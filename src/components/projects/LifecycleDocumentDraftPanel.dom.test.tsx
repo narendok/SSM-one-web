@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LifecycleDocumentDraftPanel } from "./LifecycleDocumentDraftPanel";
 
-const historyLimit = vi.fn();
+const historyQuery = vi.fn();
 const historyRows = [{
   id: "draft-1", generated_drive_node_id: "file-1", template_version: 2, created_at: "2026-10-09T00:00:00Z", result: { document_number: "DOC-001" },
 }];
@@ -15,7 +15,7 @@ const historyRows = [{
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => table === ("project_lifecycle_document_drafts" as never)
-      ? { select: () => ({ eq: () => ({ order: () => ({ limit: () => historyLimit() }) }) }) }
+      ? { select: () => ({ eq: () => ({ order: () => historyQuery }) }) }
       : { select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }) },
   },
 }));
@@ -47,13 +47,13 @@ function renderPanel() {
 
 afterEach(() => {
   cleanup();
-  historyLimit.mockReset();
+  historyQuery.mockReset();
 });
 
 describe("LifecycleDocumentDraftPanel history reads", () => {
   it("shows a failed initial history read without the empty-history message, then retries successfully", async () => {
     const user = userEvent.setup();
-    historyLimit.mockRejectedValueOnce(new Error("History unavailable")).mockResolvedValueOnce({ data: historyRows, error: null });
+    historyQuery.mockRejectedValueOnce(new Error("History unavailable")).mockResolvedValueOnce({ data: historyRows, error: null });
 
     renderPanel();
 
@@ -68,12 +68,12 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
   });
 
   it("keeps cached history visible when a refresh read fails", async () => {
-    historyLimit.mockResolvedValueOnce({ data: historyRows, error: null });
+    historyQuery.mockResolvedValueOnce({ data: historyRows, error: null });
 
     const { queryClient } = renderPanel();
     expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
 
-    historyLimit.mockRejectedValueOnce(new Error("History refresh unavailable"));
+    historyQuery.mockRejectedValueOnce(new Error("History refresh unavailable"));
 
     await queryClient.invalidateQueries({ queryKey: ["lifecycle-generated-documents", "project-123"] });
 
