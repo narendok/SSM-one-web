@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarDays, ChevronDown, FileText, LayoutGrid, List, Plus, SlidersHorizontal, User } from "lucide-react";
@@ -11,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { shouldUpdateGlobalTaskRoute } from "@/lib/task-board-selection";
 import {
   DEPARTMENTS, TASK_PRIORITIES, TASK_STATUSES, department as findDepartment,
   fetchTasks, statusLabel, updateTask, type ProjectTask, type TaskStatus,
@@ -21,10 +20,10 @@ import { TaskDrawer } from "./TaskDrawer";
 
 export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTaskChange }: { projectId?: string; compact?: boolean; assigneeId?: string; taskId?: string; onTaskChange?: (taskId: string | undefined) => void }) {
   const qc = useQueryClient();
-  const navigate = useNavigate({ from: "/tasks/" });
-  const routeSearch = useSearch({ from: "/_authenticated/tasks/", shouldThrow: false }) as { assignee?: string; task?: string } | undefined;
-  const activeAssigneeId = assigneeId ?? routeSearch?.assignee;
-  const activeTaskId = taskId ?? routeSearch?.task;
+  const navigate = useNavigate({ from: "/_authenticated/tasks/" });
+  const routeSearch = useRouterState({ select: (state) => state.location.search }) as { assignee?: string; task?: string };
+  const activeAssigneeId = assigneeId ?? (projectId ? undefined : routeSearch.assignee);
+  const activeTaskId = taskId ?? (projectId ? undefined : routeSearch.task);
   const [view, setView] = useState<"board" | "table">("table");
   const [deps, setDeps] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
@@ -95,7 +94,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
       onTaskChange(nextTaskId);
       return;
     }
-    if (!shouldUpdateGlobalTaskRoute(projectId, Boolean(onTaskChange))) return;
+    if (projectId) return;
     void navigate({ search: { assignee: activeAssigneeId, task: nextTaskId } });
   }
 
@@ -128,7 +127,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
           </Button>
         </div>
         <span className="text-xs text-muted-foreground">{filtered.length} task{filtered.length === 1 ? "" : "s"}{activeAssigneeId ? " for selected assignee" : ""}</span>
-        {activeAssigneeId && !assigneeId && <Button variant="ghost" size="sm" onClick={() => void navigate({ search: { assignee: undefined, task: activeTaskId } })}>Clear assignee</Button>}
+        {activeAssigneeId && !assigneeId && !projectId && <Button variant="ghost" size="sm" onClick={() => void navigate({ search: { assignee: undefined, task: activeTaskId } })}>Clear assignee</Button>}
         <Button className="ml-auto" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New task</Button>
       </div>
 
