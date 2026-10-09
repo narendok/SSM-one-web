@@ -3,11 +3,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { OpportunityDialog } from "./SalesIntakeDialogs";
 
 const createOpportunity = vi.fn();
 const saveSpecification = vi.fn();
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 
 vi.mock("@/lib/sales.functions", () => ({ createSalesEnquiry: "createSalesEnquiry", createSalesOpportunity: "createSalesOpportunity" }));
 vi.mock("@/lib/master-specifications.functions", () => ({ saveMasterSpecification: "saveMasterSpecification" }));
@@ -24,6 +25,14 @@ function renderDialog() {
   render(<QueryClientProvider client={queryClient}><OpportunityDialog open onOpenChange={onOpenChange} customers={[customer]} contacts={[]} enquiries={[]} /></QueryClientProvider>);
   return { queryClient, onOpenChange };
 }
+
+beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+});
+
+afterAll(() => {
+  HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+});
 
 async function completeRequiredFields(user: ReturnType<typeof userEvent.setup>) {
   fireEvent.click(screen.getAllByRole("combobox")[0]);
