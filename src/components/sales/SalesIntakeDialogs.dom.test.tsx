@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { OpportunityDialog } from "./SalesIntakeDialogs";
@@ -24,6 +25,16 @@ function renderDialog() {
   const onOpenChange = vi.fn();
   render(<QueryClientProvider client={queryClient}><OpportunityDialog open onOpenChange={onOpenChange} customers={[customer]} contacts={[]} enquiries={[]} /></QueryClientProvider>);
   return { queryClient, onOpenChange };
+}
+
+function renderControlledDialog() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  function Harness() {
+    const [open, setOpen] = useState(true);
+    return <QueryClientProvider client={queryClient}><button type="button" onClick={() => setOpen(true)}>Open proposal</button><OpportunityDialog open={open} onOpenChange={setOpen} customers={[customer]} contacts={[]} enquiries={[]} /></QueryClientProvider>;
+  }
+  render(<Harness />);
+  return { queryClient };
 }
 
 beforeAll(() => {
@@ -90,5 +101,56 @@ describe("OpportunityDialog partial-save recovery", () => {
     expect(invalidate).toHaveBeenCalledTimes(2);
     expect(createOpportunity).toHaveBeenCalledTimes(1);
     expect(saveSpecification).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets a completed proposal only after its successful refresh closes, then allows a fresh proposal on reopen", async () => {
+    const user = userEvent.setup();
+    createOpportunity.mockResolvedValue({ id: "opportunity-1", opportunityNumber: "OPPORTUNITY-2026-0099" });
+    saveSpecification.mockResolvedValue({ specificationId: "spec-1", versionId: "version-1", specificationNumber: "MASTER-2026-0099", versionNumber: 1 });
+    const { queryClient } = renderControlledDialog();
+    vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue(undefined);
+    await completeRequiredFields(user);
+
+    fireEvent.submit(screen.getByRole("button", { name: "Save proposed project" }).closest("form") as HTMLFormElement);
+    await user.click(await screen.findByRole("button", { name: "Retry sales refresh" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await user.click(screen.getByRole("button", { name: "Open proposal" }));
+    expect(screen.getByRole("button", { name: "Save proposed project" })).toBeTruthy();
+    expect(screen.queryByText(/completed with MASTER-2026-0099/)).toBeNull();
+    expect(screen.queryByDisplayValue("Manual proposal name")).toBeNull();
+  });
+
+  it("blocks partial-save dismissal and retains the manual proposal for recovery", async () => {
+    const user = userEvent.setup();
+    createOpportunity.mockResolvedValue({ id: "opportunity-1", opportunityNumber: "OPPORTUNITY-2026-0099" });
+    saveSpecification.mockRejectedValue(new Error("Specification transport lost"));
+    renderControlledDialog();
+    await completeRequiredFields(user);
+
+    fireEvent.submit(screen.getByRole("button", { name: "Save proposed project" }).closest("form") as HTMLFormElement);
+    await screen.findByRole("alert", { name: "" });
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText(/cannot be closed while its Master Specification outcome is unverified/)).toBeTruthy();
+    expect(screen.getByDisplayValue("Manual proposal name")).toBeTruthy();
+    expect(screen.getByDisplayValue("Manual scope retained after a partial result")).toBeTruthy();
+  });
+
+  it("uses a synchronous in-flight lock so two submissions create only one opportunity", async () => {
+    const user = userEvent.setup();
+    let resolveCreate: ((value: { id: string; opportunityNumber: string }) => void) | undefined;
+    createOpportunity.mockImplementation(() => new Promise((resolve) => { resolveCreate = resolve; }));
+    saveSpecification.mockResolvedValue({ specificationId: "spec-1", versionId: "version-1", specificationNumber: "MASTER-2026-0099", versionNumber: 1 });
+    renderDialog();
+    await completeRequiredFields(user);
+    const form = screen.getByRole("button", { name: "Save proposed project" }).closest("form") as HTMLFormElement;
+
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(createOpportunity).toHaveBeenCalledTimes(1);
+    resolveCreate?.({ id: "opportunity-1", opportunityNumber: "OPPORTUNITY-2026-0099" });
+    await waitFor(() => expect(saveSpecification).toHaveBeenCalledTimes(1));
   });
 });
