@@ -31,11 +31,10 @@ const tasks = [{
 function renderBoard(initialEntry: string, embedded: boolean) {
   fetchTasks.mockResolvedValue(tasks);
   const root = createRootRoute({ component: Outlet });
-  const authenticated = createRoute({ getParentRoute: () => root, id: "_authenticated", component: Outlet });
-  const tasksLayout = createRoute({ getParentRoute: () => authenticated, path: "tasks", component: Outlet });
+  const tasksLayout = createRoute({ getParentRoute: () => root, id: "_authenticated/tasks", path: "tasks", component: Outlet });
   const globalTasks = createRoute({ getParentRoute: () => tasksLayout, path: "/", validateSearch: (search) => search as { assignee?: string; task?: string }, component: () => <TaskBoard /> });
   const projectTasks = createRoute({ getParentRoute: () => root, path: "/projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact /> : null });
-  const router = createRouter({ routeTree: root.addChildren([authenticated.addChildren([tasksLayout.addChildren([globalTasks])]), projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
+  const router = createRouter({ routeTree: root.addChildren([tasksLayout.addChildren([globalTasks]), projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
   return router;
@@ -65,7 +64,7 @@ describe("TaskBoard route ownership", () => {
     expect(router.state.location.search).toEqual({ assignee: "member-1", task: "task-1" });
     await user.click(screen.getByRole("button", { name: "Clear assignee" }));
     await waitFor(() => expect(router.state.location.search).toEqual({ task: "task-1" }));
-    expect(router.state.location.pathname).toBe("/_authenticated/tasks");
+    expect(router.state.location.pathname).toBe("/tasks");
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });
