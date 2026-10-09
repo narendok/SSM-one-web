@@ -81,9 +81,10 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await user.clear(scope);
     await user.type(scope, "Keep this exact draft");
     await user.click(screen.getByRole("button", { name: "Back" }));
-    const firstDialog = await screen.findByRole("dialog");
+    const firstDialog = await screen.findByText("Discard unsaved local edits?").then((title) => title.closest("[role=alertdialog]"));
+    expect(firstDialog).not.toBeNull();
     expect(within(firstDialog).getByText("Discard unsaved local edits?")).toBeTruthy();
-    await user.click(within(firstDialog).getByRole("button", { name: "Keep editing" }));
+    await user.click(within(firstDialog as HTMLElement).getByRole("button", { name: "Keep editing" }));
     expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep this exact draft");
     await user.click(screen.getByRole("button", { name: "Close preview" }));
     await user.click(screen.getByRole("button", { name: "Discard edits" }));
