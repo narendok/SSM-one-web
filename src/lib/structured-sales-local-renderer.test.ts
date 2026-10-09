@@ -72,7 +72,7 @@ describe("structured Sales local draft HTML renderer", () => {
     expect(html).not.toContain("Verified preview source");
     expect(html).not.toContain("Prepared locally from the verified preview source.");
     expect(html).toContain(manualScope);
-    expect(html).toContain("&gt;TBC&lt;");
+    expect(html).toContain("<pre>TBC</pre>");
     expect(html).toContain("LOCAL PREVIEW ONLY — NOT A CONTROLLED DOCUMENT");
   });
 });
