@@ -84,7 +84,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(screen.queryByText(/The source pin advanced while local edits exist/)).toBeNull();
     await user.clear(scope);
     await user.type(scope, "Keep this manual scope exactly.");
-    await waitFor(() => expect((screen.getByRole("button", { name: "Refresh source" }) as HTMLButtonElement).disabled).toBe(true));
+    await waitFor(() => expect(screen.getByText(/Local edits are unsaved/)).toBeTruthy());
     client.setQueryData(["structured-template-source", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1], { ...source, versionId: "amended-version-id", sourceFields: { ...source.sourceFields, REQUIREMENT_SUMMARY: "Amended source summary" } });
     await waitFor(() => expect(screen.getByText(/The source pin advanced while local edits exist/)).toBeTruthy());
     expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep this manual scope exactly.");
