@@ -71,6 +71,7 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
     historyQuery.mockResolvedValue({ data: historyRows, error: null });
 
     const { queryClient } = renderPanel();
+    queryClient.setQueryData(["lifecycle-generated-documents", "project-123"], historyRows);
     expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
 
     historyQuery.mockRejectedValue(new Error("History refresh unavailable"));
