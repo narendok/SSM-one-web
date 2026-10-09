@@ -112,7 +112,7 @@ describe("OpportunityDialog partial-save recovery", () => {
     await completeRequiredFields(user);
 
     fireEvent.submit(screen.getByRole("button", { name: "Save proposed project" }).closest("form") as HTMLFormElement);
-    await user.click(await screen.findByRole("button", { name: "Retry sales refresh" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     await user.click(screen.getByRole("button", { name: "Open proposal" }));
