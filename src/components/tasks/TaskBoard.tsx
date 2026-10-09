@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { shouldUpdateGlobalTaskRoute } from "@/lib/task-board-selection";
 import {
   DEPARTMENTS, TASK_PRIORITIES, TASK_STATUSES, department as findDepartment,
   fetchTasks, statusLabel, updateTask, type ProjectTask, type TaskStatus,
@@ -94,7 +95,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
       onTaskChange(nextTaskId);
       return;
     }
-    if (projectId) return;
+    if (!shouldUpdateGlobalTaskRoute(projectId, Boolean(onTaskChange))) return;
     void navigate({ search: { assignee: activeAssigneeId, task: nextTaskId } });
   }
 
