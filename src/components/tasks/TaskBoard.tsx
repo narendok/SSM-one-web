@@ -94,6 +94,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
       onTaskChange(nextTaskId);
       return;
     }
+    if (projectId) return;
     void navigate({ search: { assignee: activeAssigneeId, task: nextTaskId } });
   }
 
