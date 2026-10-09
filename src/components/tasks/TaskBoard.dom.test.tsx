@@ -65,7 +65,7 @@ describe("TaskBoard route ownership", () => {
     expect(router.state.location.search).toEqual({ assignee: "member-1", task: "task-1" });
     await user.click(screen.getByRole("button", { name: "Clear assignee" }));
     await waitFor(() => expect(router.state.location.search).toEqual({ task: "task-1" }));
-    expect(router.state.location.pathname).toBe("/tasks");
+    expect(router.state.location.pathname).toBe("/_authenticated/tasks");
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });
