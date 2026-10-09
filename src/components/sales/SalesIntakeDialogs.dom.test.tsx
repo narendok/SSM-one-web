@@ -63,7 +63,7 @@ describe("OpportunityDialog partial-save recovery", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Opportunity OPPORTUNITY-2026-0099 was saved");
     expect(screen.getByDisplayValue("Manual proposal name")).toBeTruthy();
     expect(screen.getByDisplayValue("Manual scope retained after a partial result")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Reconciliation required" })).toBeDisabled();
+    expect((screen.getByRole("button", { name: "Reconciliation required" }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.submit(screen.getByRole("button", { name: "Reconciliation required" }).closest("form") as HTMLFormElement);
     expect(createOpportunity).toHaveBeenCalledTimes(1);
