@@ -83,13 +83,13 @@ It links existing records rather than duplicating any register or storage metada
 
 **Proposed uniqueness/idempotency:**
 
-- one immutable materialization per Drive revision and per controlled register;
+- one immutable materialization per Drive revision. Multiple immutable materialization receipts may reference the same existing controlled register as that file gains later Drive revisions; each receipt keeps its own expected-parent concurrency link and immutable source tuple;
 - request identity is `(location_id, request_key)`, actor-bound and compared against the **entire** immutable tuple: actor, opportunity/customer, source version, structured revision, schema, location/root/target, renderer/mime, object hash/size/path and expected parent;
 - same request identity plus exact tuple returns the original receipt; any changed member is a conflict;
 - source/template/schema changes, stale structured-draft revision, changed location, or changed renderer do not replay and create no object;
 - restoring equivalent content is permitted only as a new append-only structured draft revision and a new request key; no past Drive revision, register, receipt, or event is mutated.
 
-The proposal must use existing `document_control_registers` and `document_control_events`. Its register row carries the existing required `department_id`, file `drive_node_id`, current source Drive revision, DRAFT status, and existing document number. The materialization relation—not an overloaded mutable register field—holds the immutable Sales source tuple. A possible future foreign key from `document_control_registers` to a materialization is not necessary and should not be added until exact transition/reporting implications are reviewed.
+The proposal must use existing `document_control_registers` and `document_control_events`. Its register row carries the existing required `department_id`, file `drive_node_id`, current source Drive revision, DRAFT status, and the one existing document number. A later revision must reuse that existing file/register through the governed controlled-document transition, not mint another register or document number. The materialization relation—not an overloaded mutable register field—holds each immutable Sales source tuple and expected-parent link. A possible future foreign key from `document_control_registers` to a materialization is not necessary and should not be added until exact transition/reporting implications are reviewed.
 
 ### C. Explicit ownership and authorization boundary
 
@@ -116,7 +116,7 @@ It must reuse the existing pattern, in this order:
 2. load the selected immutable structured-draft revision, validate it against the pinned schema, and render deterministic inert bytes from server-owned layout code;
 3. obtain a unique staged `project-drive` object through a server adapter; client code never selects bucket/path or writes a register;
 4. persist an actor/request/location/source-bound staging receipt before the commit;
-5. in one transaction, revalidate all pins and write the existing `drive_nodes` file, `drive_node_revisions` revision, `document_control_registers` DRAFT row, `document_control_events` history, one existing activity-log event, and the proposed materialization receipt; consume the exact staged-object attempt in the same transaction;
+5. in one transaction, revalidate all pins and write either the initial existing `drive_nodes` file/register or the next governed `drive_node_revisions` revision on the same existing file/register, then the matching `document_control_events` history, one existing activity-log event, and the proposed materialization receipt; consume the exact staged-object attempt in the same transaction;
 6. if the transaction fails, leave no partial Drive/register/materialization relation. The server may delete staged bytes only after exact proof that the attempt is unconsumed and unreferenced; cleanup failure is recorded as a recoverable compensation state, never hidden or treated as issuance success.
 
 No operation may create a second controlled register, shadow Drive metadata, or shadow storage object record. Existing document numbering remains server-owned and is requested only inside the protected commit after every authorization/source/location precondition passes.
