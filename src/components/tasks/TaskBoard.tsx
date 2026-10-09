@@ -20,8 +20,8 @@ import { TaskDrawer } from "./TaskDrawer";
 
 export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTaskChange }: { projectId?: string; compact?: boolean; assigneeId?: string; taskId?: string; onTaskChange?: (taskId: string | undefined) => void }) {
   const qc = useQueryClient();
-  const navigate = useNavigate({ from: "/_authenticated/tasks/" });
-  const routeSearch = useSearch({ from: "/_authenticated/tasks/", shouldThrow: false }) as { assignee?: string; task?: string } | undefined;
+  const navigate = useNavigate();
+  const routeSearch = useSearch({ strict: false }) as { assignee?: string; task?: string } | undefined;
   const activeAssigneeId = assigneeId ?? routeSearch?.assignee;
   const activeTaskId = taskId ?? routeSearch?.task;
   const [view, setView] = useState<"board" | "table">("table");
