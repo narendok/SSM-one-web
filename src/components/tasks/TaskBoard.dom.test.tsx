@@ -33,7 +33,7 @@ function renderBoard(initialEntry: string, embedded: boolean) {
   const root = createRootRoute({ component: Outlet });
   const authenticated = createRoute({ getParentRoute: () => root, id: "_authenticated", component: Outlet });
   const tasksLayout = createRoute({ getParentRoute: () => authenticated, path: "tasks", component: Outlet });
-  const globalTasks = createRoute({ getParentRoute: () => tasksLayout, path: "/", id: "/_authenticated/tasks/", validateSearch: (search) => search as { assignee?: string; task?: string }, component: () => <TaskBoard /> });
+  const globalTasks = createRoute({ getParentRoute: () => tasksLayout, id: "/_authenticated/tasks/", validateSearch: (search) => search as { assignee?: string; task?: string }, component: () => <TaskBoard /> });
   const projectTasks = createRoute({ getParentRoute: () => root, path: "projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact /> : null });
   const router = createRouter({ routeTree: root.addChildren([authenticated.addChildren([tasksLayout.addChildren([globalTasks])]), projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
