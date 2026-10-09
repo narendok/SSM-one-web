@@ -125,7 +125,8 @@ BEGIN
       v_input.alternate_opportunity_id, v_input.alternate_customer_id,
       v_input.alternate_specification_id, v_input.alternate_master_version_id,
       'SOR', 0,
-      '{"OEM_REQUIREMENT_ROWS":"alternate"}'::jsonb, v_input.request_key_create
+      '{"OEM_REQUIREMENT_ROWS":"A","SCOPE_STATEMENT":"Scope","ACCEPTANCE_CRITERIA":"Accept","CAN_TELEMETRY_NOTES":"CAN","PILOT_ROLLOUT_NOTES":"Pilot","COMMERCIAL_SLA_WARRANTY_DELIVERY":"Commercial"}'::jsonb,
+      v_input.request_key_create
     );
     RAISE EXCEPTION 'Expected same request key with a changed valid source tuple to fail';
   EXCEPTION WHEN OTHERS THEN
@@ -138,8 +139,8 @@ BEGIN
     PERFORM public.save_sales_opportunity_structured_draft_revision(
       v_input.opportunity_id, v_input.customer_id,
       v_input.specification_id, v_input.master_version_id,
-      'PRS', 0,
-      '{"VERIFICATION_METHOD":"inspection"}'::jsonb, v_input.request_key_create
+      'CONTRACT_REVIEW', 0,
+      '{}'::jsonb, v_input.request_key_create
     );
     RAISE EXCEPTION 'Expected same request key with a changed document kind/schema to fail';
   EXCEPTION WHEN OTHERS THEN
@@ -156,19 +157,97 @@ BEGIN
 END;
 $$;
 
--- Required negative assertions for the isolated implementation/runner:
--- 1. NULL payloads, unknown/derived keys, arrays, objects, numbers, and scalar
---    values over the proposed local limit fail before any draft/revision/request
---    insertion. VERIFICATION_METHOD is limited to 1,000 characters; all other
---    present current-editor fields are limited to 8,000. Omitted current-editor
---    fields remain omitted in canonical payloads, matching the local validator.
+CREATE TEMP TABLE structured_draft_negative_counts AS
+SELECT
+  count(*) FILTER (WHERE true)::integer AS draft_count,
+  (SELECT count(*)::integer FROM public.sales_opportunity_structured_draft_revisions) AS revision_count,
+  (SELECT count(*)::integer FROM public.sales_opportunity_structured_draft_requests) AS request_count
+FROM public.sales_opportunity_structured_drafts;
+
+DO $$
+DECLARE
+  v_input record;
+  v_before record;
+  v_outsider uuid := :'outsider_user_id'::uuid;
+BEGIN
+  SELECT * INTO v_input FROM structured_draft_acceptance_inputs;
+  SELECT * INTO v_before FROM structured_draft_negative_counts;
+
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id, v_input.specification_id,
+      v_input.master_version_id, 'SOR', 3, NULL, gen_random_uuid()
+    );
+    RAISE EXCEPTION 'Expected NULL payload to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Structured Sales payload must be an object' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id, v_input.specification_id,
+      v_input.master_version_id, 'PRS', 0,
+      jsonb_build_object('VERIFICATION_METHOD', repeat('x', 1001)), gen_random_uuid()
+    );
+    RAISE EXCEPTION 'Expected VERIFICATION_METHOD over 1000 characters to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Structured Sales editable field VERIFICATION_METHOD exceeds its proposed local character limit' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id, v_input.specification_id,
+      v_input.master_version_id, 'SOR', 2,
+      '{"OEM_REQUIREMENT_ROWS":"stale"}'::jsonb, gen_random_uuid()
+    );
+    RAISE EXCEPTION 'Expected stale revision to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Structured Sales draft revision conflict' THEN RAISE; END IF;
+  END;
+
+  PERFORM set_config('request.jwt.claim.sub', v_outsider::text, true);
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id, v_input.specification_id,
+      v_input.master_version_id, 'SOR', 3,
+      '{}'::jsonb, gen_random_uuid()
+    );
+    RAISE EXCEPTION 'Expected outsider caller to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Sales management permission is required' THEN RAISE; END IF;
+  END;
+  PERFORM set_config('request.jwt.claim.sub', :'sales_manager_user_id', true);
+
+  BEGIN
+    UPDATE public.sales_opportunity_structured_draft_revisions
+    SET canonical_payload = '{}'::jsonb
+    WHERE id = (SELECT revision_id FROM structured_draft_first);
+    RAISE EXCEPTION 'Expected immutable revision update to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Structured Sales draft history is append-only' THEN RAISE; END IF;
+  END;
+  BEGIN
+    DELETE FROM public.sales_opportunity_structured_draft_requests
+    WHERE request_key = v_input.request_key_create;
+    RAISE EXCEPTION 'Expected immutable request deletion to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Structured Sales draft history is append-only' THEN RAISE; END IF;
+  END;
+
+  IF (SELECT count(*) FROM public.sales_opportunity_structured_drafts) <> v_before.draft_count
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> v_before.revision_count
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests) <> v_before.request_count THEN
+    RAISE EXCEPTION 'Negative assertions must not write structured draft history';
+  END IF;
+END;
+$$;
+
+-- Required separate isolated acceptance/runner evidence:
+-- 1. Unknown/derived keys, arrays, objects, and numbers fail before writes.
 -- 2. Wrong customer/opportunity/specification/version tuple fails before writes.
--- 3. Stale expected revision and reused request key with changed payload fail.
--- 4. A different authenticated actor cannot replay/read this actor-bound draft.
--- 5. The outsider caller fails before receipt lookup or write.
--- 6. UPDATE/DELETE attempts against all three proposed tables fail as immutable.
--- 7. No Drive, Drive revision, controlled register, storage, document-number, or
+-- 3. A different authenticated actor cannot replay/read this actor-bound draft.
+-- 4. No Drive, Drive revision, controlled register, storage, document-number, or
 --    activity-log entity is created by any success or failure path.
--- 8. Two sessions racing the same logical identity converge to one revision or a
+-- 5. Two sessions racing the same logical identity converge to one revision or a
 --    revision conflict; never two revision-1 rows.
 ROLLBACK;

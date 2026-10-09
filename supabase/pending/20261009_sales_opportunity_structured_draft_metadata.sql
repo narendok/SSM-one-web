@@ -286,7 +286,7 @@ BEGIN
   FROM public.master_specification_versions
   WHERE id = p_master_specification_version_id
     AND specification_id = v_specification.id
-  FOR KEY SHARE;
+  FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Master Specification version source mismatch';
   END IF;
