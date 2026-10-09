@@ -20,7 +20,7 @@ import { TaskDrawer } from "./TaskDrawer";
 
 export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTaskChange }: { projectId?: string; compact?: boolean; assigneeId?: string; taskId?: string; onTaskChange?: (taskId: string | undefined) => void }) {
   const qc = useQueryClient();
-  const navigate = useNavigate({ from: "/_authenticated/tasks/" });
+  const navigate = useNavigate();
   const routeSearch = useRouterState({ select: (state) => state.location.search }) as { assignee?: string; task?: string };
   const activeAssigneeId = assigneeId ?? (projectId ? undefined : routeSearch.assignee);
   const activeTaskId = taskId ?? (projectId ? undefined : routeSearch.task);
@@ -95,7 +95,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
       return;
     }
     if (projectId) return;
-    void navigate({ search: { assignee: activeAssigneeId, task: nextTaskId } });
+    void navigate({ to: "/tasks", search: { assignee: activeAssigneeId, task: nextTaskId } });
   }
 
   return (
@@ -127,7 +127,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
           </Button>
         </div>
         <span className="text-xs text-muted-foreground">{filtered.length} task{filtered.length === 1 ? "" : "s"}{activeAssigneeId ? " for selected assignee" : ""}</span>
-        {activeAssigneeId && !assigneeId && !projectId && <Button variant="ghost" size="sm" onClick={() => void navigate({ search: { assignee: undefined, task: activeTaskId } })}>Clear assignee</Button>}
+        {activeAssigneeId && !assigneeId && !projectId && <Button variant="ghost" size="sm" onClick={() => void navigate({ to: "/tasks", search: { assignee: undefined, task: activeTaskId } })}>Clear assignee</Button>}
         <Button className="ml-auto" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New task</Button>
       </div>
 
