@@ -88,19 +88,40 @@ const derivedSourceKeys = new Set([
   "WORKSTREAMS",
 ]);
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+function isStructuredSalesLocalDocumentKind(value: unknown): value is StructuredSalesLocalDocumentKind {
+  return value === "SOR" || value === "CONTRACT_REVIEW" || value === "PRS";
 }
 
-export function validateStructuredSalesLocalPayload(kind: StructuredSalesLocalDocumentKind, input: unknown): StructuredSalesLocalPayloadValidation {
-  if (!isPlainObject(input)) return { ok: false, errors: [{ path: "$", message: "Editable payload must be an object." }] };
+function copyPlainDataRecord(input: unknown): Record<string, unknown> | null {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+
+  const prototype = Object.getPrototypeOf(input);
+  if (prototype !== Object.prototype && prototype !== null) return null;
+
+  const descriptors = Object.getOwnPropertyDescriptors(input);
+  const snapshot = Object.create(null) as Record<string, unknown>;
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (!("value" in descriptor)) return null;
+    if (descriptor.enumerable) snapshot[key] = descriptor.value;
+  }
+
+  return snapshot;
+}
+
+export function validateStructuredSalesLocalPayload(kind: unknown, input: unknown): StructuredSalesLocalPayloadValidation {
+  if (!isStructuredSalesLocalDocumentKind(kind)) {
+    return { ok: false, errors: [{ path: "kind", message: "Unsupported structured Sales document kind." }] };
+  }
+
+  const payload = copyPlainDataRecord(input);
+  if (!payload) return { ok: false, errors: [{ path: "$", message: "Editable payload must be a plain object with data properties." }] };
 
   const rules = localFieldRules[kind];
   const allowed = new Map(rules.map((rule) => [rule.key, rule]));
   const errors: StructuredSalesLocalPayloadError[] = [];
   let totalCharacters = 0;
 
-  for (const [key, value] of Object.entries(input)) {
+  for (const [key, value] of Object.entries(payload)) {
     const rule = allowed.get(key);
     if (!rule) {
       errors.push({ path: key, message: derivedSourceKeys.has(key) ? "Derived source fields cannot be edited in this local payload." : "Unknown editable field." });
@@ -118,13 +139,14 @@ export function validateStructuredSalesLocalPayload(kind: StructuredSalesLocalDo
     errors.push({ path: "$", message: `Payload exceeds the proposed local limit of ${structuredSalesLocalPayloadLimits.totalCharacters} characters.` });
   }
 
-  return errors.length ? { ok: false, errors } : { ok: true, payload: input };
+  return errors.length ? { ok: false, errors } : { ok: true, payload };
 }
 
 /** Produces stable JSON without trimming or otherwise changing valid manual text. */
-export function canonicalizeStructuredSalesLocalPayload(kind: StructuredSalesLocalDocumentKind, input: unknown): string {
+export function canonicalizeStructuredSalesLocalPayload(kind: unknown, input: unknown): string {
   const validated = validateStructuredSalesLocalPayload(kind, input);
   if (!validated.ok) throw new Error(validated.errors.map((error) => `${error.path}: ${error.message}`).join(" "));
+  if (!isStructuredSalesLocalDocumentKind(kind)) throw new Error("kind: Unsupported structured Sales document kind.");
 
   const canonicalPayload = Object.fromEntries(
     [...localFieldRules[kind]]

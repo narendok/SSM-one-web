@@ -49,4 +49,53 @@ describe("structured Sales local editable payload contract", () => {
 
     expect(canonicalizeStructuredSalesLocalPayload("PRS", first)).toBe(canonicalizeStructuredSalesLocalPayload("PRS", second));
   });
+
+  it("rejects inherited allowed fields before canonicalization can read them", () => {
+    const inheritedPayload = Object.create({ SCOPE_STATEMENT: "x".repeat(structuredSalesLocalPayloadLimits.textareaCharacters + 1) });
+
+    expect(validateStructuredSalesLocalPayload("SOR", inheritedPayload)).toEqual({
+      ok: false,
+      errors: [{ path: "$", message: "Editable payload must be a plain object with data properties." }],
+    });
+    expect(() => canonicalizeStructuredSalesLocalPayload("SOR", inheritedPayload)).toThrow("Editable payload must be a plain object with data properties.");
+  });
+
+  it("rejects Date, class instances, and accessor-backed records without invoking accessors", () => {
+    class LocalPayload {
+      SCOPE_STATEMENT = "manual";
+    }
+    const accessorPayload = {};
+    Object.defineProperty(accessorPayload, "SCOPE_STATEMENT", {
+      enumerable: true,
+      get: () => {
+        throw new Error("Accessor must not run.");
+      },
+    });
+
+    for (const payload of [new Date(), new LocalPayload(), accessorPayload]) {
+      expect(validateStructuredSalesLocalPayload("SOR", payload)).toEqual({
+        ok: false,
+        errors: [{ path: "$", message: "Editable payload must be a plain object with data properties." }],
+      });
+    }
+  });
+
+  it("accepts null-prototype records and preserves exact own text through canonicalization", () => {
+    const payload = Object.create(null) as Record<string, unknown>;
+    payload.SCOPE_STATEMENT = "  Exact own text\nwith spacing.  ";
+
+    expect(validateStructuredSalesLocalPayload("SOR", payload)).toEqual({
+      ok: true,
+      payload: { SCOPE_STATEMENT: "  Exact own text\nwith spacing.  " },
+    });
+    expect(canonicalizeStructuredSalesLocalPayload("SOR", payload)).toBe('{"kind":"SOR","fields":{"SCOPE_STATEMENT":"  Exact own text\\nwith spacing.  "}}');
+  });
+
+  it("returns a controlled validation error for runtime-invalid document kinds", () => {
+    expect(validateStructuredSalesLocalPayload("UNSUPPORTED", { SCOPE_STATEMENT: "manual" })).toEqual({
+      ok: false,
+      errors: [{ path: "kind", message: "Unsupported structured Sales document kind." }],
+    });
+    expect(() => canonicalizeStructuredSalesLocalPayload("UNSUPPORTED", {})).toThrow("Unsupported structured Sales document kind.");
+  });
 });
