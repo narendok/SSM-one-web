@@ -71,11 +71,13 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
   it("keeps cached history visible when a refresh read fails", async () => {
     historyQuery.mockRejectedValue(new Error("History refresh unavailable"));
 
-    renderPanel(historyRows);
+    const { queryClient } = renderPanel(historyRows);
     expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
 
+    await queryClient.invalidateQueries({ queryKey: ["lifecycle-generated-documents", project.id] });
+
+    expect(await screen.findByText("Generated document history could not be loaded with your current access.")).toBeTruthy();
     expect(screen.getByText(/DOC-001 · template v2/)).toBeTruthy();
-    expect(screen.queryByText("Generated document history could not be loaded with your current access.")).toBeNull();
     expect(screen.queryByText("No generated documents are visible for this project yet.")).toBeNull();
   });
 });
