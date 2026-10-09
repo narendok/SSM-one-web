@@ -72,6 +72,24 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(await screen.findByText(/Authorized source could not be loaded: denied by mock/)).toBeTruthy();
   });
 
+  it("preserves manual SOR text and shows a stale-source conflict only when a changed source arrives with local edits", async () => {
+    previewSource.mockResolvedValue(source);
+    const user = userEvent.setup();
+    const { client } = (() => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(<QueryClientProvider client={client}><StructuredTemplatePreview /></QueryClientProvider>);
+      return { client };
+    })();
+    const scope = await screen.findByLabelText("Scope statement");
+    expect(screen.queryByText(/The source pin advanced while local edits exist/)).toBeNull();
+    await user.clear(scope);
+    await user.type(scope, "Keep this manual scope exactly.");
+    client.setQueryData(["structured-template-source", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1], { ...source, versionId: "amended-version-id", sourceFields: { ...source.sourceFields, REQUIREMENT_SUMMARY: "Amended source summary" } });
+    await waitFor(() => expect(screen.getByText(/The source pin advanced while local edits exist/)).toBeTruthy());
+    expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep this manual scope exactly.");
+    expect(screen.getByText("Amended source summary")).toBeTruthy();
+  });
+
   it("uses the production Radix dialog dismissal guard for Escape and outside interactions, retaining edits until discard", async () => {
     previewSource.mockResolvedValue(source);
     const user = userEvent.setup();
