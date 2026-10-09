@@ -26,13 +26,13 @@ function renderDialog() {
 }
 
 async function completeRequiredFields(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("combobox", { name: "Customer" }));
+  await user.click(screen.getAllByRole("combobox")[0]);
   await user.click(await screen.findByRole("option", { name: /CUST-001/ }));
-  await user.type(screen.getByRole("textbox", { name: "Proposed name" }), "Manual proposal name");
-  await user.type(screen.getByRole("textbox", { name: "Industry / application" }), "Medical");
-  await user.type(screen.getByRole("textbox", { name: "Product family" }), "Controller");
-  await user.type(screen.getByRole("textbox", { name: "Development scope" }), "Manual scope retained after a partial result");
-  await user.type(screen.getByRole("textbox", { name: "Requirement summary" }), "Manual requirement retained after a partial result");
+  await user.type(screen.getByPlaceholderText("Possible / proposed project name"), "Manual proposal name");
+  await user.type(screen.getAllByPlaceholderText("Unknown / To be confirmed")[0], "Medical");
+  await user.type(screen.getAllByPlaceholderText("Unknown / To be confirmed")[1], "Controller");
+  await user.type(screen.getByPlaceholderText(/What development is proposed/), "Manual scope retained after a partial result");
+  await user.type(screen.getByPlaceholderText("Controlled summary of the proposed product need."), "Manual requirement retained after a partial result");
 }
 
 afterEach(() => {
