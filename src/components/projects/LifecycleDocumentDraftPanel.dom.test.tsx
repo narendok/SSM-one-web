@@ -68,10 +68,12 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
   });
 
   it("keeps cached history visible when a refresh read fails", async () => {
-    historyLimit.mockResolvedValueOnce({ data: historyRows, error: null }).mockRejectedValueOnce(new Error("History refresh unavailable"));
+    historyLimit.mockResolvedValueOnce({ data: historyRows, error: null });
 
     const { queryClient } = renderPanel();
     expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
+
+    historyLimit.mockRejectedValueOnce(new Error("History refresh unavailable"));
 
     await queryClient.invalidateQueries({ queryKey: ["lifecycle-generated-documents", "project-123"] });
 
