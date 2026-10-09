@@ -49,7 +49,7 @@ describe("OpportunityDialog partial-save recovery", () => {
     renderDialog();
     await completeRequiredFields(user);
 
-    await user.click(screen.getByRole("button", { name: "Save proposed project" }));
+    fireEvent.submit(screen.getByRole("button", { name: "Save proposed project" }).closest("form") as HTMLFormElement);
 
     expect((await screen.findByRole("alert")).textContent).toContain("Opportunity OPPORTUNITY-2026-0099 was saved");
     expect(screen.getByDisplayValue("Manual proposal name")).toBeTruthy();
@@ -69,7 +69,7 @@ describe("OpportunityDialog partial-save recovery", () => {
     const invalidate = vi.spyOn(queryClient, "invalidateQueries").mockRejectedValueOnce(new Error("Overview unavailable")).mockResolvedValueOnce(undefined);
     await completeRequiredFields(user);
 
-    await user.click(screen.getByRole("button", { name: "Save proposed project" }));
+    fireEvent.submit(screen.getByRole("button", { name: "Save proposed project" }).closest("form") as HTMLFormElement);
 
     expect((await screen.findByRole("alert")).textContent).toContain("Sales data refresh failed: Overview unavailable");
     expect(screen.getByText(/Proposed project OPPORTUNITY-2026-0099 completed with MASTER-2026-0099 rev 1/)).toBeTruthy();
