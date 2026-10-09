@@ -5,7 +5,7 @@ This is a **separate**, operator-run acceptance outline. It is not a structural 
 ## Preconditions
 
 - An approved isolated target has the exact reviewed migration and structural acceptance specification deployed.
-- The runner preflight reports the approved isolated target and matching source hashes; it rejects `yyrvduosyyaluifqvwkr`.
+- The local configuration-plan builder reports `CONFIGURATION_PLAN_ONLY` after matching caller-supplied configuration and local source hashes. It rejects malformed refs, mixed-case/original refs, missing URLs, and mismatched managed hosts; it is not approval proof or server-side target verification.
 - Existing approved identities are supplied at runtime only: an in-scope non-admin Sales manager and an outsider. No token, connection URL, or identity value is stored in source or output.
 - Existing disposable caller-visible opportunity/customer/Master Specification/version tuples are supplied explicitly. Request keys are new and unique.
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Source-only isolated acceptance harness for the pending structured-draft
- * metadata proposal. It does not connect to a database unless a future,
- * separately authorized executor consumes the command plan it returns.
+ * Source-only configuration-plan builder for the pending structured-draft
+ * metadata proposal. It never connects, executes SQL, or verifies a target
+ * server-side; a future separately authorized executor owns those operations.
  */
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
@@ -22,6 +22,8 @@ export const requiredFixtureInputs = [
 ]
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const backendRefPattern = /^[a-z0-9]{20}$/
+const expectedDatabasePort = '5432'
 
 export function sha256(value) {
   return createHash('sha256').update(value).digest('hex')
@@ -35,28 +37,40 @@ export function backendRefFromConnectionUrl(connectionUrl) {
   if (typeof connectionUrl !== 'string' || !connectionUrl.trim()) {
     throw new Error('An isolated database connection URL is required for structural execution.')
   }
-  let hostname
+  let parsed
   try {
-    hostname = new URL(connectionUrl).hostname
+    parsed = new URL(connectionUrl)
   } catch {
     throw new Error('The isolated database connection URL is invalid.')
   }
-  const match = hostname.match(/^db\.([a-z0-9]{20})\.supabase\.co$/i)
+  if (!['postgresql:', 'postgres:'].includes(parsed.protocol)) {
+    throw new Error('The isolated database connection URL must use postgresql or postgres.')
+  }
+  if (parsed.port !== expectedDatabasePort) {
+    throw new Error('The isolated database connection URL must use the managed database port.')
+  }
+  const match = parsed.hostname.match(/^db\.([a-z0-9]{20})\.supabase\.co$/)
   if (!match) throw new Error('The connection URL must identify a managed database hostname.')
   return match[1]
 }
 
+export function assertCanonicalBackendRef(value, label) {
+  if (typeof value !== 'string' || !backendRefPattern.test(value)) {
+    throw new Error(`${label} must be a canonical lowercase 20-character backend reference.`)
+  }
+  if (value.toLowerCase() === ORIGINAL_BACKEND_REF) throw new Error('Refusing the original/shared backend.')
+  return value
+}
+
 export function assertIsolatedTarget(env) {
-  const configuredRef = env.ACCEPTANCE_BACKEND_REF
-  const approvedRef = env.ACCEPTANCE_APPROVED_ISOLATED_BACKEND_REF
-  if (!configuredRef || !approvedRef || configuredRef !== approvedRef) {
-    throw new Error('The configured target must exactly match the explicitly approved isolated backend reference.')
+  const configuredRef = assertCanonicalBackendRef(env.ACCEPTANCE_BACKEND_REF, 'ACCEPTANCE_BACKEND_REF')
+  const configuredApproval = assertCanonicalBackendRef(env.ACCEPTANCE_APPROVED_ISOLATED_BACKEND_REF, 'ACCEPTANCE_APPROVED_ISOLATED_BACKEND_REF')
+  if (configuredRef !== configuredApproval) {
+    throw new Error('The configured target must exactly match the caller-supplied approval configuration.')
   }
-  if (configuredRef === ORIGINAL_BACKEND_REF) throw new Error('Refusing the original/shared backend.')
-  if (env.ACCEPTANCE_DATABASE_URL) {
-    const connectionRef = backendRefFromConnectionUrl(env.ACCEPTANCE_DATABASE_URL)
-    if (connectionRef !== configuredRef) throw new Error('The connection URL target does not match the approved isolated backend reference.')
-  }
+  if (!env.ACCEPTANCE_DATABASE_URL) throw new Error('An isolated database URL is required before an execution-ready plan can be prepared.')
+  const connectionRef = backendRefFromConnectionUrl(env.ACCEPTANCE_DATABASE_URL)
+  if (connectionRef !== configuredRef) throw new Error('The connection URL target does not match the configured isolated backend reference.')
   return configuredRef
 }
 
@@ -79,16 +93,19 @@ export async function buildStructuralPlan({ env = process.env, readFileImpl = re
     throw new Error('The approved migration or acceptance-specification hash does not match the reviewed local source.')
   }
   return {
-    status: 'READY_FOR_SEPARATELY_AUTHORIZED_STRUCTURAL_EXECUTION',
+    status: 'CONFIGURATION_PLAN_ONLY',
     backendRef,
     migration: { path: migrationPath, sha256: migrationSha256 },
     specification: { path: specificationPath, sha256: specificationSha256 },
-    mode: 'ROLLBACK_ONLY',
+    mode: 'NON_EXECUTING',
     fixtures: requiredFixtureInputs,
+    psqlArgumentPlan: requiredFixtureInputs.map((key) => ({ environment: key, psqlVariable: key.toLowerCase() })),
     limits: [
-      'This plan proves configuration and source identity only.',
+      'This plan checks caller-supplied configuration and local source identity only; it is not authorization proof.',
+      'It never connects, invokes an endpoint, or executes SQL, and it intentionally omits database credentials.',
+      'Server-side target preflight and separately verified isolated-deployment approval are required before execution.',
+      'A future executor must map each listed environment input to its matching psql variable without shell interpolation; the SQL specification ends in ROLLBACK.',
       'It does not prove caller RLS, authenticated transport, outsider denial, or concurrency.',
-      'It must run only after an isolated deployment authorization; the SQL specification ends in ROLLBACK.',
     ],
   }
 }
