@@ -8,6 +8,7 @@
 -- sales_manager_user_id, outsider_user_id, opportunity_id, customer_id,
 -- specification_id, master_version_id, request_key_create, request_key_replay,
 -- request_key_update, request_key_restore, request_key_conflict,
+-- request_key_empty_kind_baseline,
 -- alternate_opportunity_id, alternate_customer_id, alternate_specification_id,
 -- alternate_master_version_id. The alternate tuple must be a separate valid,
 -- caller-authorized opportunity/customer/specification/version tuple.
@@ -96,8 +97,30 @@ BEGIN
 END;
 $$;
 
+-- A dedicated empty-payload receipt lets the cross-kind conflict vary only the
+-- document kind/schema. It must not reuse the non-empty SOR baseline receipt.
+CREATE TEMP TABLE structured_draft_empty_kind_baseline AS
+SELECT * FROM public.save_sales_opportunity_structured_draft_revision(
+  :'opportunity_id'::uuid, :'customer_id'::uuid, :'specification_id'::uuid,
+  :'master_version_id'::uuid, 'CONTRACT_REVIEW', 0,
+  '{}'::jsonb, :'request_key_empty_kind_baseline'::uuid
+);
+DO $$
+BEGIN
+  IF (SELECT revision_number FROM structured_draft_empty_kind_baseline) <> 1
+     OR (SELECT replayed FROM structured_draft_empty_kind_baseline)
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_drafts) <> 2
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> 4
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests) <> 4 THEN
+    RAISE EXCEPTION 'Expected a distinct non-replayed empty Contract Review baseline receipt';
+  END IF;
+END;
+$$;
+
 CREATE TEMP TABLE structured_draft_acceptance_inputs AS
 SELECT
+  :'sales_manager_user_id'::uuid AS sales_manager_user_id,
+  :'outsider_user_id'::uuid AS outsider_user_id,
   :'opportunity_id'::uuid AS opportunity_id,
   :'customer_id'::uuid AS customer_id,
   :'specification_id'::uuid AS specification_id,
@@ -106,7 +129,8 @@ SELECT
   :'alternate_customer_id'::uuid AS alternate_customer_id,
   :'alternate_specification_id'::uuid AS alternate_specification_id,
   :'alternate_master_version_id'::uuid AS alternate_master_version_id,
-  :'request_key_create'::uuid AS request_key_create;
+  :'request_key_create'::uuid AS request_key_create,
+  :'request_key_empty_kind_baseline'::uuid AS request_key_empty_kind_baseline;
 
 DO $$
 DECLARE
@@ -139,10 +163,10 @@ BEGIN
     PERFORM public.save_sales_opportunity_structured_draft_revision(
       v_input.opportunity_id, v_input.customer_id,
       v_input.specification_id, v_input.master_version_id,
-      'CONTRACT_REVIEW', 0,
-      '{}'::jsonb, v_input.request_key_create
+      'PRS', 0,
+      '{}'::jsonb, v_input.request_key_empty_kind_baseline
     );
-    RAISE EXCEPTION 'Expected same request key with a changed document kind/schema to fail';
+    RAISE EXCEPTION 'Expected same empty-payload request key with only document kind/schema changed to fail';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE 'Request key conflicts with a different immutable source, schema, caller, revision, or payload' THEN
       RAISE;
@@ -168,7 +192,6 @@ DO $$
 DECLARE
   v_input record;
   v_before record;
-  v_outsider uuid := :'outsider_user_id'::uuid;
 BEGIN
   SELECT * INTO v_input FROM structured_draft_acceptance_inputs;
   SELECT * INTO v_before FROM structured_draft_negative_counts;
@@ -205,7 +228,7 @@ BEGIN
     IF SQLERRM NOT LIKE 'Structured Sales draft revision conflict' THEN RAISE; END IF;
   END;
 
-  PERFORM set_config('request.jwt.claim.sub', v_outsider::text, true);
+  PERFORM set_config('request.jwt.claim.sub', v_input.outsider_user_id::text, true);
   BEGIN
     PERFORM public.save_sales_opportunity_structured_draft_revision(
       v_input.opportunity_id, v_input.customer_id, v_input.specification_id,
@@ -216,7 +239,7 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE 'Sales management permission is required' THEN RAISE; END IF;
   END;
-  PERFORM set_config('request.jwt.claim.sub', :'sales_manager_user_id', true);
+  PERFORM set_config('request.jwt.claim.sub', v_input.sales_manager_user_id::text, true);
 
   BEGIN
     UPDATE public.sales_opportunity_structured_draft_revisions
