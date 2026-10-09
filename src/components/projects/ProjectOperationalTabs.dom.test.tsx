@@ -18,7 +18,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 function renderDesignInputs() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}><ProjectOperationalTab projectId="project-123" kind="design" /></QueryClientProvider>);
+  return { queryClient, ...render(<QueryClientProvider client={queryClient}><ProjectOperationalTab projectId="project-123" kind="design" /></QueryClientProvider>) };
 }
 
 afterEach(() => {
@@ -52,10 +52,10 @@ describe("ProjectOperationalTab design-input reads", () => {
       id: "input-1", input_code: "DI-001", category: "CUSTOMER", description: "Manual design note", status: "OPEN",
     }], error: null }).mockRejectedValueOnce(new Error("Refresh unavailable"));
 
-    const { rerender } = renderDesignInputs();
+    const { queryClient } = renderDesignInputs();
     expect(await screen.findByText("Manual design note")).toBeInTheDocument();
 
-    rerender(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ProjectOperationalTab projectId="project-123" kind="design" /></QueryClientProvider>);
+    await queryClient.invalidateQueries({ queryKey: ["project_design_inputs", "project-123"] });
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Refresh unavailable"));
     expect(screen.getByText("Manual design note")).toBeInTheDocument();
     expect(screen.getByText("1 recorded · refresh failed")).toBeInTheDocument();
