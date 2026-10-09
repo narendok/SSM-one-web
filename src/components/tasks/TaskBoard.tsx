@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarDays, ChevronDown, FileText, LayoutGrid, List, Plus, SlidersHorizontal, User } from "lucide-react";
@@ -20,10 +20,10 @@ import { TaskDrawer } from "./TaskDrawer";
 
 export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTaskChange }: { projectId?: string; compact?: boolean; assigneeId?: string; taskId?: string; onTaskChange?: (taskId: string | undefined) => void }) {
   const qc = useQueryClient();
-  const navigate = useNavigate();
-  const routeSearch = useSearch({ strict: false }) as { assignee?: string; task?: string } | undefined;
-  const activeAssigneeId = assigneeId ?? routeSearch?.assignee;
-  const activeTaskId = taskId ?? routeSearch?.task;
+  const navigate = useNavigate({ from: "/_authenticated/tasks/" });
+  const routeSearch = useRouterState({ select: (state) => state.location.search }) as { assignee?: string; task?: string };
+  const activeAssigneeId = assigneeId ?? (projectId ? undefined : routeSearch.assignee);
+  const activeTaskId = taskId ?? (projectId ? undefined : routeSearch.task);
   const [view, setView] = useState<"board" | "table">("table");
   const [deps, setDeps] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
@@ -127,7 +127,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
           </Button>
         </div>
         <span className="text-xs text-muted-foreground">{filtered.length} task{filtered.length === 1 ? "" : "s"}{activeAssigneeId ? " for selected assignee" : ""}</span>
-        {activeAssigneeId && !assigneeId && !projectId && <Button variant="ghost" size="sm" onClick={() => void navigate({ search: (previous) => ({ ...previous, assignee: undefined }) })}>Clear assignee</Button>}
+        {activeAssigneeId && !assigneeId && !projectId && <Button variant="ghost" size="sm" onClick={() => void navigate({ search: { assignee: undefined, task: activeTaskId } })}>Clear assignee</Button>}
         <Button className="ml-auto" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New task</Button>
       </div>
 
