@@ -62,4 +62,17 @@ describe("structured Sales local draft HTML renderer", () => {
     expect(html).toContain("Local decision note");
     expect(html).toContain("Proceed");
   });
+
+  it("marks an unavailable source as unverified while preserving exact local edits", () => {
+    const manualScope = "  Keep this local scope exactly.\n  ";
+    const html = renderStructuredSalesLocalDraftHtml("SOR", null, { SCOPE_STATEMENT: manualScope });
+
+    expect(html).toContain("UNVERIFIED — source unavailable");
+    expect(html).toContain("No verified source loaded.");
+    expect(html).not.toContain("Verified preview source");
+    expect(html).not.toContain("Prepared locally from the verified preview source.");
+    expect(html).toContain(manualScope);
+    expect(html).toContain("<pre>TBC</pre>");
+    expect(html).toContain("LOCAL PREVIEW ONLY — NOT A CONTROLLED DOCUMENT");
+  });
 });

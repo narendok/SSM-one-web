@@ -109,5 +109,11 @@ export function renderStructuredSalesLocalDraftHtml(kind: unknown, source: Struc
     ? "Approval status: NOT APPROVED / TBC. Local inputs cannot create a feasibility, commercial, customer, or release approval."
     : "Local inputs are working notes only. They do not create an approval, release, customer commitment, or controlled record.";
 
-  return `<article data-document-kind="${kind}"><header><h1>${titles[kind]}</h1><p>LOCAL PREVIEW ONLY — NOT A CONTROLLED DOCUMENT</p></header><section><h2>Verified preview source</h2>${definitionList(sourceLabels[kind], (key) => sourceValue(source, key))}</section><section><h2>Local working notes</h2><p>${authorityNotice}</p>${definitionList(fieldLabels[kind], (key) => localValue(validated.payload, key))}</section><footer><p>Prepared locally from the verified preview source. This output is source preparation only and does not persist, save, issue, or download a document.</p></footer></article>`;
+  const sourceLoaded = source !== null;
+  const sourceHeading = sourceLoaded ? "Verified preview source" : "UNVERIFIED — source unavailable";
+  const footer = sourceLoaded
+    ? "Prepared locally from the verified preview source. This output is source preparation only and does not persist, save, issue, or download a document."
+    : "No verified source loaded. This output is source preparation only and does not persist, save, issue, or download a document.";
+
+  return `<article data-document-kind="${kind}"><header><h1>${titles[kind]}</h1><p>LOCAL PREVIEW ONLY — NOT A CONTROLLED DOCUMENT</p></header><section><h2>${sourceHeading}</h2>${definitionList(sourceLabels[kind], (key) => sourceValue(source, key))}</section><section><h2>Local working notes</h2><p>${authorityNotice}</p>${definitionList(fieldLabels[kind], (key) => localValue(validated.payload, key))}</section><footer><p>${footer}</p></footer></article>`;
 }
