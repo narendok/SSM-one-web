@@ -8,6 +8,7 @@ import { useState } from "react";
 import { StructuredTemplatePreview } from "./StructuredTemplatePreview";
 import { StructuredPreviewExitDialog } from "./StructuredPreviewExitBoundary";
 import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-template-previews";
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const source = mapMasterSpecificationSource({ opportunityId: "opportunity-id", opportunityNumber: "OPPORTUNITY-2026-0013", opportunityName: "Tracker", customerId: "customer-id", customerName: "SAMPLE ONLY", specificationId: "specification-id", specificationNumber: "MASTER-2026-0001", versionId: "version-id", versionNumber: 1, changeSummary: "Initial intake", savedAt: "2026-10-05T18:37:27.589Z", project: null, specificationData: {} });
 const previewSource = vi.fn();
@@ -29,7 +30,7 @@ function renderPreview() {
 function ProductionExitDialogHarness() {
   const [open, setOpen] = useState(true);
   const [dirty, setDirty] = useState(false);
-  return <><button onClick={() => setOpen(true)}>Reopen preview</button>{open ? <StructuredPreviewExitDialog open={open} onOpenChange={setOpen} dirty={dirty}>{(requestExit) => <><h2>Production proposal preview</h2><button onClick={() => requestExit(() => setOpen(false))}>Back to opportunity</button><StructuredTemplatePreview onDirtyChange={setDirty} /></>}</StructuredPreviewExitDialog> : <p>Exited preview</p>}</>;
+  return <><button onClick={() => setOpen(true)}>Reopen preview</button>{open ? <StructuredPreviewExitDialog open={open} onOpenChange={setOpen} dirty={dirty}>{(requestExit) => <><DialogHeader><DialogTitle>Production proposal preview</DialogTitle><DialogDescription>Mounted production exit coverage.</DialogDescription></DialogHeader><button onClick={() => requestExit(() => setOpen(false))}>Back to opportunity</button><StructuredTemplatePreview onDirtyChange={setDirty} /></>}</StructuredPreviewExitDialog> : <p>Exited preview</p>}</>;
 }
 
 afterEach(() => {
