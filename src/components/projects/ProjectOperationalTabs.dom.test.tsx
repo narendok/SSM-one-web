@@ -42,7 +42,7 @@ describe("ProjectOperationalTab design-input reads", () => {
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
-    await waitFor(() => expect(screen.getByText("Approved customer dimension")).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText("Approved customer dimension").length).toBeGreaterThan(0));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText("1 recorded")).toBeTruthy();
   });
