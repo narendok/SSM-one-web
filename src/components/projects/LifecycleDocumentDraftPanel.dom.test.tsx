@@ -60,7 +60,8 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
 
     renderPanel();
 
-    expect((await screen.findByText("Generated document history could not be loaded with your current access.").closest("[role=alert]")?.textContent).toContain("Generated document history could not be loaded");
+    const initialHistoryError = await screen.findByText("Generated document history could not be loaded with your current access.");
+    expect(initialHistoryError.closest("[role=alert]")?.textContent).toContain("Generated document history could not be loaded");
     expect(screen.queryByText("No generated documents are visible for this project yet.")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Retry history" }));
@@ -79,7 +80,9 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
 
     await queryClient.invalidateQueries({ queryKey: ["lifecycle-generated-documents", "project-123"] });
 
-    await waitFor(() => expect(screen.getByText("Generated document history could not be loaded with your current access.").closest("[role=alert]")?.textContent).toContain("Generated document history could not be loaded"));
+    await waitFor(() => {
+      expect(screen.getByText("Generated document history could not be loaded with your current access.").closest("[role=alert]")?.textContent).toContain("Generated document history could not be loaded");
+    });
     expect(screen.getByText(/DOC-001 · template v2/)).toBeTruthy();
     expect(screen.queryByText("No generated documents are visible for this project yet.")).toBeNull();
   });
