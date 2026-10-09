@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { FormattedPreview } from "./StructuredTemplatePreview";
+import { FormattedPreview, shouldWarnBeforeClosingStructuredPreview } from "./StructuredTemplatePreview";
 import { mapMasterSpecificationSource, serializeLocalTableRows, structuredLifecycleTemplatePreviews } from "@/lib/lifecycle-structured-template-previews";
 
 const source = mapMasterSpecificationSource({ opportunityId: "opportunity-id", opportunityNumber: "OPPORTUNITY-2026-0013", opportunityName: "Tracker", customerId: "customer-id", customerName: "SAMPLE ONLY", specificationId: "specification-id", specificationNumber: "MASTER-2026-0001", versionId: "version-id", versionNumber: 1, changeSummary: "Initial intake", savedAt: "2026-10-05T18:37:27.589Z", project: null, specificationData: {} });
@@ -74,5 +74,12 @@ describe("formatted structured template preview", () => {
     expect(invoicePreview).toContain("Pilot &lt;img src=x&gt;");
     expect(invoicePreview).toContain("24.78");
     expect(renderToStaticMarkup(<FormattedPreview item={skillItem} source={source} userEdits={{}} error={null} controlledText="HR SCOPE REQUIRED" />)).toContain("No employee data was read.");
+  });
+});
+
+describe("local structured preview draft safety", () => {
+  it("warns before leaving only when a local draft has unsaved edits", () => {
+    expect(shouldWarnBeforeClosingStructuredPreview(false)).toBe(false);
+    expect(shouldWarnBeforeClosingStructuredPreview(true)).toBe(true);
   });
 });
