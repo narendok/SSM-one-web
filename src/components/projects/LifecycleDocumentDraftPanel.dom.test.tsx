@@ -38,8 +38,9 @@ const project = {
   project_drive_node_id: "root-123", completion_notes: null, archived_at: null, created_at: "2026-10-09T00:00:00Z", updated_at: "2026-10-09T00:00:00Z",
 };
 
-function renderPanel() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderPanel(initialDocuments?: typeof historyRows) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: initialDocuments ? Infinity : 0 } } });
+  if (initialDocuments) queryClient.setQueryData(["lifecycle-generated-documents", project.id], initialDocuments);
   const root = createRootRoute({ component: () => <LifecycleDocumentDraftPanel project={project} /> });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   return { queryClient, ...render(<QueryClientProvider client={queryClient}><RouterProvider router={router} /></QueryClientProvider>) };
@@ -68,13 +69,10 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
   });
 
   it("keeps cached history visible when a refresh read fails", async () => {
-    historyQuery.mockResolvedValue({ data: historyRows, error: null });
-
-    const { queryClient } = renderPanel();
-    queryClient.setQueryData(["lifecycle-generated-documents", "project-123"], historyRows);
-    expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
-
     historyQuery.mockRejectedValue(new Error("History refresh unavailable"));
+
+    const { queryClient } = renderPanel(historyRows);
+    expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
 
     await queryClient.invalidateQueries({ queryKey: ["lifecycle-generated-documents", "project-123"] });
 
