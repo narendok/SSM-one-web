@@ -81,7 +81,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await user.clear(scope);
     await user.type(scope, "Keep this exact draft");
     await user.click(screen.getByRole("button", { name: "Back" }));
-    const firstDialog = await screen.findByText("Discard unsaved local edits?").then((title) => title.closest("[role=alertdialog]"));
+    const firstDialog = await screen.findByText("Discard unsaved local edits?").then((title) => title.closest("[role=alertdialog]") as HTMLElement | null);
     if (!firstDialog) throw new Error("Discard confirmation did not open.");
     expect(within(firstDialog).getByText("Discard unsaved local edits?")).toBeTruthy();
     await user.click(within(firstDialog).getByRole("button", { name: "Keep editing" }));
