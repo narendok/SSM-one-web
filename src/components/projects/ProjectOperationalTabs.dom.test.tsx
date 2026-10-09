@@ -56,7 +56,7 @@ describe("ProjectOperationalTab design-input reads", () => {
     expect((await screen.findAllByText("Manual design note")).length).toBeGreaterThan(0);
 
     await queryClient.invalidateQueries({ queryKey: ["project_design_inputs", "project-123"] });
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Refresh unavailable"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Refresh unavailable"));
     expect(screen.getAllByText("Manual design note").length).toBeGreaterThan(0);
     expect(screen.getByText("1 recorded · refresh failed")).toBeTruthy();
   });
