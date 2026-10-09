@@ -32,10 +32,14 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
   const [openId, setOpenId] = useState<string | null>(activeTaskId ?? null);
   const [dragId, setDragId] = useState<string | null>(null);
 
-  const { data: tasks = [], isLoading } = useQuery({
+  const { data, error, isError, isLoading, refetch } = useQuery({
     queryKey: ["project_tasks", projectId ?? "all"],
     queryFn: () => fetchTasks(projectId),
   });
+  const tasks = data ?? [];
+  const hasTaskData = data !== undefined;
+  const initialReadFailed = isError && !hasTaskData;
+  const readError = error instanceof Error ? error.message : "Read unavailable";
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -113,7 +117,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
           </PopoverTrigger>
           <PopoverContent align="start" className="w-60 p-2">
             <div className="space-y-1">
-              {DEPARTMENTS.map((department) => <label key={department.value} className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"><Checkbox checked={deps.has(department.value)} onCheckedChange={() => toggleDep(department.value)} /><span className={cn("size-2 rounded-full", department.dot)} /><span className="flex-1">{department.label}</span><span className="text-xs text-muted-foreground">{tasks.filter((task) => task.department === department.value).length}</span></label>)}
+              {DEPARTMENTS.map((department) => <label key={department.value} className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"><Checkbox checked={deps.has(department.value)} onCheckedChange={() => toggleDep(department.value)} /><span className={cn("size-2 rounded-full", department.dot)} /><span className="flex-1">{department.label}</span>{hasTaskData && <span className="text-xs text-muted-foreground">{tasks.filter((task) => task.department === department.value).length}</span>}</label>)}
             </div>
             {deps.size > 0 && <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setDeps(new Set())}>Clear filters</Button>}
           </PopoverContent>
@@ -126,14 +130,20 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
             <List className="h-4 w-4" /> Table
           </Button>
         </div>
-        <span className="text-xs text-muted-foreground">{filtered.length} task{filtered.length === 1 ? "" : "s"}{activeAssigneeId ? " for selected assignee" : ""}</span>
+        {hasTaskData && <span className="text-xs text-muted-foreground">{filtered.length} task{filtered.length === 1 ? "" : "s"}{activeAssigneeId ? " for selected assignee" : ""}{isError ? " · refresh failed" : ""}</span>}
         {activeAssigneeId && !assigneeId && !projectId && <Button variant="ghost" size="sm" onClick={() => void navigate({ to: "/tasks", search: { assignee: undefined, task: activeTaskId } })}>Clear assignee</Button>}
         <Button className="ml-auto" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New task</Button>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading tasks…</p>}
+      {isError && (
+        <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+          <span>{hasTaskData ? `These records could not be refreshed. ${readError}` : `These records could not be loaded. ${readError}`}</span>
+          <Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button>
+        </div>
+      )}
 
-      {!isLoading && view === "board" && (
+      {!isLoading && !initialReadFailed && view === "board" && (
         <div className={cn("grid gap-3", compact ? "md:grid-cols-3 xl:grid-cols-5" : "md:grid-cols-3 xl:grid-cols-5")}>
           {TASK_STATUSES.map((col) => (
             <div
@@ -183,7 +193,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
         </div>
       )}
 
-      {!isLoading && view === "table" && (
+      {!isLoading && !initialReadFailed && view === "table" && (
         <Card className="overflow-x-auto">
           <Table>
             <TableHeader>

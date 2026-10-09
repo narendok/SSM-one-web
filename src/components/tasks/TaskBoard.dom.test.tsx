@@ -28,8 +28,8 @@ const tasks = [{
   project: { id: "project-123", name: "Project One", code: "PROJECT-2026-0005", color: "blue" },
 }];
 
-function renderBoard(initialEntry: string, embedded: boolean) {
-  fetchTasks.mockResolvedValue(tasks);
+function renderBoard(initialEntry: string, embedded: boolean, setupFetch: () => void = () => fetchTasks.mockResolvedValue(tasks)) {
+  setupFetch();
   const root = createRootRoute({ component: Outlet });
   const authenticated = createRoute({ getParentRoute: () => root, id: "_authenticated", component: Outlet });
   const tasksLayout = createRoute({ getParentRoute: () => authenticated, path: "tasks", component: Outlet });
@@ -66,5 +66,38 @@ describe("TaskBoard route ownership", () => {
     await user.click(screen.getByRole("button", { name: "Clear assignee" }));
     await waitFor(() => expect(router.state.location.search).toEqual({ task: "task-1" }));
     expect(router.state.location.pathname).toBe("/tasks");
+  });
+});
+
+describe("TaskBoard task reads", () => {
+  it("shows an initial read failure without an empty task count or empty-state message, then retries successfully", async () => {
+    const user = userEvent.setup();
+    renderBoard("/tasks", false, () => {
+      fetchTasks.mockRejectedValueOnce(new Error("Read unavailable")).mockResolvedValueOnce(tasks);
+    });
+
+    expect((await screen.findByRole("alert")).textContent).toContain("These records could not be loaded. Read unavailable");
+    expect(screen.queryByText("0 tasks")).toBeNull();
+    expect(screen.queryByText("No tasks match.")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect((await screen.findByText("Project route task")).textContent).toBe("Project route task");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("1 task")).toBeTruthy();
+  });
+
+  it("keeps cached tasks visible when a refresh fails", async () => {
+    const { client } = renderBoard("/tasks", false, () => {
+      fetchTasks.mockResolvedValueOnce(tasks).mockRejectedValueOnce(new Error("Refresh unavailable"));
+    });
+
+    expect((await screen.findByText("Project route task")).textContent).toBe("Project route task");
+
+    await client.invalidateQueries({ queryKey: ["project_tasks", "all"] });
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("These records could not be refreshed. Refresh unavailable"));
+    expect(screen.getByText("Project route task")).toBeTruthy();
+    expect(screen.getByText("1 task · refresh failed")).toBeTruthy();
   });
 });
