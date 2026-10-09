@@ -84,10 +84,35 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(screen.queryByText(/The source pin advanced while local edits exist/)).toBeNull();
     await user.clear(scope);
     await user.type(scope, "Keep this manual scope exactly.");
+    await waitFor(() => expect(screen.getByText(/Local edits are unsaved/)).toBeTruthy());
     client.setQueryData(["structured-template-source", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1], { ...source, versionId: "amended-version-id", sourceFields: { ...source.sourceFields, REQUIREMENT_SUMMARY: "Amended source summary" } });
     await waitFor(() => expect(screen.getByText(/The source pin advanced while local edits exist/)).toBeTruthy());
     expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep this manual scope exactly.");
     expect(screen.getByText("Amended source summary")).toBeTruthy();
+  });
+
+  it("uses a clean amended source as the next edit baseline without overwriting manual text", async () => {
+    previewSource.mockResolvedValue(source);
+    const user = userEvent.setup();
+    const { client } = (() => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(<QueryClientProvider client={client}><StructuredTemplatePreview /></QueryClientProvider>);
+      return { client };
+    })();
+    const queryKey = ["structured-template-source", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1];
+    await screen.findByLabelText("Scope statement");
+    client.setQueryData(queryKey, { ...source, versionId: "clean-amended-version-id" });
+    await waitFor(() => expect(screen.getByText("clean-amended-version-id")).toBeTruthy());
+    expect(screen.queryByText(/The source pin advanced while local edits exist/)).toBeNull();
+
+    const scope = screen.getByLabelText("Scope statement");
+    await user.clear(scope);
+    await user.type(scope, "Keep this exact text after the clean amendment.");
+    expect(screen.queryByText(/The source pin advanced while local edits exist/)).toBeNull();
+
+    client.setQueryData(queryKey, { ...source, versionId: "dirty-amended-version-id" });
+    await waitFor(() => expect(screen.getByText(/The source pin advanced while local edits exist/)).toBeTruthy());
+    expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep this exact text after the clean amendment.");
   });
 
   it("uses the production Radix dialog dismissal guard for Escape and outside interactions, retaining edits until discard", async () => {
