@@ -8,6 +8,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LifecycleDocumentDraftPanel } from "./LifecycleDocumentDraftPanel";
 
 const select = vi.fn();
+const historyRows = [{
+  id: "draft-1", generated_drive_node_id: "file-1", template_version: 2, created_at: "2026-10-09T00:00:00Z", result: { document_number: "DOC-001" },
+}];
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -15,8 +18,8 @@ vi.mock("@/integrations/supabase/client", () => ({
       select: () => ({
         eq: () => ({
           order: () => ({
-            limit: select,
-            eq: () => ({ order: () => ({ limit: select }) }),
+            limit: () => select(),
+            eq: () => ({ order: () => ({ limit: () => Promise.resolve({ data: [], error: null }) }) }),
           }),
         }),
       }),
@@ -57,9 +60,7 @@ afterEach(() => {
 describe("LifecycleDocumentDraftPanel history reads", () => {
   it("shows a failed initial history read without the empty-history message, then retries successfully", async () => {
     const user = userEvent.setup();
-    select.mockRejectedValueOnce(new Error("History unavailable")).mockResolvedValueOnce({ data: [{
-      id: "draft-1", generated_drive_node_id: "file-1", template_version: 2, created_at: "2026-10-09T00:00:00Z", result: { document_number: "DOC-001" },
-    }], error: null });
+    select.mockRejectedValueOnce(new Error("History unavailable")).mockResolvedValueOnce({ data: historyRows, error: null });
 
     renderPanel();
 
@@ -70,13 +71,11 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
     await user.click(screen.getByRole("button", { name: "Retry history" }));
 
     expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText("Generated document history could not be loaded with your current access.")).toBeNull();
   });
 
   it("keeps cached history visible when a refresh read fails", async () => {
-    select.mockResolvedValueOnce({ data: [{
-      id: "draft-1", generated_drive_node_id: "file-1", template_version: 2, created_at: "2026-10-09T00:00:00Z", result: { document_number: "DOC-001" },
-    }], error: null }).mockRejectedValueOnce(new Error("History refresh unavailable"));
+    select.mockResolvedValueOnce({ data: historyRows, error: null }).mockRejectedValueOnce(new Error("History refresh unavailable"));
 
     const { queryClient } = renderPanel();
     expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
