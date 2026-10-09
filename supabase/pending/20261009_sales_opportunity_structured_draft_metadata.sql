@@ -52,8 +52,7 @@ CREATE TABLE public.sales_opportunity_structured_draft_revisions (
   source_fingerprint text NOT NULL CHECK (source_fingerprint ~ '^[a-f0-9]{64}$'),
   created_by uuid NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (draft_id, revision_number),
-  UNIQUE (draft_id, payload_hash)
+  UNIQUE (draft_id, revision_number)
 );
 GRANT SELECT ON public.sales_opportunity_structured_draft_revisions TO authenticated;
 GRANT ALL ON public.sales_opportunity_structured_draft_revisions TO service_role;
@@ -73,6 +72,14 @@ CREATE POLICY "Sales actors view their structured draft revision history"
 CREATE TABLE public.sales_opportunity_structured_draft_requests (
   request_key uuid PRIMARY KEY,
   requested_by uuid NOT NULL,
+  opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id) ON DELETE RESTRICT,
+  customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
+  master_specification_id uuid NOT NULL REFERENCES public.master_specifications(id) ON DELETE RESTRICT,
+  master_specification_version_id uuid NOT NULL REFERENCES public.master_specification_versions(id) ON DELETE RESTRICT,
+  master_specification_version_number integer NOT NULL CHECK (master_specification_version_number > 0),
+  document_kind text NOT NULL CHECK (document_kind IN ('SOR', 'CONTRACT_REVIEW', 'PRS')),
+  editable_schema_key text NOT NULL CHECK (editable_schema_key IN ('sales-local-scalar-v1')),
+  editable_schema_hash text NOT NULL CHECK (editable_schema_hash ~ '^[a-f0-9]{64}$'),
   draft_id uuid NOT NULL REFERENCES public.sales_opportunity_structured_drafts(id) ON DELETE RESTRICT,
   revision_id uuid NOT NULL REFERENCES public.sales_opportunity_structured_draft_revisions(id) ON DELETE RESTRICT,
   operation text NOT NULL CHECK (operation IN ('CREATE', 'SAVE_REVISION')),
@@ -142,7 +149,7 @@ DECLARE
   v_canonical jsonb := '{}'::jsonb;
   v_total_length integer := 0;
 BEGIN
-  IF jsonb_typeof(p_payload) <> 'object' THEN
+  IF p_payload IS NULL OR jsonb_typeof(p_payload) IS DISTINCT FROM 'object' THEN
     RAISE EXCEPTION 'Structured Sales payload must be an object';
   END IF;
   CASE p_document_kind
@@ -159,18 +166,20 @@ BEGIN
     RAISE EXCEPTION 'Structured Sales payload contains an unknown or derived field';
   END IF;
   FOREACH v_key IN ARRAY v_allowed LOOP
-    IF NOT (p_payload ? v_key) THEN
-      RAISE EXCEPTION 'Structured Sales payload is missing editable field %', v_key;
+    IF p_payload ? v_key THEN
+      v_value := p_payload -> v_key;
+      IF jsonb_typeof(v_value) <> 'string' THEN
+        RAISE EXCEPTION 'Structured Sales editable field % must be a string', v_key;
+      END IF;
+      IF char_length(v_value #>> '{}') > CASE
+        WHEN p_document_kind = 'PRS' AND v_key = 'VERIFICATION_METHOD' THEN 1000
+        ELSE 8000
+      END THEN
+        RAISE EXCEPTION 'Structured Sales editable field % exceeds its proposed local character limit', v_key;
+      END IF;
+      v_total_length := v_total_length + char_length(v_value #>> '{}');
+      v_canonical := v_canonical || jsonb_build_object(v_key, v_value #>> '{}');
     END IF;
-    v_value := p_payload -> v_key;
-    IF jsonb_typeof(v_value) <> 'string' THEN
-      RAISE EXCEPTION 'Structured Sales editable field % must be a string', v_key;
-    END IF;
-    IF char_length(v_value #>> '{}') > 8000 THEN
-      RAISE EXCEPTION 'Structured Sales editable field % exceeds 8000 characters', v_key;
-    END IF;
-    v_total_length := v_total_length + char_length(v_value #>> '{}');
-    v_canonical := v_canonical || jsonb_build_object(v_key, v_value #>> '{}');
   END LOOP;
   IF v_total_length > 48000 THEN
     RAISE EXCEPTION 'Structured Sales payload exceeds 48000 total characters';
@@ -255,22 +264,8 @@ BEGIN
   PERFORM pg_advisory_xact_lock(hashtextextended(
     concat_ws('|', p_opportunity_id::text, p_master_specification_version_id::text, p_document_kind, v_schema_hash), 0
   ));
-  -- Lock order: logical draft identity -> request receipt -> opportunity -> specification -> source version.
-  SELECT * INTO v_request
-  FROM public.sales_opportunity_structured_draft_requests
-  WHERE request_key = p_request_key
-  FOR UPDATE;
-  IF FOUND THEN
-    IF v_request.requested_by = v_actor_id
-      AND v_request.expected_revision_number = p_expected_revision_number
-      AND v_request.payload_hash = v_payload_hash THEN
-      RETURN QUERY SELECT v_request.draft_id, v_request.revision_id,
-        (SELECT revision_number FROM public.sales_opportunity_structured_draft_revisions WHERE id = v_request.revision_id), true;
-      RETURN;
-    END IF;
-    RAISE EXCEPTION 'Request key conflicts with a different caller or payload';
-  END IF;
-
+  -- Lock order: logical draft identity -> opportunity -> specification -> source version -> request receipt.
+  -- Source and authorization are verified before any replay receipt may be returned.
   SELECT * INTO v_opportunity
   FROM public.sales_opportunities
   WHERE id = p_opportunity_id AND customer_id = p_customer_id
@@ -299,6 +294,32 @@ BEGIN
     p_opportunity_id, p_customer_id, v_specification.id, v_version.id, v_version.version_number,
     p_document_kind, v_schema_hash, v_version.specification_data, v_version.created_at
   );
+
+  SELECT * INTO v_request
+  FROM public.sales_opportunity_structured_draft_requests AS request_receipt
+  WHERE request_receipt.request_key = p_request_key
+  FOR UPDATE;
+  IF FOUND THEN
+    IF v_request.requested_by = v_actor_id
+      AND v_request.opportunity_id = p_opportunity_id
+      AND v_request.customer_id = p_customer_id
+      AND v_request.master_specification_id = v_specification.id
+      AND v_request.master_specification_version_id = v_version.id
+      AND v_request.master_specification_version_number = v_version.version_number
+      AND v_request.document_kind = p_document_kind
+      AND v_request.editable_schema_key = 'sales-local-scalar-v1'
+      AND v_request.editable_schema_hash = v_schema_hash
+      AND v_request.expected_revision_number = p_expected_revision_number
+      AND v_request.payload_hash = v_payload_hash
+      AND v_request.source_fingerprint = v_source_fingerprint THEN
+      RETURN QUERY SELECT v_request.draft_id, v_request.revision_id,
+        (SELECT stored_revision.revision_number
+         FROM public.sales_opportunity_structured_draft_revisions AS stored_revision
+         WHERE stored_revision.id = v_request.revision_id), true;
+      RETURN;
+    END IF;
+    RAISE EXCEPTION 'Request key conflicts with a different immutable source, schema, caller, revision, or payload';
+  END IF;
 
   SELECT * INTO v_draft
   FROM public.sales_opportunity_structured_drafts
@@ -333,9 +354,9 @@ BEGIN
       RAISE EXCEPTION 'Structured Sales draft source or actor mismatch';
     END IF;
     SELECT * INTO v_revision
-    FROM public.sales_opportunity_structured_draft_revisions
-    WHERE draft_id = v_draft.id
-    ORDER BY revision_number DESC
+    FROM public.sales_opportunity_structured_draft_revisions AS draft_revision
+    WHERE draft_revision.draft_id = v_draft.id
+    ORDER BY draft_revision.revision_number DESC
     LIMIT 1
     FOR UPDATE;
     IF NOT FOUND OR v_revision.revision_number <> p_expected_revision_number THEN
@@ -357,10 +378,14 @@ BEGIN
     v_payload, v_payload_hash, v_source_fingerprint, v_actor_id
   ) RETURNING * INTO v_revision;
   INSERT INTO public.sales_opportunity_structured_draft_requests (
-    request_key, requested_by, draft_id, revision_id, operation,
+    request_key, requested_by, opportunity_id, customer_id, master_specification_id,
+    master_specification_version_id, master_specification_version_number, document_kind,
+    editable_schema_key, editable_schema_hash, draft_id, revision_id, operation,
     expected_revision_number, payload_hash, source_fingerprint
   ) VALUES (
-    p_request_key, v_actor_id, v_draft.id, v_revision.id, v_operation,
+    p_request_key, v_actor_id, p_opportunity_id, p_customer_id, v_specification.id,
+    v_version.id, v_version.version_number, p_document_kind,
+    'sales-local-scalar-v1', v_schema_hash, v_draft.id, v_revision.id, v_operation,
     p_expected_revision_number, v_payload_hash, v_source_fingerprint
   );
   RETURN QUERY SELECT v_draft.id, v_revision.id, v_revision.revision_number, false;
