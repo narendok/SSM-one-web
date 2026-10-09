@@ -65,4 +65,10 @@ describe("server-owned lifecycle document preflight", () => {
     await expect(loadLifecycleDocumentPreflight(client({ department_process_template_document_revisions: { id: ids.revision, template_id: "other", content: "{{PROJECT_CODE}}" } }), input)).rejects.toThrow("does not belong");
     await expect(loadLifecycleDocumentPreflight(client({ drive_nodes: { id: ids.target, project_id: "other", department_id: ids.department, node_type: "FILE", is_trashed: false } }), input)).rejects.toThrow("outside");
   });
+
+  it("rejects an inactive source department before rendering or fingerprinting a draft", async () => {
+    await expect(loadLifecycleDocumentPreflight(client({
+      departments: { id: ids.department, name: "Hardware & R&D", is_active: false },
+    }), input)).rejects.toThrow("active source department");
+  });
 });

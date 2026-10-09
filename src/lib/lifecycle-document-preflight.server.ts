@@ -108,6 +108,9 @@ export async function loadLifecycleDocumentPreflight(
     .eq("id", typedProject.department_id)
     .maybeSingle();
   if (departmentError || !department) fail(departmentError, "Owning department was not found.");
+  if (!(department as DepartmentRow).is_active) {
+    throw new Error("Project must belong to the active source department.");
+  }
 
   const fields = mapLifecycleProjectDocumentFields(typedProject, department as DepartmentRow);
   const rendered = renderLifecycleDocument({
