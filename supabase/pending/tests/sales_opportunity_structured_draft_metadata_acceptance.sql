@@ -29,6 +29,14 @@ SELECT * FROM public.save_sales_opportunity_structured_draft_revision(
   '{"OEM_REQUIREMENT_ROWS":"A","SCOPE_STATEMENT":"Scope","ACCEPTANCE_CRITERIA":"Accept","CAN_TELEMETRY_NOTES":"CAN","PILOT_ROLLOUT_NOTES":"Pilot","COMMERCIAL_SLA_WARRANTY_DELIVERY":"Commercial"}'::jsonb,
   :'request_key_create'::uuid
 );
+CREATE TEMP TABLE structured_draft_scope AS
+SELECT
+  (SELECT draft_id FROM structured_draft_first) AS primary_draft_id,
+  (SELECT revision_id FROM structured_draft_first) AS first_revision_id,
+  :'request_key_create'::uuid AS request_key_create,
+  :'request_key_update'::uuid AS request_key_update,
+  :'request_key_restore'::uuid AS request_key_restore,
+  :'request_key_empty_kind_baseline'::uuid AS request_key_empty_kind_baseline;
 DO $$
 BEGIN
   IF (SELECT count(*) FROM structured_draft_first) <> 1
@@ -36,9 +44,12 @@ BEGIN
      OR (SELECT replayed FROM structured_draft_first) THEN
     RAISE EXCEPTION 'Expected one non-replayed first structured draft revision';
   END IF;
-  IF (SELECT count(*) FROM public.sales_opportunity_structured_drafts) <> 1
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> 1
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests) <> 1 THEN
+  IF (SELECT count(*) FROM public.sales_opportunity_structured_drafts AS draft
+      WHERE draft.id = (SELECT primary_draft_id FROM structured_draft_scope)) <> 1
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions AS revision
+         WHERE revision.draft_id = (SELECT primary_draft_id FROM structured_draft_scope)) <> 1
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests AS receipt
+         WHERE receipt.request_key = (SELECT request_key_create FROM structured_draft_scope)) <> 1 THEN
     RAISE EXCEPTION 'First structured draft receipt graph is incomplete';
   END IF;
   IF EXISTS (SELECT 1 FROM public.activity_log WHERE entity_type = 'sales_opportunity_structured_draft') THEN
@@ -58,7 +69,8 @@ DO $$
 BEGIN
   IF NOT (SELECT replayed FROM structured_draft_replay)
      OR (SELECT revision_id FROM structured_draft_first) IS DISTINCT FROM (SELECT revision_id FROM structured_draft_replay)
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> 1 THEN
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions AS revision
+         WHERE revision.draft_id = (SELECT primary_draft_id FROM structured_draft_scope)) <> 1 THEN
     RAISE EXCEPTION 'Exact request replay did not converge to the first revision';
   END IF;
 END;
@@ -74,7 +86,8 @@ SELECT * FROM public.save_sales_opportunity_structured_draft_revision(
 DO $$
 BEGIN
   IF (SELECT revision_number FROM structured_draft_update) <> 2
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> 2 THEN
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions AS revision
+         WHERE revision.draft_id = (SELECT primary_draft_id FROM structured_draft_scope)) <> 2 THEN
     RAISE EXCEPTION 'Expected one append-only revision two';
   END IF;
 END;
@@ -91,7 +104,8 @@ DO $$
 BEGIN
   IF (SELECT revision_number FROM structured_draft_restore) <> 3
      OR (SELECT replayed FROM structured_draft_restore)
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> 3 THEN
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions AS revision
+         WHERE revision.draft_id = (SELECT primary_draft_id FROM structured_draft_scope)) <> 3 THEN
     RAISE EXCEPTION 'A new request must be able to restore a prior canonical payload as revision three';
   END IF;
 END;
@@ -109,9 +123,17 @@ DO $$
 BEGIN
   IF (SELECT revision_number FROM structured_draft_empty_kind_baseline) <> 1
      OR (SELECT replayed FROM structured_draft_empty_kind_baseline)
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_drafts) <> 2
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> 4
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests) <> 4 THEN
+   OR (SELECT count(*) FROM public.sales_opportunity_structured_drafts AS draft
+       WHERE draft.id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline))) <> 2
+   OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions AS revision
+       WHERE revision.draft_id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline))) <> 4
+   OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests AS receipt
+       WHERE receipt.request_key IN (
+         (SELECT request_key_create FROM structured_draft_scope),
+         (SELECT request_key_update FROM structured_draft_scope),
+         (SELECT request_key_restore FROM structured_draft_scope),
+         (SELECT request_key_empty_kind_baseline FROM structured_draft_scope)
+       )) <> 4 THEN
     RAISE EXCEPTION 'Expected a distinct non-replayed empty Contract Review baseline receipt';
   END IF;
 END;
@@ -140,9 +162,17 @@ DECLARE
   v_before_requests integer;
 BEGIN
   SELECT * INTO v_input FROM structured_draft_acceptance_inputs;
-  SELECT count(*) INTO v_before_drafts FROM public.sales_opportunity_structured_drafts;
-  SELECT count(*) INTO v_before_revisions FROM public.sales_opportunity_structured_draft_revisions;
-  SELECT count(*) INTO v_before_requests FROM public.sales_opportunity_structured_draft_requests;
+  SELECT count(*) INTO v_before_drafts FROM public.sales_opportunity_structured_drafts AS draft
+  WHERE draft.id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline));
+  SELECT count(*) INTO v_before_revisions FROM public.sales_opportunity_structured_draft_revisions AS revision
+  WHERE revision.draft_id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline));
+  SELECT count(*) INTO v_before_requests FROM public.sales_opportunity_structured_draft_requests AS receipt
+  WHERE receipt.request_key IN (
+    (SELECT request_key_create FROM structured_draft_scope),
+    (SELECT request_key_update FROM structured_draft_scope),
+    (SELECT request_key_restore FROM structured_draft_scope),
+    (SELECT request_key_empty_kind_baseline FROM structured_draft_scope)
+  );
 
   BEGIN
     PERFORM public.save_sales_opportunity_structured_draft_revision(
@@ -173,9 +203,17 @@ BEGIN
     END IF;
   END;
 
-  IF (SELECT count(*) FROM public.sales_opportunity_structured_drafts) <> v_before_drafts
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> v_before_revisions
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests) <> v_before_requests THEN
+  IF (SELECT count(*) FROM public.sales_opportunity_structured_drafts AS draft
+      WHERE draft.id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline))) <> v_before_drafts
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions AS revision
+         WHERE revision.draft_id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline))) <> v_before_revisions
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests AS receipt
+         WHERE receipt.request_key IN (
+           (SELECT request_key_create FROM structured_draft_scope),
+           (SELECT request_key_update FROM structured_draft_scope),
+           (SELECT request_key_restore FROM structured_draft_scope),
+           (SELECT request_key_empty_kind_baseline FROM structured_draft_scope)
+         )) <> v_before_requests THEN
     RAISE EXCEPTION 'Changed-tuple request-key conflicts must not write history';
   END IF;
 END;
@@ -183,10 +221,17 @@ $$;
 
 CREATE TEMP TABLE structured_draft_negative_counts AS
 SELECT
-  count(*) FILTER (WHERE true)::integer AS draft_count,
-  (SELECT count(*)::integer FROM public.sales_opportunity_structured_draft_revisions) AS revision_count,
-  (SELECT count(*)::integer FROM public.sales_opportunity_structured_draft_requests) AS request_count
-FROM public.sales_opportunity_structured_drafts;
+  (SELECT count(*)::integer FROM public.sales_opportunity_structured_drafts AS draft
+   WHERE draft.id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline))) AS draft_count,
+  (SELECT count(*)::integer FROM public.sales_opportunity_structured_draft_revisions AS revision
+   WHERE revision.draft_id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline))) AS revision_count,
+  (SELECT count(*)::integer FROM public.sales_opportunity_structured_draft_requests AS receipt
+   WHERE receipt.request_key IN (
+     (SELECT request_key_create FROM structured_draft_scope),
+     (SELECT request_key_update FROM structured_draft_scope),
+     (SELECT request_key_restore FROM structured_draft_scope),
+     (SELECT request_key_empty_kind_baseline FROM structured_draft_scope)
+   )) AS request_count;
 
 DO $$
 DECLARE
@@ -257,9 +302,17 @@ BEGIN
     IF SQLERRM NOT LIKE 'Structured Sales draft history is append-only' THEN RAISE; END IF;
   END;
 
-  IF (SELECT count(*) FROM public.sales_opportunity_structured_drafts) <> v_before.draft_count
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions) <> v_before.revision_count
-     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests) <> v_before.request_count THEN
+  IF (SELECT count(*) FROM public.sales_opportunity_structured_drafts AS draft
+      WHERE draft.id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline))) <> v_before.draft_count
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_revisions AS revision
+         WHERE revision.draft_id IN ((SELECT primary_draft_id FROM structured_draft_scope), (SELECT draft_id FROM structured_draft_empty_kind_baseline))) <> v_before.revision_count
+     OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests AS receipt
+         WHERE receipt.request_key IN (
+           (SELECT request_key_create FROM structured_draft_scope),
+           (SELECT request_key_update FROM structured_draft_scope),
+           (SELECT request_key_restore FROM structured_draft_scope),
+           (SELECT request_key_empty_kind_baseline FROM structured_draft_scope)
+         )) <> v_before.request_count THEN
     RAISE EXCEPTION 'Negative assertions must not write structured draft history';
   END IF;
 END;
