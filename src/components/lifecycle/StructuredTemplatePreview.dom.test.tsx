@@ -1,12 +1,12 @@
 /** @vitest-environment jsdom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import { StructuredTemplatePreview } from "./StructuredTemplatePreview";
-import { StructuredPreviewExitBoundary } from "./StructuredPreviewExitBoundary";
+import { StructuredPreviewExitDialog } from "./StructuredPreviewExitBoundary";
 import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-template-previews";
 
 const source = mapMasterSpecificationSource({ opportunityId: "opportunity-id", opportunityNumber: "OPPORTUNITY-2026-0013", opportunityName: "Tracker", customerId: "customer-id", customerName: "SAMPLE ONLY", specificationId: "specification-id", specificationNumber: "MASTER-2026-0001", versionId: "version-id", versionNumber: 1, changeSummary: "Initial intake", savedAt: "2026-10-05T18:37:27.589Z", project: null, specificationData: {} });
@@ -26,11 +26,10 @@ function renderPreview() {
   return render(<QueryClientProvider client={client}><StructuredTemplatePreview /></QueryClientProvider>);
 }
 
-function ProductionExitBoundaryHarness() {
+function ProductionExitDialogHarness() {
   const [open, setOpen] = useState(true);
   const [dirty, setDirty] = useState(false);
-  if (!open) return <p>Exited preview</p>;
-  return <StructuredPreviewExitBoundary dirty={dirty}>{(requestExit) => <><button onClick={() => requestExit(() => setOpen(false))}>Back</button><button aria-label="Close preview" onClick={() => requestExit(() => setOpen(false))}>Close</button><StructuredTemplatePreview onDirtyChange={setDirty} /></>}</StructuredPreviewExitBoundary>;
+  return <><button onClick={() => setOpen(true)}>Reopen preview</button>{open ? <StructuredPreviewExitDialog open={open} onOpenChange={setOpen} dirty={dirty}>{() => <><h2>Production proposal preview</h2><StructuredTemplatePreview onDirtyChange={setDirty} /></>}</StructuredPreviewExitDialog> : <p>Exited preview</p>}</>;
 }
 
 afterEach(() => {
@@ -72,22 +71,27 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(await screen.findByText(/Authorized source could not be loaded: denied by mock/)).toBeTruthy();
   });
 
-  it("uses the production exit boundary to retain local edits after Back or Close cancellation, then exits only after discard", async () => {
+  it("uses the production Radix dialog dismissal guard for Escape and outside interactions, retaining edits until discard", async () => {
     previewSource.mockResolvedValue(source);
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><ProductionExitBoundaryHarness /></QueryClientProvider>);
+    render(<QueryClientProvider client={client}><ProductionExitDialogHarness /></QueryClientProvider>);
     const scope = await screen.findByLabelText("Scope statement");
     await user.clear(scope);
     await user.type(scope, "Keep this exact draft");
-    await user.click(screen.getByRole("button", { name: "Back" }));
+    await user.keyboard("{Escape}");
     const firstDialog = await screen.findByText("Discard unsaved local edits?").then((title) => title.closest("[role=alertdialog]") as HTMLElement | null);
     if (!firstDialog) throw new Error("Discard confirmation did not open.");
     expect(within(firstDialog).getByText("Discard unsaved local edits?")).toBeTruthy();
     await user.click(within(firstDialog).getByRole("button", { name: "Keep editing" }));
     expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep this exact draft");
-    await user.click(screen.getByRole("button", { name: "Close preview" }));
+    fireEvent.pointerDown(document.body);
+    fireEvent.click(document.body);
+    expect(await screen.findByText("Discard unsaved local edits?")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Discard edits" }));
     await waitFor(() => expect(screen.getByText("Exited preview")).toBeTruthy());
+    await user.click(screen.getByRole("button", { name: "Reopen preview" }));
+    expect((await screen.findByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("TBC");
+    expect((screen.getByRole("button", { name: "Refresh source" }) as HTMLButtonElement).disabled).toBe(false);
   });
 });
