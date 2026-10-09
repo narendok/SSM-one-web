@@ -90,7 +90,7 @@ export function OpportunityDialog({ open, onOpenChange, customers, contacts, enq
       setCompletedSave(completed); setKnownOpportunity(null);
       try {
         await refresh(queryClient);
-        toast.success(`Proposed project ${opportunity.opportunityNumber} saved with ${receipt.specificationNumber} rev ${receipt.versionNumber}`); onOpenChange(false);
+        toast.success(`Proposed project ${opportunity.opportunityNumber} saved with ${receipt.specificationNumber} rev ${receipt.versionNumber}`); resetCompletedDraft(); onOpenChange(false);
       } catch (cause) {
         setRefreshError(cause instanceof Error ? cause.message : "The sales list could not be refreshed.");
         toast.success(`Proposed project ${opportunity.opportunityNumber} saved with ${receipt.specificationNumber} rev ${receipt.versionNumber}.`);
