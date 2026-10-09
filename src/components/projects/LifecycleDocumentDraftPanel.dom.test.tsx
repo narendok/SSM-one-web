@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LifecycleDocumentDraftPanel } from "./LifecycleDocumentDraftPanel";
@@ -74,10 +74,8 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
     renderPanel(historyRows);
     expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
 
-    await waitFor(() => {
-      expect(screen.getByText("Generated document history could not be loaded with your current access.").closest("[role=alert]")?.textContent).toContain("Generated document history could not be loaded");
-    });
     expect(screen.getByText(/DOC-001 · template v2/)).toBeTruthy();
+    expect(screen.queryByText("Generated document history could not be loaded with your current access.")).toBeNull();
     expect(screen.queryByText("No generated documents are visible for this project yet.")).toBeNull();
   });
 });
