@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AssignedFeasibilityDialog } from "./SalesLifecycleDialogs";
 
 const review = {
@@ -14,6 +14,8 @@ const review = {
   department: { id: "department-1", name: "Hardware" },
 };
 
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+
 function renderDialog(provenanceError: string | null, reviews = [review]) {
   return render(<AssignedFeasibilityDialog open onOpenChange={() => undefined} reviews={reviews as any} provenanceError={provenanceError} />);
 }
@@ -24,6 +26,14 @@ async function selectReview() {
 }
 
 afterEach(cleanup);
+
+beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+});
+
+afterAll(() => {
+  HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+});
 
 describe("AssignedFeasibilityDialog provenance presentation", () => {
   it("keeps absent immutable provenance fail-closed without presenting it as a transport failure", async () => {
