@@ -14,7 +14,7 @@ const historyRows = [{
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (table: string) => table === "project_lifecycle_document_drafts"
+    from: (table: string) => table === ("project_lifecycle_document_drafts" as never)
       ? { select: () => ({ eq: () => ({ order: () => ({ limit: () => historyLimit() }) }) }) }
       : { select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }) },
   },
