@@ -31,14 +31,14 @@ describe("AssignedFeasibilityDialog provenance presentation", () => {
     expect(screen.getByText("Cached requirement evidence")).toBeTruthy();
     expect(screen.getByText(/current immutable customer-requirement revision is unavailable/i)).toBeTruthy();
     expect(screen.queryByText(/source records could not be verified/i)).toBeNull();
-    expect(screen.getByRole("button", { name: /submit protected feasibility response/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /record feasibility response/i })).toHaveProperty("disabled", true);
   });
 
   it("presents an actual provenance read failure as a transport failure and remains blocked", () => {
     renderDialog("RLS read denied");
     selectReview();
     expect(screen.getByText(/source records could not be verified/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /submit protected feasibility response/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /record feasibility response/i })).toHaveProperty("disabled", true);
   });
 
   it("retains cached review evidence when a later provenance refresh fails", () => {
@@ -48,6 +48,6 @@ describe("AssignedFeasibilityDialog provenance presentation", () => {
     expect(screen.getByText("Cached requirement evidence")).toBeTruthy();
     expect(screen.getByText(/assigned department: Hardware/i)).toBeTruthy();
     expect(screen.getByText(/source records could not be verified/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /submit protected feasibility response/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /record feasibility response/i })).toHaveProperty("disabled", true);
   });
 });
