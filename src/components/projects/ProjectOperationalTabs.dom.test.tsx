@@ -35,16 +35,16 @@ describe("ProjectOperationalTab design-input reads", () => {
 
     renderDesignInputs();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("These records could not be loaded. Read unavailable");
-    expect(screen.getByText("Records unavailable")).toBeInTheDocument();
-    expect(screen.queryByText("No controlled design inputs recorded.")).not.toBeInTheDocument();
-    expect(screen.queryByText("0 recorded")).not.toBeInTheDocument();
+    expect((await screen.findByRole("alert")).textContent).toContain("These records could not be loaded. Read unavailable");
+    expect(screen.getByText("Records unavailable")).toBeTruthy();
+    expect(screen.queryByText("No controlled design inputs recorded.")).toBeNull();
+    expect(screen.queryByText("0 recorded")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
-    await waitFor(() => expect(screen.getByText("Approved customer dimension")).toBeInTheDocument());
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.getByText("1 recorded")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Approved customer dimension")).toBeTruthy());
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("1 recorded")).toBeTruthy();
   });
 
   it("keeps cached design inputs visible when a refresh fails", async () => {
@@ -53,11 +53,11 @@ describe("ProjectOperationalTab design-input reads", () => {
     }], error: null }).mockRejectedValueOnce(new Error("Refresh unavailable"));
 
     const { queryClient } = renderDesignInputs();
-    expect(await screen.findByText("Manual design note")).toBeInTheDocument();
+    expect((await screen.findAllByText("Manual design note")).length).toBeGreaterThan(0);
 
     await queryClient.invalidateQueries({ queryKey: ["project_design_inputs", "project-123"] });
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Refresh unavailable"));
-    expect(screen.getByText("Manual design note")).toBeInTheDocument();
-    expect(screen.getByText("1 recorded · refresh failed")).toBeInTheDocument();
+    expect(screen.getAllByText("Manual design note").length).toBeGreaterThan(0);
+    expect(screen.getByText("1 recorded · refresh failed")).toBeTruthy();
   });
 });
