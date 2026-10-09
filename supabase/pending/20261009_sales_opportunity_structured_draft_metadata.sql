@@ -282,6 +282,12 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Master Specification source mismatch';
   END IF;
+  -- The authoritative migration
+  -- 20261005183103_2157aab7-4509-46b0-bc31-4d5f6e7785d0.sql installs
+  -- master_specification_versions_no_update_delete, whose trigger function
+  -- rejects all UPDATE/DELETE operations as append-only. FOR UPDATE therefore
+  -- serializes this source read with any attempted writer while the immutable
+  -- version row stabilizes specification_data for the fingerprint below.
   SELECT * INTO v_version
   FROM public.master_specification_versions
   WHERE id = p_master_specification_version_id
