@@ -26,8 +26,9 @@ function renderDialog() {
 }
 
 async function completeRequiredFields(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getAllByRole("combobox")[0]);
-  await user.click(await screen.findByText("CUST-001 · Northwind"));
+  fireEvent.click(screen.getAllByRole("combobox")[0]);
+  fireEvent.pointerDown(screen.getAllByRole("combobox")[0]);
+  fireEvent.click(await screen.findByText("CUST-001 · Northwind"));
   await user.type(screen.getByPlaceholderText("Possible / proposed project name"), "Manual proposal name");
   await user.type(screen.getAllByPlaceholderText("Unknown / To be confirmed")[0], "Medical");
   await user.type(screen.getAllByPlaceholderText("Unknown / To be confirmed")[1], "Controller");
