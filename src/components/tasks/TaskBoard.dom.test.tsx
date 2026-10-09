@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from "@tanstack/react-router";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -30,10 +30,11 @@ const tasks = [{
 
 function renderBoard(initialEntry: string, embedded: boolean) {
   fetchTasks.mockResolvedValue(tasks);
-  const root = createRootRoute({ component: () => <RouterProvider router={router} /> });
-  const globalTasks = createRoute({ getParentRoute: () => root, path: "/tasks", validateSearch: (search) => search as { assignee?: string; task?: string }, component: () => <TaskBoard /> });
+  const root = createRootRoute({ component: Outlet });
+  const authenticated = createRoute({ getParentRoute: () => root, id: "_authenticated", component: Outlet });
+  const globalTasks = createRoute({ getParentRoute: () => authenticated, path: "/tasks", validateSearch: (search) => search as { assignee?: string; task?: string }, component: () => <TaskBoard /> });
   const projectTasks = createRoute({ getParentRoute: () => root, path: "/projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact /> : null });
-  const router = createRouter({ routeTree: root.addChildren([globalTasks, projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
+  const router = createRouter({ routeTree: root.addChildren([authenticated.addChildren([globalTasks]), projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
   return router;
