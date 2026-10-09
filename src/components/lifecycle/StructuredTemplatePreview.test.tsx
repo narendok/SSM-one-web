@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { FormattedPreview, shouldWarnBeforeClosingStructuredPreview } from "./StructuredTemplatePreview";
+import { buildStructuredPreviewContent, FormattedPreview, localEditsForStructuredPreview, requestStructuredPreviewExit, shouldWarnBeforeClosingStructuredPreview } from "./StructuredTemplatePreview";
 import { mapMasterSpecificationSource, serializeLocalTableRows, structuredLifecycleTemplatePreviews } from "@/lib/lifecycle-structured-template-previews";
 
 const source = mapMasterSpecificationSource({ opportunityId: "opportunity-id", opportunityNumber: "OPPORTUNITY-2026-0013", opportunityName: "Tracker", customerId: "customer-id", customerName: "SAMPLE ONLY", specificationId: "specification-id", specificationNumber: "MASTER-2026-0001", versionId: "version-id", versionNumber: 1, changeSummary: "Initial intake", savedAt: "2026-10-05T18:37:27.589Z", project: null, specificationData: {} });
@@ -81,5 +81,43 @@ describe("local structured preview draft safety", () => {
   it("warns before leaving only when a local draft has unsaved edits", () => {
     expect(shouldWarnBeforeClosingStructuredPreview(false)).toBe(false);
     expect(shouldWarnBeforeClosingStructuredPreview(true)).toBe(true);
+  });
+
+  it("reflects exact manual SOR edits in the sandboxed local preview", () => {
+    const content = buildStructuredPreviewContent("SOR", source, { "SOR:SCOPE_STATEMENT": "  Manual scope\nkept exactly.  " });
+    const item = structuredLifecycleTemplatePreviews.find((candidate) => candidate.kind === "SOR");
+    if (!item || content.error) throw new Error("Expected a safe SOR preview.");
+
+    const markup = renderToStaticMarkup(<FormattedPreview item={item} source={source} userEdits={{ "SOR:SCOPE_STATEMENT": "  Manual scope\nkept exactly.  " }} error={content.error} controlledText={content.content} />);
+    expect(content.content).toContain("  Manual scope\nkept exactly.  ");
+    expect(markup).toContain('sandbox=""');
+    expect(markup).toContain("Local unsaved draft — NOT APPROVED / TBC.");
+  });
+
+  it("keeps XSS text inert in a sandboxed SOR preview", () => {
+    const content = buildStructuredPreviewContent("SOR", source, { "SOR:SCOPE_STATEMENT": '<img src=x onerror="alert(1)"><script>alert(1)</script>' });
+    const item = structuredLifecycleTemplatePreviews.find((candidate) => candidate.kind === "SOR");
+    if (!item || content.error) throw new Error("Expected a safe SOR preview.");
+
+    const markup = renderToStaticMarkup(<FormattedPreview item={item} source={source} userEdits={{}} error={content.error} controlledText={content.content} />);
+    expect(content.content).not.toContain("<img");
+    expect(content.content).not.toContain("<script");
+    expect(markup).toContain('sandbox=""');
+    expect(markup).not.toContain("allow-scripts");
+  });
+
+  it("retains manual fields across template switches and routes an exit through the discard guard", () => {
+    const edits = { "SOR:SCOPE_STATEMENT": "Retain me", "PRS:POWER_REQUIREMENT": "24 V" };
+    expect(localEditsForStructuredPreview("SOR", edits)).toEqual({ SCOPE_STATEMENT: "Retain me" });
+    expect(localEditsForStructuredPreview("PRS", edits)).toEqual({ POWER_REQUIREMENT: "24 V" });
+    expect(localEditsForStructuredPreview("SOR", edits)).toEqual({ SCOPE_STATEMENT: "Retain me" });
+
+    let exited = false;
+    let discardAsked = false;
+    requestStructuredPreviewExit(true, () => { exited = true; }, () => { discardAsked = true; });
+    expect(discardAsked).toBe(true);
+    expect(exited).toBe(false);
+    requestStructuredPreviewExit(false, () => { exited = true; }, () => { discardAsked = true; });
+    expect(exited).toBe(true);
   });
 });
