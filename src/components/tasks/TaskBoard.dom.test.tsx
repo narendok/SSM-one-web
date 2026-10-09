@@ -31,9 +31,9 @@ const tasks = [{
 function renderBoard(initialEntry: string, embedded: boolean) {
   fetchTasks.mockResolvedValue(tasks);
   const root = createRootRoute({ component: Outlet });
-  const tasksLayout = createRoute({ getParentRoute: () => root, id: "_authenticated/tasks", path: "tasks", component: Outlet });
+  const tasksLayout = createRoute({ getParentRoute: () => root, path: "tasks", component: Outlet });
   const globalTasks = createRoute({ getParentRoute: () => tasksLayout, path: "/", validateSearch: (search) => search as { assignee?: string; task?: string }, component: () => <TaskBoard /> });
-  const projectTasks = createRoute({ getParentRoute: () => root, path: "/projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact /> : null });
+  const projectTasks = createRoute({ getParentRoute: () => root, path: "projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact /> : null });
   const router = createRouter({ routeTree: root.addChildren([tasksLayout.addChildren([globalTasks]), projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
