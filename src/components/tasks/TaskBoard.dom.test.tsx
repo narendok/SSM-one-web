@@ -38,7 +38,7 @@ function renderBoard(initialEntry: string, embedded: boolean, setupFetch: () => 
   const router = createRouter({ routeTree: root.addChildren([authenticated.addChildren([tasksLayout.addChildren([globalTasks])]), projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
-  return router;
+  return { client, router };
 }
 
 afterEach(() => {
@@ -49,7 +49,7 @@ afterEach(() => {
 describe("TaskBoard route ownership", () => {
   it("opens and closes a project task without changing the embedded project route", async () => {
     const user = userEvent.setup();
-    const router = renderBoard("/projects/project-123", true);
+    const { router } = renderBoard("/projects/project-123", true);
     await user.click(await screen.findByText("Project route task"));
     expect(router.state.location.pathname).toBe("/projects/project-123");
     expect(router.state.location.search).toEqual({});
@@ -60,7 +60,7 @@ describe("TaskBoard route ownership", () => {
 
   it("preserves standalone task deep links and clears only the assignee filter", async () => {
     const user = userEvent.setup();
-    const router = renderBoard("/tasks?assignee=member-1&task=task-1", false);
+    const { router } = renderBoard("/tasks?assignee=member-1&task=task-1", false);
     await screen.findByText("Clear assignee");
     expect(router.state.location.search).toEqual({ assignee: "member-1", task: "task-1" });
     await user.click(screen.getByRole("button", { name: "Clear assignee" }));
