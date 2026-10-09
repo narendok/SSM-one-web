@@ -7,21 +7,16 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LifecycleDocumentDraftPanel } from "./LifecycleDocumentDraftPanel";
 
-const select = vi.fn();
+const historyLimit = vi.fn();
 const historyRows = [{
   id: "draft-1", generated_drive_node_id: "file-1", template_version: 2, created_at: "2026-10-09T00:00:00Z", result: { document_number: "DOC-001" },
 }];
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          order: () => ({ limit: () => select() }),
-          eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }),
-        }),
-      }),
-    }),
+    from: (table: string) => table === "project_lifecycle_document_drafts"
+      ? { select: () => ({ eq: () => ({ order: () => ({ limit: () => historyLimit() }) }) }) }
+      : { select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }) },
   },
 }));
 
@@ -52,13 +47,13 @@ function renderPanel() {
 
 afterEach(() => {
   cleanup();
-  select.mockReset();
+  historyLimit.mockReset();
 });
 
 describe("LifecycleDocumentDraftPanel history reads", () => {
   it("shows a failed initial history read without the empty-history message, then retries successfully", async () => {
     const user = userEvent.setup();
-    select.mockRejectedValueOnce(new Error("History unavailable")).mockResolvedValueOnce({ data: historyRows, error: null });
+    historyLimit.mockRejectedValueOnce(new Error("History unavailable")).mockResolvedValueOnce({ data: historyRows, error: null });
 
     renderPanel();
 
@@ -73,7 +68,7 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
   });
 
   it("keeps cached history visible when a refresh read fails", async () => {
-    select.mockResolvedValueOnce({ data: historyRows, error: null }).mockRejectedValueOnce(new Error("History refresh unavailable"));
+    historyLimit.mockResolvedValueOnce({ data: historyRows, error: null }).mockRejectedValueOnce(new Error("History refresh unavailable"));
 
     const { queryClient } = renderPanel();
     expect(await screen.findByText(/DOC-001 · template v2/)).toBeTruthy();
