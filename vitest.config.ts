@@ -8,6 +8,7 @@ export default defineConfig({
     environment: "node",
     environmentMatchGlobs: [
       ["src/components/lifecycle/**/*.dom.test.tsx", "jsdom"],
+      ["src/components/projects/**/*.dom.test.tsx", "jsdom"],
       ["src/components/tasks/**/*.dom.test.tsx", "jsdom"],
     ],
   },

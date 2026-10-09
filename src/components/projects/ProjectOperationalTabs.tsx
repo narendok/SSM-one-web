@@ -43,7 +43,7 @@ export function ProjectOperationalTab({ projectId, kind }: { projectId: string; 
   const config = configs[kind];
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const { data: records = [], isLoading, isError, error } = useQuery({
+  const { data: records = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: [config.queryKey, projectId],
     queryFn: async () => {
       const { data, error } = await sb.from(config.table).select("*").eq("project_id", projectId).order("created_at", { ascending: false });
@@ -59,10 +59,16 @@ export function ProjectOperationalTab({ projectId, kind }: { projectId: string; 
     toast.success("Record removed");
     refresh();
   };
-  const subtitle = useMemo(() => `${records.length} recorded`, [records.length]);
+  const subtitle = useMemo(() => {
+    if (isError) return records.length ? `${records.length} recorded · refresh failed` : "Records unavailable";
+    return `${records.length} recorded`;
+  }, [isError, records.length]);
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-base font-semibold">{config.heading}</h2><p className="text-sm text-muted-foreground">{subtitle}</p></div><Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" />{config.addLabel}</Button></div>
-    {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : isError ? <Card className="p-5 text-sm text-destructive">These records could not be loaded. {error instanceof Error ? error.message : "Please try again."}</Card> : records.length === 0 ? <Card className="p-8 text-center text-sm text-muted-foreground">{config.empty}</Card> : <div className="space-y-2">{records.map((record: any) => <Card key={record.id} className="p-4"><div className="flex gap-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{record[config.descriptionKey]}</span>{record[config.codeKey] !== record[config.descriptionKey] && <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{record[config.codeKey]}</span>}<Badge variant="outline">{record[config.typeKey]}</Badge><Badge variant="secondary">{record[config.statusKey]}</Badge></div>{record.description && <p className="mt-1 text-sm text-muted-foreground">{record.description}</p>}{record.summary && <p className="mt-1 text-sm text-muted-foreground">{record.summary}</p>}{record.impact_summary && <p className="mt-1 text-sm text-muted-foreground">{record.impact_summary}</p>}{record.evidence_note && <p className="mt-1 text-sm text-muted-foreground">{record.evidence_note}</p>}</div><Button variant="ghost" size="icon" aria-label="Remove record" title="Remove record" onClick={() => remove(record.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></Card>)}</div>}
+    {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : <>
+      {isError && <Card role="alert" className="flex flex-wrap items-center justify-between gap-3 p-5 text-sm text-destructive"><span>These records could not be loaded. {error instanceof Error ? error.message : "Please try again."}</span><Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></Card>}
+      {records.length === 0 && !isError ? <Card className="p-8 text-center text-sm text-muted-foreground">{config.empty}</Card> : records.length > 0 ? <div className="space-y-2">{records.map((record: any) => <Card key={record.id} className="p-4"><div className="flex gap-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{record[config.descriptionKey]}</span>{record[config.codeKey] !== record[config.descriptionKey] && <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{record[config.codeKey]}</span>}<Badge variant="outline">{record[config.typeKey]}</Badge><Badge variant="secondary">{record[config.statusKey]}</Badge></div>{record.description && <p className="mt-1 text-sm text-muted-foreground">{record.description}</p>}{record.summary && <p className="mt-1 text-sm text-muted-foreground">{record.summary}</p>}{record.impact_summary && <p className="mt-1 text-sm text-muted-foreground">{record.impact_summary}</p>}{record.evidence_note && <p className="mt-1 text-sm text-muted-foreground">{record.evidence_note}</p>}</div><Button variant="ghost" size="icon" aria-label="Remove record" title="Remove record" onClick={() => remove(record.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></Card>)}</div> : null}
+    </>}
     <OperationalDialog projectId={projectId} config={config} open={open} onOpenChange={setOpen} onSaved={refresh} />
   </div>;
 }
