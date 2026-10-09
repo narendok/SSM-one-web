@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import { StructuredTemplatePreview } from "./StructuredTemplatePreview";
+import { StructuredPreviewExitBoundary } from "./StructuredPreviewExitBoundary";
 import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-template-previews";
 
 const source = mapMasterSpecificationSource({ opportunityId: "opportunity-id", opportunityNumber: "OPPORTUNITY-2026-0013", opportunityName: "Tracker", customerId: "customer-id", customerName: "SAMPLE ONLY", specificationId: "specification-id", specificationNumber: "MASTER-2026-0001", versionId: "version-id", versionNumber: 1, changeSummary: "Initial intake", savedAt: "2026-10-05T18:37:27.589Z", project: null, specificationData: {} });
@@ -25,12 +26,11 @@ function renderPreview() {
   return render(<QueryClientProvider client={client}><StructuredTemplatePreview /></QueryClientProvider>);
 }
 
-function ExitHarness() {
+function ProductionExitBoundaryHarness() {
   const [open, setOpen] = useState(true);
   const [dirty, setDirty] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   if (!open) return <p>Exited preview</p>;
-  return <><button onClick={() => dirty ? setConfirming(true) : setOpen(false)}>Back</button><button aria-label="Close preview" onClick={() => dirty ? setConfirming(true) : setOpen(false)}>Close</button><StructuredTemplatePreview onDirtyChange={setDirty} />{confirming && <section role="dialog"><p>Discard unsaved local edits?</p><button onClick={() => setConfirming(false)}>Keep editing</button><button onClick={() => setOpen(false)}>Discard edits</button></section>}</>;
+  return <StructuredPreviewExitBoundary dirty={dirty}>{(requestExit) => <><button onClick={() => requestExit(() => setOpen(false))}>Back</button><button aria-label="Close preview" onClick={() => requestExit(() => setOpen(false))}>Close</button><StructuredTemplatePreview onDirtyChange={setDirty} /></>}</StructuredPreviewExitBoundary>;
 }
 
 afterEach(() => {
@@ -72,11 +72,11 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(await screen.findByText(/Authorized source could not be loaded: denied by mock/)).toBeTruthy();
   });
 
-  it("keeps local edits after Back or Close confirmation is cancelled and exits only after discard", async () => {
+  it("uses the production exit boundary to retain local edits after Back or Close cancellation, then exits only after discard", async () => {
     previewSource.mockResolvedValue(source);
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><ExitHarness /></QueryClientProvider>);
+    render(<QueryClientProvider client={client}><ProductionExitBoundaryHarness /></QueryClientProvider>);
     const scope = await screen.findByLabelText("Scope statement");
     await user.clear(scope);
     await user.type(scope, "Keep this exact draft");
