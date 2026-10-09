@@ -120,9 +120,9 @@ export function LifecycleDocumentDraftPanel({ project }: { project: Project }) {
         <Button size="sm" variant="outline" disabled={busy || !project.revision || !project.project_drive_node_id} onClick={() => void refreshDepartmentDrafts()}>Refresh department drafts</Button>
       </div>
       <p className="text-xs text-muted-foreground">Active department templates are generated into the project Drive. Unchanged snapshots reuse their saved documents.</p>
-      {documents.isError ? <p role="alert" className="text-xs text-destructive">Generated document history could not be loaded with your current access.</p>
-        : documents.isLoading ? <p className="text-xs text-muted-foreground">Loading saved documents…</p>
-        : !documents.data?.length ? <p className="text-xs text-muted-foreground">No generated documents are visible for this project yet.</p>
+      {documents.isError && <div role="alert" className="flex flex-wrap items-center gap-1 text-xs text-destructive"><span>Generated document history could not be loaded with your current access.</span><Button size="sm" variant="ghost" onClick={() => void documents.refetch()}>Retry history</Button></div>}
+      {documents.isLoading && !documents.data ? <p className="text-xs text-muted-foreground">Loading saved documents…</p>
+        : !documents.data?.length ? !documents.isError && <p className="text-xs text-muted-foreground">No generated documents are visible for this project yet.</p>
         : documents.data.map((document) => <Link key={document.id} className="block rounded-md border px-3 py-2 text-sm hover:bg-muted"
           to="/drive" search={{ node: document.generated_drive_node_id, department: project.department_id ?? undefined }}>
           {document.result?.document_number ?? "Generated document"} · template v{document.template_version}
