@@ -16,7 +16,7 @@
 - Controlled-document decisions use the protected, replay-safe transition action and remain linked to the existing register and Drive revision history; no client-side status mutation or duplicate register is allowed.
 - Engineering BOM records may reference an authoritative project Drive file and its revision; preserve that source link instead of copying the authoritative file.
 - Present shared product-lifecycle status as a read-only composition of governed records; lifecycle screens must not infer approvals, ownership, releases, or external publication.
-- Keep lifecycle draft planning as a pure read-only derivation; template materialization, feedback revisions, task creation, and notifications require separately reviewed server-side contracts.
+- Keep lifecycle draft planning and local structured Sales rendering as pure derivations; materialization, feedback revisions, task creation, persistence, and notifications require separately reviewed server-side contracts.
 - Lifecycle contracts must authorize before replay, bind receipts and generated records to immutable actor/template provenance, reject duplicate source-stage regeneration, and serialize all project dependency graph writes.
 - Lifecycle action façades must authenticate and re-check department scope before any mutation bridge is enabled; it remains disabled until isolated authorization, rollback, replay/concurrency, and non-admin RLS acceptance all pass.
 - Lifecycle document-draft persistence is one protected transaction: pin immutable template revision, render server-owned fields, lock target ancestry, and write Drive metadata/register/audit/actor-bound receipt; cleanup only after exact unreferenced-reference proof.
