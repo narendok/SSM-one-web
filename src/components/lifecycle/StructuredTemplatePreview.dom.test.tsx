@@ -664,7 +664,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     ).toBe("Catalogue description");
     client.setQueryData(
       ["structured-template-source", "actor-a", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1],
-      { ...source, versionId: "amended-version-id" },
+      { ...source, currentVersionNumber: 2 },
     );
     await screen.findByText(/A newer Master Specification revision \(2\) is available/);
     expect(
