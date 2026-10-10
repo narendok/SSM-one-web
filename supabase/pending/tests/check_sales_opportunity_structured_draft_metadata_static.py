@@ -4,8 +4,8 @@
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
-SQL = (ROOT / "20261009_sales_opportunity_structured_draft_metadata.sql").read_text()
+PENDING_ROOT = Path(__file__).resolve().parents[1]
+SQL = (PENDING_ROOT / "20261009_sales_opportunity_structured_draft_metadata.sql").read_text()
 ACCEPTANCE = (Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_acceptance.sql").read_text()
 
 
