@@ -126,8 +126,9 @@ BEGIN
     END IF;
   END LOOP;
   v_spec := p_intake->'masterSpecification';
-  IF (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(v_spec) AS key)
-       IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_spec_allowed) AS allowed(key))
+  IF EXISTS (SELECT 1 FROM jsonb_object_keys(v_spec) AS key WHERE key <> ALL(v_spec_allowed))
+     OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(v_spec) AS key)
+        IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_spec_allowed) AS allowed(key))
      OR EXISTS (
        SELECT 1 FROM unnest(ARRAY[
          'changeSummary', 'customerOrInternalOwner', 'developmentScope',
