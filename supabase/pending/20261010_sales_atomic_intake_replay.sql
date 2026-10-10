@@ -77,7 +77,7 @@ DECLARE
   ];
   v_spec_allowed text[] := ARRAY[
     'changeSummary', 'customerOrInternalOwner', 'developmentScope',
-    'environmentAndIp', 'exclusions', 'industryApplication', 'interfaces',
+    'connectivityAndGnss', 'environmentAndIp', 'exclusions', 'industryApplication', 'interfaces',
     'powerAndUnits', 'productFamily', 'proposedName', 'requestedStandards',
     'requirementSummary', 'schedule', 'volumes', 'workstreams'
   ];
@@ -126,14 +126,18 @@ BEGIN
     END IF;
   END LOOP;
   v_spec := p_intake->'masterSpecification';
-  IF (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(v_spec) AS key)
-       IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_spec_allowed) AS allowed(key))
+  IF jsonb_typeof(v_spec) <> 'object' THEN
+    RETURN NULL;
+  END IF;
+  IF EXISTS (SELECT 1 FROM jsonb_object_keys(v_spec) AS key WHERE key <> ALL(v_spec_allowed))
+     OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(v_spec) AS key)
+        IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_spec_allowed) AS allowed(key))
      OR EXISTS (
        SELECT 1 FROM unnest(ARRAY[
          'changeSummary', 'customerOrInternalOwner', 'developmentScope',
          'environmentAndIp', 'exclusions', 'industryApplication', 'interfaces',
          'powerAndUnits', 'productFamily', 'proposedName', 'requestedStandards',
-         'requirementSummary', 'schedule', 'volumes'
+         'requirementSummary', 'schedule', 'volumes', 'connectivityAndGnss'
        ]) AS required(key)
        WHERE jsonb_typeof(v_spec->required.key) <> 'string'
      )
@@ -305,7 +309,7 @@ BEGIN
     NULLIF(v_canonical->>'nextActionDate', '')::date, v_actor_id
   ) RETURNING * INTO v_opportunity;
 
-  v_spec_data := v_canonical->'masterSpecification' - 'changeSummary';
+  v_spec_data := v_canonical->'masterSpecification';
   INSERT INTO public.master_specifications (
     specification_number, opportunity_id, customer_id, title, status, current_version, created_by
   ) VALUES (
@@ -316,7 +320,7 @@ BEGIN
   INSERT INTO public.master_specification_versions (
     specification_id, version_number, change_summary, specification_data, status, created_by
   ) VALUES (
-    v_specification.id, 1, v_spec_data->>'changeSummary', v_spec_data - 'changeSummary', 'working', v_actor_id
+    v_specification.id, 1, v_spec_data->>'changeSummary', v_spec_data - 'changeSummary'::text, 'working', v_actor_id
   ) RETURNING * INTO v_version;
   INSERT INTO public.activity_log (
     actor_user_id, module_key, entity_type, entity_id, action, summary, after_data
