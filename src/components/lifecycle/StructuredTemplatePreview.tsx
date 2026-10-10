@@ -148,7 +148,6 @@ export function StructuredTemplatePreview({
   };
   const [selectedComponentIds, setSelectedComponentIds] = useState<LocalBomComponentSelection>({});
   const [selectedBomId, setSelectedBomId] = useState<string | null>(null);
-  const [adoptedVersionId, setAdoptedVersionId] = useState<string | null>(null);
   const source = useQuery({
     queryKey: [
       "structured-template-source",
@@ -189,10 +188,11 @@ export function StructuredTemplatePreview({
   });
   const dirty = hasLocalEdits(userEdits);
   const sourceAdvanced = Boolean(
-    dirty && source.data && adoptedVersionId && adoptedVersionId !== source.data.versionId,
+    source.data &&
+      Number.isInteger(source.data.currentVersionNumber) &&
+      source.data.currentVersionNumber > source.data.versionNumber,
   );
   const updateLocalEdit = (field: string, value: string) => {
-    if (!dirty) setAdoptedVersionId(source.data?.versionId ?? null);
     setUserEdits((current) => ({ ...current, [editKey(kind, field)]: value }));
   };
   const selectLocalBomComponent = (rowId: string, candidate: LocalBomComponentCandidate) => {
@@ -216,12 +216,8 @@ export function StructuredTemplatePreview({
       onLocalEditsChange?.({});
       setSelectedComponentIds({});
       setSelectedBomId(null);
-      setAdoptedVersionId(null);
     }
   }, [scopeChanged, scopeKey, onLocalEditsChange]);
-  useEffect(() => {
-    if (source.data && !dirty) setAdoptedVersionId(source.data.versionId);
-  }, [dirty, source.data]);
   useEffect(() => {
     setSelectedBomId(null);
   }, [effectiveProjectId]);
@@ -269,7 +265,7 @@ export function StructuredTemplatePreview({
             size="sm"
             variant="outline"
             onClick={() => void source.refetch()}
-            disabled={source.isFetching || dirty}
+            disabled={source.isFetching}
           >
             <RefreshCw className="size-4" /> Refresh source
           </Button>
@@ -301,14 +297,15 @@ export function StructuredTemplatePreview({
         {source.data && <SourcePin source={source.data} />}
         {dirty && (
           <p role="status" className="mt-3 border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
-            Local edits are unsaved. Refresh is paused so source data cannot overwrite them
-            silently.
+            Local edits are unsaved. Refresh reads the same pinned historical revision and does not
+            overwrite local text.
           </p>
         )}
         {sourceAdvanced && (
           <p role="alert" className="mt-3 border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
-            The source pin advanced while local edits exist. Review the conflict before starting a
-            new draft; no edit was replaced.
+            A newer Master Specification revision ({source.data?.currentVersionNumber}) is available.
+            This preview remains pinned to revision {source.data?.versionNumber}; no local edit,
+            approval, or source content was replaced.
           </p>
         )}
         <Tabs

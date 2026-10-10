@@ -1,7 +1,7 @@
 import { renderLifecycleDocument, type DocumentTemplate } from "@/lib/lifecycle-document-renderer";
 
 export type StructuredLifecycleTemplateKind = "SOR" | "CONTRACT_REVIEW" | "PRS" | "NDA" | "COMMERCIAL_QUOTATION" | "BOM_COST_TRACKER" | "DFMEA" | "MANUFACTURING_CONTROL_PLAN" | "DVPR" | "PDI" | "COMMERCIAL_TAX_INVOICE" | "ANNUAL_SKILL_MATRIX";
-export type StructuredTemplateSource = { opportunityId: string; opportunityNumber: string; opportunityName: string; customerId: string; customerName: string; specificationId: string; specificationNumber: string; versionId: string; versionNumber: number; changeSummary: string | null; savedAt: string | null; project: { id: string; name: string; code: string | null } | null; sourceFields: Record<string, string | null> };
+export type StructuredTemplateSource = { opportunityId: string; opportunityNumber: string; opportunityName: string; customerId: string; customerName: string; specificationId: string; specificationNumber: string; versionId: string; versionNumber: number; currentVersionNumber: number | null; changeSummary: string | null; savedAt: string | null; project: { id: string; name: string; code: string | null } | null; sourceFields: Record<string, string | null> };
 export type EditableField = { key: string; label: string; kind: "text" | "textarea" | "number" | "table"; group: string; placeholder?: string };
 export type StructuredLifecycleTemplatePreview = { kind: StructuredLifecycleTemplateKind; label: string; description: string; sourceFields: string[]; editableFields: EditableField[]; template: DocumentTemplate; fields: Record<string, string | null> };
 export type QuoteLineRow = { id: string; line: string; description: string; quantity: string; unitPrice: string; currency: string; leadTime: string };
