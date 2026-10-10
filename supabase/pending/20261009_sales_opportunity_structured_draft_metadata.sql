@@ -6,7 +6,9 @@
 -- Scope: opportunity-only SOR, Contract Review, and PRS draft metadata and
 -- append-only revisions. This is NOT a Drive/register/storage/materialization
 -- contract. It creates no controlled document, storage object, file, document
--- number, or controlled-document/activity audit record. Controlled issuance and
+-- number, or controlled-document materialization record. Any established
+-- transactional audit requirement remains governed by its authoritative contract;
+-- this proposal neither removes nor bypasses it. Controlled issuance and
 -- materialization remain unavailable until a separately governed Sales document
 -- location linkage exists.
 --
@@ -301,6 +303,13 @@ BEGIN
     p_document_kind, v_schema_hash, v_version.specification_data, v_version.created_at
   );
 
+  -- Re-check authorization after waiting on the logical/source locks and before
+  -- a receipt can be observed. A permission revoked while this call waited must
+  -- deny both a new write and an otherwise exact replay.
+  IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
+    RAISE EXCEPTION 'Sales management permission is required';
+  END IF;
+
   SELECT * INTO v_request
   FROM public.sales_opportunity_structured_draft_requests AS request_receipt
   WHERE request_receipt.request_key = p_request_key
@@ -400,9 +409,8 @@ $$;
 REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_schema_hash(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_canonical_payload(text, jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_source_fingerprint(uuid, uuid, uuid, uuid, integer, text, text, jsonb, timestamptz) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
 
 -- Deliberately absent: Drive, storage, controlled-register, document-number, or
--- activity-log writes. This metadata-only proposal must not be used to issue,
+-- controlled-document materialization. This metadata-only proposal must not be used to issue,
 -- materialize, download, release, or classify a controlled Sales document.
