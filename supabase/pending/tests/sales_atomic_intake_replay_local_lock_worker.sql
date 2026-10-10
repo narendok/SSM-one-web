@@ -3,10 +3,8 @@
 \set ON_ERROR_STOP on
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
-BEGIN;
-SELECT pg_advisory_xact_lock(hashtextextended(:'request_key', 0));
+SELECT pg_advisory_lock(hashtextextended(:'request_key', 0));
 UPDATE public.sales_intake_lock_wait_cases SET ready = true WHERE case_label = :'case_label';
-COMMIT;
 DO $wait$
 DECLARE v_deadline timestamptz := clock_timestamp() + interval '15 seconds'; v_released boolean;
 BEGIN
@@ -18,6 +16,7 @@ BEGIN
   END LOOP;
 END;
 $wait$;
+SELECT pg_advisory_unlock(hashtextextended(:'request_key', 0));
 SELECT * FROM public.create_sales_opportunity_with_initial_master_specification(
   '00000000-0000-4000-8000-000000000010'::uuid,
   '00000000-0000-4000-8000-000000000011'::uuid,
