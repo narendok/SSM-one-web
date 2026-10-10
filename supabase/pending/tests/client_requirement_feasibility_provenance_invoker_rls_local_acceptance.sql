@@ -9,7 +9,8 @@ CREATE ROLE provenance_owner NOLOGIN;
 CREATE ROLE provenance_nonowner NOLOGIN;
 GRANT USAGE ON SCHEMA public TO provenance_owner, provenance_nonowner;
 GRANT SELECT ON public.requirement_feasibility_reviews, public.requirement_feasibility_review_provenance TO provenance_owner, provenance_nonowner;
-GRANT SELECT ON public.customer_requirements, public.customer_requirement_revisions, public.master_specifications, public.master_specification_versions TO provenance_owner;
+GRANT SELECT ON public.customer_requirements TO provenance_owner, provenance_nonowner;
+GRANT SELECT ON public.customer_requirement_revisions, public.master_specifications, public.master_specification_versions TO provenance_owner;
 
 ALTER TABLE public.requirement_feasibility_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_requirements ENABLE ROW LEVEL SECURITY;
@@ -20,7 +21,7 @@ ALTER TABLE public.master_specification_versions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY local_visible_review ON public.requirement_feasibility_reviews
   FOR SELECT TO provenance_owner, provenance_nonowner USING (true);
 CREATE POLICY local_visible_requirement ON public.customer_requirements
-  FOR SELECT TO provenance_owner USING (true);
+  FOR SELECT TO provenance_owner, provenance_nonowner USING (true);
 CREATE POLICY local_visible_revision ON public.customer_requirement_revisions
   FOR SELECT TO provenance_owner USING (true);
 CREATE POLICY local_visible_specification ON public.master_specifications

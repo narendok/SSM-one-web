@@ -357,8 +357,6 @@ SELECT
   review.master_specification_version_id,
   review.master_specification_version_number,
   review.applicable_workstreams,
-  requirement.opportunity_id,
-  requirement.customer_id,
   CASE
     WHEN review.source_revision_id IS NULL
       OR review.source_revision_number IS NULL
@@ -412,6 +410,9 @@ LEFT JOIN public.master_specification_versions master_version
 LEFT JOIN public.master_specifications specification
   ON specification.id = master_version.specification_id;
 
+-- Requirement opportunity/customer fields are used only to validate the exact
+-- pinned relationship and are never projected, preventing current-header
+-- disclosure when an otherwise visible review has hidden source rows.
 -- No authenticated view grant is proposed. PostgreSQL SECURITY INVOKER keeps
 -- underlying caller RLS in force; explicit caller access remains an isolated
 -- installation and managed caller-RLS acceptance gate.
