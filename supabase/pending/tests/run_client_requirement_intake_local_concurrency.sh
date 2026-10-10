@@ -28,21 +28,13 @@ run_psql() { psql "${psql_args[@]}" "$@"; }
 run_psql -f "$root/supabase/pending/tests/client_requirement_intake_local_fixture.sql"
 run_psql -f "$root/supabase/pending/20261005_client_requirement_intake.sql"
 run_psql -c "GRANT EXECUTE ON FUNCTION public.submit_external_customer_requirement(uuid, uuid, text, text, jsonb, uuid) TO authenticated;"
-run_psql -c "CREATE TABLE public.client_requirement_concurrency_barrier (case_name text PRIMARY KEY, ready boolean NOT NULL DEFAULT false, released boolean NOT NULL DEFAULT false);" >/dev/null
 run_case() {
   local case_name="$1" title_a="$2" payload_a="$3" title_b="$4" payload_b="$5" expected_b_status="$6"
   local worker="$root/supabase/pending/tests/client_requirement_intake_local_concurrency.sql"
-  psql "${psql_args[@]}" <<'SQL' >"$log_dir/${case_name}_barrier.out" 2>"$log_dir/${case_name}_barrier.err" & local barrier_pid=$!
-BEGIN;
-SELECT pg_advisory_xact_lock(hashtextextended('00000000-0000-4000-8000-000000000095', 0));
-SELECT pg_sleep(0.20);
-COMMIT;
-SQL
-  sleep 0.03
   psql "${psql_args[@]}" --set="submission_title=$title_a" --set="submission_payload=$payload_a" -f "$worker" >"$log_dir/${case_name}_a.out" 2>"$log_dir/${case_name}_a.err" & local pid_a=$!
+  until run_psql -Atqc "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND classid = 0 AND objid = 0 AND NOT granted" | grep -qx 1; do sleep 0.01; done
   psql "${psql_args[@]}" --set="submission_title=$title_b" --set="submission_payload=$payload_b" -f "$worker" >"$log_dir/${case_name}_b.out" 2>"$log_dir/${case_name}_b.err" & local pid_b=$!
-  run_psql -c "UPDATE public.client_requirement_concurrency_barrier SET released = true WHERE case_name = '$case_name';" >/dev/null
-  wait "$barrier_pid"
+  sleep 0.02
   wait "$pid_a"; local status_a=$?
   wait "$pid_b"; local status_b=$?
   printf 'CONCURRENCY_CASE case=%s worker_a_exit=%s worker_b_exit=%s\n' "$case_name" "$status_a" "$status_b"
