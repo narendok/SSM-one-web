@@ -116,8 +116,10 @@ BEGIN
     RETURN NULL;
   END IF;
   FOREACH v_key IN ARRAY ARRAY['application', 'productType', 'estimatedVolume', 'targetTimeline', 'nextAction'] LOOP
-    IF jsonb_typeof(p_intake->v_key) = 'string'
-       AND char_length(p_intake->>v_key) > CASE WHEN v_key = 'nextAction' THEN 1000 ELSE 240 END THEN
+    IF jsonb_typeof(p_intake->v_key) = 'string' AND (
+      (v_key = 'nextAction' AND char_length(p_intake->>v_key) > 1000)
+      OR (v_key <> 'nextAction' AND char_length(p_intake->>v_key) > 240)
+    ) THEN
       RETURN NULL;
     END IF;
   END LOOP;
