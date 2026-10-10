@@ -47,14 +47,19 @@ SQL
   printf 'CONCURRENCY_CASE case=%s worker_a_exit=%s worker_b_exit=%s\n' "$case_name" "$status_a" "$status_b"
   [[ "$status_a" == "0" && "$status_b" == "$expected_b_status" ]] || { cat "$log_dir/${case_name}_a.err" "$log_dir/${case_name}_b.err" >&2; return 1; }
 }
+baseline_revision_count="$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions")"
 run_case same_actor_same_canonical 'Concurrent request' '{"description":"Concurrent canonical payload"}' ' Concurrent request ' '{"description":"Concurrent canonical payload"}' 0
 same_ids="$(sed -n '/^[0-9a-f-]\{36\}$/p' "$log_dir/same_actor_same_canonical_a.out"; sed -n '/^[0-9a-f-]\{36\}$/p' "$log_dir/same_actor_same_canonical_b.out")"
 [[ "$(printf '%s\n' "$same_ids" | sort -u | wc -l)" == "1" ]] || { echo 'LOCAL_CASE_FAIL same canonical submissions returned different requirement IDs' >&2; exit 1; }
-[[ "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirements WHERE customer_reference = 'REQ-CONCURRENT'")" == "1" ]] || { echo 'LOCAL_CASE_FAIL same canonical submissions created multiple headers' >&2; exit 1; }
-same_revision_count="$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions")"
-same_audit_count="$(run_psql -Atqc "SELECT count(*) FROM public.activity_log WHERE action = 'external_submitted'")"
-same_receipt_count="$(run_psql -Atqc "SELECT count(*) FROM public.external_requirement_submission_requests WHERE request_key = '00000000-0000-4000-8000-000000000095'")"
+same_requirement_id="$(printf '%s\n' "$same_ids" | sort -u)"
+[[ "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirements WHERE id = '$same_requirement_id'::uuid")" == "1" ]] || { echo 'LOCAL_CASE_FAIL same canonical submissions created multiple returned headers' >&2; exit 1; }
+same_revision_count="$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions WHERE requirement_id = '$same_requirement_id'::uuid AND revision_number = 1")"
+same_audit_count="$(run_psql -Atqc "SELECT count(*) FROM public.activity_log WHERE entity_id = '$same_requirement_id'::uuid AND action = 'external_submitted'")"
+same_receipt_count="$(run_psql -Atqc "SELECT count(*) FROM public.external_requirement_submission_requests WHERE request_key = '00000000-0000-4000-8000-000000000095' AND requirement_id = '$same_requirement_id'::uuid")"
+after_revision_count="$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions")"
 [[ "$same_revision_count/$same_audit_count/$same_receipt_count" == "1/1/1" ]] || { printf 'LOCAL_CASE_FAIL same canonical write counts revision/audit/receipt=%s/%s/%s\n' "$same_revision_count" "$same_audit_count" "$same_receipt_count" >&2; exit 1; }
+[[ "$((after_revision_count - baseline_revision_count))" == "1" ]] || { printf 'LOCAL_CASE_FAIL same canonical revision delta expected=1 actual=%s baseline=%s after=%s\n' "$((after_revision_count - baseline_revision_count))" "$baseline_revision_count" "$after_revision_count" >&2; exit 1; }
+printf 'CONCURRENCY_SCOPE case=same_actor_same_canonical requirement_id=%s revisions_before=%s revisions_after=%s request_revision_delta=1 request_graph=1/1/1\n' "$same_requirement_id" "$baseline_revision_count" "$after_revision_count"
 run_psql -c "TRUNCATE public.external_requirement_submission_requests, public.activity_log, public.customer_requirement_revisions, public.customer_requirements CASCADE;" >/dev/null
 run_case same_key_conflicting_payloads 'Conflict A' '{"description":"Concurrent conflict A"}' 'Conflict B' '{"description":"Concurrent conflict B"}' 3
 [[ "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirements")" == "1" && "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions")" == "1" && "$(run_psql -Atqc "SELECT count(*) FROM public.activity_log WHERE action = 'external_submitted'")" == "1" && "$(run_psql -Atqc "SELECT count(*) FROM public.external_requirement_submission_requests WHERE request_key = '00000000-0000-4000-8000-000000000095'")" == "1" ]] || { echo 'LOCAL_CASE_FAIL conflicting request-key submissions committed more than one graph' >&2; exit 1; }
