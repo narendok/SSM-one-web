@@ -371,7 +371,7 @@ SELECT
       OR specification.customer_id IS DISTINCT FROM requirement.customer_id
       THEN 'UNAVAILABLE_MISMATCHED_PIN'
     ELSE 'AVAILABLE'
-  END AS provenance_status,
+  END AS provenance_status
 FROM public.requirement_feasibility_reviews review
 JOIN public.customer_requirements requirement
   ON requirement.id = review.requirement_id
