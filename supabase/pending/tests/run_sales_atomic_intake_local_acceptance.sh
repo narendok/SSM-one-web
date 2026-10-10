@@ -11,6 +11,10 @@ set -euo pipefail
 #   LOCAL_SALES_INTAKE_DISPOSABLE=yes \
 #   bash supabase/pending/tests/run_sales_atomic_intake_local_acceptance.sh preinstall
 #
+# For a private local Unix socket, use a URL whose host is the percent-encoded
+# absolute directory created for this task, for example:
+# postgresql://sales_atomic_local@%2Ftmp%2Fsales_atomic_acceptance_x%2Fsock/sales_atomic_acceptance_demo
+#
 # `installed` recreates only the supplied disposable local test schema, loads
 # the pending proposal into it, and grants EXECUTE solely to the local fixture
 # role so behavioral cases can run. The pending proposal itself remains revoked.
@@ -33,9 +37,17 @@ node --input-type=module - "$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL" "$LOCAL
 const [url, hostPattern] = process.argv.slice(2)
 let parsed
 try { parsed = new URL(url) } catch { throw new Error('The local acceptance URL is invalid.') }
-if (!['postgresql:', 'postgres:'].includes(parsed.protocol) || !new RegExp(hostPattern).test(parsed.hostname)) {
+const decodedHost = decodeURIComponent(parsed.hostname)
+const privateSocketRoot = process.env.LOCAL_SALES_INTAKE_PRIVATE_SOCKET_ROOT
+const isLoopback = new RegExp(hostPattern).test(parsed.hostname)
+const isPrivateSocket = Boolean(privateSocketRoot)
+  && decodedHost.startsWith(`${privateSocketRoot}/`)
+  && !decodedHost.includes('..')
+  && decodedHost.startsWith('/tmp/sales_atomic_acceptance_')
+if (!['postgresql:', 'postgres:'].includes(parsed.protocol) || !(isLoopback || isPrivateSocket)) {
   throw new Error('Refusing a non-local PostgreSQL target.')
 }
+if (parsed.port || parsed.search || parsed.hash) throw new Error('Connection options are not accepted by the local runner.')
 if (!/^\/sales_atomic_acceptance_[a-z0-9_]+$/i.test(parsed.pathname)) {
   throw new Error('The local database name must start with sales_atomic_acceptance_.')
 }
