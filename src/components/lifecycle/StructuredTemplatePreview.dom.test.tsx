@@ -9,12 +9,17 @@ import { StructuredTemplatePreview } from "./StructuredTemplatePreview";
 import { StructuredPreviewExitDialog } from "./StructuredPreviewExitBoundary";
 import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-template-previews";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const source = mapMasterSpecificationSource({ opportunityId: "opportunity-id", opportunityNumber: "OPPORTUNITY-2026-0013", opportunityName: "Tracker", customerId: "customer-id", customerName: "SAMPLE ONLY", specificationId: "specification-id", specificationNumber: "MASTER-2026-0001", versionId: "version-id", versionNumber: 1, changeSummary: "Initial intake", savedAt: "2026-10-05T18:37:27.589Z", project: null, specificationData: {} });
 const previewSource = vi.fn();
 
 vi.mock("@/lib/lifecycle-structured-template-previews.functions", () => ({
   fetchStructuredTemplatePreviewSource: (input: unknown) => previewSource(input),
+}));
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { from: vi.fn() },
 }));
 
 vi.mock("@tanstack/react-start", async () => {
@@ -36,6 +41,7 @@ function ProductionExitDialogHarness() {
 afterEach(() => {
   cleanup();
   previewSource.mockReset();
+  vi.mocked(supabase.from).mockReset();
 });
 
 describe("StructuredTemplatePreview mounted local interactions", () => {
@@ -116,6 +122,80 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     client.setQueryData(queryKey, { ...source, versionId: "dirty-amended-version-id" });
     await waitFor(() => expect(screen.getByText(/The source pin advanced while local edits exist/)).toBeTruthy());
     expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep this exact text after the clean amendment.");
+  });
+
+  it("adopts only empty BOM component fields, retains local edits through switching and source conflict, and makes no project-BOM calls while unprojected", async () => {
+    previewSource.mockResolvedValue(source);
+    const select = vi.fn().mockResolvedValue({ data: [{ id: "component-1", name: "Catalogue description", part_number: "CAT-001", manufacturer: "Catalogue maker" }], error: null });
+    vi.mocked(supabase.from).mockReturnValue({ select: () => ({ or: () => ({ limit: select }) }) } as never);
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><StructuredTemplatePreview /></QueryClientProvider>);
+    await screen.findByLabelText("Scope statement");
+    await user.click(screen.getByRole("tab", { name: "BOM review" }));
+    await user.click(screen.getByRole("button", { name: "Add Optional local scratch rows row" }));
+    const mpn = screen.getByLabelText("Optional local scratch rows row 1 MPN");
+    const manufacturer = screen.getByLabelText("Optional local scratch rows row 1 Manufacturer");
+    const description = screen.getByLabelText("Optional local scratch rows row 1 Description");
+    const quantity = screen.getByLabelText("Optional local scratch rows row 1 Qty");
+    const packageField = screen.getByLabelText("Optional local scratch rows row 1 Package");
+    await user.type(mpn, "Manual MPN");
+    await user.type(quantity, "7");
+    await user.type(packageField, "Manual package");
+    await user.type(screen.getByLabelText("Search caller-visible components for Optional local scratch rows row 1"), "ca");
+    await screen.findByRole("option", { name: /Catalogue description/ });
+    await user.click(screen.getByRole("option", { name: /Catalogue description/ }));
+    expect((mpn as HTMLInputElement).value).toBe("Manual MPN");
+    expect((manufacturer as HTMLInputElement).value).toBe("Catalogue maker");
+    expect((description as HTMLInputElement).value).toBe("Catalogue description");
+    expect((quantity as HTMLInputElement).value).toBe("7");
+    expect((packageField as HTMLInputElement).value).toBe("Manual package");
+    expect(screen.getByText(/all nonempty manual values and every other field stay unchanged/)).toBeTruthy();
+
+    const secondSelect = vi.fn().mockResolvedValue({ data: [{ id: "component-2", name: "Replacement description", part_number: "CAT-002", manufacturer: "Replacement maker" }], error: null });
+    vi.mocked(supabase.from).mockReturnValue({ select: () => ({ or: () => ({ limit: secondSelect }) }) } as never);
+    await user.type(screen.getByLabelText("Search caller-visible components for Optional local scratch rows row 1"), "re");
+    await screen.findByRole("option", { name: /Replacement description/ });
+    await user.click(screen.getByRole("option", { name: /Replacement description/ }));
+    expect((mpn as HTMLInputElement).value).toBe("Manual MPN");
+    expect((manufacturer as HTMLInputElement).value).toBe("Catalogue maker");
+    expect((description as HTMLInputElement).value).toBe("Catalogue description");
+
+    await user.click(screen.getByRole("tab", { name: "Statement of Requirements" }));
+    await user.click(screen.getByRole("tab", { name: "BOM review" }));
+    expect((screen.getByLabelText("Optional local scratch rows row 1 Description") as HTMLInputElement).value).toBe("Catalogue description");
+    client.setQueryData(["structured-template-source", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1], { ...source, versionId: "amended-version-id" });
+    await screen.findByText(/The source pin advanced while local edits exist/);
+    expect((screen.getByLabelText("Optional local scratch rows row 1 MPN") as HTMLInputElement).value).toBe("Manual MPN");
+    expect(vi.mocked(supabase.from).mock.calls.map(([table]) => table)).toEqual(expect.arrayContaining(["components"]));
+  });
+
+  it("shows component search loading, empty, error, and ignores stale results without clearing local rows", async () => {
+    previewSource.mockResolvedValue(source);
+    let firstResolve: (value: { data: { id: string; name: string; part_number: string; manufacturer: string | null }[]; error: null }) => void = () => undefined;
+    const first = new Promise<{ data: { id: string; name: string; part_number: string; manufacturer: string | null }[]; error: null }>((resolve) => { firstResolve = resolve; });
+    const second = vi.fn().mockResolvedValue({ data: [], error: null });
+    const limit = vi.fn().mockReturnValueOnce(first).mockImplementation(second);
+    vi.mocked(supabase.from).mockReturnValue({ select: () => ({ or: () => ({ limit }) }) } as never);
+    const user = userEvent.setup();
+    renderPreview();
+    await screen.findByLabelText("Scope statement");
+    await user.click(screen.getByRole("tab", { name: "BOM review" }));
+    await user.click(screen.getByRole("button", { name: "Add Optional local scratch rows row" }));
+    const search = screen.getByLabelText("Search caller-visible components for Optional local scratch rows row 1");
+    await user.type(search, "ol");
+    expect(await screen.findByLabelText("Searching components")).toBeTruthy();
+    await user.clear(search);
+    await user.type(search, "new");
+    await screen.findByText("No caller-visible components match this search. Your local row is unchanged.");
+    firstResolve({ data: [{ id: "stale", name: "Stale result", part_number: "STALE", manufacturer: null }], error: null });
+    await waitFor(() => expect(screen.queryByRole("option", { name: /Stale result/ })).toBeNull());
+
+    vi.mocked(supabase.from).mockReturnValue({ select: () => ({ or: () => ({ limit: vi.fn().mockResolvedValue({ data: null, error: new Error("read denied") }) }) }) } as never);
+    await user.clear(search);
+    await user.type(search, "er");
+    expect(await screen.findByText("Component search is unavailable. Your local row is unchanged.")).toBeTruthy();
+    expect((screen.getByLabelText("Optional local scratch rows row 1 MPN") as HTMLInputElement).value).toBe("");
   });
 
   it("uses the production Radix dialog dismissal guard for Escape and outside interactions, retaining edits until discard", async () => {
