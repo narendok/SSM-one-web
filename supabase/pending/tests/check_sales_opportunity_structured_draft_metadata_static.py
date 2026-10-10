@@ -55,6 +55,10 @@ def main() -> None:
     conflict_worker = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_conflict_race_worker.sql"
     conflict_assertions = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_conflict_race_assertions.sql"
     conflict_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_conflict_race.sh"
+    stale_setup = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_stale_revision_race_setup.sql"
+    stale_worker = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_stale_revision_race_worker.sql"
+    stale_assertions = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_stale_revision_race_assertions.sql"
+    stale_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_stale_revision_race.sh"
     require(fixture.read_text(), "LOCAL DISPOSABLE FIXTURE ONLY", "local fixture boundary")
     require(runtime.read_text(), "STRUCTURED_DRAFT_LOCAL_ACCEPTANCE_PASS", "runtime acceptance success marker")
     require(runner.read_text(), "Refusing a non-private local structured-draft acceptance target.", "local-only runner refusal")
@@ -64,6 +68,13 @@ def main() -> None:
     require(conflict_assertions.read_text(), "v_drafts <> 1 OR v_revisions <> 1 OR v_requests <> 1", "conflict no-extra-write assertion")
     require(conflict_runner.read_text(), "CONTRACT_CONTENTION_OBSERVED case=%s", "conflict contract lock observation")
     require(conflict_runner.read_text(), "Fixture-only transport; pending contract remains revoked by default.", "conflict fixture-only transport boundary")
+    require(stale_setup.read_text(), "LOCAL DISPOSABLE TWO-WORKER STALE-REVISION RACE FIXTURE ONLY", "stale-race fixture boundary")
+    require(stale_worker.read_text(), "Captures the stale conflict without a receipt result", "stale worker receipt denial capture")
+    require(stale_assertions.read_text(), "Structured Sales draft revision conflict", "stale conflict assertion")
+    require(stale_assertions.read_text(), "Original revision history changed during stale-revision race", "stale historical preservation assertion")
+    require(stale_assertions.read_text(), "v_drafts <> 1 OR v_revisions <> 2 OR v_requests <> 2", "stale no-loser-write assertion")
+    require(stale_runner.read_text(), "CONTRACT_CONTENTION_OBSERVED workers=%s", "stale contract lock observation")
+    require(stale_runner.read_text(), "Fixture-only transport; the pending proposal remains fully revoked by default.", "stale fixture-only transport boundary")
     print("structured draft metadata static checks: PASS")
 
 
