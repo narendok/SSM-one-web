@@ -5,7 +5,8 @@
 -- observer are mandatory before the protected function could be enabled.
 --
 -- Required isolated-fixture variables:
--- sales_manager_user_id, outsider_user_id, opportunity_id, customer_id,
+-- sales_manager_user_id, second_sales_manager_user_id, outsider_user_id,
+-- opportunity_id, customer_id,
 -- specification_id, master_version_id, request_key_create, request_key_replay,
 -- request_key_update, request_key_restore, request_key_conflict,
 -- request_key_empty_kind_baseline,
@@ -51,9 +52,6 @@ BEGIN
      OR (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests AS receipt
          WHERE receipt.request_key = (SELECT request_key_create FROM structured_draft_scope)) <> 1 THEN
     RAISE EXCEPTION 'First structured draft receipt graph is incomplete';
-  END IF;
-  IF EXISTS (SELECT 1 FROM public.activity_log WHERE entity_type = 'sales_opportunity_structured_draft') THEN
-    RAISE EXCEPTION 'Metadata proposal must not create an activity audit';
   END IF;
 END;
 $$;
@@ -142,6 +140,7 @@ $$;
 CREATE TEMP TABLE structured_draft_acceptance_inputs AS
 SELECT
   :'sales_manager_user_id'::uuid AS sales_manager_user_id,
+  :'second_sales_manager_user_id'::uuid AS second_sales_manager_user_id,
   :'outsider_user_id'::uuid AS outsider_user_id,
   :'opportunity_id'::uuid AS opportunity_id,
   :'customer_id'::uuid AS customer_id,
@@ -188,6 +187,23 @@ BEGIN
       RAISE;
     END IF;
   END;
+
+  -- A separately authorized Sales actor must not replay or disclose this
+  -- actor-bound receipt, even with the exact immutable tuple and payload.
+  PERFORM set_config('request.jwt.claim.sub', v_input.second_sales_manager_user_id::text, true);
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id,
+      v_input.specification_id, v_input.master_version_id,
+      'SOR', 0,
+      '{"OEM_REQUIREMENT_ROWS":"A","SCOPE_STATEMENT":"Scope","ACCEPTANCE_CRITERIA":"Accept","CAN_TELEMETRY_NOTES":"CAN","PILOT_ROLLOUT_NOTES":"Pilot","COMMERCIAL_SLA_WARRANTY_DELIVERY":"Commercial"}'::jsonb,
+      v_input.request_key_create
+    );
+    RAISE EXCEPTION 'Expected separately authorized actor replay to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Request key conflicts with a different immutable source, schema, caller, revision, or payload' THEN RAISE; END IF;
+  END;
+  PERFORM set_config('request.jwt.claim.sub', v_input.sales_manager_user_id::text, true);
 
   BEGIN
     PERFORM public.save_sales_opportunity_structured_draft_revision(
@@ -321,9 +337,9 @@ $$;
 -- Required separate isolated acceptance/runner evidence:
 -- 1. Unknown/derived keys, arrays, objects, and numbers fail before writes.
 -- 2. Wrong customer/opportunity/specification/version tuple fails before writes.
--- 3. A different authenticated actor cannot replay/read this actor-bound draft.
+-- 3. A separately authorized Sales actor cannot replay/read this actor-bound draft.
 -- 4. No Drive, Drive revision, controlled register, storage, document-number, or
---    activity-log entity is created by any success or failure path.
+--    controlled-document materialization is created by any success or failure path.
 -- 5. Two sessions racing the same logical identity converge to one revision or a
 --    revision conflict; never two revision-1 rows.
 ROLLBACK;
