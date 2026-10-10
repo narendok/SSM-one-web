@@ -17,10 +17,7 @@ COMMIT;
 
 -- Polling is bounded and conditioned on durable barrier state, rather than a
 -- time delay that assumes the competing session started.
-SELECT released
-FROM public.sales_intake_race_barriers
-WHERE race_label = :'race_label'
-  AND (released OR clock_timestamp() < clock_timestamp() + interval '15 seconds');
+SELECT set_config('race_label', :'race_label', false);
 
 DO $wait$
 DECLARE v_released boolean; v_deadline timestamptz := clock_timestamp() + interval '15 seconds';

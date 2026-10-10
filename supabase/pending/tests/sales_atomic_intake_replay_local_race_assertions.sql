@@ -2,6 +2,7 @@
 -- worker registrations, then asserts the completed scenario. This is a
 -- synthetic fixture test, not managed RLS/JWT transport evidence.
 \set ON_ERROR_STOP on
+SELECT set_config('race_label', :'race_label', false);
 WITH waited AS (
   SELECT ready_workers
   FROM public.sales_intake_race_barriers
