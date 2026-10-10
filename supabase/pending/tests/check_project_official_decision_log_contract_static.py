@@ -63,8 +63,8 @@ checks = {
         and "v_adapted_request->>'note'" in sql
     ),
     "caller reads remain denied pending authority": sql.count("USING (false);") == 2 and "WHERE false;" in sql,
-    "evidence fields require JSON strings": all(
-        f"jsonb_typeof(v_evidence_entry->'{field}') <> 'string'" in sql
+    "evidence fields require JSON strings before provenance gating": all(
+        f"jsonb_typeof(evidence.value->'{field}') <> 'string'" in sql
         for field in ("evidenceReference", "contributorReference", "scopeReference")
     ),
     "role harness uses SET LOCAL ROLE": "SET LOCAL ROLE authenticated;" in harness,
