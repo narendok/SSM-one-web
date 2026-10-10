@@ -1,0 +1,39 @@
+-- LOCAL DISPOSABLE FIXTURE ONLY. This is a deliberately minimal schema for
+-- exercising the pending client-intake proposal. It models function inputs,
+-- source foreign keys, and synthetic identity/scope helpers only. It does not
+-- reproduce managed RLS, JWT verification, grants, or application transport.
+\set ON_ERROR_STOP on
+BEGIN;
+DROP SCHEMA IF EXISTS auth CASCADE;
+DROP SCHEMA IF EXISTS public CASCADE;
+CREATE SCHEMA public;
+CREATE SCHEMA auth;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+DO $roles$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
+END;
+$roles$;
+GRANT authenticated TO CURRENT_USER;
+GRANT USAGE ON SCHEMA public, auth TO authenticated;
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+CREATE TABLE public.customers (id uuid PRIMARY KEY, name text NOT NULL);
+CREATE TABLE public.sales_opportunities (id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id));
+CREATE TABLE public.external_parties (id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id), active boolean NOT NULL DEFAULT true);
+CREATE TABLE public.external_contacts (id uuid PRIMARY KEY, external_party_id uuid NOT NULL REFERENCES public.external_parties(id), user_id uuid NOT NULL UNIQUE, active boolean NOT NULL DEFAULT true, portal_enabled boolean NOT NULL DEFAULT true);
+CREATE TABLE public.external_portal_access (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), external_contact_id uuid NOT NULL REFERENCES public.external_contacts(id), portal_type text NOT NULL, access_scope jsonb NOT NULL DEFAULT '{}'::jsonb, is_active boolean NOT NULL DEFAULT true, deactivated_at timestamptz, invitation_revoked_at timestamptz, expires_at timestamptz);
+CREATE TABLE public.customer_requirements (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id), customer_id uuid NOT NULL REFERENCES public.customers(id), title text NOT NULL, status text NOT NULL, current_revision integer NOT NULL, customer_reference text, requirement_data jsonb NOT NULL DEFAULT '{}'::jsonb, submitted_at timestamptz, created_by uuid);
+CREATE TABLE public.customer_requirement_revisions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), requirement_id uuid NOT NULL REFERENCES public.customer_requirements(id), revision_number integer NOT NULL, change_summary text NOT NULL, requirement_data jsonb NOT NULL, status text NOT NULL, created_by uuid);
+CREATE TABLE public.activity_log (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), actor_user_id uuid NOT NULL, module_key text NOT NULL, entity_type text NOT NULL, entity_id uuid NOT NULL, action text NOT NULL, summary text NOT NULL, after_data jsonb);
+CREATE FUNCTION public.external_current_contact_id(p_user_id uuid DEFAULT auth.uid()) RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$ SELECT contact.id FROM public.external_contacts contact JOIN public.external_parties party ON party.id = contact.external_party_id WHERE contact.user_id = p_user_id AND contact.active AND contact.portal_enabled AND party.active LIMIT 1 $$;
+CREATE FUNCTION public.external_current_party_id() RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$ SELECT contact.external_party_id FROM public.external_contacts contact WHERE contact.id = public.external_current_contact_id(auth.uid()) $$;
+CREATE FUNCTION public.client_requirement_test_failpoint() RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$ BEGIN IF current_setting('client_requirement.test.failpoint', true) = TG_TABLE_NAME AND NEW.action = 'external_submitted' THEN RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'Local test failpoint: ' || TG_TABLE_NAME; END IF; RETURN NEW; END; $$;
+CREATE TRIGGER client_requirement_fail_activity BEFORE INSERT ON public.activity_log FOR EACH ROW EXECUTE FUNCTION public.client_requirement_test_failpoint();
+INSERT INTO public.customers (id, name) VALUES ('00000000-0000-4000-8000-000000000010', 'Synthetic Customer A'), ('00000000-0000-4000-8000-000000000011', 'Synthetic Customer B');
+INSERT INTO public.sales_opportunities (id, customer_id) VALUES ('00000000-0000-4000-8000-000000000020', '00000000-0000-4000-8000-000000000010'), ('00000000-0000-4000-8000-000000000021', '00000000-0000-4000-8000-000000000011');
+INSERT INTO public.external_parties (id, customer_id) VALUES ('00000000-0000-4000-8000-000000000030', '00000000-0000-4000-8000-000000000010'), ('00000000-0000-4000-8000-000000000031', '00000000-0000-4000-8000-000000000011');
+INSERT INTO public.external_contacts (id, external_party_id, user_id) VALUES ('00000000-0000-4000-8000-000000000040', '00000000-0000-4000-8000-000000000030', '00000000-0000-4000-8000-000000000001'), ('00000000-0000-4000-8000-000000000041', '00000000-0000-4000-8000-000000000030', '00000000-0000-4000-8000-000000000002'), ('00000000-0000-4000-8000-000000000042', '00000000-0000-4000-8000-000000000031', '00000000-0000-4000-8000-000000000003');
+INSERT INTO public.external_portal_access (external_contact_id, portal_type, access_scope) VALUES ('00000000-0000-4000-8000-000000000040', 'CLIENT_REQUIREMENTS', '{"opportunityIds":["00000000-0000-4000-8000-000000000020"],"customerIds":["00000000-0000-4000-8000-000000000010"]}'::jsonb), ('00000000-0000-4000-8000-000000000041', 'CLIENT_REQUIREMENTS', '{"opportunityIds":["00000000-0000-4000-8000-000000000020"],"customerIds":["00000000-0000-4000-8000-000000000010"]}'::jsonb), ('00000000-0000-4000-8000-000000000042', 'CLIENT_REQUIREMENTS', '{"opportunityIds":["00000000-0000-4000-8000-000000000021"],"customerIds":["00000000-0000-4000-8000-000000000011"]}'::jsonb);
+COMMIT;
