@@ -84,6 +84,16 @@ function readEvidenceReferences(value: unknown, errors: ProjectOfficialDecisionP
     return null;
   }
 
+  let hasSparseEntries = false;
+  for (let index = 0; index < value.length; index += 1) {
+    if (!(index in value)) {
+      errors.push({ path: `evidenceReferences[${index}]`, message: "Evidence references must not contain sparse entries." });
+      hasSparseEntries = true;
+    }
+  }
+
+  if (hasSparseEntries) return null;
+
   const references: ProjectOfficialDecisionEvidenceReference[] = [];
   value.forEach((entry, index) => {
     const path = `evidenceReferences[${index}]`;
@@ -98,6 +108,15 @@ function readEvidenceReferences(value: unknown, errors: ProjectOfficialDecisionP
     if (evidenceReference && contributorReference && scopeReference) references.push({ evidenceReference, contributorReference, scopeReference });
   });
   return references;
+}
+
+function compareCodeUnits(left: string, right: string): number {
+  const sharedLength = Math.min(left.length, right.length);
+  for (let index = 0; index < sharedLength; index += 1) {
+    const difference = left.charCodeAt(index) - right.charCodeAt(index);
+    if (difference !== 0) return difference;
+  }
+  return left.length - right.length;
 }
 
 function readAmendment(value: unknown, errors: ProjectOfficialDecisionPayloadError[]): ProjectOfficialDecisionAmendmentLink | null {
@@ -143,7 +162,7 @@ export function canonicalizeProjectOfficialDecisionRequestPayload(input: unknown
   const validated = validateProjectOfficialDecisionRequestPayload(input);
   if (!validated.ok) throw new Error(validated.errors.map((error) => `${error.path}: ${error.message}`).join(" "));
   const { payload } = validated;
-  const evidenceReferences = [...payload.evidenceReferences].sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+  const evidenceReferences = [...payload.evidenceReferences].sort((left, right) => compareCodeUnits(JSON.stringify(left), JSON.stringify(right)));
   return JSON.stringify({
     actionIntent: payload.actionIntent,
     sourceLocator: payload.sourceLocator,

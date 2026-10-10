@@ -58,6 +58,23 @@ describe("project official decision local payload contract", () => {
     });
   });
 
+  it("rejects hole-only and mixed sparse evidence arrays instead of dropping entries", () => {
+    const holeOnlyEvidence = new Array(1);
+    const mixedEvidence = [{ ...validPayload.evidenceReferences[0] }, , { evidenceReference: "evidence-8", contributorReference: "contributor-6", scopeReference: "project-42" }];
+
+    expect(validateProjectOfficialDecisionRequestPayload({ ...validPayload, evidenceReferences: holeOnlyEvidence })).toEqual({
+      ok: false,
+      errors: [{ path: "evidenceReferences[0]", message: "Evidence references must not contain sparse entries." }],
+    });
+    expect(validateProjectOfficialDecisionRequestPayload({ ...validPayload, evidenceReferences: mixedEvidence })).toEqual({
+      ok: false,
+      errors: [{ path: "evidenceReferences[1]", message: "Evidence references must not contain sparse entries." }],
+    });
+    expect(() => canonicalizeProjectOfficialDecisionRequestPayload({ ...validPayload, evidenceReferences: mixedEvidence })).toThrow(
+      "evidenceReferences[1]: Evidence references must not contain sparse entries.",
+    );
+  });
+
   it("requires an immutable prior decision reference whenever an amendment link is supplied", () => {
     const result = validateProjectOfficialDecisionRequestPayload({ ...validPayload, amendment: {} });
     expect(result).toEqual({ ok: false, errors: [{ path: "amendment", message: "An amendment link must contain only priorDecisionReference." }] });
@@ -82,6 +99,22 @@ describe("project official decision local payload contract", () => {
     expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, evidenceReferences: [{ ...validPayload.evidenceReferences[0], evidenceReference: "evidence-8" }] })).toBe(false);
     expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, evidenceReferences: [{ ...validPayload.evidenceReferences[0], contributorReference: "contributor-6" }] })).toBe(false);
     expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, evidenceReferences: [{ ...validPayload.evidenceReferences[0], scopeReference: "project-43" }] })).toBe(false);
+  });
+
+  it("sorts evidence with deterministic code-unit ordering across case, accents, and punctuation", () => {
+    const evidenceReferences = [
+      { evidenceReference: "zeta", contributorReference: "contributor", scopeReference: "scope" },
+      { evidenceReference: "Éclair", contributorReference: "contributor", scopeReference: "scope" },
+      { evidenceReference: "alpha", contributorReference: "contributor", scopeReference: "scope" },
+      { evidenceReference: "Alpha", contributorReference: "contributor", scopeReference: "scope" },
+      { evidenceReference: "!alert", contributorReference: "contributor", scopeReference: "scope" },
+    ];
+    const canonical = JSON.parse(canonicalizeProjectOfficialDecisionRequestPayload({ ...validPayload, evidenceReferences: [...evidenceReferences].reverse() }));
+
+    expect(canonical.evidenceReferences.map((entry: { evidenceReference: string }) => entry.evidenceReference)).toEqual(["!alert", "Alpha", "alpha", "zeta", "Éclair"]);
+    expect(canonicalizeProjectOfficialDecisionRequestPayload({ ...validPayload, evidenceReferences })).toBe(
+      canonicalizeProjectOfficialDecisionRequestPayload({ ...validPayload, evidenceReferences: [...evidenceReferences].reverse() }),
+    );
   });
 
   it("throws rather than silently canonicalizing payloads with unknown meaningful fields", () => {
