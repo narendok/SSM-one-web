@@ -8,6 +8,7 @@ import { useState, type ReactNode } from "react";
 import { StructuredTemplatePreview } from "./StructuredTemplatePreview";
 import { StructuredPreviewExitDialog } from "./StructuredPreviewExitBoundary";
 import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-template-previews";
+import { MASTER_SPECIFICATION_TBC } from "@/lib/master-specification";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ProposalDetail } from "@/routes/_authenticated/sales";
@@ -214,6 +215,24 @@ function ProposalDetailDialogHarness() {
     </>
   );
 }
+
+const proposalSpecificationData = {
+  proposedName: "Synthetic Tracker",
+  customerOrInternalOwner: "Synthetic OEM",
+  industryApplication: "Fleet monitoring",
+  productFamily: "Vehicle tracker",
+  developmentScope: "Hardware proof of concept",
+  workstreams: ["HARDWARE", "TEST"],
+  requirementSummary: "Synthetic intake only.",
+  powerAndUnits: MASTER_SPECIFICATION_TBC,
+  interfaces: MASTER_SPECIFICATION_TBC,
+  connectivityAndGnss: "GNSS",
+  environmentAndIp: MASTER_SPECIFICATION_TBC,
+  volumes: MASTER_SPECIFICATION_TBC,
+  schedule: MASTER_SPECIFICATION_TBC,
+  requestedStandards: MASTER_SPECIFICATION_TBC,
+  exclusions: MASTER_SPECIFICATION_TBC,
+};
 
 afterEach(() => {
   cleanup();
@@ -814,7 +833,23 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
   it("keeps local preview text when the real proposal dialog returns from documents, while Close still prompts", async () => {
     previewSource.mockResolvedValue(source);
     vi.mocked(supabase.from).mockReturnValue({
-      select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }) }),
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            single: () =>
+              Promise.resolve({
+                data: {
+                  id: "version-id",
+                  version_number: 1,
+                  change_summary: "Initial intake",
+                  created_at: "2026-10-05T18:37:27.589Z",
+                  specification_data: proposalSpecificationData,
+                },
+                error: null,
+              }),
+          }),
+        }),
+      }),
     } as never);
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
