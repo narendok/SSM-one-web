@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   areCanonicalProjectOfficialDecisionRequestPayloadsEqual,
   canonicalizeProjectOfficialDecisionRequestPayload,
+  projectOfficialDecisionPayloadLimits,
   validateProjectOfficialDecisionRequestPayload,
 } from "./project-official-decision-payload";
 
@@ -21,7 +22,7 @@ describe("project official decision local payload contract", () => {
     expect(validateProjectOfficialDecisionRequestPayload(validPayload)).toEqual({ ok: true, payload: validPayload });
   });
 
-  it("rejects missing notes and malformed source locators without treating client input as an authorization decision", () => {
+  it("rejects missing and oversized notes plus malformed source locators without treating client input as authorization", () => {
     const result = validateProjectOfficialDecisionRequestPayload({ ...validPayload, note: " \n ", sourceLocator: { pageReference: "project-bom", label: "BOM Item 42" } });
     expect(result).toEqual({
       ok: false,
@@ -30,16 +31,30 @@ describe("project official decision local payload contract", () => {
         { path: "note", message: "A non-empty short human-authored note is required." },
       ],
     });
+    expect(validateProjectOfficialDecisionRequestPayload({ ...validPayload, note: "n".repeat(projectOfficialDecisionPayloadLimits.noteCharacters) })).toEqual({
+      ok: true,
+      payload: { ...validPayload, note: "n".repeat(projectOfficialDecisionPayloadLimits.noteCharacters) },
+    });
+    expect(validateProjectOfficialDecisionRequestPayload({ ...validPayload, note: "n".repeat(projectOfficialDecisionPayloadLimits.noteCharacters + 1) })).toEqual({
+      ok: false,
+      errors: [{ path: "note", message: `Note exceeds ${projectOfficialDecisionPayloadLimits.noteCharacters} characters.` }],
+    });
   });
 
-  it("rejects a contributor reference that lacks the required bounded evidence scope", () => {
+  it("rejects unknown nested source, evidence, and amendment fields", () => {
     const result = validateProjectOfficialDecisionRequestPayload({
       ...validPayload,
-      evidenceReferences: [{ evidenceReference: "evidence-7", contributorReference: "contributor-5" }],
+      sourceLocator: { ...validPayload.sourceLocator, injected: "ignored" },
+      evidenceReferences: [{ ...validPayload.evidenceReferences[0], injected: "ignored" }],
+      amendment: { ...validPayload.amendment, injected: "ignored" },
     });
     expect(result).toEqual({
       ok: false,
-      errors: [{ path: "evidenceReferences[0]", message: "Evidence reference must contain only evidenceReference, contributorReference, and scopeReference data properties." }],
+      errors: [
+        { path: "sourceLocator", message: "Source locator must contain only pageReference and itemReference data properties." },
+        { path: "evidenceReferences[0]", message: "Evidence reference must contain only evidenceReference, contributorReference, and scopeReference data properties." },
+        { path: "amendment", message: "An amendment link must contain only priorDecisionReference." },
+      ],
     });
   });
 
@@ -48,7 +63,7 @@ describe("project official decision local payload contract", () => {
     expect(result).toEqual({ ok: false, errors: [{ path: "amendment", message: "An amendment link must contain only priorDecisionReference." }] });
   });
 
-  it("compares equivalent canonical request payloads despite evidence order, while any note change differs", () => {
+  it("compares evidence order canonically while preserving every source, amendment, contributor, and evidence field", () => {
     const reordered = {
       ...validPayload,
       evidenceReferences: [
@@ -61,5 +76,17 @@ describe("project official decision local payload contract", () => {
     expect(canonicalizeProjectOfficialDecisionRequestPayload(reordered)).toBe(canonicalizeProjectOfficialDecisionRequestPayload(sameReferencesDifferentOrder));
     expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(reordered, sameReferencesDifferentOrder)).toBe(true);
     expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, note: "Changed note." })).toBe(false);
+    expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, sourceLocator: { ...validPayload.sourceLocator, pageReference: "project-delivery" } })).toBe(false);
+    expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, sourceLocator: { ...validPayload.sourceLocator, itemReference: "bom-item-43" } })).toBe(false);
+    expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, amendment: { priorDecisionReference: "decision-2" } })).toBe(false);
+    expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, evidenceReferences: [{ ...validPayload.evidenceReferences[0], evidenceReference: "evidence-8" }] })).toBe(false);
+    expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, evidenceReferences: [{ ...validPayload.evidenceReferences[0], contributorReference: "contributor-6" }] })).toBe(false);
+    expect(areCanonicalProjectOfficialDecisionRequestPayloadsEqual(validPayload, { ...validPayload, evidenceReferences: [{ ...validPayload.evidenceReferences[0], scopeReference: "project-43" }] })).toBe(false);
+  });
+
+  it("throws rather than silently canonicalizing payloads with unknown meaningful fields", () => {
+    expect(() => canonicalizeProjectOfficialDecisionRequestPayload({ ...validPayload, sourceLocator: { ...validPayload.sourceLocator, injected: "ignored" } })).toThrow(
+      "sourceLocator: Source locator must contain only pageReference and itemReference data properties.",
+    );
   });
 });

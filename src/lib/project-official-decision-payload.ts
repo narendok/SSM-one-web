@@ -5,6 +5,7 @@
  */
 export const projectOfficialDecisionPayloadLimits = {
   referenceCharacters: 512,
+  noteCharacters: 512,
   evidenceReferences: 32,
 } as const;
 
@@ -123,7 +124,11 @@ export function validateProjectOfficialDecisionRequestPayload(input: unknown): P
   const sourceLocator = readSourceLocator(record.sourceLocator, errors);
   const expectedSourceRevision = readOpaqueReference(record.expectedSourceRevision, "expectedSourceRevision", errors);
   const note = typeof record.note === "string" && record.note.trim() ? record.note : null;
-  if (!note) errors.push({ path: "note", message: "A non-empty short human-authored note is required." });
+  if (!note) {
+    errors.push({ path: "note", message: "A non-empty short human-authored note is required." });
+  } else if (note.length > projectOfficialDecisionPayloadLimits.noteCharacters) {
+    errors.push({ path: "note", message: `Note exceeds ${projectOfficialDecisionPayloadLimits.noteCharacters} characters.` });
+  }
   const evidenceReferences = readEvidenceReferences(record.evidenceReferences, errors);
   const amendment = readAmendment(record.amendment, errors);
   const alternativeReference = record.alternativeReference === undefined || record.alternativeReference === null ? null : readOpaqueReference(record.alternativeReference, "alternativeReference", errors);
