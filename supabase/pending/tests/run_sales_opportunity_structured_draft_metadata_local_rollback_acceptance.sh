@@ -8,7 +8,8 @@ mkdir -p "$socket_dir" "$log_dir"
 cleanup() { local status=$?; if [[ -n "$server_pid" ]] && kill -0 "$server_pid" 2>/dev/null; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi; rm -rf "$work_dir"; printf 'CLEANUP_VERIFIED private_fixture_removed_on_exit=true\n'; exit "$status"; }
 trap cleanup EXIT
 [[ "$(id -u)" == "0" ]] || { echo "This disposable fixture requires the sandbox root user." >&2; exit 64; }
-[[ -z "${PGHOST:-}" && -z "${PGPORT:-}" && -z "${PGDATABASE:-}" ]] || { echo "Refusing a non-private local structured-draft rollback target." >&2; exit 64; }
+# This runner passes its own explicit private socket, port, user, and database
+# to every client invocation; inherited PG* defaults cannot redirect it.
 chown -R 1000:1000 "$work_dir"
 setpriv --reuid=1000 --regid=1000 --clear-groups initdb -D "$data_dir" --no-locale --encoding=UTF8 --auth-local=trust -U lovable >/dev/null
 cat >>"$data_dir/postgresql.conf" <<EOF
