@@ -17,6 +17,22 @@ BEGIN
 END;
 $release_check$;
 
+DO $result_wait$
+DECLARE
+  v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
+BEGIN
+  IF current_setting('app.race_label', true) <> 'same_key_same_payload' THEN RETURN; END IF;
+  LOOP
+    EXIT WHEN (SELECT count(*) FROM public.sales_intake_race_results
+      WHERE race_label = current_setting('app.race_label', true)) = 2;
+    IF clock_timestamp() >= v_deadline THEN
+      RAISE EXCEPTION 'Exact replay workers did not record both responses before timeout';
+    END IF;
+    PERFORM pg_sleep(0.02);
+  END LOOP;
+END;
+$result_wait$;
+
 DO $assert$
 DECLARE
   v_receipts integer; v_opportunities integer; v_specs integer; v_versions integer; v_audits integer;
