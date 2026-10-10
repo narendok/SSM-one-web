@@ -2,11 +2,13 @@
 -- in an independent session after fixture state is committed. The controller
 -- observes a second session blocked on this lock before revoking permission.
 \set ON_ERROR_STOP on
-BEGIN;
-SELECT pg_advisory_xact_lock(hashtextextended(:'request_key', 0));
+-- Commit readiness first. The subsequent transaction holds the exact lock, so
+-- the controller never relies on an uncommitted status flag as wait evidence.
 UPDATE public.sales_intake_lock_wait_cases
 SET holder_ready = true
 WHERE case_label = :'case_label';
+BEGIN;
+SELECT pg_advisory_xact_lock(hashtextextended(:'request_key', 0));
 SELECT set_config('app.case_label', :'case_label', false);
 DO $hold$
 DECLARE
