@@ -431,7 +431,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       render(
         <QueryClientProvider client={client}>
-          <StructuredTemplatePreview />
+          <StructuredTemplatePreview actorId="actor-a" />
         </QueryClientProvider>,
       );
       return { client };
@@ -467,7 +467,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       render(
         <QueryClientProvider client={client}>
-          <StructuredTemplatePreview />
+          <StructuredTemplatePreview actorId="actor-a" />
         </QueryClientProvider>,
       );
       return { client };
@@ -525,7 +525,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <StructuredTemplatePreview />
+        <StructuredTemplatePreview actorId="actor-a" />
       </QueryClientProvider>,
     );
     await screen.findByLabelText("Scope statement");
@@ -581,6 +581,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     render(
       <QueryClientProvider client={client}>
         <StructuredTemplatePreview
+          actorId="actor-a"
           project={{ id: "project-id", name: "Test project", code: "TEST" }}
         />
       </QueryClientProvider>,
@@ -678,6 +679,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
         client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
       >
         <StructuredTemplatePreview
+          actorId="actor-a"
           project={{ id: "project-id", name: "Test project", code: "TEST" }}
         />
       </QueryClientProvider>,
