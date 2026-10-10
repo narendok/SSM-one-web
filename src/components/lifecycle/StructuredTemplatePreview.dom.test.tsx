@@ -8,8 +8,10 @@ import { useState, type ReactNode } from "react";
 import { StructuredTemplatePreview } from "./StructuredTemplatePreview";
 import { StructuredPreviewExitDialog } from "./StructuredPreviewExitBoundary";
 import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-template-previews";
+import { MASTER_SPECIFICATION_TBC } from "@/lib/master-specification";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { ProposalDetail } from "@/routes/_authenticated/sales";
 
 const source = mapMasterSpecificationSource({
   opportunityId: "opportunity-id",
@@ -50,6 +52,7 @@ vi.mock("@/lib/project-bom.functions", async (importOriginal) => {
 });
 
 vi.mock("@tanstack/react-router", () => ({
+  createFileRoute: () => (options: unknown) => options,
   Link: ({ children }: { children: ReactNode }) => <a href="/bom">{children}</a>,
 }));
 
@@ -185,6 +188,51 @@ function DeferredActorSourceHarness() {
     </>
   );
 }
+
+function ProposalDetailDialogHarness() {
+  const [open, setOpen] = useState(true);
+  const detail = {
+    opportunity: {
+      id: "opportunity-id",
+      opportunity_number: "OPPORTUNITY-2026-0013",
+    },
+    specification: {
+      id: "specification-id",
+      specification_number: "MASTER-2026-0001",
+      current_version: 1,
+      customer_id: "customer-id",
+    },
+  } as never;
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Reopen proposal</button>
+      <ProposalDetail
+        detail={open ? detail : null}
+        requirements={[]}
+        onOpenChange={setOpen}
+        actorId="actor-a"
+      />
+    </>
+  );
+}
+
+const proposalSpecificationData = {
+  proposedName: "Synthetic Tracker",
+  customerOrInternalOwner: "Synthetic OEM",
+  industryApplication: "Fleet monitoring",
+  productFamily: "Vehicle tracker",
+  developmentScope: "Hardware proof of concept",
+  workstreams: ["HARDWARE", "TEST"],
+  requirementSummary: "Synthetic intake only.",
+  powerAndUnits: MASTER_SPECIFICATION_TBC,
+  interfaces: MASTER_SPECIFICATION_TBC,
+  connectivityAndGnss: "GNSS",
+  environmentAndIp: MASTER_SPECIFICATION_TBC,
+  volumes: MASTER_SPECIFICATION_TBC,
+  schedule: MASTER_SPECIFICATION_TBC,
+  requestedStandards: MASTER_SPECIFICATION_TBC,
+  exclusions: MASTER_SPECIFICATION_TBC,
+};
 
 afterEach(() => {
   cleanup();
@@ -780,6 +828,53 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       throw new Error("Discard confirmation did not open from the built-in Close button.");
     await user.click(within(confirmation).getByRole("button", { name: "Discard edits" }));
     await waitFor(() => expect(screen.getByText("Exited preview")).toBeTruthy());
+  });
+
+  it("keeps local preview text when the real proposal dialog returns from documents, while Close still prompts", async () => {
+    previewSource.mockResolvedValue(source);
+    vi.mocked(supabase.from).mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            single: () =>
+              Promise.resolve({
+                data: {
+                  id: "version-id",
+                  version_number: 1,
+                  change_summary: "Initial intake",
+                  created_at: "2026-10-05T18:37:27.589Z",
+                  specification_data: proposalSpecificationData,
+                },
+                error: null,
+              }),
+          }),
+        }),
+      }),
+    } as never);
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ProposalDetailDialogHarness />
+      </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Preview documents" }));
+    const scope = await screen.findByLabelText("Scope statement");
+    await user.clear(scope);
+    await user.type(scope, "Keep this proposal-local draft");
+
+    await user.click(screen.getByRole("button", { name: "Back to proposal" }));
+    expect(screen.queryByText("Discard unsaved local edits?")).toBeNull();
+    expect(await screen.findByRole("button", { name: "Preview documents" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Preview documents" }));
+    expect((await screen.findByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe(
+      "Keep this proposal-local draft",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(await screen.findByText("Discard unsaved local edits?")).toBeTruthy();
   });
 
   it("exits clean previews by Escape and built-in Close without confirmation, and reopens without stale dirty state", async () => {
