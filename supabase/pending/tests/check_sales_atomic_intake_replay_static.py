@@ -54,7 +54,7 @@ checks = {
     "local lock wait revokes before release": "sales_manage = false" in lock_assertions and "released = true" in lock_assertions,
     "local lock wait requires post-release denial without records": "LOCK_WAIT_DENIAL_PASS" in race_runner and "receipts=0 opportunities=0" in race_runner,
     "local receipt replay lock wait is seeded": "receipt_replay" in lock_setup and "000000000202" in race_runner,
-    "local fixture supports receipt insertion failpoint": "sales_intake_fail_receipt" in local_fixture,
+    "local fixture supports receipt insertion failpoint": "sales_intake_fail_receipt" in failpoint_acceptance,
     "local failpoints cover specification version and receipt": all(point in failpoint_acceptance for point in ("master_specifications", "master_specification_versions", "sales_opportunity_intake_receipts")),
     "local failpoints assert number rollback": "document_numbering_config" in failpoint_acceptance and "Failpoint % did not roll back all records and numbers" in failpoint_acceptance,
     "local race runner rejects remote targets": "Refusing a non-local PostgreSQL target." in race_runner and "LOCAL_SALES_INTAKE_DISPOSABLE" in race_runner,

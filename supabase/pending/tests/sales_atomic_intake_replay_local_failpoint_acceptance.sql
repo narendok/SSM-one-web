@@ -6,6 +6,8 @@ INSERT INTO public.customer_contacts VALUES ('00000000-0000-4000-8000-0000000000
 INSERT INTO public.sales_enquiries VALUES ('00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000011');
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
+CREATE TRIGGER sales_intake_fail_receipt BEFORE INSERT ON public.sales_opportunity_intake_receipts
+FOR EACH ROW EXECUTE FUNCTION public.sales_intake_test_failpoint();
 DO $failpoints$
 DECLARE
   v_point text; v_before_opportunity integer; v_before_spec integer; v_before_version integer; v_before_audit integer; v_before_receipt integer;
