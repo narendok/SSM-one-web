@@ -77,7 +77,7 @@ function SalesPage() {
     | null
   >(null);
   const [detail, setDetail] = useState<SalesDetail | null>(null);
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, user } = useAuth();
   const sales = useQuery({
     queryKey: ["sales_overview"],
     queryFn: fetchSalesOverview,
@@ -485,6 +485,7 @@ function SalesPage() {
           detail={detail}
           requirements={sales.data?.requirements ?? []}
           onOpenChange={(open) => !open && setDetail(null)}
+          actorId={user?.id ?? null}
         />
       </div>
     </PermissionGate>
@@ -494,10 +495,12 @@ function ProposalDetail({
   detail,
   requirements,
   onOpenChange,
+  actorId,
 }: {
   detail: SalesDetail | null;
   requirements: CustomerRequirement[];
   onOpenChange: (open: boolean) => void;
+  actorId: string | null;
 }) {
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [previewDirty, setPreviewDirty] = useState(false);
@@ -596,6 +599,7 @@ function ProposalDetail({
               </div>
               <StructuredTemplatePreview
                 sourcePin={sourcePin}
+                actorId={actorId}
                 localEdits={localPreviewEdits}
                 onLocalEditsChange={setLocalPreviewEdits}
                 onDirtyChange={setPreviewDirty}
