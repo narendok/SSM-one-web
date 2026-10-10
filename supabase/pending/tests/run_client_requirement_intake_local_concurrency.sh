@@ -46,7 +46,11 @@ SQL
   wait "$pid_a" || status_a=$?
   wait "$pid_b" || status_b=$?
   printf 'CONCURRENCY_CASE case=%s worker_a_exit=%s worker_b_exit=%s\n' "$case_name" "$status_a" "$status_b"
-  [[ "$status_a" == "0" && "$status_b" == "$expected_b_status" ]] || { cat "$log_dir/${case_name}_a.err" "$log_dir/${case_name}_b.err" >&2; return 1; }
+  if [[ "$expected_b_status" == "either_conflict" ]]; then
+    [[ ( "$status_a" == "0" && "$status_b" == "3" ) || ( "$status_a" == "3" && "$status_b" == "0" ) ]] || { cat "$log_dir/${case_name}_a.err" "$log_dir/${case_name}_b.err" >&2; return 1; }
+  else
+    [[ "$status_a" == "0" && "$status_b" == "$expected_b_status" ]] || { cat "$log_dir/${case_name}_a.err" "$log_dir/${case_name}_b.err" >&2; return 1; }
+  fi
 }
 baseline_revision_count="$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions")"
 run_case same_actor_same_canonical 'Concurrent request' '{"description":"Concurrent canonical payload"}' ' Concurrent request ' '{"description":"Concurrent canonical payload"}' 0
@@ -62,7 +66,7 @@ after_revision_count="$(run_psql -Atqc "SELECT count(*) FROM public.customer_req
 [[ "$((after_revision_count - baseline_revision_count))" == "1" ]] || { printf 'LOCAL_CASE_FAIL same canonical revision delta expected=1 actual=%s baseline=%s after=%s\n' "$((after_revision_count - baseline_revision_count))" "$baseline_revision_count" "$after_revision_count" >&2; exit 1; }
 printf 'CONCURRENCY_SCOPE case=same_actor_same_canonical requirement_id=%s revisions_before=%s revisions_after=%s request_revision_delta=1 request_graph=1/1/1\n' "$same_requirement_id" "$baseline_revision_count" "$after_revision_count"
 run_psql -c "TRUNCATE public.external_requirement_submission_requests, public.activity_log, public.customer_requirement_revisions, public.customer_requirements CASCADE;" >/dev/null
-run_case same_key_conflicting_payloads 'Conflict A' '{"description":"Concurrent conflict A"}' 'Conflict B' '{"description":"Concurrent conflict B"}' 0
+run_case same_key_conflicting_payloads 'Conflict A' '{"description":"Concurrent conflict A"}' 'Conflict B' '{"description":"Concurrent conflict B"}' either_conflict
 conflict_requirement_id="$(run_psql -Atqc "SELECT requirement_id FROM public.external_requirement_submission_requests WHERE request_key = '00000000-0000-4000-8000-000000000095'")"
 [[ -n "$conflict_requirement_id" && "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirements WHERE id = '$conflict_requirement_id'::uuid")" == "1" && "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions WHERE requirement_id = '$conflict_requirement_id'::uuid AND revision_number = 1")" == "1" && "$(run_psql -Atqc "SELECT count(*) FROM public.activity_log WHERE entity_id = '$conflict_requirement_id'::uuid AND action = 'external_submitted'")" == "1" && "$(run_psql -Atqc "SELECT count(*) FROM public.external_requirement_submission_requests WHERE request_key = '00000000-0000-4000-8000-000000000095' AND requirement_id = '$conflict_requirement_id'::uuid")" == "1" ]] || { echo 'LOCAL_CASE_FAIL conflicting request-key submissions committed more than one request-scoped graph' >&2; exit 1; }
 grep -Fqx 'ERROR:  Request key conflicts with a different caller or payload' "$log_dir/same_key_conflicting_payloads_a.err" || grep -Fqx 'ERROR:  Request key conflicts with a different caller or payload' "$log_dir/same_key_conflicting_payloads_b.err" || { cat "$log_dir/same_key_conflicting_payloads_a.err" "$log_dir/same_key_conflicting_payloads_b.err" >&2; exit 1; }
