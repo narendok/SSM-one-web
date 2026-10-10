@@ -3,8 +3,8 @@
 -- until the assertion process has observed two ready sessions and released it.
 \set ON_ERROR_STOP on
 BEGIN;
-SELECT set_config('request.jwt.claim.sub', :'actor_id', true);
-SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT set_config('request.jwt.claim.sub', :'actor_id', false);
+SELECT set_config('request.jwt.claim.role', 'authenticated', false);
 SELECT pg_advisory_xact_lock(hashtextextended('sales-intake-race:' || :'race_label', 0));
 UPDATE public.sales_intake_race_barriers
 SET ready_workers = ready_workers + 1
