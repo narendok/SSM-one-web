@@ -48,6 +48,12 @@ function ProductionExitDialogHarness() {
   return <><button onClick={() => setOpen(true)}>Reopen preview</button>{open ? <StructuredPreviewExitDialog open={open} onOpenChange={setOpen} dirty={dirty}>{(requestExit) => <><DialogHeader><DialogTitle>Production proposal preview</DialogTitle><DialogDescription>Mounted production exit coverage.</DialogDescription></DialogHeader><button onClick={() => requestExit(() => setOpen(false))}>Back to opportunity</button><StructuredTemplatePreview onDirtyChange={setDirty} /></>}</StructuredPreviewExitDialog> : <p>Exited preview</p>}</>;
 }
 
+function ReturnToProposalHarness() {
+  const [documentsOpen, setDocumentsOpen] = useState(true);
+  const [localEdits, setLocalEdits] = useState<Record<string, string>>({});
+  return <><button onClick={() => setDocumentsOpen(true)}>Open previews</button>{documentsOpen ? <><button onClick={() => setDocumentsOpen(false)}>Back to proposal</button><StructuredTemplatePreview localEdits={localEdits} onLocalEditsChange={setLocalEdits} /></> : <p>Proposal overview</p>}</>;
+}
+
 afterEach(() => {
   cleanup();
   previewSource.mockReset();
@@ -104,6 +110,34 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect((screen.getByLabelText("Local decision note") as HTMLTextAreaElement).value).toBe("Keep late Contract Review edit.");
     await user.click(screen.getByRole("tab", { name: "Product Requirements Specification" }));
     expect((screen.getByLabelText("Power requirement") as HTMLInputElement).value).toBe("Keep late PRS edit.");
+  });
+
+  it("keeps SOR, Contract Review, and PRS local edits after returning to the proposal overview", async () => {
+    previewSource.mockResolvedValue(source);
+    const user = userEvent.setup();
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ReturnToProposalHarness /></QueryClientProvider>);
+
+    const scope = await screen.findByLabelText("Scope statement");
+    await user.clear(scope);
+    await user.type(scope, "Keep SOR while returning.");
+    await user.click(screen.getByRole("tab", { name: "Contract Review" }));
+    const note = screen.getByLabelText("Local decision note");
+    await user.clear(note);
+    await user.type(note, "Keep review while returning.");
+    await user.click(screen.getByRole("tab", { name: "Product Requirements Specification" }));
+    const power = screen.getByLabelText("Power requirement");
+    await user.clear(power);
+    await user.type(power, "Keep PRS while returning.");
+
+    await user.click(screen.getByRole("button", { name: "Back to proposal" }));
+    expect(screen.getByText("Proposal overview")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Open previews" }));
+    await user.click(screen.getByRole("tab", { name: "Statement of Requirements" }));
+    expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep SOR while returning.");
+    await user.click(screen.getByRole("tab", { name: "Contract Review" }));
+    expect((screen.getByLabelText("Local decision note") as HTMLTextAreaElement).value).toBe("Keep review while returning.");
+    await user.click(screen.getByRole("tab", { name: "Product Requirements Specification" }));
+    expect((screen.getByLabelText("Power requirement") as HTMLInputElement).value).toBe("Keep PRS while returning.");
   });
 
   it("renders the exact successful authorized source pin instead of TBC fallback fields", async () => {
