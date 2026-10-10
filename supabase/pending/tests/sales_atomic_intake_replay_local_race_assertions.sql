@@ -28,7 +28,8 @@ DO $result_wait$
 DECLARE
   v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
 BEGIN
-  IF current_setting('app.race_label', true) <> 'same_key_same_payload' THEN RETURN; END IF;
+  IF current_setting('app.release_only', true) = 'yes'
+     OR current_setting('app.race_label', true) <> 'same_key_same_payload' THEN RETURN; END IF;
   LOOP
     EXIT WHEN (SELECT count(*) FROM public.sales_intake_race_results
       WHERE race_label = current_setting('app.race_label', true)) = 2;
@@ -46,6 +47,7 @@ DECLARE
   v_results integer; v_distinct_opportunity_ids integer; v_distinct_spec_ids integer;
   v_distinct_version_ids integer; v_distinct_numbers integer; v_replayed integer;
 BEGIN
+  IF current_setting('app.release_only', true) = 'yes' THEN RETURN; END IF;
   SELECT count(*) INTO v_receipts FROM public.sales_opportunity_intake_receipts;
   SELECT count(*), count(DISTINCT opportunity_number) INTO v_opportunities, v_specs FROM public.sales_opportunities;
   SELECT count(*) INTO v_versions FROM public.master_specification_versions;
