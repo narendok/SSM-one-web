@@ -27,3 +27,4 @@
 - App MCP tools always use a caller-token RLS client, remain read-only unless separately reviewed, and require OAuth consent; this keeps connected assistants within each user’s existing workspace access.
 - Master Specification revisions remain append-only via a permission-checked atomic routine; client intake is explicit-scope, expiry/revocation-bound, and feasibility is immutable without auto-conversion.
 - Lifecycle diagnostics derive their target server-side; the UI never accepts operator-selected backends.
+- Candidate components from a project BOM remain separate from inventory until a protected, replay-safe Hardware approval and single promotion transaction; proposal-mode forms must never call existing component, stock, location, project-link, substitute, provenance, or delete paths.
