@@ -51,9 +51,19 @@ def main() -> None:
     fixture = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_fixture.sql"
     runtime = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_installed_acceptance.sql"
     runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_acceptance.sh"
+    conflict_setup = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_conflict_race_setup.sql"
+    conflict_worker = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_conflict_race_worker.sql"
+    conflict_assertions = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_conflict_race_assertions.sql"
+    conflict_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_conflict_race.sh"
     require(fixture.read_text(), "LOCAL DISPOSABLE FIXTURE ONLY", "local fixture boundary")
     require(runtime.read_text(), "STRUCTURED_DRAFT_LOCAL_ACCEPTANCE_PASS", "runtime acceptance success marker")
     require(runner.read_text(), "Refusing a non-private local structured-draft acceptance target.", "local-only runner refusal")
+    require(conflict_setup.read_text(), "LOCAL DISPOSABLE TWO-WORKER CONFLICT-RACE FIXTURE ONLY", "conflict-race fixture boundary")
+    require(conflict_worker.read_text(), "Captures expected SQLSTATE without returning a receipt on denial", "conflict worker receipt denial capture")
+    require(conflict_assertions.read_text(), "Request key conflicts with a different immutable source, schema, caller, revision, or payload", "conflict receipt assertion")
+    require(conflict_assertions.read_text(), "v_drafts <> 1 OR v_revisions <> 1 OR v_requests <> 1", "conflict no-extra-write assertion")
+    require(conflict_runner.read_text(), "CONTRACT_CONTENTION_OBSERVED case=%s", "conflict contract lock observation")
+    require(conflict_runner.read_text(), "Fixture-only transport; pending contract remains revoked by default.", "conflict fixture-only transport boundary")
     print("structured draft metadata static checks: PASS")
 
 
