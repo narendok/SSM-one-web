@@ -148,7 +148,7 @@ SELECT * FROM public.create_sales_opportunity_with_initial_master_specification(
 SQL
 run_lock_wait_case receipt_replay 00000000-0000-4000-8000-000000000202
 
--- Restore a clean fixture before the pre-existing exact replay/conflict/different-key race suite.
+# Restore a clean fixture before the pre-existing exact replay/conflict/different-key race suite.
 run_psql -f "$fixture"
 run_psql -f "$proposal"
 run_psql <<'SQL'
