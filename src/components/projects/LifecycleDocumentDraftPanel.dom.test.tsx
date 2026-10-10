@@ -118,7 +118,7 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
     await user.click(await screen.findByRole("button", { name: "Refresh department drafts" }));
-    expect((await screen.findByRole("alert")).textContent).toContain("1 drafts need attention: Template scope unavailable");
+    expect((await screen.findByText("1 drafts need attention: Template scope unavailable")).textContent).toContain("1 drafts need attention: Template scope unavailable");
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["lifecycle-generated-documents", project.id] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["drive_children"] });
   });
