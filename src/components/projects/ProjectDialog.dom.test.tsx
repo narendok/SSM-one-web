@@ -60,7 +60,7 @@ function renderDialog(editing?: typeof project) {
 }
 
 async function saveNamedProject(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText("Name"), "New project");
+  await user.type(screen.getByRole("textbox").first(), "New project");
   await user.click(screen.getByRole("button", { name: "Save project" }));
 }
 
