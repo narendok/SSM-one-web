@@ -9,7 +9,10 @@
 -- opportunity_id, customer_id,
 -- specification_id, master_version_id, request_key_create, request_key_replay,
 -- request_key_update, request_key_restore, request_key_conflict,
--- request_key_empty_kind_baseline,
+-- request_key_empty_kind_baseline, request_key_unchanged_payload,
+-- request_key_malformed_unknown, request_key_malformed_non_string,
+-- request_key_opportunity_mismatch, request_key_specification_mismatch,
+-- request_key_version_mismatch,
 -- alternate_opportunity_id, alternate_customer_id, alternate_specification_id,
 -- alternate_master_version_id. The alternate tuple must be a separate valid,
 -- caller-authorized opportunity/customer/specification/version tuple.
@@ -151,6 +154,12 @@ SELECT
   :'alternate_specification_id'::uuid AS alternate_specification_id,
   :'alternate_master_version_id'::uuid AS alternate_master_version_id,
   :'request_key_create'::uuid AS request_key_create,
+  :'request_key_unchanged_payload'::uuid AS request_key_unchanged_payload,
+  :'request_key_malformed_unknown'::uuid AS request_key_malformed_unknown,
+  :'request_key_malformed_non_string'::uuid AS request_key_malformed_non_string,
+  :'request_key_opportunity_mismatch'::uuid AS request_key_opportunity_mismatch,
+  :'request_key_specification_mismatch'::uuid AS request_key_specification_mismatch,
+  :'request_key_version_mismatch'::uuid AS request_key_version_mismatch,
   :'request_key_empty_kind_baseline'::uuid AS request_key_empty_kind_baseline;
 
 DO $$
@@ -289,6 +298,78 @@ BEGIN
     IF SQLERRM NOT LIKE 'Structured Sales draft revision conflict' THEN RAISE; END IF;
   END;
 
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id,
+      v_input.specification_id, v_input.master_version_id,
+      'SOR', 3,
+      '{"OEM_REQUIREMENT_ROWS":"A","SCOPE_STATEMENT":"Scope","ACCEPTANCE_CRITERIA":"Accept","CAN_TELEMETRY_NOTES":"CAN","PILOT_ROLLOUT_NOTES":"Pilot","COMMERCIAL_SLA_WARRANTY_DELIVERY":"Commercial"}'::jsonb,
+      v_input.request_key_unchanged_payload
+    );
+    RAISE EXCEPTION 'Expected unchanged payload with a new request key to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Use the original request key to replay an unchanged structured Sales draft revision' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id,
+      v_input.specification_id, v_input.master_version_id,
+      'SOR', 3,
+      jsonb_build_object('SCOPE_STATEMENT', 'Scope', 'DERIVED_STATUS', 'not editable'),
+      v_input.request_key_malformed_unknown
+    );
+    RAISE EXCEPTION 'Expected unknown editable payload field to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Structured Sales payload contains an unknown or derived field' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id,
+      v_input.specification_id, v_input.master_version_id,
+      'SOR', 3,
+      jsonb_build_object('SCOPE_STATEMENT', jsonb_build_array('not a scalar string')),
+      v_input.request_key_malformed_non_string
+    );
+    RAISE EXCEPTION 'Expected non-string editable payload field to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Structured Sales editable field SCOPE_STATEMENT must be a string' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.alternate_customer_id,
+      v_input.specification_id, v_input.master_version_id,
+      'SOR', 3, '{}'::jsonb, v_input.request_key_opportunity_mismatch
+    );
+    RAISE EXCEPTION 'Expected raw opportunity/customer source mismatch to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Opportunity/customer source mismatch' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id,
+      v_input.alternate_specification_id, v_input.master_version_id,
+      'SOR', 3, '{}'::jsonb, v_input.request_key_specification_mismatch
+    );
+    RAISE EXCEPTION 'Expected raw Master Specification source mismatch to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Master Specification source mismatch' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    PERFORM public.save_sales_opportunity_structured_draft_revision(
+      v_input.opportunity_id, v_input.customer_id,
+      v_input.specification_id, v_input.alternate_master_version_id,
+      'SOR', 3, '{}'::jsonb, v_input.request_key_version_mismatch
+    );
+    RAISE EXCEPTION 'Expected raw Master Specification version source mismatch to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Master Specification version source mismatch' THEN RAISE; END IF;
+  END;
+
   PERFORM set_config('request.jwt.claim.sub', v_input.outsider_user_id::text, true);
   BEGIN
     PERFORM public.save_sales_opportunity_structured_draft_revision(
@@ -335,11 +416,11 @@ END;
 $$;
 
 -- Required separate isolated acceptance/runner evidence:
--- 1. Unknown/derived keys, arrays, objects, and numbers fail before writes.
--- 2. Wrong customer/opportunity/specification/version tuple fails before writes.
--- 3. A separately authorized Sales actor cannot replay/read this actor-bound draft.
--- 4. No Drive, Drive revision, controlled register, storage, document-number, or
+-- Required separate isolated acceptance/runner evidence:
+-- 1. Objects and numbers as editable values fail before writes.
+-- 2. A separately authorized Sales actor cannot read this actor-bound draft.
+-- 3. No Drive, Drive revision, controlled register, storage, document-number, or
 --    controlled-document materialization is created by any success or failure path.
--- 5. Two sessions racing the same logical identity converge to one revision or a
+-- 4. Two sessions racing the same logical identity converge to one revision or a
 --    revision conflict; never two revision-1 rows.
 ROLLBACK;
