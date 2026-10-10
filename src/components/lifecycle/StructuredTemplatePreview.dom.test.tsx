@@ -77,6 +77,35 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(frame.getAttribute("srcdoc")).not.toContain("<img");
   });
 
+  it("preserves SOR, Contract Review, and PRS edits when the authorized source resolves after editing starts", async () => {
+    let resolveSource: (value: typeof source) => void = () => undefined;
+    previewSource.mockImplementation(() => new Promise<typeof source>((resolve) => { resolveSource = resolve; }));
+    const user = userEvent.setup();
+    renderPreview();
+
+    expect(await screen.findByText("LOADING — authorized source request in progress")).toBeTruthy();
+    const scope = screen.getByLabelText("Scope statement");
+    await user.clear(scope);
+    await user.type(scope, "Keep late SOR edit.");
+    await user.click(screen.getByRole("tab", { name: "Contract Review" }));
+    const decision = screen.getByLabelText("Local decision note");
+    await user.clear(decision);
+    await user.type(decision, "Keep late Contract Review edit.");
+    await user.click(screen.getByRole("tab", { name: "Product Requirements Specification" }));
+    const power = screen.getByLabelText("Power requirement");
+    await user.clear(power);
+    await user.type(power, "Keep late PRS edit.");
+
+    resolveSource(source);
+    expect(await screen.findByText("version-id")).toBeTruthy();
+    await user.click(screen.getByRole("tab", { name: "Statement of Requirements" }));
+    expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Keep late SOR edit.");
+    await user.click(screen.getByRole("tab", { name: "Contract Review" }));
+    expect((screen.getByLabelText("Local decision note") as HTMLTextAreaElement).value).toBe("Keep late Contract Review edit.");
+    await user.click(screen.getByRole("tab", { name: "Product Requirements Specification" }));
+    expect((screen.getByLabelText("Power requirement") as HTMLInputElement).value).toBe("Keep late PRS edit.");
+  });
+
   it("renders the exact successful authorized source pin instead of TBC fallback fields", async () => {
     previewSource.mockResolvedValue(source);
     renderPreview();
