@@ -9,8 +9,7 @@ CREATE ROLE provenance_owner NOLOGIN;
 CREATE ROLE provenance_nonowner NOLOGIN;
 GRANT USAGE ON SCHEMA public TO provenance_owner, provenance_nonowner;
 GRANT SELECT ON public.requirement_feasibility_reviews, public.requirement_feasibility_review_provenance TO provenance_owner, provenance_nonowner;
-GRANT SELECT ON public.customer_requirements TO provenance_owner, provenance_nonowner;
-GRANT SELECT ON public.customer_requirement_revisions, public.master_specifications, public.master_specification_versions TO provenance_owner;
+GRANT SELECT ON public.customer_requirements, public.customer_requirement_revisions, public.master_specifications, public.master_specification_versions TO provenance_owner, provenance_nonowner;
 
 ALTER TABLE public.requirement_feasibility_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_requirements ENABLE ROW LEVEL SECURITY;
@@ -24,10 +23,16 @@ CREATE POLICY local_visible_requirement ON public.customer_requirements
   FOR SELECT TO provenance_owner, provenance_nonowner USING (true);
 CREATE POLICY local_visible_revision ON public.customer_requirement_revisions
   FOR SELECT TO provenance_owner USING (true);
+CREATE POLICY local_hidden_revision ON public.customer_requirement_revisions
+  FOR SELECT TO provenance_nonowner USING (false);
 CREATE POLICY local_visible_specification ON public.master_specifications
   FOR SELECT TO provenance_owner USING (true);
+CREATE POLICY local_hidden_specification ON public.master_specifications
+  FOR SELECT TO provenance_nonowner USING (false);
 CREATE POLICY local_visible_version ON public.master_specification_versions
   FOR SELECT TO provenance_owner USING (true);
+CREATE POLICY local_hidden_version ON public.master_specification_versions
+  FOR SELECT TO provenance_nonowner USING (false);
 
 INSERT INTO public.requirement_feasibility_reviews (
   id, requirement_id, department_id, reviewer_user_id, status, created_by,
@@ -67,9 +72,9 @@ BEGIN
   BEGIN
     PERFORM 1 FROM public.customer_requirement_revisions
     WHERE id = '00000000-0000-4000-8000-000000000081';
-    RAISE EXCEPTION 'LOCAL_CASE_FAIL direct joined-table select unexpectedly succeeded';
-  EXCEPTION WHEN insufficient_privilege THEN
-    NULL;
+    IF FOUND THEN
+      RAISE EXCEPTION 'LOCAL_CASE_FAIL direct joined-table RLS unexpectedly exposed a row';
+    END IF;
   END;
 
   SELECT * INTO v_row FROM public.requirement_feasibility_review_provenance
