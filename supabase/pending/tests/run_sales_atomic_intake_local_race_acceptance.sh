@@ -45,6 +45,7 @@ setup="$root/supabase/pending/tests/sales_atomic_intake_replay_local_race_setup.
 worker="$root/supabase/pending/tests/sales_atomic_intake_replay_local_race_worker.sql"
 assertions="$root/supabase/pending/tests/sales_atomic_intake_replay_local_race_assertions.sql"
 lock_setup="$root/supabase/pending/tests/sales_atomic_intake_replay_local_lock_setup.sql"
+lock_holder="$root/supabase/pending/tests/sales_atomic_intake_replay_local_lock_holder.sql"
 lock_worker="$root/supabase/pending/tests/sales_atomic_intake_replay_local_lock_worker.sql"
 lock_assertions="$root/supabase/pending/tests/sales_atomic_intake_replay_local_lock_assertions.sql"
 failpoints="$root/supabase/pending/tests/sales_atomic_intake_replay_local_failpoint_acceptance.sql"
@@ -109,28 +110,41 @@ run_race() {
 }
 
 run_lock_wait_case() {
-  local label="$1" key="$2" log_dir status
+  local label="$1" key="$2" log_dir holder_pid worker_pid holder_status worker_status observed
   log_dir="$(mktemp -d /tmp/sales_atomic_acceptance_lock_XXXXXX)"
-  timeout 20s psql "${psql_args[@]}" -v case_label="$label" -v request_key="$key" -f "$lock_worker" >"$log_dir/worker.log" 2>&1 &
-  local pid=$!
+  PGAPPNAME="sales-intake-lock-holder:$label" timeout 20s psql "${psql_args[@]}" -v case_label="$label" -v request_key="$key" -f "$lock_holder" >"$log_dir/holder.log" 2>&1 &
+  holder_pid=$!
   for attempt in $(seq 1 150); do
-    if [[ "$(run_psql -Atqc "SELECT ready::text || ':' || released::text FROM public.sales_intake_lock_wait_cases WHERE case_label = '$label'")" == "true:false" ]]; then break; fi
+    if [[ "$(run_psql -Atqc "SELECT holder_ready::text || ':' || released::text FROM public.sales_intake_lock_wait_cases WHERE case_label = '$label'")" == "true:false" ]]; then break; fi
     sleep 0.1
   done
-  [[ "$(run_psql -Atqc "SELECT ready::text || ':' || released::text FROM public.sales_intake_lock_wait_cases WHERE case_label = '$label'")" == "true:false" ]] || { cat "$log_dir/worker.log" >&2; return 1; }
-  printf 'LOCK_WAIT_DEMONSTRATED case=%s\n' "$label"
+  [[ "$(run_psql -Atqc "SELECT holder_ready::text || ':' || released::text FROM public.sales_intake_lock_wait_cases WHERE case_label = '$label'")" == "true:false" ]] || { cat "$log_dir/holder.log" >&2; return 1; }
+  PGAPPNAME="sales-intake-lock-worker:$label" timeout 20s psql "${psql_args[@]}" -v case_label="$label" -v request_key="$key" -f "$lock_worker" >"$log_dir/worker.log" 2>&1 &
+  worker_pid=$!
+  for attempt in $(seq 1 150); do
+    observed="$(run_psql -Atqc "WITH expected AS (SELECT hashtextextended('$key', 0) AS lock_key), worker AS (SELECT pid, wait_event_type, wait_event FROM pg_stat_activity WHERE application_name = 'sales-intake-lock-worker:$label') SELECT worker.pid::text || ':' || worker.wait_event_type || ':' || worker.wait_event || ':' || count(locks.*)::text FROM worker CROSS JOIN expected LEFT JOIN pg_locks locks ON locks.pid = worker.pid AND locks.locktype = 'advisory' AND NOT locks.granted AND locks.classid = (((expected.lock_key >> 32) & 4294967295)::oid) AND locks.objid = ((expected.lock_key & 4294967295)::oid) GROUP BY worker.pid, worker.wait_event_type, worker.wait_event")"
+    if [[ "$observed" =~ ^[0-9]+:Lock:advisory:1$ ]]; then break; fi
+    sleep 0.1
+  done
+  [[ "$observed" =~ ^[0-9]+:Lock:advisory:1$ ]] || { cat "$log_dir/holder.log" "$log_dir/worker.log" >&2; return 1; }
+  printf 'CONTRACT_LOCK_WAIT_OBSERVED case=%s evidence=%s\n' "$label" "$observed"
   run_psql -v case_label="$label" -v phase=release -f "$lock_assertions"
-  wait "$pid" && status=0 || status=$?
-  printf 'LOCK_WAIT_WORKER_STATUS case=%s status=%s\n' "$label" "$status"
-  [[ "$status" != 0 ]] || { cat "$log_dir/worker.log" >&2; return 1; }
-  local expected_receipts=0 expected_opportunities=0
+  wait "$holder_pid" && holder_status=0 || holder_status=$?
+  wait "$worker_pid" && worker_status=0 || worker_status=$?
+  printf 'CONTRACT_LOCK_WAIT_STATUS case=%s holder=%s worker=%s\n' "$label" "$holder_status" "$worker_status"
+  [[ "$holder_status" == 0 && "$worker_status" != 0 ]] || { cat "$log_dir/holder.log" "$log_dir/worker.log" >&2; return 1; }
+  rg -q 'ERROR:.*42501: Sales management permission is required|ERROR:.*Sales management permission is required' "$log_dir/worker.log" || { cat "$log_dir/worker.log" >&2; return 1; }
+  [[ "$(rg -c '^\([0-9]+ rows?\)' "$log_dir/worker.log" || true)" == "3" ]] || { cat "$log_dir/worker.log" >&2; return 1; }
+  local expected_receipts=0 expected_opportunities=0 expected_specs=0 expected_versions=0 expected_audits=0
   if [[ "$label" == "receipt_replay" ]]; then
-    expected_receipts=1
-    expected_opportunities=1
+    expected_receipts=1; expected_opportunities=1; expected_specs=1; expected_versions=1; expected_audits=1
   fi
   [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunity_intake_receipts WHERE request_key = '$key'")" == "$expected_receipts" ]] || return 1
   [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunities")" == "$expected_opportunities" ]] || return 1
-  printf 'LOCK_WAIT_DENIAL_PASS case=%s receipts_for_key=%s total_opportunities=%s\n' "$label" "$expected_receipts" "$expected_opportunities"
+  [[ "$(run_psql -Atqc "SELECT count(*) FROM public.master_specifications")" == "$expected_specs" ]] || return 1
+  [[ "$(run_psql -Atqc "SELECT count(*) FROM public.master_specification_versions")" == "$expected_versions" ]] || return 1
+  [[ "$(run_psql -Atqc "SELECT count(*) FROM public.activity_log")" == "$expected_audits" ]] || return 1
+  printf 'CONTRACT_LOCK_DENIAL_PASS case=%s receipts=%s opportunities=%s specifications=%s versions=%s audits=%s\n' "$label" "$expected_receipts" "$expected_opportunities" "$expected_specs" "$expected_versions" "$expected_audits"
   rm -rf "$log_dir"
 }
 
