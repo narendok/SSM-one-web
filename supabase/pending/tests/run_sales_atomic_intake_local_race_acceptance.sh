@@ -77,9 +77,9 @@ run_race() {
   log_dir="$(mktemp -d /tmp/sales_atomic_acceptance_race_XXXXXX)"
   cleanup_logs() { rm -rf "$log_dir"; }
   trap cleanup_logs RETURN
-  timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v request_key="$key_a" -v payload_variant="$payload_a" -v actor_id="$actor_a" -f "$worker" >"$log_dir/a.log" 2>&1 &
+  timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v worker_label=a -v request_key="$key_a" -v payload_variant="$payload_a" -v actor_id="$actor_a" -f "$worker" >"$log_dir/a.log" 2>&1 &
   local pid_a=$!
-  timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v request_key="$key_b" -v payload_variant="$payload_b" -v actor_id="$actor_b" -f "$worker" >"$log_dir/b.log" 2>&1 &
+  timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v worker_label=b -v request_key="$key_b" -v payload_variant="$payload_b" -v actor_id="$actor_b" -f "$worker" >"$log_dir/b.log" 2>&1 &
   local pid_b=$!
   if ! wait "$pid_a" || ! wait "$pid_b"; then
     cat "$log_dir/a.log" "$log_dir/b.log" >&2

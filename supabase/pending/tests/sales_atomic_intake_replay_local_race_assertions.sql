@@ -16,7 +16,11 @@ END;
 $release$;
 
 DO $assert$
-DECLARE v_deadline timestamptz := clock_timestamp() + interval '15 seconds'; v_receipts integer; v_opportunities integer; v_specs integer; v_versions integer; v_audits integer;
+DECLARE
+  v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
+  v_receipts integer; v_opportunities integer; v_specs integer; v_versions integer; v_audits integer;
+  v_results integer; v_distinct_opportunity_ids integer; v_distinct_spec_ids integer;
+  v_distinct_version_ids integer; v_distinct_numbers integer; v_replayed integer;
 BEGIN
   LOOP
     SELECT count(*) INTO v_receipts FROM public.sales_opportunity_intake_receipts;
@@ -45,5 +49,24 @@ BEGIN
   IF (SELECT count(*) FROM public.sales_opportunities) <> (SELECT count(DISTINCT opportunity_number) FROM public.sales_opportunities) THEN
     RAISE EXCEPTION 'Concurrent allocator produced duplicate opportunity numbers';
   END IF;
+  IF :'race_label' = 'same_key_same_payload' THEN
+    SELECT count(*), count(DISTINCT opportunity_id), count(DISTINCT master_specification_id),
+      count(DISTINCT master_specification_version_id), count(DISTINCT opportunity_number),
+      count(*) FILTER (WHERE replayed)
+    INTO v_results, v_distinct_opportunity_ids, v_distinct_spec_ids,
+      v_distinct_version_ids, v_distinct_numbers, v_replayed
+    FROM public.sales_intake_race_results WHERE race_label = :'race_label';
+    IF v_results <> 2 OR v_distinct_opportunity_ids <> 1 OR v_distinct_spec_ids <> 1
+       OR v_distinct_version_ids <> 1 OR v_distinct_numbers <> 1 OR v_replayed <> 1 THEN
+      RAISE EXCEPTION 'Exact replay workers did not return identical opportunity/specification/version IDs and number with one replay';
+    END IF;
+  END IF;
 END;
 $assert$;
+
+SELECT :'race_label' AS race_label, worker_label, opportunity_id, opportunity_number,
+  master_specification_id, master_specification_number,
+  master_specification_version_id, master_specification_version_number, replayed
+FROM public.sales_intake_race_results
+WHERE race_label = :'race_label'
+ORDER BY worker_label;

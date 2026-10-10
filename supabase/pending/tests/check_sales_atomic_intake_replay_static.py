@@ -53,6 +53,8 @@ checks = {
     "local race avoids sleep-only coordination": "pg_advisory_xact_lock" in race_worker and "released" in race_assertions,
     "local race covers same key conflicts and distinct keys": all(label in race_runner for label in ("same_key_same_payload", "same_key_changed_payload", "same_key_actor_conflict", "different_keys")),
     "local race asserts allocation and atomic row counts": "count(DISTINCT opportunity_number)" in race_assertions and "mismatched opportunity/spec/version/audit rows" in race_assertions,
+    "local race records both worker responses": "CREATE TABLE public.sales_intake_race_results" in race_setup and "INSERT INTO public.sales_intake_race_results" in race_worker,
+    "local race proves exact replay IDs": "Exact replay workers did not return identical opportunity/specification/version IDs" in race_assertions and "count(DISTINCT master_specification_version_id)" in race_assertions,
 }
 failed = [name for name, passed in checks.items() if not passed]
 for name, passed in checks.items():

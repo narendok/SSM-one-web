@@ -12,5 +12,17 @@ CREATE TABLE public.sales_intake_race_barriers (
   ready_workers integer NOT NULL DEFAULT 0 CHECK (ready_workers BETWEEN 0 AND 2),
   released boolean NOT NULL DEFAULT false
 );
+CREATE TABLE public.sales_intake_race_results (
+  race_label text NOT NULL REFERENCES public.sales_intake_race_barriers(race_label),
+  worker_label text NOT NULL CHECK (worker_label IN ('a', 'b')),
+  opportunity_id uuid NOT NULL,
+  opportunity_number text NOT NULL,
+  master_specification_id uuid NOT NULL,
+  master_specification_number text NOT NULL,
+  master_specification_version_id uuid NOT NULL,
+  master_specification_version_number integer NOT NULL,
+  replayed boolean NOT NULL,
+  PRIMARY KEY (race_label, worker_label)
+);
 INSERT INTO public.sales_intake_race_barriers (race_label) VALUES
   ('same_key_same_payload'), ('same_key_changed_payload'), ('same_key_actor_conflict'), ('different_keys');

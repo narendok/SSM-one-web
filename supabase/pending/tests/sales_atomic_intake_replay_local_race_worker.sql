@@ -1,5 +1,5 @@
 -- Invoked by exactly one independent local psql process. The barrier is backed
--- by a row lock and LISTEN/NOTIFY; the worker cannot call the intake action
+-- by durable committed state; the worker cannot call the intake action
 -- until the assertion process has observed two ready sessions and released it.
 \set ON_ERROR_STOP on
 BEGIN;
@@ -11,7 +11,10 @@ SET ready_workers = ready_workers + 1
 WHERE race_label = :'race_label' AND NOT released AND ready_workers < expected_workers;
 DO $ready$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.sales_intake_race_barriers WHERE race_label = :'race_label' AND ready_workers <= expected_workers) THEN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.sales_intake_race_barriers
+    WHERE race_label = :'race_label' AND ready_workers BETWEEN 1 AND expected_workers
+  ) THEN
     RAISE EXCEPTION 'Race worker could not register readiness';
   END IF;
 END;
@@ -32,7 +35,8 @@ BEGIN
 END;
 $wait$;
 
-SELECT * FROM public.create_sales_opportunity_with_initial_master_specification(
+WITH response AS (
+  SELECT * FROM public.create_sales_opportunity_with_initial_master_specification(
   '00000000-0000-4000-8000-000000000010'::uuid,
   '00000000-0000-4000-8000-000000000011'::uuid,
   '00000000-0000-4000-8000-000000000012'::uuid,
@@ -42,4 +46,17 @@ SELECT * FROM public.create_sales_opportunity_with_initial_master_specification(
     WHEN 'alternate' THEN '{"name":"Separate race intake","application":"Vehicle tracking","productType":"Tracker","primarySalesOwnerUserId":null,"ndaRequired":false,"estimatedVolume":"20","targetTimeline":"Q4","priority":"medium","nextAction":"Review","nextActionDate":null,"masterSpecification":{"changeSummary":"Initial intake","proposedName":"Separate race intake","customerOrInternalOwner":"Disposable customer","industryApplication":"Automotive","productFamily":"Tracker","developmentScope":"Prototype scope","workstreams":["HARDWARE"],"requirementSummary":"Track test vehicles","powerAndUnits":"12V","interfaces":"CAN","connectivityAndGnss":"LTE/GNSS","environmentAndIp":"IP67","volumes":"20","schedule":"Q4","requestedStandards":"TBC","exclusions":"None"}}'::jsonb
   END,
   :'request_key'::uuid
-);
+  )
+)
+INSERT INTO public.sales_intake_race_results (
+  race_label, worker_label, opportunity_id, opportunity_number,
+  master_specification_id, master_specification_number,
+  master_specification_version_id, master_specification_version_number, replayed
+)
+SELECT :'race_label', :'worker_label', opportunity_id, opportunity_number,
+  master_specification_id, master_specification_number,
+  master_specification_version_id, master_specification_version_number, replayed
+FROM response
+RETURNING worker_label, opportunity_id, opportunity_number, master_specification_id,
+  master_specification_number, master_specification_version_id,
+  master_specification_version_number, replayed;
