@@ -19,7 +19,9 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => table === ("project_lifecycle_document_drafts" as never)
       ? { select: () => ({ eq: () => ({ order: () => ({ limit: historyQuery }) }) }) }
-      : { select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }) },
+      : table === ("department_process_templates" as never)
+        ? { select: () => ({ eq: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [{ id: "11111111-1111-4111-8111-111111111111", department_id: "department-123", template_key: "spec", version: 2, title: "Specification", status: "ACTIVE", active_document_revision_id: "33333333-3333-4333-8333-333333333333" }], error: null }) }) }) }) }
+        : { select: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [{ id: "22222222-2222-4222-8222-222222222222", name: "Controlled", project_id: "project-123", department_id: "department-123", node_type: "FOLDER", is_trashed: false }], error: null }) }) }) }) }) }) },
   },
 }));
 
