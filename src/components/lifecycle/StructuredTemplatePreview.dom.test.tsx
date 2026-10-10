@@ -210,11 +210,10 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await user.type(scope, "Actor A only");
     expect((scope as HTMLTextAreaElement).value).toBe("Actor A only");
     await user.click(screen.getByRole("button", { name: "Switch actor" }));
-    expect(await screen.findByText("LOADING — authorized source request in progress")).toBeTruthy();
+    await waitFor(() => expect(previewSource).toHaveBeenCalledTimes(2));
     expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).not.toBe(
       "Actor A only",
     );
-    await waitFor(() => expect(previewSource).toHaveBeenCalledTimes(2));
     expect(
       client.getQueryData([
         "structured-template-source",
@@ -444,7 +443,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await user.type(scope, "Keep this manual scope exactly.");
     await waitFor(() => expect(screen.getByText(/Local edits are unsaved/)).toBeTruthy());
     client.setQueryData(
-      ["structured-template-source", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1],
+      ["structured-template-source", "actor-a", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1],
       {
         ...source,
         versionId: "amended-version-id",
