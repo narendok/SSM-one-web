@@ -31,9 +31,9 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
-    FROM pg_constraint constraint
-    WHERE constraint.conrelid = 'public.external_requirement_submission_requests'::regclass
-      AND constraint.conname = 'external_requirement_submission_requests_payload_canonical_check'
+    FROM pg_constraint existing_constraint
+    WHERE existing_constraint.conrelid = 'public.external_requirement_submission_requests'::regclass
+      AND existing_constraint.conname = 'external_requirement_submission_requests_payload_canonical_check'
   ) THEN
     ALTER TABLE public.external_requirement_submission_requests
       ADD CONSTRAINT external_requirement_submission_requests_payload_canonical_check
