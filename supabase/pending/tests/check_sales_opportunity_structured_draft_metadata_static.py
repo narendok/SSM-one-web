@@ -85,7 +85,7 @@ def main() -> None:
     require(rollback_acceptance.read_text(), "update_revision", "update revision rollback case")
     require(rollback_acceptance.read_text(), "update_receipt", "update receipt rollback case")
     require(rollback_assertions.read_text(), "STRUCTURED_DRAFT_ROLLBACK_ACCEPTANCE_PASS", "rollback success marker")
-    require(rollback_runner.read_text(), "Refusing a non-private local structured-draft rollback target.", "rollback local-only runner refusal")
+    require(rollback_runner.read_text(), "Refusing a non-private local structured-draft rollback target", "rollback local-only runner refusal")
     print("structured draft metadata static checks: PASS")
 
 
