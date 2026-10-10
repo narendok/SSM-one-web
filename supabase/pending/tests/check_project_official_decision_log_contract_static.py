@@ -29,6 +29,21 @@ checks = {
         "GRANT EXECUTE ON FUNCTION public.append_project_official_decision" not in sql
         and "Official decision append authority is not installed" in sql
     ),
+    "server JSONB adapter rejects client source and amendment identifiers": (
+        "CREATE OR REPLACE FUNCTION public.project_official_decision_request_adapter(" in sql
+        and "'projectBomItemId', 'sourceLocator', 'amendment'," in sql
+        and "'project_bom_item_id', 'source_page_reference'," in sql
+    ),
+    "server receipt canonicalization remains authoritative": (
+        "This JSONB result, produced" in sql
+        and "is the receipt authority." in sql
+        and "Cross-runtime byte/hash parity is intentionally not" in sql
+    ),
+    "manual request strings are preserved rather than trimmed": (
+        "'note', p_request->'note'" in sql
+        and "'sourcePageReference', p_request->'sourcePageReference'" in sql
+        and "v_adapted_request->>'note'" in sql
+    ),
     "caller reads remain denied pending authority": sql.count("USING (false);") == 2 and "WHERE false;" in sql,
     "evidence fields require JSON strings": all(
         f"jsonb_typeof(v_evidence_entry->'{field}') <> 'string'" in sql

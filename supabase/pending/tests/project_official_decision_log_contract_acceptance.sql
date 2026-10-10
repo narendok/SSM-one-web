@@ -27,23 +27,31 @@ SELECT set_config('project_official_decision.test.conflicting_request_key', :'co
 CREATE TEMP TABLE official_decision_first AS
 SELECT public.append_project_official_decision(
   :'project_bom_item_id'::uuid,
-  'project-bom',
-  'project-bom-note',
-  :'project_bom_revision',
-  'Bench review confirmed.',
   NULL,
-  NULL,
-  NULL,
-  '[{"evidenceReference":"evidence-1","contributorReference":"contributor-1","scopeReference":"project-bom"}]'::jsonb,
+  jsonb_build_object(
+    'actionIntent', 'project-bom-note',
+    'sourcePageReference', 'project-bom',
+    'expectedSourceRevision', :'project_bom_revision',
+    'note', 'Bench review confirmed.',
+    'evidenceReferences', jsonb_build_array(jsonb_build_object(
+      'evidenceReference', 'evidence-1', 'contributorReference', 'contributor-1', 'scopeReference', 'project-bom'
+    )),
+    'alternativeReference', NULL,
+    'exceptionReference', NULL
+  ),
   :'request_key'::uuid
 ) AS decision_id;
 
 -- Exact actor + canonical payload replay returns one immutable result.
 CREATE TEMP TABLE official_decision_replay AS
 SELECT public.append_project_official_decision(
-  :'project_bom_item_id'::uuid, 'project-bom', 'project-bom-note', :'project_bom_revision',
-  'Bench review confirmed.', NULL, NULL, NULL,
-  '[{"evidenceReference":"evidence-1","contributorReference":"contributor-1","scopeReference":"project-bom"}]'::jsonb,
+  :'project_bom_item_id'::uuid, NULL, jsonb_build_object(
+    'actionIntent', 'project-bom-note', 'sourcePageReference', 'project-bom',
+    'expectedSourceRevision', :'project_bom_revision', 'note', 'Bench review confirmed.',
+    'evidenceReferences', jsonb_build_array(jsonb_build_object(
+      'evidenceReference', 'evidence-1', 'contributorReference', 'contributor-1', 'scopeReference', 'project-bom'
+    )), 'alternativeReference', NULL, 'exceptionReference', NULL
+  ),
   :'request_key'::uuid
 ) AS decision_id;
 DO $$
@@ -105,8 +113,11 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', v_cross_project_reader_user_id::text, true);
   BEGIN
     PERFORM public.append_project_official_decision(
-      v_project_bom_item_id, 'project-bom', 'project-bom-note', v_project_bom_revision,
-      'Cross-project denial.', NULL, NULL, NULL, '[]'::jsonb, v_conflicting_request_key
+      v_project_bom_item_id, NULL, jsonb_build_object(
+        'actionIntent', 'project-bom-note', 'sourcePageReference', 'project-bom',
+        'expectedSourceRevision', v_project_bom_revision, 'note', 'Cross-project denial.',
+        'evidenceReferences', '[]'::jsonb, 'alternativeReference', NULL, 'exceptionReference', NULL
+      ), v_conflicting_request_key
     );
     RAISE EXCEPTION 'Expected cross-project append denial';
   EXCEPTION WHEN insufficient_privilege THEN
