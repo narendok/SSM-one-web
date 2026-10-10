@@ -5,6 +5,9 @@ from pathlib import Path
 pending = Path(__file__).resolve().parents[1]
 sql = (pending / "20261010_sales_atomic_intake_replay.sql").read_text()
 harness = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_acceptance.sql").read_text()
+local_runner = (Path(__file__).resolve().parent / "run_sales_atomic_intake_local_acceptance.sh").read_text()
+local_fixture = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_fixture.sql").read_text()
+local_acceptance = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_installed_acceptance.sql").read_text()
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
@@ -25,6 +28,12 @@ checks = {
     "acceptance catches only permission denial": "EXCEPTION WHEN OTHERS" not in harness and "EXCEPTION WHEN insufficient_privilege" in harness and "SQLSTATE <> '42501'" in harness,
     "acceptance rolls back": harness.rstrip().endswith("ROLLBACK;"),
     "concurrency and rollback remain explicit acceptance gates": "Two distinct authenticated sessions race" in harness and "complete transaction rolls back" in harness,
+    "local runner rejects remote targets": "LOCALHOST_ONLY_HOSTS" in local_runner and "Refusing a non-local" in local_runner,
+    "local runner requires disposable confirmation": "LOCAL_SALES_INTAKE_DISPOSABLE" in local_runner and "yes" in local_runner,
+    "local installed transport is explicit and separate": "GRANT EXECUTE ON FUNCTION public.create_sales_opportunity_with_initial_master_specification" in local_runner and "local disposable fixture only" in local_runner,
+    "local fixture proves allocator locking": "FOR UPDATE" in local_fixture and "document_numbering_config" in local_fixture,
+    "local acceptance covers replay conflicts invalid source rollback and races": all(fragment in local_acceptance for fragment in ("Exact replay", "changed payload", "different actor", "invalid source", "rollback", "Two-session race")),
+    "local acceptance restores its disposable fixture": local_acceptance.rstrip().endswith("ROLLBACK;"),
 }
 failed = [name for name, passed in checks.items() if not passed]
 for name, passed in checks.items():
