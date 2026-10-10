@@ -22,6 +22,12 @@ export function LocalBomComponentPicker({ rowLabel, selectedComponentId, onSelec
   const [results, setResults] = useState<LocalBomComponentCandidate[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "empty">("idle");
 
+  const changeQuery = (nextQuery: string) => {
+    setQuery(nextQuery);
+    setResults([]);
+    setStatus(nextQuery.trim().length < 2 ? "idle" : "loading");
+  };
+
   useEffect(() => {
     const term = query.trim();
     if (term.length < 2) {
@@ -73,7 +79,7 @@ export function LocalBomComponentPicker({ rowLabel, selectedComponentId, onSelec
     <label className="sr-only" htmlFor={`local-component-search-${rowLabel}`}>Search caller-visible components for {rowLabel}</label>
     <div className="relative">
       <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-      <Input id={`local-component-search-${rowLabel}`} aria-label={`Search caller-visible components for ${rowLabel}`} className="pl-8" placeholder="Search component" value={query} onChange={(event) => setQuery(event.target.value)} />
+      <Input id={`local-component-search-${rowLabel}`} aria-label={`Search caller-visible components for ${rowLabel}`} className="pl-8" placeholder="Search component" value={query} onChange={(event) => changeQuery(event.target.value)} />
       {status === "loading" && <Loader2 aria-label="Searching components" className="absolute right-2.5 top-2.5 size-4 animate-spin text-muted-foreground" />}
     </div>
     <p className="text-xs text-muted-foreground">{selectedComponentId ? "A local component identity is selected; existing row text remains unchanged." : "Search by name or part number; caller-visible results only."}</p>
