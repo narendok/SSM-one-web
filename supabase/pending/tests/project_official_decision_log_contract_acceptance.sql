@@ -8,6 +8,8 @@
 -- Required variables: manager_user_id, same_project_reader_user_id,
 -- cross_project_reader_user_id, outsider_user_id, project_bom_item_id,
 -- project_bom_revision, request_key, conflicting_request_key.
+-- No case is executable until the deployment gate in the companion source-only
+-- SQL is replaced by a reviewed exact project-membership/source-action contract.
 
 \set ON_ERROR_STOP on
 
@@ -88,6 +90,28 @@ EXCEPTION WHEN insufficient_privilege THEN NULL;
 END;
 $direct_write$;
 
+
+-- Genuine role-bound denials (not only forged JWT claims) required after the
+-- deployment gate is resolved. Run each with an isolated login/session fixture;
+-- SET ROLE authenticated removes table/function owner privileges, while the
+-- session sub remains the named fixture user. Assert no receipt, decision, or
+-- evidence rows are appended on every denial.
+--
+-- SET ROLE authenticated;
+-- SELECT set_config('request.jwt.claim.sub', :'cross_project_reader_user_id', false);
+-- SELECT public.append_project_official_decision(...); -- must deny before replay/write
+-- RESET ROLE;
+--
+-- SET ROLE authenticated;
+-- SELECT set_config('request.jwt.claim.sub', :'outsider_user_id', false);
+-- SELECT * FROM public.project_official_decision_log; -- must return zero rows
+-- INSERT INTO public.project_official_decisions (...); -- must raise insufficient_privilege
+-- RESET ROLE;
+--
+-- Repeat for a former project member after their membership/permission is removed
+-- between target locking and receipt lookup; the implementation must re-check
+-- current authorization before replay or any write.
+
 -- The following caller tests require the deployment-gated exact project-scoped
 -- read policy. They are intentionally pending because verified current project
 -- reads are permission-wide rather than member-scoped:
@@ -98,7 +122,10 @@ $direct_write$;
 --      rejects a parent from another project or BOM item;
 --   5. forced evidence/receipt insert failure rolls back the decision append;
 --   6. two-session same-key race returns one receipt and one decision;
---   7. every future Hardware/Purchase/Sales action intent fails closed until
---      independently verified department-specific authority is installed.
+--   7. arbitrary Hardware/Purchase/Sales action intents fail closed and cannot
+--      impersonate a separately authorized decision;
+--   8. non-string evidence fields and unresolved contributor provenance deny;
+--   9. canonical SQL/TypeScript parity and concurrent amendment-chain behavior
+--      remain blocked for a subsequent dedicated review group.
 
 ROLLBACK;
