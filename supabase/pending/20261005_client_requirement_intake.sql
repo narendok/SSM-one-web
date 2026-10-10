@@ -243,16 +243,9 @@ $$;
 
 REVOKE ALL ON FUNCTION public.submit_external_customer_requirement(uuid, uuid, text, text, jsonb, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.submit_external_customer_requirement(uuid, uuid, text, text, jsonb, uuid) TO authenticated, service_role;
--- A clean installation has no former three-argument scope helper. Check the exact overload
--- before either privilege change or dependency-safe removal; never use CASCADE here.
-DO $$
-BEGIN
-  IF to_regprocedure('public.external_requirement_scope_allows(uuid,uuid,uuid)') IS NOT NULL THEN
-    EXECUTE 'REVOKE ALL ON FUNCTION public.external_requirement_scope_allows(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role';
-    EXECUTE 'DROP FUNCTION public.external_requirement_scope_allows(uuid,uuid,uuid)';
-  END IF;
-END;
-$$;
+-- The former three-argument scope helper is deliberately retained. Its revocation and
+-- removal are in the separately approved compatibility transition, after target-bound
+-- dependency evidence proves no existing caller still requires that overload.
 REVOKE ALL ON FUNCTION public.external_requirement_scope_allows(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.external_requirement_submission_payload_hash(uuid, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.external_requirement_submission_canonical_payload(uuid, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
@@ -392,8 +385,9 @@ JOIN public.master_specifications specification
 REVOKE ALL ON TABLE public.requirement_feasibility_review_provenance FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.requirement_feasibility_review_provenance TO service_role;
 
-REVOKE INSERT, UPDATE, DELETE ON TABLE public.requirement_feasibility_reviews FROM authenticated;
-DROP POLICY IF EXISTS "Sales users manage feasibility reviews" ON public.requirement_feasibility_reviews;
+-- Existing direct feasibility writers and the Sales-manage policy remain unchanged in
+-- this phase. Their revocation/removal is separately gated because retaining them is a
+-- compatibility choice, not proof that direct writes are safe or production-ready.
 
 CREATE OR REPLACE FUNCTION public.assign_requirement_feasibility_review(
   p_requirement_id uuid,
