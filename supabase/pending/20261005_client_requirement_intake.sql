@@ -272,7 +272,7 @@ BEGIN
       AND table_name = 'requirement_feasibility_reviews'
       AND constraint_type = 'UNIQUE'
       AND constraint_name <> 'requirement_feasibility_reviews_revision_department_key'
-      AND (SELECT array_agg(key_column.column_name ORDER BY key_column.ordinal_position)
+      AND (SELECT array_agg(key_column.column_name::text ORDER BY key_column.ordinal_position)
            FROM information_schema.key_column_usage key_column
            WHERE key_column.constraint_schema = 'public'
              AND key_column.constraint_name = table_constraints.constraint_name)
