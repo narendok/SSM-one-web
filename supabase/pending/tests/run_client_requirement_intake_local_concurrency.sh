@@ -50,8 +50,8 @@ SQL
 baseline_revision_count="$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions")"
 run_case same_actor_same_canonical 'Concurrent request' '{"description":"Concurrent canonical payload"}' ' Concurrent request ' '{"description":"Concurrent canonical payload"}' 0
 same_ids="$(sed -n '/^[0-9a-f-]\{36\}$/p' "$log_dir/same_actor_same_canonical_a.out"; sed -n '/^[0-9a-f-]\{36\}$/p' "$log_dir/same_actor_same_canonical_b.out")"
-[[ "$(printf '%s\n' "$same_ids" | sort -u | wc -l)" == "1" ]] || { echo 'LOCAL_CASE_FAIL same canonical submissions returned different requirement IDs' >&2; exit 1; }
-same_requirement_id="$(printf '%s\n' "$same_ids" | sort -u)"
+same_requirement_id="$(run_psql -Atqc "SELECT requirement_id FROM public.external_requirement_submission_requests WHERE request_key = '00000000-0000-4000-8000-000000000095'")"
+[[ -n "$same_requirement_id" && "$(printf '%s\n' "$same_requirement_id" | wc -l)" == "1" ]] || { echo 'LOCAL_CASE_FAIL same canonical submission did not persist exactly one authoritative receipt result' >&2; exit 1; }
 [[ "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirements WHERE id = '$same_requirement_id'::uuid")" == "1" ]] || { echo 'LOCAL_CASE_FAIL same canonical submissions created multiple returned headers' >&2; exit 1; }
 same_revision_count="$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions WHERE requirement_id = '$same_requirement_id'::uuid AND revision_number = 1")"
 same_audit_count="$(run_psql -Atqc "SELECT count(*) FROM public.activity_log WHERE entity_id = '$same_requirement_id'::uuid AND action = 'external_submitted'")"
