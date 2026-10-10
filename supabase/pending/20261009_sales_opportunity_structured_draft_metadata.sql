@@ -173,10 +173,12 @@ BEGIN
       IF jsonb_typeof(v_value) <> 'string' THEN
         RAISE EXCEPTION 'Structured Sales editable field % must be a string', v_key;
       END IF;
-      IF char_length(v_value #>> '{}') > CASE
-        WHEN p_document_kind = 'PRS' AND v_key = 'VERIFICATION_METHOD' THEN 1000
-        ELSE 8000
-      END THEN
+      IF char_length(v_value #>> '{}') > (
+        CASE
+          WHEN p_document_kind = 'PRS' AND v_key = 'VERIFICATION_METHOD' THEN 1000
+          ELSE 8000
+        END
+      ) THEN
         RAISE EXCEPTION 'Structured Sales editable field % exceeds its proposed local character limit', v_key;
       END IF;
       v_total_length := v_total_length + char_length(v_value #>> '{}');
