@@ -23,6 +23,7 @@ const source = mapMasterSpecificationSource({
   specificationNumber: "MASTER-2026-0001",
   versionId: "version-id",
   versionNumber: 1,
+  currentVersionNumber: 1,
   changeSummary: "Initial intake",
   savedAt: "2026-10-05T18:37:27.589Z",
   project: null,
@@ -325,7 +326,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await user.type(scope, exact);
     expect(
       (screen.getByRole("button", { name: "Refresh source" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    ).toBe(false);
     await user.click(screen.getByRole("tab", { name: "Contract Review" }));
     await user.click(screen.getByRole("tab", { name: "Product Requirements Specification" }));
     await user.click(screen.getByRole("tab", { name: "Statement of Requirements" }));
@@ -472,85 +473,66 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(screen.queryByText("Pinned authorized source")).toBeNull();
   });
 
-  it("preserves manual SOR text and shows a stale-source conflict only when a changed source arrives with local edits", async () => {
-    previewSource.mockResolvedValue(source);
+  it("reports a newer authorized revision after a clean refresh while retaining the pinned historical content", async () => {
+    previewSource.mockResolvedValueOnce(source).mockResolvedValueOnce({
+      ...source,
+      currentVersionNumber: 2,
+    });
     const user = userEvent.setup();
-    const { client } = (() => {
-      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-      render(
-        <QueryClientProvider client={client}>
-          <StructuredTemplatePreview actorId="actor-a" />
-        </QueryClientProvider>,
-      );
-      return { client };
-    })();
-    const scope = await screen.findByLabelText("Scope statement");
+    renderPreview();
     await screen.findByText("version-id");
-    expect(screen.queryByText(/The source pin advanced while local edits exist/)).toBeNull();
-    await user.clear(scope);
-    await user.type(scope, "Keep this manual scope exactly.");
-    await waitFor(() => expect(screen.getByText(/Local edits are unsaved/)).toBeTruthy());
-    client.setQueryData(
-      ["structured-template-source", "actor-a", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1],
-      {
-        ...source,
-        versionId: "amended-version-id",
-        sourceFields: { ...source.sourceFields, REQUIREMENT_SUMMARY: "Amended source summary" },
-      },
-    );
-    await screen.findByText("amended-version-id");
-    await waitFor(() =>
-      expect(screen.getByText(/The source pin advanced while local edits exist/)).toBeTruthy(),
-    );
-    expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe(
-      "Keep this manual scope exactly.",
-    );
-    expect(screen.getByText("Amended source summary")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Refresh source" }));
+    expect(await screen.findByText(/A newer Master Specification revision \(2\) is available/)).toBeTruthy();
+    expect(screen.getByText("version-id")).toBeTruthy();
+    expect(screen.getAllByText(/MASTER-2026-0001 rev 1/).length).toBeGreaterThan(0);
   });
 
-  it("uses a clean amended source as the next edit baseline without overwriting manual text", async () => {
-    previewSource.mockResolvedValue(source);
+  it("refreshes a dirty preview for newer-revision provenance without replacing manual text", async () => {
+    previewSource.mockResolvedValueOnce(source).mockResolvedValueOnce({
+      ...source,
+      currentVersionNumber: 2,
+    });
     const user = userEvent.setup();
-    const { client } = (() => {
-      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-      render(
-        <QueryClientProvider client={client}>
-          <StructuredTemplatePreview actorId="actor-a" />
-        </QueryClientProvider>,
-      );
-      return { client };
-    })();
-    const queryKey = [
-      "structured-template-source",
-      "actor-a",
-      "OPPORTUNITY-2026-0013",
-      "MASTER-2026-0001",
-      1,
-    ];
-    await screen.findByLabelText("Scope statement");
-    await screen.findByText("version-id");
-    client.setQueryData(
-      ["structured-template-source", "actor-a", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1],
-      { ...source, versionId: "clean-amended-version-id" },
-    );
-    await waitFor(() => expect(screen.getByText("clean-amended-version-id")).toBeTruthy());
-    expect(screen.queryByText(/The source pin advanced while local edits exist/)).toBeNull();
-
+    renderPreview();
     const scope = screen.getByLabelText("Scope statement");
     await user.clear(scope);
     await user.type(scope, "Keep this exact text after the clean amendment.");
-    expect(screen.queryByText(/The source pin advanced while local edits exist/)).toBeNull();
-
-    client.setQueryData(
-      ["structured-template-source", "actor-a", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1],
-      { ...source, versionId: "dirty-amended-version-id" },
-    );
-    await waitFor(() =>
-      expect(screen.getByText(/The source pin advanced while local edits exist/)).toBeTruthy(),
-    );
+    expect((screen.getByRole("button", { name: "Refresh source" }) as HTMLButtonElement).disabled).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Refresh source" }));
+    expect(await screen.findByText(/A newer Master Specification revision \(2\) is available/)).toBeTruthy();
     expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe(
       "Keep this exact text after the clean amendment.",
     );
+    expect(screen.getByText("version-id")).toBeTruthy();
+  });
+
+  it.each([1, null])(
+    "does not report a newer revision when the authorized marker is %s",
+    async (currentVersionNumber) => {
+      previewSource.mockResolvedValue({ ...source, currentVersionNumber });
+      renderPreview();
+      await screen.findByText("version-id");
+      expect(screen.queryByText(/A newer Master Specification revision/)).toBeNull();
+    },
+  );
+
+  it("does not render a late newer-revision marker from the previous actor", async () => {
+    let resolveActorA: (value: typeof source) => void = () => undefined;
+    previewSource
+      .mockImplementationOnce(
+        () => new Promise<typeof source>((resolve) => { resolveActorA = resolve; }),
+      )
+      .mockResolvedValueOnce({ ...source, versionId: "actor-b-version", currentVersionNumber: 1 });
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <DeferredActorSourceHarness />
+      </QueryClientProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Switch actor" }));
+    await screen.findByText("actor-b-version");
+    resolveActorA({ ...source, currentVersionNumber: 2 });
+    await waitFor(() => expect(screen.queryByText(/revision \(2\) is available/)).toBeNull());
   });
 
   it("does not request project BOMs for the unprojected source while local scratch rows are edited and selected", async () => {
@@ -682,9 +664,9 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     ).toBe("Catalogue description");
     client.setQueryData(
       ["structured-template-source", "actor-a", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1],
-      { ...source, versionId: "amended-version-id" },
+      { ...source, currentVersionNumber: 2 },
     );
-    await screen.findByText(/The source pin advanced while local edits exist/);
+    await screen.findByText(/A newer Master Specification revision \(2\) is available/);
     expect(
       (screen.getByLabelText("Optional local scratch rows row 1 MPN") as HTMLInputElement).value,
     ).toBe("Manual MPN");
