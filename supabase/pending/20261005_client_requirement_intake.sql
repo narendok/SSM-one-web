@@ -339,6 +339,85 @@ $$;
 CREATE INDEX IF NOT EXISTS requirement_feasibility_reviews_source_revision_idx
   ON public.requirement_feasibility_reviews(source_revision_id);
 
+-- Caller-RLS feasibility provenance projection. This deliberately runs as the
+-- invoking caller: it has no SECURITY DEFINER path, no owner bypass, and no
+-- replacement source fallback. A visible review with legacy, missing, or
+-- mismatched pins remains visible but is explicitly unavailable.
+CREATE OR REPLACE VIEW public.requirement_feasibility_review_provenance
+WITH (security_invoker = true)
+AS
+SELECT
+  review.id AS review_id,
+  review.requirement_id,
+  review.department_id,
+  review.reviewer_user_id,
+  review.status AS review_status,
+  review.source_revision_id,
+  review.source_revision_number,
+  review.master_specification_version_id,
+  review.master_specification_version_number,
+  review.applicable_workstreams,
+  requirement.opportunity_id,
+  requirement.customer_id,
+  CASE
+    WHEN review.source_revision_id IS NULL
+      OR review.source_revision_number IS NULL
+      OR review.master_specification_version_id IS NULL
+      OR review.master_specification_version_number IS NULL
+      OR review.applicable_workstreams IS NULL
+      THEN 'UNAVAILABLE_LEGACY_OR_MISSING_PIN'
+    WHEN revision.id IS NULL
+      OR master_version.id IS NULL
+      OR specification.id IS NULL
+      THEN 'UNAVAILABLE_INACCESSIBLE_OR_MISSING_SOURCE'
+    WHEN revision.requirement_id IS DISTINCT FROM review.requirement_id
+      OR revision.revision_number IS DISTINCT FROM review.source_revision_number
+      OR master_version.version_number IS DISTINCT FROM review.master_specification_version_number
+      OR specification.opportunity_id IS DISTINCT FROM requirement.opportunity_id
+      OR specification.customer_id IS DISTINCT FROM requirement.customer_id
+      THEN 'UNAVAILABLE_MISMATCHED_PIN'
+    ELSE 'AVAILABLE'
+  END AS provenance_status,
+  CASE
+    WHEN revision.id IS NOT NULL
+      AND master_version.id IS NOT NULL
+      AND specification.id IS NOT NULL
+      AND revision.requirement_id IS NOT DISTINCT FROM review.requirement_id
+      AND revision.revision_number IS NOT DISTINCT FROM review.source_revision_number
+      AND master_version.version_number IS NOT DISTINCT FROM review.master_specification_version_number
+      AND specification.opportunity_id IS NOT DISTINCT FROM requirement.opportunity_id
+      AND specification.customer_id IS NOT DISTINCT FROM requirement.customer_id
+      THEN revision.id
+    ELSE NULL
+  END AS verified_source_revision_id,
+  CASE
+    WHEN revision.id IS NOT NULL
+      AND master_version.id IS NOT NULL
+      AND specification.id IS NOT NULL
+      AND revision.requirement_id IS NOT DISTINCT FROM review.requirement_id
+      AND revision.revision_number IS NOT DISTINCT FROM review.source_revision_number
+      AND master_version.version_number IS NOT DISTINCT FROM review.master_specification_version_number
+      AND specification.opportunity_id IS NOT DISTINCT FROM requirement.opportunity_id
+      AND specification.customer_id IS NOT DISTINCT FROM requirement.customer_id
+      THEN master_version.id
+    ELSE NULL
+  END AS verified_master_specification_version_id
+FROM public.requirement_feasibility_reviews review
+JOIN public.customer_requirements requirement
+  ON requirement.id = review.requirement_id
+LEFT JOIN public.customer_requirement_revisions revision
+  ON revision.id = review.source_revision_id
+LEFT JOIN public.master_specification_versions master_version
+  ON master_version.id = review.master_specification_version_id
+LEFT JOIN public.master_specifications specification
+  ON specification.id = master_version.specification_id;
+
+-- No authenticated view grant is proposed. PostgreSQL SECURITY INVOKER keeps
+-- underlying caller RLS in force; explicit caller access remains an isolated
+-- installation and managed caller-RLS acceptance gate.
+REVOKE ALL ON TABLE public.requirement_feasibility_review_provenance FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.requirement_feasibility_review_provenance TO service_role;
+
 REVOKE INSERT, UPDATE, DELETE ON TABLE public.requirement_feasibility_reviews FROM authenticated;
 DROP POLICY IF EXISTS "Sales users manage feasibility reviews" ON public.requirement_feasibility_reviews;
 
