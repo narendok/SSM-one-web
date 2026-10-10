@@ -191,9 +191,6 @@ BEGIN
     END IF;
     RAISE EXCEPTION 'Request key conflicts with a different caller or payload';
   END IF;
-  -- The receipt lock serializes same-key calls. Re-check after taking it: a
-  -- concurrent transaction can have created the receipt between the first read
-  -- and lock acquisition only when an older deployment lacked this ordering.
   INSERT INTO public.customer_requirements (
     opportunity_id, customer_id, title, status, current_revision, customer_reference,
     requirement_data, submitted_at, created_by
