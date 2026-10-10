@@ -45,6 +45,8 @@ import { buildSalesSourceContractAvailability } from "@/lib/feasibility-planning
 import { draftFromSpecificationData } from "@/lib/master-specification";
 import { getSalesNextStepGuidance } from "@/lib/sales-next-step";
 import { useAuth } from "@/hooks/useAuth";
+import { salesOverviewQueryOptions } from "@/lib/sales-overview-query";
+import { SalesOpportunityPipeline } from "@/components/sales/SalesOpportunityPipeline";
 
 export const Route = createFileRoute("/_authenticated/sales")({
   head: () => ({
@@ -78,11 +80,7 @@ function SalesPage() {
   >(null);
   const [detail, setDetail] = useState<SalesDetail | null>(null);
   const { loading: authLoading, user } = useAuth();
-  const sales = useQuery({
-    queryKey: ["sales_overview"],
-    queryFn: fetchSalesOverview,
-    enabled: !authLoading,
-  });
+  const sales = useQuery(salesOverviewQueryOptions(user?.id ?? null));
   const metrics = useMemo(
     () => ({
       active: sales.data?.opportunities.filter((item) => item.status === "active").length ?? 0,
@@ -305,11 +303,13 @@ function SalesPage() {
                   </div>
                 );
               })}
-              {!sales.data?.opportunities.length && (
-                <p className="py-6 text-sm text-muted-foreground">
-                  No opportunities yet. Create a customer, then capture the first enquiry.
-                </p>
-              )}
+              <SalesOpportunityPipeline
+                state={{
+                  opportunities: sales.data?.opportunities,
+                  pending: authLoading || sales.isPending,
+                  error: sales.error instanceof Error ? sales.error : sales.isError ? new Error("Unexpected Sales read error") : null,
+                }}
+              />
             </CardContent>
           </Card>
           <Card>
