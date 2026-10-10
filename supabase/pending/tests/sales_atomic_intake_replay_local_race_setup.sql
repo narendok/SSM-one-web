@@ -24,5 +24,6 @@ CREATE TABLE public.sales_intake_race_results (
   replayed boolean NOT NULL,
   PRIMARY KEY (race_label, worker_label)
 );
-INSERT INTO public.sales_intake_race_barriers (race_label) VALUES
-  ('same_key_same_payload'), ('same_key_changed_payload'), ('same_key_actor_conflict'), ('different_keys');
+INSERT INTO public.sales_intake_race_barriers (race_label, expected_workers) VALUES
+  ('same_key_same_payload', 2), ('same_key_changed_payload', 2),
+  ('same_key_actor_conflict', 2), ('different_keys', 2);
