@@ -88,4 +88,5 @@ CREATE TRIGGER sales_intake_fail_opportunity BEFORE INSERT ON public.sales_oppor
 CREATE TRIGGER sales_intake_fail_specification BEFORE INSERT ON public.master_specifications FOR EACH ROW EXECUTE FUNCTION public.sales_intake_test_failpoint();
 CREATE TRIGGER sales_intake_fail_version BEFORE INSERT ON public.master_specification_versions FOR EACH ROW EXECUTE FUNCTION public.sales_intake_test_failpoint();
 CREATE TRIGGER sales_intake_fail_activity BEFORE INSERT ON public.activity_log FOR EACH ROW EXECUTE FUNCTION public.sales_intake_test_failpoint();
+CREATE TRIGGER sales_intake_fail_receipt BEFORE INSERT ON public.sales_opportunity_intake_receipts FOR EACH ROW EXECUTE FUNCTION public.sales_intake_test_failpoint();
 COMMIT;

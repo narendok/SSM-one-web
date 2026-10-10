@@ -12,6 +12,10 @@ race_runner = (Path(__file__).resolve().parent / "run_sales_atomic_intake_local_
 race_setup = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_race_setup.sql").read_text()
 race_worker = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_race_worker.sql").read_text()
 race_assertions = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_race_assertions.sql").read_text()
+lock_setup = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_lock_setup.sql").read_text()
+lock_worker = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_lock_worker.sql").read_text()
+lock_assertions = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_lock_assertions.sql").read_text()
+failpoint_acceptance = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_failpoint_acceptance.sql").read_text()
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
@@ -46,6 +50,13 @@ checks = {
     "local fixture proves allocator locking": "FOR UPDATE" in local_fixture and "document_numbering_config" in local_fixture,
     "local acceptance covers replay conflicts invalid source rollback and races": all(fragment in local_acceptance for fragment in ("Exact replay", "changed payload", "different actor", "invalid source", "rollback", "Two-session race")),
     "local acceptance restores its disposable fixture": local_acceptance.rstrip().endswith("ROLLBACK;"),
+    "local lock wait uses the exact request-key advisory lock": "pg_advisory_xact_lock(hashtextextended(:'request_key'" in lock_worker and "LOCK_WAIT_DEMONSTRATED" in race_runner,
+    "local lock wait revokes before release": "sales_manage = false" in lock_assertions and "released = true" in lock_assertions,
+    "local lock wait requires post-release denial without records": "LOCK_WAIT_DENIAL_PASS" in race_runner and "receipts=0 opportunities=0" in race_runner,
+    "local receipt replay lock wait is seeded": "receipt_replay" in lock_setup and "000000000202" in race_runner,
+    "local fixture supports receipt insertion failpoint": "sales_intake_fail_receipt" in local_fixture,
+    "local failpoints cover specification version and receipt": all(point in failpoint_acceptance for point in ("master_specifications", "master_specification_versions", "sales_opportunity_intake_receipts")),
+    "local failpoints assert number rollback": "document_numbering_config" in failpoint_acceptance and "Failpoint % did not roll back all records and numbers" in failpoint_acceptance,
     "local race runner rejects remote targets": "Refusing a non-local PostgreSQL target." in race_runner and "LOCAL_SALES_INTAKE_DISPOSABLE" in race_runner,
     "local race runner bounds worker waits": "timeout 20s psql" in race_runner and "interval '15 seconds'" in race_worker,
     "local race workers use independent psql sessions": race_runner.count("timeout 20s psql") >= 2,

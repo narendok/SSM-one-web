@@ -44,6 +44,10 @@ proposal="$root/supabase/pending/20261010_sales_atomic_intake_replay.sql"
 setup="$root/supabase/pending/tests/sales_atomic_intake_replay_local_race_setup.sql"
 worker="$root/supabase/pending/tests/sales_atomic_intake_replay_local_race_worker.sql"
 assertions="$root/supabase/pending/tests/sales_atomic_intake_replay_local_race_assertions.sql"
+lock_setup="$root/supabase/pending/tests/sales_atomic_intake_replay_local_lock_setup.sql"
+lock_worker="$root/supabase/pending/tests/sales_atomic_intake_replay_local_lock_worker.sql"
+lock_assertions="$root/supabase/pending/tests/sales_atomic_intake_replay_local_lock_assertions.sql"
+failpoints="$root/supabase/pending/tests/sales_atomic_intake_replay_local_failpoint_acceptance.sql"
 
 psql_args=(--set=ON_ERROR_STOP=1)
 if [[ -n "${LOCAL_SALES_INTAKE_PRIVATE_SOCKET_ROOT:-}" ]]; then
@@ -71,6 +75,15 @@ GRANT EXECUTE ON FUNCTION public.create_sales_opportunity_with_initial_master_sp
 SQL
 run_psql -f "$setup"
 
+run_psql -f "$failpoints"
+# Recreate fixture state for revocation-after-lock-wait cases and preserve race coverage.
+run_psql -f "$fixture"
+run_psql -f "$proposal"
+run_psql <<'SQL'
+GRANT EXECUTE ON FUNCTION public.create_sales_opportunity_with_initial_master_specification(uuid, uuid, uuid, jsonb, uuid) TO authenticated;
+SQL
+run_psql -f "$lock_setup"
+
 run_race() {
   local label="$1" key_a="$2" key_b="$3" payload_a="$4" payload_b="$5" actor_a="$6" actor_b="$7"
   local log_dir
@@ -94,6 +107,52 @@ run_race() {
       ;;
   esac
 }
+
+run_lock_wait_case() {
+  local label="$1" key="$2" log_dir status
+  log_dir="$(mktemp -d /tmp/sales_atomic_acceptance_lock_XXXXXX)"
+  timeout 20s psql "${psql_args[@]}" -v case_label="$label" -v request_key="$key" -f "$lock_worker" >"$log_dir/worker.log" 2>&1 &
+  local pid=$!
+  for attempt in $(seq 1 150); do
+    if [[ "$(run_psql -Atqc "SELECT ready::text || ':' || released::text FROM public.sales_intake_lock_wait_cases WHERE case_label = '$label'")" == "true:false" ]]; then break; fi
+    sleep 0.1
+  done
+  [[ "$(run_psql -Atqc "SELECT ready::text || ':' || released::text FROM public.sales_intake_lock_wait_cases WHERE case_label = '$label'")" == "true:false" ]] || { cat "$log_dir/worker.log" >&2; return 1; }
+  printf 'LOCK_WAIT_DEMONSTRATED case=%s
+' "$label"
+  run_psql -v case_label="$label" -v phase=release -f "$lock_assertions"
+  wait "$pid" && status=0 || status=$?
+  printf 'LOCK_WAIT_WORKER_STATUS case=%s status=%s
+' "$label" "$status"
+  [[ "$status" != 0 ]] || { cat "$log_dir/worker.log" >&2; return 1; }
+  [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunity_intake_receipts WHERE request_key = '$key'")" == "0" ]] || return 1
+  [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunities")" == "0" ]] || return 1
+  printf 'LOCK_WAIT_DENIAL_PASS case=%s receipts=0 opportunities=0
+' "$label"
+  rm -rf "$log_dir"
+}
+
+run_lock_wait_case new_request 00000000-0000-4000-8000-000000000201
+-- Seed an authorized exact-replay receipt, then reset the caller permission before lock wait.
+run_psql <<'SQL'
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
+SELECT set_config('request.jwt.claim.role', 'authenticated', false);
+SELECT * FROM public.create_sales_opportunity_with_initial_master_specification(
+  '00000000-0000-4000-8000-000000000010'::uuid, '00000000-0000-4000-8000-000000000011'::uuid, '00000000-0000-4000-8000-000000000012'::uuid,
+  '{"name":"Lock wait intake","application":"Vehicle tracking","productType":"Tracker","primarySalesOwnerUserId":null,"ndaRequired":false,"estimatedVolume":"20","targetTimeline":"Q4","priority":"medium","nextAction":"Review","nextActionDate":null,"masterSpecification":{"changeSummary":"Initial intake","proposedName":"Lock wait intake","customerOrInternalOwner":"Disposable customer","industryApplication":"Automotive","productFamily":"Tracker","developmentScope":"Prototype scope","workstreams":["HARDWARE"],"requirementSummary":"Track test vehicles","powerAndUnits":"12V","interfaces":"CAN","connectivityAndGnss":"LTE/GNSS","environmentAndIp":"IP67","volumes":"20","schedule":"Q4","requestedStandards":"TBC","exclusions":"None"}}'::jsonb,
+  '00000000-0000-4000-8000-000000000202'::uuid
+);
+UPDATE public.sales_test_permissions SET sales_manage = true WHERE user_id = '00000000-0000-4000-8000-000000000001';
+SQL
+run_lock_wait_case receipt_replay 00000000-0000-4000-8000-000000000202
+
+-- Restore a clean fixture before the pre-existing exact replay/conflict/different-key race suite.
+run_psql -f "$fixture"
+run_psql -f "$proposal"
+run_psql <<'SQL'
+GRANT EXECUTE ON FUNCTION public.create_sales_opportunity_with_initial_master_specification(uuid, uuid, uuid, jsonb, uuid) TO authenticated;
+SQL
+run_psql -f "$setup"
 
 # Each pair waits on the same server-side barrier. The assertion transaction
 # releases it only after both independent sessions have registered readiness.
