@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # LOCAL DISPOSABLE POSTGRESQL 17 ONLY. Refuses remote, managed, and shared targets.
+# Refusing a non-private local structured-draft rollback target is enforced by
+# explicit socket/port/database arguments below; inherited PG* values cannot redirect it.
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 work_dir="$(mktemp -d /tmp/structured_draft_rollback_acceptance_XXXXXX)"
 data_dir="$work_dir/data"; socket_dir="$work_dir/socket"; log_dir="$work_dir/logs"; database="structured_draft_acceptance_rollback"; port=55436; server_pid=""
