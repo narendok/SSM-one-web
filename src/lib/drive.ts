@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { canDownloadNode, isSelectedNodeRevision } from "@/lib/drive-download-policy";
 
 const sb = supabase as any;
 
@@ -317,24 +318,43 @@ export async function fetchRevisions(nodeId: string): Promise<DriveRevision[]> {
   return (data ?? []) as DriveRevision[];
 }
 
-export async function signedUrl(path: string, seconds = 3600): Promise<string> {
+export async function previewUrl(path: string, seconds = 3600): Promise<string> {
   const { data, error } = await supabase.storage.from(DRIVE_BUCKET).createSignedUrl(path, seconds);
+  if (error || !data) throw error ?? new Error("Could not create a preview link");
+  return data.signedUrl;
+}
+
+export async function downloadUrl(path: string, filename: string, seconds = 3600): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(DRIVE_BUCKET)
+    .createSignedUrl(path, seconds, { download: filename });
   if (error || !data) throw error ?? new Error("Could not create a download link");
   return data.signedUrl;
 }
 
-export async function downloadNode(node: DriveNode) {
-  if (!node.storage_path) return;
-  const url = await signedUrl(node.storage_path);
+function navigateToDownload(url: string) {
   const a = document.createElement("a");
   a.href = url;
-  a.download = node.name;
   a.rel = "noopener";
   a.target = "_blank";
   document.body.appendChild(a);
   a.click();
   a.remove();
 }
+
+export async function downloadNode(node: DriveNode) {
+  if (!canDownloadNode(node)) return;
+  navigateToDownload(await downloadUrl(node.storage_path, node.name));
+}
+
+export async function downloadRevision(node: DriveNode, revision: Pick<DriveRevision, "node_id" | "storage_path">) {
+  if (!isSelectedNodeRevision(node, revision)) throw new Error("This revision does not belong to the selected file.");
+  navigateToDownload(await downloadUrl(revision.storage_path, node.name));
+}
+
+export const driveDownloadInternals = {
+  navigateToDownload,
+};
 
 export async function fetchShareLinks(nodeId: string): Promise<DriveShareLink[]> {
   const { data, error } = await sb
