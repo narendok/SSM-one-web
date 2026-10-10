@@ -77,7 +77,6 @@ function SalesPage() {
     | null
   >(null);
   const [detail, setDetail] = useState<SalesDetail | null>(null);
-  const [localPreviewEdits, setLocalPreviewEdits] = useState<Record<string, string>>({});
   const { loading: authLoading } = useAuth();
   const sales = useQuery({
     queryKey: ["sales_overview"],
@@ -296,10 +295,7 @@ function SalesPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            setLocalPreviewEdits({});
-                            setDetail({ opportunity: item, specification });
-                          }}
+                          onClick={() => setDetail({ opportunity: item, specification })}
                         >
                           View proposal
                         </Button>
@@ -488,9 +484,7 @@ function SalesPage() {
         <ProposalDetail
           detail={detail}
           requirements={sales.data?.requirements ?? []}
-          localPreviewEdits={localPreviewEdits}
-          onLocalPreviewEditsChange={setLocalPreviewEdits}
-          onOpenChange={closeProposal}
+          onOpenChange={(open) => !open && setDetail(null)}
         />
       </div>
     </PermissionGate>
