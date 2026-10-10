@@ -141,6 +141,8 @@ BEGIN
      OR jsonb_array_length(v_spec->'workstreams') NOT BETWEEN 1 AND 5 THEN
     RETURN NULL;
   END IF;
+  -- Required specification fields are all strings; the surrounding predicate
+  -- above validates shape before these value bounds are evaluated.
   IF NULLIF(btrim(v_spec->>'changeSummary'), '') IS NULL
      OR char_length(v_spec->>'changeSummary') NOT BETWEEN 3 AND 1000
      OR NULLIF(btrim(v_spec->>'proposedName'), '') IS NULL
