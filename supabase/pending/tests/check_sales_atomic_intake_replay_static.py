@@ -56,10 +56,13 @@ checks = {
     "local exact replay waits for both durable responses": "Exact replay workers did not record both responses" in race_assertions,
     "local race releases before it evaluates completed workers": "-v release_only=yes" in race_runner and "wait \"$race_pid\"" in race_runner,
     "release-only barrier pass cannot evaluate unfinished workers": "current_setting('app.release_only', true) = 'yes' THEN RETURN" in race_assertions,
+    "final aggregate assertion does not require a barrier row": "current_setting('app.race_label', true) <> 'final'" in race_assertions,
     "local conflict races require exactly one rejected worker": "same_key_changed_payload|same_key_actor_conflict" in race_runner,
     "local race avoids sleep-only coordination": "pg_advisory_xact_lock" in race_worker and "released" in race_assertions,
     "local race covers same key conflicts and distinct keys": all(label in race_runner for label in ("same_key_same_payload", "same_key_changed_payload", "same_key_actor_conflict", "different_keys")),
     "local race asserts allocation and atomic row counts": "count(DISTINCT opportunity_number)" in race_assertions and "mismatched opportunity/spec/version/audit rows" in race_assertions,
+    "local conflict races retain no rejected-worker records": "WHEN 'same_key_changed_payload' THEN 2" in race_assertions and "WHEN 'same_key_actor_conflict' THEN 3" in race_assertions and "left records from the rejected worker" in race_assertions,
+    "local distinct-key race counts only successful intakes": "WHEN 'different_keys' THEN 5" in race_assertions and "WHEN 'final' THEN 5" in race_assertions,
     "local race records both worker responses": "CREATE TABLE public.sales_intake_race_results" in race_setup and "INSERT INTO public.sales_intake_race_results" in race_worker,
     "local race proves exact replay IDs": "Exact replay workers did not return identical opportunity/specification/version IDs" in race_assertions and "count(DISTINCT master_specification_version_id)" in race_assertions,
 }
