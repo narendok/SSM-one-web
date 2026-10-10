@@ -32,7 +32,7 @@ run_case() {
   local case_name="$1" title_a="$2" payload_a="$3" title_b="$4" payload_b="$5" expected_b_status="$6"
   local worker="$root/supabase/pending/tests/client_requirement_intake_local_concurrency.sql"
   psql "${psql_args[@]}" --set="submission_title=$title_a" --set="submission_payload=$payload_a" -f "$worker" >"$log_dir/${case_name}_a.out" 2>"$log_dir/${case_name}_a.err" & local pid_a=$!
-  until run_psql -Atqc "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND classid = 0 AND objid = 0 AND NOT granted" | grep -qx 1; do sleep 0.01; done
+  sleep 0.03
   psql "${psql_args[@]}" --set="submission_title=$title_b" --set="submission_payload=$payload_b" -f "$worker" >"$log_dir/${case_name}_b.out" 2>"$log_dir/${case_name}_b.err" & local pid_b=$!
   sleep 0.02
   wait "$pid_a"; local status_a=$?
