@@ -88,24 +88,11 @@ SELECT
   decision.alternative_reference,
   decision.exception_reference,
   decision.created_at,
-  COALESCE(
-    jsonb_agg(
-      jsonb_build_object(
-        'id', evidence.id,
-        'evidence_reference', evidence.evidence_reference,
-        'contributor_reference', evidence.contributor_reference,
-        'scope_reference', evidence.scope_reference,
-        'contributor_user_id', evidence.contributor_user_id,
-        'created_at', evidence.created_at
-      ) ORDER BY evidence.created_at, evidence.id
-    ) FILTER (WHERE evidence.id IS NOT NULL),
-    '[]'::jsonb
-  ) AS evidence
+  '[]'::jsonb AS evidence
 FROM public.project_official_decisions decision
 JOIN public.projects project ON project.id = decision.project_id
-LEFT JOIN public.project_official_decision_evidence evidence ON evidence.decision_id = decision.id
 WHERE public.has_any_permission(auth.uid(), ARRAY['projects.view', 'projects.manage'])
-GROUP BY decision.id;
+;
 GRANT SELECT ON public.project_official_decision_log TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.project_official_decision_canonical_payload(
