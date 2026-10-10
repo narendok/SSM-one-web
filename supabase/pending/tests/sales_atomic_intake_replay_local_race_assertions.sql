@@ -2,18 +2,25 @@
 -- worker registrations, then asserts the completed scenario. This is a
 -- synthetic fixture test, not managed RLS/JWT transport evidence.
 \set ON_ERROR_STOP on
-DO $release$
-DECLARE v_ready integer; v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
+WITH waited AS (
+  SELECT ready_workers
+  FROM public.sales_intake_race_barriers
+  WHERE race_label = :'race_label'
+    AND ready_workers = expected_workers
+)
+UPDATE public.sales_intake_race_barriers
+SET released = true
+WHERE race_label = :'race_label'
+  AND EXISTS (SELECT 1 FROM waited)
+RETURNING race_label;
+
+DO $release_check$
 BEGIN
-  LOOP
-    SELECT ready_workers INTO v_ready FROM public.sales_intake_race_barriers WHERE race_label = :'race_label';
-    IF v_ready = 2 THEN EXIT; END IF;
-    IF clock_timestamp() >= v_deadline THEN RAISE EXCEPTION 'Race readiness timeout for %', :'race_label'; END IF;
-    PERFORM pg_sleep(0.02);
-  END LOOP;
-  UPDATE public.sales_intake_race_barriers SET released = true WHERE race_label = :'race_label';
+  IF NOT EXISTS (SELECT 1 FROM public.sales_intake_race_barriers WHERE race_label = current_setting('race_label', true) AND released) THEN
+    RAISE EXCEPTION 'Race readiness timeout';
+  END IF;
 END;
-$release$;
+$release_check$;
 
 DO $assert$
 DECLARE
@@ -24,7 +31,7 @@ DECLARE
 BEGIN
   LOOP
     SELECT count(*) INTO v_receipts FROM public.sales_opportunity_intake_receipts;
-    CASE :'race_label'
+    CASE current_setting('race_label', true)
       WHEN 'same_key_same_payload' THEN EXIT WHEN v_receipts = 1;
       WHEN 'same_key_changed_payload', 'same_key_actor_conflict' THEN EXIT WHEN v_receipts = 2;
       WHEN 'different_keys' THEN EXIT WHEN v_receipts = 4;
@@ -39,23 +46,23 @@ BEGIN
   IF v_opportunities <> v_specs OR v_opportunities <> v_versions OR v_opportunities <> v_audits THEN
     RAISE EXCEPTION 'Race left mismatched opportunity/spec/version/audit rows';
   END IF;
-  IF :'race_label' = 'same_key_same_payload' AND (v_receipts <> 1 OR v_opportunities <> 1) THEN
+  IF current_setting('race_label', true) = 'same_key_same_payload' AND (v_receipts <> 1 OR v_opportunities <> 1) THEN
     RAISE EXCEPTION 'Same actor/key/payload did not converge to exactly one receipt and business records';
-  ELSIF :'race_label' IN ('same_key_changed_payload', 'same_key_actor_conflict') AND (v_receipts <> 2 OR v_opportunities <> 2) THEN
+  ELSIF current_setting('race_label', true) IN ('same_key_changed_payload', 'same_key_actor_conflict') AND (v_receipts <> 2 OR v_opportunities <> 2) THEN
     RAISE EXCEPTION 'Conflicting same-key race wrote more than one new intake';
-  ELSIF :'race_label' IN ('different_keys', 'final') AND (v_receipts <> 4 OR v_opportunities <> 4) THEN
+  ELSIF current_setting('race_label', true) IN ('different_keys', 'final') AND (v_receipts <> 4 OR v_opportunities <> 4) THEN
     RAISE EXCEPTION 'Different-key race did not leave exactly four receipts/opportunities';
   END IF;
   IF (SELECT count(*) FROM public.sales_opportunities) <> (SELECT count(DISTINCT opportunity_number) FROM public.sales_opportunities) THEN
     RAISE EXCEPTION 'Concurrent allocator produced duplicate opportunity numbers';
   END IF;
-  IF :'race_label' = 'same_key_same_payload' THEN
+  IF current_setting('race_label', true) = 'same_key_same_payload' THEN
     SELECT count(*), count(DISTINCT opportunity_id), count(DISTINCT master_specification_id),
       count(DISTINCT master_specification_version_id), count(DISTINCT opportunity_number),
       count(*) FILTER (WHERE replayed)
     INTO v_results, v_distinct_opportunity_ids, v_distinct_spec_ids,
       v_distinct_version_ids, v_distinct_numbers, v_replayed
-    FROM public.sales_intake_race_results WHERE race_label = :'race_label';
+    FROM public.sales_intake_race_results WHERE race_label = current_setting('race_label', true);
     IF v_results <> 2 OR v_distinct_opportunity_ids <> 1 OR v_distinct_spec_ids <> 1
        OR v_distinct_version_ids <> 1 OR v_distinct_numbers <> 1 OR v_replayed <> 1 THEN
       RAISE EXCEPTION 'Exact replay workers did not return identical opportunity/specification/version IDs and number with one replay';

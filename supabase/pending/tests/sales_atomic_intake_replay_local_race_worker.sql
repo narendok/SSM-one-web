@@ -9,27 +9,26 @@ SELECT pg_advisory_xact_lock(hashtextextended('sales-intake-race:' || :'race_lab
 UPDATE public.sales_intake_race_barriers
 SET ready_workers = ready_workers + 1
 WHERE race_label = :'race_label' AND NOT released AND ready_workers < expected_workers;
-DO $ready$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.sales_intake_race_barriers
-    WHERE race_label = :'race_label' AND ready_workers BETWEEN 1 AND expected_workers
-  ) THEN
-    RAISE EXCEPTION 'Race worker could not register readiness';
-  END IF;
-END;
-$ready$;
+SELECT CASE WHEN EXISTS (
+  SELECT 1 FROM public.sales_intake_race_barriers
+  WHERE race_label = :'race_label' AND ready_workers BETWEEN 1 AND expected_workers
+) THEN 1 ELSE 1 / 0 END AS readiness_registered;
 COMMIT;
 
 -- Polling is bounded and conditioned on durable barrier state, rather than a
 -- time delay that assumes the competing session started.
+SELECT released
+FROM public.sales_intake_race_barriers
+WHERE race_label = :'race_label'
+  AND (released OR clock_timestamp() < clock_timestamp() + interval '15 seconds');
+
 DO $wait$
 DECLARE v_released boolean; v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
 BEGIN
   LOOP
-    SELECT released INTO v_released FROM public.sales_intake_race_barriers WHERE race_label = :'race_label';
+    SELECT released INTO v_released FROM public.sales_intake_race_barriers WHERE race_label = current_setting('race_label', true);
     IF v_released THEN EXIT; END IF;
-    IF clock_timestamp() >= v_deadline THEN RAISE EXCEPTION 'Race barrier timeout for %', :'race_label'; END IF;
+    IF clock_timestamp() >= v_deadline THEN RAISE EXCEPTION 'Race barrier timeout'; END IF;
     PERFORM pg_sleep(0.02);
   END LOOP;
 END;
