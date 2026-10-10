@@ -247,6 +247,18 @@ The scripts use a fresh private PostgreSQL 17 Unix-socket/mmap fixture and fixtu
 
 **Current blockers:** no read-only catalog evidence has yet established target compatibility for `egjotuxqguifnvdnflan`; no existing non-admin caller matrix or disposable source tuple has been evidenced; installation has not been approved; the save function remains revoked for all ordinary transport; there is no live Save control; and managed acceptance has not run.
 
+## Read-only managed preflight attempt — 2026-10-10 16:38 UTC
+
+The attempt stopped before schema, RLS, grant, object-collision, or identity queries.
+
+| Check | Actual result | Stop outcome |
+| --- | --- | --- |
+| Source and guard pins | Pending contract SHA-256 remained `32fef255d2deeacfe859c9978d6ba25fb7c4384afb7183dc6c860bd7efdca448`; acceptance SQL SHA-256 remained `7be51b57b37bc5b95cd7ea861f8ba2909c013c600d6f1056b2fd`; target guard remained pinned at `ab251fcebca573c9954f3954af4c53baf7f1c77f0e159aaec8edf44ce0af9c03`. | Passed local source identity only. |
+| Available managed connection identity | Read-only connection returned database `postgres`, role `sandbox_exec`, PostgreSQL `17.6`. It did not return a verifiable isolated backend reference. | **STOP.** No subsequent catalog, schema, RLS, grant, collision, or identity query was run. |
+| Original-backend exclusion | The available connection was not demonstrated to be `egjotuxqguifnvdnflan`; it was therefore not used for preflight. The explicitly excluded original ref `yyrvduosyyaluifqvwkr` was not queried. | Preserved. |
+
+No database mutation occurred. The blocked evidence remains: a verifiable, already-authorized read-only connection to `egjotuxqguifnvdnflan`, followed by the exact catalog checks listed above and the existing non-admin caller/fixture availability record. This stop does not establish any managed schema, policy, grant, object, identity, or target compatibility result.
+
 > I approve installation of only `supabase/pending/20261009_sales_opportunity_structured_draft_metadata.sql`, matching SHA-256 `32fef255d2deeacfe859c9978d6ba25fb7c4384afb7183dc6c860bd7efdca448`, on isolated backend `egjotuxqguifnvdnflan` only after this document's read-only preflight passes. I approve no RPC EXECUTE grant, user/role/permission change, fixture creation beyond separately approved recorded acceptance fixtures, legacy-path change, live Save wiring, Drive/register/storage/document materialization, original-backend activity, or publication. Installation must preserve default revoked transport.
 
 A second approval is required before the exact authenticated EXECUTE grant, and a third approval is required before relying on any existing caller identities or disposable managed fixtures for authenticated acceptance.
