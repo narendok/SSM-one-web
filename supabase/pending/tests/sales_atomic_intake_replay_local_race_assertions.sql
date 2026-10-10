@@ -3,16 +3,10 @@
 -- synthetic fixture test, not managed RLS/JWT transport evidence.
 \set ON_ERROR_STOP on
 SELECT set_config('app.race_label', :'race_label', false);
-WITH waited AS (
-  SELECT ready_workers
-  FROM public.sales_intake_race_barriers
-  WHERE race_label = :'race_label'
-    AND ready_workers = expected_workers
-)
+SELECT pg_advisory_xact_lock(hashtextextended('sales-intake-race:' || :'race_label', 0));
 UPDATE public.sales_intake_race_barriers
 SET released = true
 WHERE race_label = :'race_label'
-  AND EXISTS (SELECT 1 FROM waited)
 RETURNING race_label;
 
 DO $release_check$

@@ -9,10 +9,6 @@ SELECT pg_advisory_xact_lock(hashtextextended('sales-intake-race:' || :'race_lab
 UPDATE public.sales_intake_race_barriers
 SET ready_workers = ready_workers + 1
 WHERE race_label = :'race_label' AND NOT released AND ready_workers < expected_workers;
-SELECT CASE WHEN EXISTS (
-  SELECT 1 FROM public.sales_intake_race_barriers
-  WHERE race_label = :'race_label' AND ready_workers BETWEEN 1 AND expected_workers
-) THEN 1 ELSE 1 / 0 END AS readiness_registered;
 COMMIT;
 
 -- Polling is bounded and conditioned on durable barrier state, rather than a
