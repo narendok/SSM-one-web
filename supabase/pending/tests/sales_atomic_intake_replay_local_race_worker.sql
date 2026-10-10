@@ -17,7 +17,7 @@ COMMIT;
 
 -- Polling is bounded and conditioned on durable barrier state, rather than a
 -- time delay that assumes the competing session started.
-SELECT set_config('race_label', :'race_label', false);
+SELECT set_config('app.race_label', :'race_label', false);
 
 DO $wait$
 DECLARE
@@ -25,7 +25,7 @@ DECLARE
   v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
 BEGIN
   LOOP
-    SELECT released INTO v_released FROM public.sales_intake_race_barriers WHERE race_label = current_setting('race_label', true);
+    SELECT released INTO v_released FROM public.sales_intake_race_barriers WHERE race_label = current_setting('app.race_label', true);
     IF v_released THEN EXIT; END IF;
     IF clock_timestamp() >= v_deadline THEN RAISE EXCEPTION 'Race barrier timeout'; END IF;
     PERFORM pg_sleep(0.02);
