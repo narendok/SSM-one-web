@@ -131,7 +131,6 @@ export function StructuredTemplatePreview({
   const scopeKey = `${actorId ?? "signed-out"}:${sourcePin.opportunityNumber}:${sourcePin.specificationNumber}:${sourcePin.versionNumber}`;
   const priorScopeKey = useRef(scopeKey);
   const scopeChanged = priorScopeKey.current !== scopeKey;
-  if (scopeChanged) priorScopeKey.current = scopeKey;
   const userEdits = scopeChanged ? {} : (localEdits ?? uncontrolledEdits);
   const setUserEdits = (
     next: Record<string, string> | ((current: Record<string, string>) => Record<string, string>),
@@ -205,13 +204,14 @@ export function StructuredTemplatePreview({
   };
   useEffect(() => {
     if (scopeChanged) {
+      priorScopeKey.current = scopeKey;
       setUncontrolledEdits({});
       onLocalEditsChange?.({});
       setSelectedComponentIds({});
       setSelectedBomId(null);
       setAdoptedVersionId(null);
     }
-  }, [scopeChanged, onLocalEditsChange]);
+  }, [scopeChanged, scopeKey, onLocalEditsChange]);
   useEffect(() => {
     if (source.data && !dirty) setAdoptedVersionId(source.data.versionId);
   }, [dirty, source.data]);
