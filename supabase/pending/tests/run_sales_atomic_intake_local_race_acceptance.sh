@@ -118,22 +118,19 @@ run_lock_wait_case() {
     sleep 0.1
   done
   [[ "$(run_psql -Atqc "SELECT ready::text || ':' || released::text FROM public.sales_intake_lock_wait_cases WHERE case_label = '$label'")" == "true:false" ]] || { cat "$log_dir/worker.log" >&2; return 1; }
-  printf 'LOCK_WAIT_DEMONSTRATED case=%s
-' "$label"
+  printf 'LOCK_WAIT_DEMONSTRATED case=%s\n' "$label"
   run_psql -v case_label="$label" -v phase=release -f "$lock_assertions"
   wait "$pid" && status=0 || status=$?
-  printf 'LOCK_WAIT_WORKER_STATUS case=%s status=%s
-' "$label" "$status"
+  printf 'LOCK_WAIT_WORKER_STATUS case=%s status=%s\n' "$label" "$status"
   [[ "$status" != 0 ]] || { cat "$log_dir/worker.log" >&2; return 1; }
   [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunity_intake_receipts WHERE request_key = '$key'")" == "0" ]] || return 1
   [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunities")" == "0" ]] || return 1
-  printf 'LOCK_WAIT_DENIAL_PASS case=%s receipts=0 opportunities=0
-' "$label"
+  printf 'LOCK_WAIT_DENIAL_PASS case=%s receipts=0 opportunities=0\n' "$label"
   rm -rf "$log_dir"
 }
 
 run_lock_wait_case new_request 00000000-0000-4000-8000-000000000201
--- Seed an authorized exact-replay receipt, then reset the caller permission before lock wait.
+# Seed an authorized exact-replay receipt, then reset the caller permission before lock wait.
 run_psql <<'SQL'
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
