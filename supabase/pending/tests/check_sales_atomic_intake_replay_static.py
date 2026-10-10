@@ -52,6 +52,7 @@ checks = {
     "local race readiness is durable": "sales_intake_race_barriers" in race_setup and "ready_workers" in race_worker,
     "local race barrier rows carry their required worker count": "(race_label, expected_workers)" in race_setup and "('same_key_same_payload', 2)" in race_setup,
     "local race retains worker identity after readiness commit": "set_config('request.jwt.claim.sub', :'actor_id', false)" in race_worker,
+    "local race waits for both committed readiness rows": "SELECT ready_workers FROM public.sales_intake_race_barriers" in race_runner,
     "local race avoids sleep-only coordination": "pg_advisory_xact_lock" in race_worker and "released" in race_assertions,
     "local race covers same key conflicts and distinct keys": all(label in race_runner for label in ("same_key_same_payload", "same_key_changed_payload", "same_key_actor_conflict", "different_keys")),
     "local race asserts allocation and atomic row counts": "count(DISTINCT opportunity_number)" in race_assertions and "mismatched opportunity/spec/version/audit rows" in race_assertions,

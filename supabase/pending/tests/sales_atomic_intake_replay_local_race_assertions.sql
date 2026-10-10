@@ -3,7 +3,6 @@
 -- synthetic fixture test, not managed RLS/JWT transport evidence.
 \set ON_ERROR_STOP on
 SELECT set_config('app.race_label', :'race_label', false);
-SELECT pg_sleep(0.10);
 SELECT pg_advisory_xact_lock(hashtextextended('sales-intake-race:' || :'race_label', 0));
 UPDATE public.sales_intake_race_barriers
 SET released = true
