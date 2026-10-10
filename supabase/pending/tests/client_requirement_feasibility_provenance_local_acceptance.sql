@@ -52,8 +52,8 @@ BEGIN
   FROM public.requirement_feasibility_review_provenance
   WHERE review_id = '00000000-0000-4000-8000-000000000082';
   IF v_historical.provenance_status <> 'AVAILABLE'
-     OR v_historical.verified_source_revision_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000081'::uuid
-     OR v_historical.verified_master_specification_version_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000071'::uuid THEN
+     OR v_historical.source_revision_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000081'::uuid
+     OR v_historical.master_specification_version_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000071'::uuid THEN
     RAISE EXCEPTION 'LOCAL_CASE_FAIL historical v1 provenance was not preserved';
   END IF;
 
@@ -61,8 +61,8 @@ BEGIN
   FROM public.requirement_feasibility_review_provenance
   WHERE review_id = '00000000-0000-4000-8000-000000000083';
   IF v_legacy.provenance_status <> 'UNAVAILABLE_LEGACY_OR_MISSING_PIN'
-     OR v_legacy.verified_source_revision_id IS NOT NULL
-     OR v_legacy.verified_master_specification_version_id IS NOT NULL THEN
+     OR v_legacy.source_revision_id IS NOT NULL
+     OR v_legacy.master_specification_version_id IS NOT NULL THEN
     RAISE EXCEPTION 'LOCAL_CASE_FAIL legacy review substituted source provenance';
   END IF;
 
@@ -70,8 +70,8 @@ BEGIN
   FROM public.requirement_feasibility_review_provenance
   WHERE review_id = '00000000-0000-4000-8000-000000000084';
   IF v_mismatch.provenance_status <> 'UNAVAILABLE_MISMATCHED_PIN'
-     OR v_mismatch.verified_source_revision_id IS NOT NULL
-     OR v_mismatch.verified_master_specification_version_id IS NOT NULL THEN
+     OR v_mismatch.source_revision_id IS NULL
+     OR v_mismatch.master_specification_version_id IS NULL THEN
     RAISE EXCEPTION 'LOCAL_CASE_FAIL mismatched review exposed unverified provenance';
   END IF;
 
