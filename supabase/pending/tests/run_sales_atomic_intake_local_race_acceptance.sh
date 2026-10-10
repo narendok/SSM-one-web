@@ -95,8 +95,9 @@ for attempt in $(seq 1 150); do
   if [[ "$(run_psql -Atqc "SELECT ready_workers FROM public.sales_intake_race_barriers WHERE race_label = 'same_key_same_payload'")" == "2" ]]; then break; fi
   sleep 0.1
 done
-run_psql -v race_label=same_key_same_payload -f "$assertions"
+run_psql -v race_label=same_key_same_payload -v release_only=yes -f "$assertions"
 wait "$race_pid"
+run_psql -v race_label=same_key_same_payload -v release_only=no -f "$assertions"
 
 run_race same_key_changed_payload 00000000-0000-4000-8000-000000000102 00000000-0000-4000-8000-000000000102 base changed 00000000-0000-4000-8000-000000000001 00000000-0000-4000-8000-000000000001 &
 race_pid=$!
@@ -104,8 +105,9 @@ for attempt in $(seq 1 150); do
   if [[ "$(run_psql -Atqc "SELECT ready_workers FROM public.sales_intake_race_barriers WHERE race_label = 'same_key_changed_payload'")" == "2" ]]; then break; fi
   sleep 0.1
 done
-run_psql -v race_label=same_key_changed_payload -f "$assertions"
+run_psql -v race_label=same_key_changed_payload -v release_only=yes -f "$assertions"
 wait "$race_pid"
+run_psql -v race_label=same_key_changed_payload -v release_only=no -f "$assertions"
 
 run_race same_key_actor_conflict 00000000-0000-4000-8000-000000000103 00000000-0000-4000-8000-000000000103 base base 00000000-0000-4000-8000-000000000001 00000000-0000-4000-8000-000000000002 &
 race_pid=$!
@@ -113,8 +115,9 @@ for attempt in $(seq 1 150); do
   if [[ "$(run_psql -Atqc "SELECT ready_workers FROM public.sales_intake_race_barriers WHERE race_label = 'same_key_actor_conflict'")" == "2" ]]; then break; fi
   sleep 0.1
 done
-run_psql -v race_label=same_key_actor_conflict -f "$assertions"
+run_psql -v race_label=same_key_actor_conflict -v release_only=yes -f "$assertions"
 wait "$race_pid"
+run_psql -v race_label=same_key_actor_conflict -v release_only=no -f "$assertions"
 
 run_race different_keys 00000000-0000-4000-8000-000000000104 00000000-0000-4000-8000-000000000105 base alternate 00000000-0000-4000-8000-000000000001 00000000-0000-4000-8000-000000000001 &
 race_pid=$!
@@ -122,7 +125,8 @@ for attempt in $(seq 1 150); do
   if [[ "$(run_psql -Atqc "SELECT ready_workers FROM public.sales_intake_race_barriers WHERE race_label = 'different_keys'")" == "2" ]]; then break; fi
   sleep 0.1
 done
-run_psql -v race_label=different_keys -f "$assertions"
+run_psql -v race_label=different_keys -v release_only=yes -f "$assertions"
 wait "$race_pid"
+run_psql -v race_label=different_keys -v release_only=no -f "$assertions"
 
-run_psql -v race_label=final -f "$assertions"
+run_psql -v race_label=final -v release_only=no -f "$assertions"

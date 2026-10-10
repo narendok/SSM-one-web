@@ -3,6 +3,7 @@
 -- synthetic fixture test, not managed RLS/JWT transport evidence.
 \set ON_ERROR_STOP on
 SELECT set_config('app.race_label', :'race_label', false);
+SELECT set_config('app.release_only', :'release_only', false);
 SELECT pg_advisory_xact_lock(hashtextextended('sales-intake-race:' || :'race_label', 0));
 UPDATE public.sales_intake_race_barriers
 SET released = true
@@ -16,6 +17,12 @@ BEGIN
   END IF;
 END;
 $release_check$;
+
+DO $release_only$
+BEGIN
+  IF current_setting('app.release_only', true) = 'yes' THEN RETURN; END IF;
+END;
+$release_only$;
 
 DO $result_wait$
 DECLARE
