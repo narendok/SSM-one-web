@@ -17,7 +17,7 @@ checks = {
         )
     ),
     "public and caller roles are revoked from history objects": all(
-        f"REVOKE ALL ON TABLE public.{name} FROM PUBLIC, anon, authenticated;" in sql
+        f"REVOKE ALL ON TABLE public.{name} FROM PUBLIC, anon, authenticated, service_role;" in sql
         for name in (
             "project_official_decisions",
             "project_official_decision_evidence",
@@ -35,6 +35,15 @@ checks = {
         for field in ("evidenceReference", "contributorReference", "scopeReference")
     ),
     "role harness uses SET LOCAL ROLE": "SET LOCAL ROLE authenticated;" in harness,
+    "role harness uses transaction-local settings rather than psql variables in DO bodies": (
+        "current_setting('project_official_decision.test.cross_project_reader_user_id')" in harness
+        and ":'cross_project_reader_user_id'" not in harness.split("DO $role_bound_denials$", 1)[1]
+    ),
+    "role harness catches only the expected permission SQLSTATE": (
+        "EXCEPTION WHEN insufficient_privilege OR OTHERS" not in harness
+        and "EXCEPTION WHEN OTHERS" not in harness
+        and "SQLSTATE <> '42501'" in harness
+    ),
     "outsider view expects privilege denial": "Expected outsider view SELECT privilege denial" in harness,
     "role harness asserts no history mutation": "Role-bound denial changed append-only decision history" in harness,
 }

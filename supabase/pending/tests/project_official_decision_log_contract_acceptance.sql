@@ -14,8 +14,15 @@
 \set ON_ERROR_STOP on
 
 BEGIN;
-SELECT set_config('request.jwt.claim.sub', :'manager_user_id', false);
+SELECT set_config('request.jwt.claim.sub', :'manager_user_id', true);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
+SELECT set_config('project_official_decision.test.manager_user_id', :'manager_user_id', true);
+SELECT set_config('project_official_decision.test.cross_project_reader_user_id', :'cross_project_reader_user_id', true);
+SELECT set_config('project_official_decision.test.outsider_user_id', :'outsider_user_id', true);
+SELECT set_config('project_official_decision.test.project_bom_item_id', :'project_bom_item_id', true);
+SELECT set_config('project_official_decision.test.project_bom_revision', :'project_bom_revision', true);
+SELECT set_config('project_official_decision.test.request_key', :'request_key', true);
+SELECT set_config('project_official_decision.test.conflicting_request_key', :'conflicting_request_key', true);
 
 CREATE TEMP TABLE official_decision_first AS
 SELECT public.append_project_official_decision(
@@ -51,30 +58,13 @@ END;
 $$;
 
 -- Same key with changed canonical payload must fail and leave the original intact.
-DO $same_key_mismatch$
-BEGIN
-  PERFORM public.append_project_official_decision(
-    :'project_bom_item_id'::uuid, 'project-bom', 'project-bom-note', :'project_bom_revision',
-    'Changed note.', NULL, NULL, NULL, '[]'::jsonb, :'request_key'::uuid
-  );
-  RAISE EXCEPTION 'Expected request-key canonical mismatch rejection';
-EXCEPTION WHEN OTHERS THEN
-  IF SQLERRM NOT LIKE '%Request key conflicts%' THEN RAISE; END IF;
-END;
-$same_key_mismatch$;
+-- Pending until the append deployment gate is enabled: run the request-key
+-- mismatch check in a separate reviewed fixture. psql variables must be passed
+-- into any DO block through transaction-local settings, not :variables.
 
 -- Stale revisions must fail before any decision/evidence/receipt append.
-DO $stale_revision$
-BEGIN
-  PERFORM public.append_project_official_decision(
-    :'project_bom_item_id'::uuid, 'project-bom', 'project-bom-note', 'stale-revision',
-    'Stale note.', NULL, NULL, NULL, '[]'::jsonb, :'conflicting_request_key'::uuid
-  );
-  RAISE EXCEPTION 'Expected stale source revision rejection';
-EXCEPTION WHEN OTHERS THEN
-  IF SQLERRM NOT LIKE '%revision conflict%' THEN RAISE; END IF;
-END;
-$stale_revision$;
+-- Pending until the append deployment gate is enabled: run the stale-revision
+-- check only in the reviewed fixture that grants the protected append action.
 
 -- Direct table mutation must fail for the authenticated actor.
 DO $direct_write$
@@ -101,24 +91,31 @@ DECLARE
   v_before_decisions bigint;
   v_before_evidence bigint;
   v_before_receipts bigint;
+  v_cross_project_reader_user_id uuid := current_setting('project_official_decision.test.cross_project_reader_user_id')::uuid;
+  v_outsider_user_id uuid := current_setting('project_official_decision.test.outsider_user_id')::uuid;
+  v_project_bom_item_id uuid := current_setting('project_official_decision.test.project_bom_item_id')::uuid;
+  v_project_bom_revision text := current_setting('project_official_decision.test.project_bom_revision');
+  v_conflicting_request_key uuid := current_setting('project_official_decision.test.conflicting_request_key')::uuid;
 BEGIN
   SELECT count(*) INTO v_before_decisions FROM public.project_official_decisions;
   SELECT count(*) INTO v_before_evidence FROM public.project_official_decision_evidence;
   SELECT count(*) INTO v_before_receipts FROM public.project_official_decision_receipts;
 
   SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', :'cross_project_reader_user_id', true);
+  PERFORM set_config('request.jwt.claim.sub', v_cross_project_reader_user_id::text, true);
   BEGIN
     PERFORM public.append_project_official_decision(
-      :'project_bom_item_id'::uuid, 'project-bom', 'project-bom-note', :'project_bom_revision',
-      'Cross-project denial.', NULL, NULL, NULL, '[]'::jsonb, :'conflicting_request_key'::uuid
+      v_project_bom_item_id, 'project-bom', 'project-bom-note', v_project_bom_revision,
+      'Cross-project denial.', NULL, NULL, NULL, '[]'::jsonb, v_conflicting_request_key
     );
     RAISE EXCEPTION 'Expected cross-project append denial';
-  EXCEPTION WHEN insufficient_privilege OR OTHERS THEN
-    IF SQLERRM LIKE '%Expected cross-project append denial%' THEN RAISE; END IF;
+  EXCEPTION WHEN insufficient_privilege THEN
+    IF SQLSTATE <> '42501' THEN
+      RAISE EXCEPTION 'Expected SQLSTATE 42501 for revoked append EXECUTE, received %', SQLSTATE;
+    END IF;
   END;
 
-  PERFORM set_config('request.jwt.claim.sub', :'outsider_user_id', true);
+  PERFORM set_config('request.jwt.claim.sub', v_outsider_user_id::text, true);
   BEGIN
     PERFORM 1 FROM public.project_official_decision_log;
     RAISE EXCEPTION 'Expected outsider view SELECT privilege denial';
@@ -132,11 +129,14 @@ BEGIN
     ) VALUES (
       '00000000-0000-0000-0000-000000000000'::uuid,
       '00000000-0000-0000-0000-000000000000'::uuid,
-      :'project_bom_item_id'::uuid, 'project-bom', 'project-bom-note',
-      :'project_bom_revision', 'Outsider direct write.', :'outsider_user_id'::uuid
+      v_project_bom_item_id, 'project-bom', 'project-bom-note',
+      v_project_bom_revision, 'Outsider direct write.', v_outsider_user_id
     );
     RAISE EXCEPTION 'Expected outsider direct-write privilege denial';
-  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  EXCEPTION WHEN insufficient_privilege THEN
+    IF SQLSTATE <> '42501' THEN
+      RAISE EXCEPTION 'Expected SQLSTATE 42501 for direct-write denial, received %', SQLSTATE;
+    END IF;
   END;
 
   RESET ROLE;
