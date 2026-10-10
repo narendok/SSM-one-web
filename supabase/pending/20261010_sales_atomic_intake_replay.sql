@@ -77,7 +77,7 @@ DECLARE
   ];
   v_spec_allowed text[] := ARRAY[
     'changeSummary', 'customerOrInternalOwner', 'developmentScope',
-    'environmentAndIp', 'exclusions', 'industryApplication', 'interfaces',
+    'connectivityAndGnss', 'environmentAndIp', 'exclusions', 'industryApplication', 'interfaces',
     'powerAndUnits', 'productFamily', 'proposedName', 'requestedStandards',
     'requirementSummary', 'schedule', 'volumes', 'workstreams'
   ];
