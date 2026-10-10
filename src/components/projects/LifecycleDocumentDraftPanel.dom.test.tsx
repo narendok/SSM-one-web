@@ -2,11 +2,11 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LifecycleDocumentDraftPanel } from "./LifecycleDocumentDraftPanel";
-import { generateLifecycleDocumentDraft } from "@/lib/lifecycle-actions.functions";
+import { generateLifecycleDocumentDraft, generateProjectLifecycleDocumentDrafts } from "@/lib/lifecycle-actions.functions";
 
 const historyQuery = vi.fn();
 const saveDraft = vi.fn();
@@ -29,7 +29,7 @@ vi.mock("@/lib/lifecycle-template-settings", () => ({
 
 vi.mock("@tanstack/react-start", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-start")>("@tanstack/react-start");
-  return { ...actual, useServerFn: (action: unknown) => action === generateLifecycleDocumentDraft ? saveDraft : refreshDrafts };
+  return { ...actual, useServerFn: (action: unknown) => action === generateLifecycleDocumentDraft ? saveDraft : action === generateProjectLifecycleDocumentDrafts ? refreshDrafts : vi.fn() };
 });
 
 const project = {
@@ -81,8 +81,9 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
 
   it("invalidates Drive and exact project history only after a successful protected draft receipt", async () => {
     const user = userEvent.setup();
-    const action = Promise.withResolvers<{ result: { receipt: { nodeId: string; revisionId: string; registerId: string } } }>();
-    saveDraft.mockReturnValueOnce(action.promise);
+    let resolveAction: (value: { result: { receipt: { nodeId: string; revisionId: string; registerId: string } } }) => void = () => undefined;
+    const action = new Promise<{ result: { receipt: { nodeId: string; revisionId: string; registerId: string } } }>((resolve) => { resolveAction = resolve; });
+    saveDraft.mockReturnValueOnce(action);
     const { queryClient } = renderPanel(historyRows);
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -90,7 +91,7 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
     await user.click(screen.getByRole("button", { name: "Generate draft" }));
     expect(invalidate).not.toHaveBeenCalled();
 
-    action.resolve({ result: { receipt: { nodeId: "node-1", revisionId: "revision-1", registerId: "register-1" } } });
+    resolveAction({ result: { receipt: { nodeId: "node-1", revisionId: "revision-1", registerId: "register-1" } } });
     await screen.findByText("Draft saved. The original files and approved versions remain preserved.");
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["drive_children"] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["lifecycle-generated-documents", project.id] });
