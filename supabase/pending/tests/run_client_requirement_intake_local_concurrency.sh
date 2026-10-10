@@ -34,7 +34,7 @@ run_case() {
   psql "${psql_args[@]}" --set="submission_title=$title_a" --set="submission_payload=$payload_a" -f "$worker" >"$log_dir/${case_name}_a.out" 2>"$log_dir/${case_name}_a.err" & local pid_a=$!
   until run_psql -Atqc "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND objid = 918273645 AND granted" | grep -qx 1; do sleep 0.01; done
   psql "${psql_args[@]}" --set="submission_title=$title_b" --set="submission_payload=$payload_b" -f "$worker" >"$log_dir/${case_name}_b.out" 2>"$log_dir/${case_name}_b.err" & local pid_b=$!
-  run_psql -c "SELECT pg_advisory_lock(918273646); SELECT pg_advisory_unlock(918273646);" >/dev/null
+  run_psql -c "SELECT pg_advisory_unlock(918273645);" >/dev/null
   wait "$pid_a"; local status_a=$?
   wait "$pid_b"; local status_b=$?
   printf 'CONCURRENCY_CASE case=%s worker_a_exit=%s worker_b_exit=%s\n' "$case_name" "$status_a" "$status_b"
