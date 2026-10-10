@@ -309,7 +309,7 @@ BEGIN
     NULLIF(v_canonical->>'nextActionDate', '')::date, v_actor_id
   ) RETURNING * INTO v_opportunity;
 
-  v_spec_data := v_canonical->'masterSpecification' - 'changeSummary';
+  v_spec_data := (v_canonical->'masterSpecification') - 'changeSummary'::text;
   INSERT INTO public.master_specifications (
     specification_number, opportunity_id, customer_id, title, status, current_version, created_by
   ) VALUES (
@@ -320,7 +320,7 @@ BEGIN
   INSERT INTO public.master_specification_versions (
     specification_id, version_number, change_summary, specification_data, status, created_by
   ) VALUES (
-    v_specification.id, 1, v_spec_data->>'changeSummary', v_spec_data - 'changeSummary', 'working', v_actor_id
+    v_specification.id, 1, v_spec_data->>'changeSummary', v_spec_data - 'changeSummary'::text, 'working', v_actor_id
   ) RETURNING * INTO v_version;
   INSERT INTO public.activity_log (
     actor_user_id, module_key, entity_type, entity_id, action, summary, after_data
