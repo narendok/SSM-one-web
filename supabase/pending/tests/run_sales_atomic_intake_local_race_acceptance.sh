@@ -77,36 +77,64 @@ run_race() {
   log_dir="$(mktemp -d /tmp/sales_atomic_acceptance_race_XXXXXX)"
   cleanup_logs() { rm -rf "$log_dir"; }
   trap cleanup_logs RETURN
-  timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v request_key="$key_a" -v payload_variant="$payload_a" -v actor_id="$actor_a" -f "$worker" >"$log_dir/a.log" 2>&1 &
+  timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v worker_label=a -v request_key="$key_a" -v payload_variant="$payload_a" -v actor_id="$actor_a" -f "$worker" >"$log_dir/a.log" 2>&1 &
   local pid_a=$!
-  timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v request_key="$key_b" -v payload_variant="$payload_b" -v actor_id="$actor_b" -f "$worker" >"$log_dir/b.log" 2>&1 &
+  timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v worker_label=b -v request_key="$key_b" -v payload_variant="$payload_b" -v actor_id="$actor_b" -f "$worker" >"$log_dir/b.log" 2>&1 &
   local pid_b=$!
-  if ! wait "$pid_a" || ! wait "$pid_b"; then
-    cat "$log_dir/a.log" "$log_dir/b.log" >&2
-    return 1
-  fi
+  local status_a status_b
+  wait "$pid_a" && status_a=0 || status_a=$?
+  wait "$pid_b" && status_b=0 || status_b=$?
+  printf 'RACE_WORKER_STATUS label=%s a=%s b=%s\n' "$label" "$status_a" "$status_b"
+  case "$label" in
+    same_key_same_payload|different_keys)
+      [[ "$status_a" == 0 && "$status_b" == 0 ]] || { cat "$log_dir/a.log" "$log_dir/b.log" >&2; return 1; }
+      ;;
+    same_key_changed_payload|same_key_actor_conflict)
+      [[ "$status_a" != 0 && "$status_b" == 0 || "$status_a" == 0 && "$status_b" != 0 ]] || { cat "$log_dir/a.log" "$log_dir/b.log" >&2; return 1; }
+      ;;
+  esac
 }
 
 # Each pair waits on the same server-side barrier. The assertion transaction
 # releases it only after both independent sessions have registered readiness.
 run_race same_key_same_payload 00000000-0000-4000-8000-000000000101 00000000-0000-4000-8000-000000000101 base base 00000000-0000-4000-8000-000000000001 00000000-0000-4000-8000-000000000001 &
 race_pid=$!
-run_psql -v race_label=same_key_same_payload -f "$assertions"
+for attempt in $(seq 1 150); do
+  if [[ "$(run_psql -Atqc "SELECT ready_workers FROM public.sales_intake_race_barriers WHERE race_label = 'same_key_same_payload'")" == "2" ]]; then break; fi
+  sleep 0.1
+done
+run_psql -v race_label=same_key_same_payload -v release_only=yes -f "$assertions"
 wait "$race_pid"
+run_psql -v race_label=same_key_same_payload -v release_only=no -f "$assertions"
 
 run_race same_key_changed_payload 00000000-0000-4000-8000-000000000102 00000000-0000-4000-8000-000000000102 base changed 00000000-0000-4000-8000-000000000001 00000000-0000-4000-8000-000000000001 &
 race_pid=$!
-run_psql -v race_label=same_key_changed_payload -f "$assertions"
+for attempt in $(seq 1 150); do
+  if [[ "$(run_psql -Atqc "SELECT ready_workers FROM public.sales_intake_race_barriers WHERE race_label = 'same_key_changed_payload'")" == "2" ]]; then break; fi
+  sleep 0.1
+done
+run_psql -v race_label=same_key_changed_payload -v release_only=yes -f "$assertions"
 wait "$race_pid"
+run_psql -v race_label=same_key_changed_payload -v release_only=no -f "$assertions"
 
 run_race same_key_actor_conflict 00000000-0000-4000-8000-000000000103 00000000-0000-4000-8000-000000000103 base base 00000000-0000-4000-8000-000000000001 00000000-0000-4000-8000-000000000002 &
 race_pid=$!
-run_psql -v race_label=same_key_actor_conflict -f "$assertions"
+for attempt in $(seq 1 150); do
+  if [[ "$(run_psql -Atqc "SELECT ready_workers FROM public.sales_intake_race_barriers WHERE race_label = 'same_key_actor_conflict'")" == "2" ]]; then break; fi
+  sleep 0.1
+done
+run_psql -v race_label=same_key_actor_conflict -v release_only=yes -f "$assertions"
 wait "$race_pid"
+run_psql -v race_label=same_key_actor_conflict -v release_only=no -f "$assertions"
 
 run_race different_keys 00000000-0000-4000-8000-000000000104 00000000-0000-4000-8000-000000000105 base alternate 00000000-0000-4000-8000-000000000001 00000000-0000-4000-8000-000000000001 &
 race_pid=$!
-run_psql -v race_label=different_keys -f "$assertions"
+for attempt in $(seq 1 150); do
+  if [[ "$(run_psql -Atqc "SELECT ready_workers FROM public.sales_intake_race_barriers WHERE race_label = 'different_keys'")" == "2" ]]; then break; fi
+  sleep 0.1
+done
+run_psql -v race_label=different_keys -v release_only=yes -f "$assertions"
 wait "$race_pid"
+run_psql -v race_label=different_keys -v release_only=no -f "$assertions"
 
-run_psql -v race_label=final -f "$assertions"
+run_psql -v race_label=final -v release_only=no -f "$assertions"
