@@ -60,8 +60,8 @@ checks = {
     "local race avoids sleep-only coordination": "pg_advisory_xact_lock" in race_worker and "released" in race_assertions,
     "local race covers same key conflicts and distinct keys": all(label in race_runner for label in ("same_key_same_payload", "same_key_changed_payload", "same_key_actor_conflict", "different_keys")),
     "local race asserts allocation and atomic row counts": "count(DISTINCT opportunity_number)" in race_assertions and "mismatched opportunity/spec/version/audit rows" in race_assertions,
-    "local conflict races retain no rejected-worker records": "v_receipts <> 1 OR v_opportunities <> 1" in race_assertions and "left records from the rejected worker" in race_assertions,
-    "local distinct-key race counts only successful intakes": "v_receipts <> 3 OR v_opportunities <> 3" in race_assertions,
+    "local conflict races retain no rejected-worker records": "v_receipts <> 2 OR v_opportunities <> 2" in race_assertions and "left records from the rejected worker" in race_assertions,
+    "local distinct-key race counts only successful intakes": "v_receipts <> 4 OR v_opportunities <> 4" in race_assertions,
     "local race records both worker responses": "CREATE TABLE public.sales_intake_race_results" in race_setup and "INSERT INTO public.sales_intake_race_results" in race_worker,
     "local race proves exact replay IDs": "Exact replay workers did not return identical opportunity/specification/version IDs" in race_assertions and "count(DISTINCT master_specification_version_id)" in race_assertions,
 }

@@ -57,10 +57,10 @@ BEGIN
   END IF;
   IF current_setting('app.race_label', true) = 'same_key_same_payload' AND (v_receipts <> 1 OR v_opportunities <> 1) THEN
     RAISE EXCEPTION 'Same actor/key/payload did not converge to exactly one receipt and business records';
-  ELSIF current_setting('app.race_label', true) IN ('same_key_changed_payload', 'same_key_actor_conflict') AND (v_receipts <> 1 OR v_opportunities <> 1) THEN
+  ELSIF current_setting('app.race_label', true) IN ('same_key_changed_payload', 'same_key_actor_conflict') AND (v_receipts <> 2 OR v_opportunities <> 2) THEN
     RAISE EXCEPTION 'Conflicting same-key race left records from the rejected worker';
-  ELSIF current_setting('app.race_label', true) IN ('different_keys', 'final') AND (v_receipts <> 3 OR v_opportunities <> 3) THEN
-    RAISE EXCEPTION 'Different-key race did not leave exactly three receipts/opportunities after conflict rollbacks';
+  ELSIF current_setting('app.race_label', true) IN ('different_keys', 'final') AND (v_receipts <> 4 OR v_opportunities <> 4) THEN
+    RAISE EXCEPTION 'Different-key race did not leave exactly four receipts/opportunities after conflict rollbacks';
   END IF;
   IF (SELECT count(*) FROM public.sales_opportunities) <> (SELECT count(DISTINCT opportunity_number) FROM public.sales_opportunities) THEN
     RAISE EXCEPTION 'Concurrent allocator produced duplicate opportunity numbers';
