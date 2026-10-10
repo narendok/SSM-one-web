@@ -22,6 +22,7 @@ def forbid(haystack: str, needle: str, label: str) -> None:
 def main() -> None:
     protected_signature = "public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid)"
     require(SQL, "SECURITY DEFINER", "protected save function")
+    require(SQL, "IF char_length(v_value #>> '{}') > (\n        CASE", "valid payload-length CASE expression")
     require(SQL, "PERFORM pg_advisory_xact_lock", "logical identity lock")
     require(SQL, "FOR UPDATE;\n  IF FOUND THEN", "locked receipt lookup")
     require(SQL, "-- Re-check authorization after waiting on the logical/source locks", "post-lock authorization comment")
@@ -47,6 +48,12 @@ def main() -> None:
     require(ACCEPTANCE, "Expected raw Master Specification version source mismatch to fail", "version source-mismatch acceptance")
     require(ACCEPTANCE, "Expected immutable revision update to fail", "append-only acceptance")
     forbid(ACCEPTANCE, "Metadata proposal must not create an activity audit", "unsupported no-audit assertion")
+    fixture = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_fixture.sql"
+    runtime = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_installed_acceptance.sql"
+    runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_acceptance.sh"
+    require(fixture.read_text(), "LOCAL DISPOSABLE FIXTURE ONLY", "local fixture boundary")
+    require(runtime.read_text(), "STRUCTURED_DRAFT_LOCAL_ACCEPTANCE_PASS", "runtime acceptance success marker")
+    require(runner.read_text(), "Refusing a non-private local structured-draft acceptance target.", "local-only runner refusal")
     print("structured draft metadata static checks: PASS")
 
 
