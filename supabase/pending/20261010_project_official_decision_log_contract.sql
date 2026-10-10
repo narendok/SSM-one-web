@@ -38,7 +38,7 @@ CREATE TABLE public.project_official_decisions (
   CONSTRAINT project_official_decisions_no_self_amendment CHECK (amendment_parent_decision_id IS NULL OR amendment_parent_decision_id <> id)
 );
 REVOKE ALL ON TABLE public.project_official_decisions FROM PUBLIC, anon, authenticated;
-GRANT ALL ON TABLE public.project_official_decisions TO service_role;
+GRANT SELECT ON TABLE public.project_official_decisions TO service_role;
 ALTER TABLE public.project_official_decisions ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE public.project_official_decision_evidence (
@@ -54,7 +54,7 @@ CREATE TABLE public.project_official_decision_evidence (
   CONSTRAINT project_official_decision_evidence_scope_reference_nonblank CHECK (length(btrim(scope_reference)) > 0)
 );
 REVOKE ALL ON TABLE public.project_official_decision_evidence FROM PUBLIC, anon, authenticated;
-GRANT ALL ON TABLE public.project_official_decision_evidence TO service_role;
+GRANT SELECT ON TABLE public.project_official_decision_evidence TO service_role;
 ALTER TABLE public.project_official_decision_evidence ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE public.project_official_decision_receipts (
@@ -69,7 +69,7 @@ CREATE TABLE public.project_official_decision_receipts (
   CONSTRAINT project_official_decision_receipts_payload_canonical_object CHECK (jsonb_typeof(payload_canonical) = 'object')
 );
 REVOKE ALL ON TABLE public.project_official_decision_receipts FROM PUBLIC, anon, authenticated;
-GRANT ALL ON TABLE public.project_official_decision_receipts TO service_role;
+GRANT SELECT ON TABLE public.project_official_decision_receipts TO service_role;
 ALTER TABLE public.project_official_decision_receipts ENABLE ROW LEVEL SECURITY;
 
 -- Caller-scoped, security-invoker read projection. It intentionally returns no
@@ -347,8 +347,8 @@ REVOKE ALL ON FUNCTION public.append_project_official_decision(uuid, text, text,
 REVOKE ALL ON FUNCTION public.project_official_decision_canonical_payload(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_official_decision_payload_hash(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
 
--- Direct writes are denied by privilege and by omission of INSERT/UPDATE/DELETE
--- policies. Caller reads are deliberately denied until exact active project
+-- Direct writes, including service-role UPDATE/DELETE, are denied by explicit
+-- table privileges and by omission of INSERT/UPDATE/DELETE policies. Caller reads are deliberately denied until exact active project
 -- membership plus existing permission can be proven for the target project.
 CREATE POLICY project_official_decisions_project_read_denied_pending_authority
 ON public.project_official_decisions

@@ -92,31 +92,73 @@ $direct_write$;
 
 
 -- Genuine role-bound denials (not only forged JWT claims) required after the
--- deployment gate is resolved. Run each with an isolated login/session fixture;
--- SET ROLE authenticated removes table/function owner privileges, while the
--- session sub remains the named fixture user. Assert no receipt, decision, or
--- evidence rows are appended on every denial.
---
--- SET ROLE authenticated;
--- SELECT set_config('request.jwt.claim.sub', :'cross_project_reader_user_id', false);
--- SELECT public.append_project_official_decision(...); -- must deny before replay/write
--- RESET ROLE;
---
--- SET ROLE authenticated;
--- SELECT set_config('request.jwt.claim.sub', :'outsider_user_id', false);
--- SELECT * FROM public.project_official_decision_log; -- must return zero rows
--- INSERT INTO public.project_official_decisions (...); -- must raise insufficient_privilege
--- RESET ROLE;
---
--- Repeat for a former project member after their membership/permission is removed
--- between target locking and receipt lookup; the implementation must re-check
--- current authorization before replay or any write.
+-- deployment gate is resolved. Run each with an isolated login/session fixture.
+-- SET LOCAL ROLE authenticated removes table/function owner privileges; every
+-- expected denial is caught, an unexpected success raises, and the transaction
+-- remains available for the final ROLLBACK.
+DO $role_bound_denials$
+DECLARE
+  v_before_decisions bigint;
+  v_before_evidence bigint;
+  v_before_receipts bigint;
+BEGIN
+  SELECT count(*) INTO v_before_decisions FROM public.project_official_decisions;
+  SELECT count(*) INTO v_before_evidence FROM public.project_official_decision_evidence;
+  SELECT count(*) INTO v_before_receipts FROM public.project_official_decision_receipts;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', :'cross_project_reader_user_id', true);
+  BEGIN
+    PERFORM public.append_project_official_decision(
+      :'project_bom_item_id'::uuid, 'project-bom', 'project-bom-note', :'project_bom_revision',
+      'Cross-project denial.', NULL, NULL, NULL, '[]'::jsonb, :'conflicting_request_key'::uuid
+    );
+    RAISE EXCEPTION 'Expected cross-project append denial';
+  EXCEPTION WHEN insufficient_privilege OR OTHERS THEN
+    IF SQLERRM LIKE '%Expected cross-project append denial%' THEN RAISE; END IF;
+  END;
+
+  PERFORM set_config('request.jwt.claim.sub', :'outsider_user_id', true);
+  BEGIN
+    PERFORM 1 FROM public.project_official_decision_log;
+    RAISE EXCEPTION 'Expected outsider view SELECT privilege denial';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
+  BEGIN
+    INSERT INTO public.project_official_decisions (
+      project_id, project_bom_id, project_bom_item_id, source_page_reference,
+      action_intent, expected_source_revision, note, actor_user_id
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000000'::uuid,
+      '00000000-0000-0000-0000-000000000000'::uuid,
+      :'project_bom_item_id'::uuid, 'project-bom', 'project-bom-note',
+      :'project_bom_revision', 'Outsider direct write.', :'outsider_user_id'::uuid
+    );
+    RAISE EXCEPTION 'Expected outsider direct-write privilege denial';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
+  RESET ROLE;
+  IF (SELECT count(*) FROM public.project_official_decisions) <> v_before_decisions
+     OR (SELECT count(*) FROM public.project_official_decision_evidence) <> v_before_evidence
+     OR (SELECT count(*) FROM public.project_official_decision_receipts) <> v_before_receipts THEN
+    RAISE EXCEPTION 'Role-bound denial changed append-only decision history';
+  END IF;
+END;
+$role_bound_denials$;
+
+-- Repeat with membership/permission removed between target locking and receipt
+-- lookup once the source-action deployment gate is resolved; it must deny before
+-- replay or write and preserve all three row counts.
 
 -- The following caller tests require the deployment-gated exact project-scoped
 -- read policy. They are intentionally pending because verified current project
 -- reads are permission-wide rather than member-scoped:
 --   1. same-project reader sees only the fixture decision and evidence;
---   2. cross-project reader and outsider see no rows and cannot distinguish IDs;
+--   2. cross-project reader and outsider receive SELECT privilege denial while
+--      caller-view SELECT remains revoked; a later granted projection must return
+--      no rows without distinguishing IDs;
 --   3. a different actor cannot replay manager_user_id's request_key;
 --   4. an amendment locks the exact parent/source, preserves earlier text, and
 --      rejects a parent from another project or BOM item;
