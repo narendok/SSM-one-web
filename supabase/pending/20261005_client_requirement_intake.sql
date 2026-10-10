@@ -173,8 +173,23 @@ BEGIN
     p_opportunity_id, p_customer_id, p_title, p_customer_reference, p_requirement_data
   );
   -- Mirror the established request-key receipt convention. The advisory lock covers the
-  -- absent-receipt race; the locked receipt row handles every later replay.
+  -- absent-receipt race; re-check all authoritative caller scope after any lock wait so a
+  -- revocation committed while waiting cannot create or replay a result.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text, 0));
+  v_contact_id := public.external_current_contact_id(v_actor_id);
+  v_party_id := public.external_current_party_id();
+  IF v_contact_id IS NULL OR v_party_id IS NULL
+     OR NOT public.external_requirement_scope_allows(p_opportunity_id, p_customer_id) THEN
+    RAISE EXCEPTION 'Client requirement access is inactive, expired, revoked, or outside its granted scope';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.external_parties party
+    WHERE party.id = v_party_id AND party.customer_id = p_customer_id
+  ) THEN RAISE EXCEPTION 'Customer is outside the current external party scope'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.sales_opportunities opportunity
+    WHERE opportunity.id = p_opportunity_id AND opportunity.customer_id = p_customer_id
+  ) THEN RAISE EXCEPTION 'Opportunity/customer source mismatch'; END IF;
   SELECT * INTO v_prior
   FROM public.external_requirement_submission_requests
   WHERE request_key = p_request_key
