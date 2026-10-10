@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const createSignedUrl = vi.fn();
-const from = vi.fn(() => ({ createSignedUrl }));
+const { createSignedUrl, from } = vi.hoisted(() => {
+  const createSignedUrl = vi.fn();
+  return { createSignedUrl, from: vi.fn(() => ({ createSignedUrl })) };
+});
 const createElement = vi.fn();
 const appendChild = vi.fn();
 
