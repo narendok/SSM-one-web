@@ -100,5 +100,9 @@ END;
 $denied$;
 RESET ROLE;
 
-RAISE NOTICE 'FEASIBILITY_PROVENANCE_INVOKER_RLS_LOCAL_PASS owner_available=1 nonowner_hidden=1 direct_join_denied=1 view_grant_denied=1';
+DO $notice$
+BEGIN
+  RAISE NOTICE 'FEASIBILITY_PROVENANCE_INVOKER_RLS_LOCAL_PASS owner_available=1 nonowner_hidden=1 direct_join_hidden=1 view_grant_denied=1';
+END;
+$notice$;
 ROLLBACK;
