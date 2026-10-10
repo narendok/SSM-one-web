@@ -31,6 +31,6 @@ run_psql -f "$root/supabase/pending/20261009_sales_opportunity_structured_draft_
 # Fixture-only transport; the pending proposal remains fully revoked by default.
 run_psql -c "GRANT EXECUTE ON FUNCTION public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid) TO authenticated;"
 run_psql -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_metadata_local_rollback_setup.sql"
-timeout 20s run_psql -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_metadata_local_rollback_acceptance.sql"
+timeout 20s psql "${psql_args[@]}" -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_metadata_local_rollback_acceptance.sql"
 run_psql -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_metadata_local_rollback_assertions.sql"
 printf 'ROLLBACK_EXECUTION_COMPLETE=true\n'
