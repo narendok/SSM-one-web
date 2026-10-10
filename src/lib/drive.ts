@@ -352,6 +352,10 @@ export async function downloadRevision(node: DriveNode, revision: Pick<DriveRevi
   navigateToDownload(await downloadUrl(revision.storage_path, node.name));
 }
 
+export const driveDownloadInternals = {
+  navigateToDownload,
+};
+
 export async function fetchShareLinks(nodeId: string): Promise<DriveShareLink[]> {
   const { data, error } = await sb
     .from("drive_share_links")
