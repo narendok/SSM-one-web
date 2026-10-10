@@ -23,26 +23,26 @@ const opportunity = {
 describe("SalesOpportunityPipeline", () => {
   it("does not render an empty state for a successful nonempty response", () => {
     render(<SalesOpportunityPipeline state={{ opportunities: [opportunity], pending: false, error: null }} />);
-    expect(screen.queryByText(/No opportunities are available/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Loading opportunities/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No opportunities are available/i)).toBeNull();
+    expect(screen.queryByText(/Loading opportunities/i)).toBeNull();
   });
 
   it("keeps pending separate from a settled empty response", () => {
     const { rerender } = render(<SalesOpportunityPipeline state={{ opportunities: undefined, pending: true, error: null }} />);
-    expect(screen.getByText("Loading opportunities…")).toBeInTheDocument();
+    expect(screen.getByText("Loading opportunities…")).not.toBeNull();
     rerender(<SalesOpportunityPipeline state={{ opportunities: [], pending: false, error: null }} />);
-    expect(screen.getByText("No opportunities are available for this signed-in user.")).toBeInTheDocument();
+    expect(screen.getByText("No opportunities are available for this signed-in user.")).not.toBeNull();
   });
 
   it("reports a failed response instead of an empty dataset", () => {
     render(<SalesOpportunityPipeline state={{ opportunities: undefined, pending: false, error: new Error("Access query failed") }} />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Opportunities could not be loaded: Access query failed");
+    expect(screen.getByRole("alert").textContent).toContain("Opportunities could not be loaded: Access query failed");
   });
 
   it("does not retain a prior actor's response as a new actor's settled data", () => {
     const { rerender } = render(<SalesOpportunityPipeline state={{ opportunities: [opportunity], pending: false, error: null }} />);
-    expect(screen.queryByText(/Sales records are not available/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sales records are not available/i)).toBeNull();
     rerender(<SalesOpportunityPipeline state={{ opportunities: undefined, pending: false, error: null }} />);
-    expect(screen.getByText("Sales records are not available for this signed-in user.")).toBeInTheDocument();
+    expect(screen.getByText("Sales records are not available for this signed-in user.")).not.toBeNull();
   });
 });
