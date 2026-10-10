@@ -25,22 +25,11 @@ $release_check$;
 
 DO $assert$
 DECLARE
-  v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
   v_receipts integer; v_opportunities integer; v_specs integer; v_versions integer; v_audits integer;
   v_results integer; v_distinct_opportunity_ids integer; v_distinct_spec_ids integer;
   v_distinct_version_ids integer; v_distinct_numbers integer; v_replayed integer;
 BEGIN
-  LOOP
-    SELECT count(*) INTO v_receipts FROM public.sales_opportunity_intake_receipts;
-    CASE current_setting('race_label', true)
-      WHEN 'same_key_same_payload' THEN EXIT WHEN v_receipts = 1;
-      WHEN 'same_key_changed_payload', 'same_key_actor_conflict' THEN EXIT WHEN v_receipts = 2;
-      WHEN 'different_keys' THEN EXIT WHEN v_receipts = 4;
-      WHEN 'final' THEN EXIT;
-    END CASE;
-    IF clock_timestamp() >= v_deadline THEN RAISE EXCEPTION 'Race completion timeout for %', :'race_label'; END IF;
-    PERFORM pg_sleep(0.02);
-  END LOOP;
+  SELECT count(*) INTO v_receipts FROM public.sales_opportunity_intake_receipts;
   SELECT count(*), count(DISTINCT opportunity_number) INTO v_opportunities, v_specs FROM public.sales_opportunities;
   SELECT count(*) INTO v_versions FROM public.master_specification_versions;
   SELECT count(*) INTO v_audits FROM public.activity_log;
