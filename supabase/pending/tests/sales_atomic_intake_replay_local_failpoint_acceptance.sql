@@ -1,9 +1,5 @@
 -- LOCAL DISPOSABLE transactional failpoint acceptance only.
 \set ON_ERROR_STOP on
-INSERT INTO public.sales_test_permissions VALUES ('00000000-0000-4000-8000-000000000001', true);
-INSERT INTO public.customers VALUES ('00000000-0000-4000-8000-000000000010', 'Disposable customer');
-INSERT INTO public.customer_contacts VALUES ('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000010', true);
-INSERT INTO public.sales_enquiries VALUES ('00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000011');
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
 CREATE TRIGGER sales_intake_fail_receipt BEFORE INSERT ON public.sales_opportunity_intake_receipts
