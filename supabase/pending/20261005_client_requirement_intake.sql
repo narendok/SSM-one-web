@@ -31,9 +31,9 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
-    FROM pg_constraint constraint
-    WHERE constraint.conrelid = 'public.external_requirement_submission_requests'::regclass
-      AND constraint.conname = 'external_requirement_submission_requests_payload_canonical_check'
+    FROM pg_constraint existing_constraint
+    WHERE existing_constraint.conrelid = 'public.external_requirement_submission_requests'::regclass
+      AND existing_constraint.conname = 'external_requirement_submission_requests_payload_canonical_check'
   ) THEN
     ALTER TABLE public.external_requirement_submission_requests
       ADD CONSTRAINT external_requirement_submission_requests_payload_canonical_check
@@ -272,7 +272,7 @@ BEGIN
       AND table_name = 'requirement_feasibility_reviews'
       AND constraint_type = 'UNIQUE'
       AND constraint_name <> 'requirement_feasibility_reviews_revision_department_key'
-      AND (SELECT array_agg(key_column.column_name ORDER BY key_column.ordinal_position)
+      AND (SELECT array_agg(key_column.column_name::text ORDER BY key_column.ordinal_position)
            FROM information_schema.key_column_usage key_column
            WHERE key_column.constraint_schema = 'public'
              AND key_column.constraint_name = table_constraints.constraint_name)
