@@ -77,17 +77,31 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(frame.getAttribute("srcdoc")).not.toContain("<img");
   });
 
-  it("labels loading and failed source reads as unverified without network access", async () => {
-    let resolveSource: (value: typeof source) => void = () => undefined;
-    previewSource.mockImplementation(() => new Promise<typeof source>((resolve) => { resolveSource = resolve; }));
-    const { rerender } = renderPreview();
-    expect(await screen.findByText("LOADING — source unavailable")).toBeTruthy();
-    resolveSource(source);
+  it("renders the exact successful authorized source pin instead of TBC fallback fields", async () => {
+    previewSource.mockResolvedValue(source);
+    renderPreview();
     expect(await screen.findByText("Pinned authorized source")).toBeTruthy();
-    previewSource.mockRejectedValue(new Error("denied by mock"));
-    rerender(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><StructuredTemplatePreview sourcePin={{ opportunityNumber: "OPPORTUNITY-2026-9999", specificationNumber: "MASTER-2026-9999", versionNumber: 1 }} /></QueryClientProvider>);
-    expect(await screen.findByText("UNVERIFIED — source unavailable")).toBeTruthy();
-    expect(await screen.findByText(/Authorized source could not be loaded: denied by mock/)).toBeTruthy();
+    expect(screen.getByText("version-id")).toBeTruthy();
+    expect(screen.getByText("Tracker")).toBeTruthy();
+    expect(screen.queryByText("LOADING — authorized source request in progress")).toBeNull();
+  });
+
+  it.each(["denied by mock", "requested source not found"])('terminates an authorized source failure as explicit unverified state: %s', async (message) => {
+    previewSource.mockRejectedValue(new Error(message));
+    renderPreview();
+    expect(await screen.findByText("UNVERIFIED — authorized source unavailable")).toBeTruthy();
+    expect(await screen.findByText(`Authorized source could not be loaded: ${message}`)).toBeTruthy();
+    expect(screen.queryByText("Loading authorized source…")).toBeNull();
+    expect(screen.queryByText("Pinned authorized source")).toBeNull();
+  });
+
+  it("terminates an invalid empty authorized source response without fabricated source fields", async () => {
+    previewSource.mockResolvedValue(undefined);
+    renderPreview();
+    expect(await screen.findByText("UNVERIFIED — authorized source unavailable")).toBeTruthy();
+    expect(await screen.findByText(/data is undefined/)).toBeTruthy();
+    expect(screen.queryByText("Loading authorized source…")).toBeNull();
+    expect(screen.queryByText("Pinned authorized source")).toBeNull();
   });
 
   it("preserves manual SOR text and shows a stale-source conflict only when a changed source arrives with local edits", async () => {
