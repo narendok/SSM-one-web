@@ -37,14 +37,9 @@ BEGIN;
 INSERT INTO public.client_requirement_concurrency_barrier (case_name) VALUES (:'case_name');
 SELECT pg_advisory_xact_lock(hashtextextended('00000000-0000-4000-8000-000000000095', 0));
 UPDATE public.client_requirement_concurrency_barrier SET ready = true WHERE case_name = :'case_name';
-DO $wait$
-BEGIN
-  LOOP
-    EXIT WHEN (SELECT released FROM public.client_requirement_concurrency_barrier WHERE case_name = :'case_name');
-    PERFORM pg_sleep(0.01);
-  END LOOP;
-END
-$wait$;
+SELECT pg_sleep(0.01)
+FROM generate_series(1, 100)
+WHERE NOT (SELECT released FROM public.client_requirement_concurrency_barrier WHERE case_name = :'case_name');
 COMMIT;
 SQL
   until run_psql -Atqc "SELECT ready FROM public.client_requirement_concurrency_barrier WHERE case_name = '$case_name'" | grep -qx t; do sleep 0.01; done
