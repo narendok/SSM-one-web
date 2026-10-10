@@ -8,11 +8,13 @@ SELECT pg_advisory_xact_lock(hashtextextended('sales-intake-race:' || :'race_lab
 UPDATE public.sales_intake_race_barriers
 SET released = true
 WHERE race_label = :'race_label'
+  AND current_setting('app.race_label', true) <> 'final'
 RETURNING race_label;
 
 DO $release_check$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.sales_intake_race_barriers WHERE race_label = current_setting('app.race_label', true) AND released) THEN
+  IF current_setting('app.race_label', true) <> 'final'
+     AND NOT EXISTS (SELECT 1 FROM public.sales_intake_race_barriers WHERE race_label = current_setting('app.race_label', true) AND released) THEN
     RAISE EXCEPTION 'Race readiness timeout';
   END IF;
 END;
