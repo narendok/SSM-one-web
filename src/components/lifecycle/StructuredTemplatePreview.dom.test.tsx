@@ -130,7 +130,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     vi.mocked(supabase.from).mockReturnValue({ select: () => ({ or: () => ({ limit: select }) }) } as never);
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><StructuredTemplatePreview /></QueryClientProvider>);
+    render(<QueryClientProvider client={client}><StructuredTemplatePreview project={{ id: "project-id", name: "Test project", code: "TEST" }} /></QueryClientProvider>);
     await screen.findByLabelText("Scope statement");
     await user.click(screen.getByRole("tab", { name: "BOM review" }));
     await user.click(screen.getByRole("button", { name: "Add Optional local scratch rows row" }));
@@ -178,7 +178,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     const limit = vi.fn().mockReturnValueOnce(first).mockImplementation(second);
     vi.mocked(supabase.from).mockReturnValue({ select: () => ({ or: () => ({ limit }) }) } as never);
     const user = userEvent.setup();
-    renderPreview();
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><StructuredTemplatePreview project={{ id: "project-id", name: "Test project", code: "TEST" }} /></QueryClientProvider>);
     await screen.findByLabelText("Scope statement");
     await user.click(screen.getByRole("tab", { name: "BOM review" }));
     await user.click(screen.getByRole("button", { name: "Add Optional local scratch rows row" }));
