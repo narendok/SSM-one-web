@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { canDownloadNode, isSelectedNodeRevision } from "@/lib/drive-download-policy";
 
 const sb = supabase as any;
 
@@ -342,12 +343,12 @@ function navigateToDownload(url: string) {
 }
 
 export async function downloadNode(node: DriveNode) {
-  if (!node.storage_path) return;
+  if (!canDownloadNode(node)) return;
   navigateToDownload(await downloadUrl(node.storage_path, node.name));
 }
 
 export async function downloadRevision(node: DriveNode, revision: Pick<DriveRevision, "node_id" | "storage_path">) {
-  if (revision.node_id !== node.id) throw new Error("This revision does not belong to the selected file.");
+  if (!isSelectedNodeRevision(node, revision)) throw new Error("This revision does not belong to the selected file.");
   navigateToDownload(await downloadUrl(revision.storage_path, node.name));
 }
 
