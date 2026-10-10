@@ -100,6 +100,8 @@ GRANT SELECT ON TABLE public.project_official_decision_log TO service_role;
 
 -- PROPOSED server request adapter. It accepts one exact JSONB representation,
 -- preserves every manual string byte, and rejects unsupported/ambiguous shapes.
+-- All 512-character limits are Unicode code points (PostgreSQL char_length),
+-- matching the local validator's Array.from code-point count.
 -- Client-side payload comparison is local-only. This JSONB result, produced
 -- after future server-derived source resolution, is the receipt authority.
 CREATE OR REPLACE FUNCTION public.project_official_decision_request_adapter(
@@ -109,14 +111,28 @@ LANGUAGE sql
 IMMUTABLE
 SET search_path = public
 AS $$
+  WITH request_shape AS (
+    SELECT p_request
+    WHERE jsonb_typeof(p_request) = 'object'
+  ), request_fields AS (
+    SELECT request_shape.p_request,
+      (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(request_shape.p_request) AS key) AS keys
+    FROM request_shape
+  ), evidence_shape AS (
+    SELECT request_fields.p_request, evidence.value
+    FROM request_fields
+    CROSS JOIN LATERAL jsonb_array_elements(request_fields.p_request->'evidenceReferences') AS evidence(value)
+    WHERE jsonb_typeof(request_fields.p_request->'evidenceReferences') = 'array'
+  )
   SELECT CASE
-    WHEN jsonb_typeof(p_request) <> 'object'
+    WHEN p_request IS NULL
+      OR jsonb_typeof(p_request) <> 'object'
       OR p_request ?| ARRAY[
         'projectBomItemId', 'sourceLocator', 'amendment',
         'project_bom_item_id', 'source_page_reference',
         'amendment_parent_decision_id'
       ]
-      OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(p_request) AS key)
+      OR (SELECT keys FROM request_fields)
          IS DISTINCT FROM ARRAY[
            'actionIntent', 'alternativeReference', 'evidenceReferences',
            'exceptionReference', 'expectedSourceRevision', 'note',
@@ -129,7 +145,8 @@ AS $$
       OR jsonb_typeof(p_request->'evidenceReferences') <> 'array'
       OR jsonb_typeof(p_request->'alternativeReference') NOT IN ('null', 'string')
       OR jsonb_typeof(p_request->'exceptionReference') NOT IN ('null', 'string')
-      OR jsonb_array_length(p_request->'evidenceReferences') > 32
+      OR CASE WHEN jsonb_typeof(p_request->'evidenceReferences') = 'array'
+        THEN jsonb_array_length(p_request->'evidenceReferences') > 32 ELSE false END
       OR NULLIF(btrim(p_request->>'actionIntent'), '') IS NULL
       OR NULLIF(btrim(p_request->>'sourcePageReference'), '') IS NULL
       OR NULLIF(btrim(p_request->>'expectedSourceRevision'), '') IS NULL
@@ -146,7 +163,7 @@ AS $$
             OR char_length(p_request->>'exceptionReference') > 512))
       OR EXISTS (
         SELECT 1
-        FROM jsonb_array_elements(p_request->'evidenceReferences') AS evidence(value)
+        FROM evidence_shape AS evidence
         WHERE jsonb_typeof(evidence.value) <> 'object'
           OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(evidence.value) AS key)
              IS DISTINCT FROM ARRAY['contributorReference', 'evidenceReference', 'scopeReference']
@@ -168,7 +185,7 @@ AS $$
       'note', p_request->'note',
       'evidenceReferences', COALESCE((
         SELECT jsonb_agg(evidence.value ORDER BY evidence.value::text COLLATE "C")
-        FROM jsonb_array_elements(p_request->'evidenceReferences') AS evidence(value)
+        FROM evidence_shape AS evidence
       ), '[]'::jsonb),
       'alternativeReference', p_request->'alternativeReference',
       'exceptionReference', p_request->'exceptionReference'
@@ -177,8 +194,9 @@ AS $$
 $$;
 
 -- PROPOSED receipt canonicalizer. The protected action must inject only
--- server-derived projectBomItemId and amendmentParentDecisionId after it has
--- authorized and locked the source; neither is accepted in p_request.
+-- client-supplied projectBomItemId after it has authorized and locked the
+-- target against the source. The action must derive amendmentParentDecisionId
+-- from server-owned history; neither identity is accepted in p_request.
 CREATE OR REPLACE FUNCTION public.project_official_decision_canonical_payload(
   p_project_bom_item_id uuid,
   p_amendment_parent_decision_id uuid,
@@ -189,7 +207,7 @@ IMMUTABLE
 SET search_path = public
 AS $$
   SELECT CASE
-    WHEN adapted.payload IS NULL THEN NULL
+    WHEN p_project_bom_item_id IS NULL OR adapted.payload IS NULL THEN NULL
     ELSE adapted.payload || jsonb_build_object(
       'projectBomItemId', p_project_bom_item_id,
       'amendmentParentDecisionId', p_amendment_parent_decision_id
@@ -207,9 +225,12 @@ LANGUAGE sql
 IMMUTABLE
 SET search_path = public
 AS $$
-  SELECT md5(public.project_official_decision_canonical_payload(
-    p_project_bom_item_id, p_amendment_parent_decision_id, p_request
-  )::text)
+  SELECT CASE WHEN canonical.payload IS NULL THEN NULL ELSE md5(canonical.payload::text) END
+  FROM (
+    SELECT public.project_official_decision_canonical_payload(
+      p_project_bom_item_id, p_amendment_parent_decision_id, p_request
+    ) AS payload
+  ) AS canonical
 $$;
 
 -- PROPOSED protected append action. Its action intent is deliberately limited
@@ -235,8 +256,6 @@ DECLARE
   v_decision_id uuid;
   v_payload_canonical jsonb;
   v_payload_hash text;
-  v_evidence_entry jsonb;
-  v_evidence_index integer := 0;
   v_adapted_request jsonb;
 BEGIN
   IF v_actor_id IS NULL THEN
@@ -256,26 +275,11 @@ BEGIN
     RAISE EXCEPTION 'A valid bounded project-BOM official decision request is required';
   END IF;
 
-  -- Each evidence reference is bounded, shape-fixed, and kept only as
-  -- contributor-scoped contextual provenance. The server derives its actor.
-  FOR v_evidence_entry IN SELECT value FROM jsonb_array_elements(v_adapted_request->'evidenceReferences')
-  LOOP
-    IF jsonb_typeof(v_evidence_entry) <> 'object'
-       OR (SELECT count(*) FROM jsonb_object_keys(v_evidence_entry)) <> 3
-       OR NOT (v_evidence_entry ? 'evidenceReference' AND v_evidence_entry ? 'contributorReference' AND v_evidence_entry ? 'scopeReference')
-       OR jsonb_typeof(v_evidence_entry->'evidenceReference') <> 'string'
-       OR jsonb_typeof(v_evidence_entry->'contributorReference') <> 'string'
-       OR jsonb_typeof(v_evidence_entry->'scopeReference') <> 'string'
-       OR NULLIF(btrim(v_evidence_entry->>'evidenceReference'), '') IS NULL
-       OR NULLIF(btrim(v_evidence_entry->>'contributorReference'), '') IS NULL
-       OR NULLIF(btrim(v_evidence_entry->>'scopeReference'), '') IS NULL
-       OR char_length(v_evidence_entry->>'evidenceReference') > 512
-       OR char_length(v_evidence_entry->>'contributorReference') > 512
-       OR char_length(v_evidence_entry->>'scopeReference') > 512 THEN
-      RAISE EXCEPTION 'Evidence entry % is invalid', v_evidence_index;
-    END IF;
-    v_evidence_index := v_evidence_index + 1;
-  END LOOP;
+  -- Evidence is optional. Nonempty evidence remains fail-closed until a
+  -- reviewed contract resolves contributor and evidence provenance.
+  IF jsonb_array_length(v_adapted_request->'evidenceReferences') <> 0 THEN
+    RAISE EXCEPTION 'Evidence provenance authority is not installed';
+  END IF;
 
   -- Authorize before receipt lookup. Existing project membership proves only
   -- membership; it does not verify this requested page/item action. Fail closed
@@ -370,16 +374,8 @@ BEGIN
     v_adapted_request->>'exceptionReference'
   ) RETURNING id INTO v_decision_id;
 
-  FOR v_evidence_entry IN SELECT value FROM jsonb_array_elements(v_adapted_request->'evidenceReferences')
-  LOOP
-    INSERT INTO public.project_official_decision_evidence (
-      decision_id, evidence_reference, contributor_reference, scope_reference, contributor_user_id
-    ) VALUES (
-      v_decision_id, btrim(v_evidence_entry->>'evidenceReference'),
-      btrim(v_evidence_entry->>'contributorReference'), btrim(v_evidence_entry->>'scopeReference'),
-      v_actor_id
-    );
-  END LOOP;
+  -- No evidence insert occurs until provenance is verified. When enabled, it
+  -- must persist v_adapted_request evidence strings without trimming.
 
   INSERT INTO public.project_official_decision_receipts (
     request_key, requested_by, project_id, payload_hash, payload_canonical, decision_id
@@ -391,9 +387,12 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.append_project_official_decision(uuid, uuid, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.append_project_official_decision(uuid, text, text, text, text, uuid, text, text, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_official_decision_request_adapter(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_official_decision_canonical_payload(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_official_decision_canonical_payload(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_official_decision_payload_hash(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_official_decision_payload_hash(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
 
 -- Direct writes, including service-role UPDATE/DELETE, are denied by explicit
 -- table privileges and by omission of INSERT/UPDATE/DELETE policies. Caller reads are deliberately denied until exact active project

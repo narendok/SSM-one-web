@@ -34,6 +34,24 @@ checks = {
         and "'projectBomItemId', 'sourceLocator', 'amendment'," in sql
         and "'project_bom_item_id', 'source_page_reference'," in sql
     ),
+    "adapter stages JSONB shape checks before object or array expansion": (
+        "WITH request_shape AS" in sql
+        and "WHERE jsonb_typeof(p_request) = 'object'" in sql
+        and "WHERE jsonb_typeof(request_fields.p_request->'evidenceReferences') = 'array'" in sql
+    ),
+    "canonicalization rejects null inputs explicitly": (
+        "WHEN p_project_bom_item_id IS NULL OR adapted.payload IS NULL THEN NULL" in sql
+        and "CASE WHEN canonical.payload IS NULL THEN NULL ELSE md5" in sql
+    ),
+    "nonempty evidence remains denied pending provenance": "Evidence provenance authority is not installed" in sql,
+    "all known draft overloads are revoked": all(signature in sql for signature in (
+        "append_project_official_decision(uuid, uuid, jsonb, uuid)",
+        "append_project_official_decision(uuid, text, text, text, text, uuid, text, text, jsonb, uuid)",
+        "project_official_decision_canonical_payload(uuid, uuid, jsonb)",
+        "project_official_decision_canonical_payload(uuid, text, text, text, text, uuid, text, text, jsonb)",
+        "project_official_decision_payload_hash(uuid, uuid, jsonb)",
+        "project_official_decision_payload_hash(uuid, text, text, text, text, uuid, text, text, jsonb)",
+    )),
     "server receipt canonicalization remains authoritative": (
         "This JSONB result, produced" in sql
         and "is the receipt authority." in sql
@@ -45,8 +63,8 @@ checks = {
         and "v_adapted_request->>'note'" in sql
     ),
     "caller reads remain denied pending authority": sql.count("USING (false);") == 2 and "WHERE false;" in sql,
-    "evidence fields require JSON strings": all(
-        f"jsonb_typeof(v_evidence_entry->'{field}') <> 'string'" in sql
+    "evidence fields require JSON strings before provenance gating": all(
+        f"jsonb_typeof(evidence.value->'{field}') <> 'string'" in sql
         for field in ("evidenceReference", "contributorReference", "scopeReference")
     ),
     "role harness uses SET LOCAL ROLE": "SET LOCAL ROLE authenticated;" in harness,

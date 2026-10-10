@@ -7,10 +7,12 @@ import {
 /**
  * Local-only preparation for the proposed server request schema. It never
  * authorizes a request or supplies receipt data. The future protected server
- * action must derive projectBomItemId and amendmentParentDecisionId after it
- * authorizes and locks the source.
+ * action must verify the client-supplied target UUID against the locked source
+ * and derive any amendment identity from server-owned records.
  */
 export type ProjectOfficialDecisionServerRequest = {
+  /** Client-supplied target only; never authorization or server verification. */
+  targetProjectBomItemId: string;
   actionIntent: string;
   sourcePageReference: string;
   expectedSourceRevision: string;
@@ -20,18 +22,27 @@ export type ProjectOfficialDecisionServerRequest = {
   exceptionReference: string | null;
 };
 
-function failUnsupported(): never {
-  throw new Error("The server request accepts only local payload fields; source and amendment identifiers are server-derived.");
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-export function adaptProjectOfficialDecisionPayloadForServer(input: unknown): ProjectOfficialDecisionServerRequest {
-  const validated = validateProjectOfficialDecisionRequestPayload(input);
+export function adaptProjectOfficialDecisionPayloadForServer(
+  payloadInput: unknown,
+  targetProjectBomItemId: unknown,
+): ProjectOfficialDecisionServerRequest {
+  if (!isUuid(targetProjectBomItemId)) {
+    throw new Error("A client-supplied target project BOM item UUID is required and remains server-verification-required.");
+  }
+  const validated = validateProjectOfficialDecisionRequestPayload(payloadInput);
   if (!validated.ok) throw new Error(validated.errors.map((error) => `${error.path}: ${error.message}`).join(" "));
 
   const { payload } = validated;
-  if (payload.amendment !== null) failUnsupported();
+  if (payload.amendment !== null) {
+    throw new Error("The local server request adapter rejects amendment links until the server derives and verifies the immutable parent.");
+  }
 
   return {
+    targetProjectBomItemId,
     actionIntent: payload.actionIntent,
     sourcePageReference: payload.sourceLocator.pageReference,
     expectedSourceRevision: payload.expectedSourceRevision,
@@ -43,8 +54,8 @@ export function adaptProjectOfficialDecisionPayloadForServer(input: unknown): Pr
 }
 
 /** Local comparison only; the server JSONB canonicalizer is the receipt authority. */
-export function canonicalizeProjectOfficialDecisionServerRequest(input: unknown): string {
-  const request = adaptProjectOfficialDecisionPayloadForServer(input);
+export function canonicalizeProjectOfficialDecisionServerRequest(payloadInput: unknown, targetProjectBomItemId: unknown): string {
+  const request = adaptProjectOfficialDecisionPayloadForServer(payloadInput, targetProjectBomItemId);
   const evidenceReferences = [...request.evidenceReferences].sort((left, right) => {
     const leftText = JSON.stringify(left);
     const rightText = JSON.stringify(right);
