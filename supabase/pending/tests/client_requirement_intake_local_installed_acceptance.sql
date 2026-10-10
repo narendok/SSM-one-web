@@ -29,4 +29,25 @@ BEGIN
   RAISE NOTICE 'CLIENT_REQUIREMENT_LOCAL_ACCEPTANCE_PASS headers=% revisions=% audits=% receipts=%', v_headers, v_revisions, v_audits, v_receipts;
 END;
 $cases$;
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000050', true);
+CREATE TEMP TABLE assigned_historical_review AS SELECT public.assign_requirement_feasibility_review('00000000-0000-4000-8000-000000000080', '00000000-0000-4000-8000-000000000060', '00000000-0000-4000-8000-000000000062') AS review_id;
+DO $assignment$
+DECLARE v_review uuid := (SELECT review_id FROM assigned_historical_review); v_before jsonb; v_assignment_audits integer;
+BEGIN
+  IF (SELECT source_revision_id FROM public.requirement_feasibility_reviews WHERE id = v_review) IS DISTINCT FROM '00000000-0000-4000-8000-000000000081'::uuid
+     OR (SELECT source_revision_number FROM public.requirement_feasibility_reviews WHERE id = v_review) IS DISTINCT FROM 1
+     OR (SELECT master_specification_version_id FROM public.requirement_feasibility_reviews WHERE id = v_review) IS DISTINCT FROM '00000000-0000-4000-8000-000000000071'::uuid
+     OR (SELECT master_specification_version_number FROM public.requirement_feasibility_reviews WHERE id = v_review) IS DISTINCT FROM 1
+     OR (SELECT applicable_workstreams FROM public.requirement_feasibility_reviews WHERE id = v_review) IS DISTINCT FROM '["HARDWARE"]'::jsonb THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL historical requirement/specification tuple was not pinned exactly'; END IF;
+  IF (SELECT max(version_number) FROM public.master_specification_versions WHERE specification_id = '00000000-0000-4000-8000-000000000070') <> 2
+     OR (SELECT specification_data FROM public.master_specification_versions WHERE id = '00000000-0000-4000-8000-000000000072') IS DISTINCT FROM '{"workstreams":["FIRMWARE"]}'::jsonb THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL fixture header advancement was not present'; END IF;
+  IF public.assign_requirement_feasibility_review('00000000-0000-4000-8000-000000000080', '00000000-0000-4000-8000-000000000060', '00000000-0000-4000-8000-000000000062') IS DISTINCT FROM v_review THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL exact assignment replay did not return the pinned review'; END IF;
+  SELECT jsonb_build_object('source_revision_id', source_revision_id, 'source_revision_number', source_revision_number, 'master_specification_version_id', master_specification_version_id, 'master_specification_version_number', master_specification_version_number, 'applicable_workstreams', applicable_workstreams, 'reviewer_user_id', reviewer_user_id, 'status', status), count(*) FILTER (WHERE action = 'assigned') INTO v_before, v_assignment_audits FROM public.requirement_feasibility_reviews review CROSS JOIN public.activity_log audit WHERE review.id = v_review GROUP BY review.id;
+  UPDATE public.customer_requirement_revisions SET requirement_data = jsonb_set(requirement_data, '{source,master_specification_version_id}', '"00000000-0000-4000-8000-000000000072"'::jsonb) WHERE id = '00000000-0000-4000-8000-000000000081';
+  BEGIN PERFORM public.assign_requirement_feasibility_review('00000000-0000-4000-8000-000000000080', '00000000-0000-4000-8000-000000000060', '00000000-0000-4000-8000-000000000062'); RAISE EXCEPTION 'LOCAL_CASE_FAIL mismatched requirement/specification tuple accepted'; EXCEPTION WHEN OTHERS THEN IF SQLSTATE <> 'P0001' OR SQLERRM <> 'Open feasibility review is pinned to different immutable provenance' THEN RAISE; END IF; END;
+  IF (SELECT jsonb_build_object('source_revision_id', source_revision_id, 'source_revision_number', source_revision_number, 'master_specification_version_id', master_specification_version_id, 'master_specification_version_number', master_specification_version_number, 'applicable_workstreams', applicable_workstreams, 'reviewer_user_id', reviewer_user_id, 'status', status) FROM public.requirement_feasibility_reviews WHERE id = v_review) IS DISTINCT FROM v_before
+     OR (SELECT count(*) FROM public.activity_log WHERE entity_id = v_review AND action = 'assigned') <> v_assignment_audits THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL tuple mismatch changed historical review or audit history'; END IF;
+  RAISE NOTICE 'CLIENT_REQUIREMENT_HISTORICAL_ASSIGNMENT_PASS review_id=% source_revision=1 specification_version=1 replay=true mismatch_rejected=true', v_review;
+END;
+$assignment$;
 ROLLBACK;
