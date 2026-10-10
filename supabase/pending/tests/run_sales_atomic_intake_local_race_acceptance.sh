@@ -81,10 +81,18 @@ run_race() {
   local pid_a=$!
   timeout 20s psql "${psql_args[@]}" -v race_label="$label" -v worker_label=b -v request_key="$key_b" -v payload_variant="$payload_b" -v actor_id="$actor_b" -f "$worker" >"$log_dir/b.log" 2>&1 &
   local pid_b=$!
-  if ! wait "$pid_a" || ! wait "$pid_b"; then
-    cat "$log_dir/a.log" "$log_dir/b.log" >&2
-    return 1
-  fi
+  local status_a status_b
+  wait "$pid_a" && status_a=0 || status_a=$?
+  wait "$pid_b" && status_b=0 || status_b=$?
+  printf 'RACE_WORKER_STATUS label=%s a=%s b=%s\n' "$label" "$status_a" "$status_b"
+  case "$label" in
+    same_key_same_payload|different_keys)
+      [[ "$status_a" == 0 && "$status_b" == 0 ]] || { cat "$log_dir/a.log" "$log_dir/b.log" >&2; return 1; }
+      ;;
+    same_key_changed_payload|same_key_actor_conflict)
+      [[ "$status_a" != 0 && "$status_b" == 0 || "$status_a" == 0 && "$status_b" != 0 ]] || { cat "$log_dir/a.log" "$log_dir/b.log" >&2; return 1; }
+      ;;
+  esac
 }
 
 # Each pair waits on the same server-side barrier. The assertion transaction
