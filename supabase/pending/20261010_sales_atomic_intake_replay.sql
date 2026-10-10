@@ -90,18 +90,20 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM jsonb_object_keys(p_intake) AS key WHERE key <> ALL(v_allowed))
      OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(p_intake) AS key)
-        IS DISTINCT FROM v_allowed THEN
+        IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_allowed) AS allowed(key)) THEN
     RETURN NULL;
   END IF;
+  -- A JSON null is represented by SQL NULL in jsonb_typeof, so use explicit
+  -- null-aware comparisons rather than NOT IN (which propagates SQL NULL).
   IF jsonb_typeof(p_intake->'name') <> 'string'
-     OR jsonb_typeof(p_intake->'application') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'productType') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'primarySalesOwnerUserId') NOT IN ('null', 'string')
+     OR jsonb_typeof(p_intake->'application') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'application') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'productType') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'productType') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'primarySalesOwnerUserId') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'primarySalesOwnerUserId') IS DISTINCT FROM 'string'
      OR jsonb_typeof(p_intake->'ndaRequired') <> 'boolean'
-     OR jsonb_typeof(p_intake->'estimatedVolume') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'targetTimeline') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'nextAction') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'nextActionDate') NOT IN ('null', 'string')
+     OR jsonb_typeof(p_intake->'estimatedVolume') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'estimatedVolume') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'targetTimeline') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'targetTimeline') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'nextAction') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'nextAction') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'nextActionDate') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'nextActionDate') IS DISTINCT FROM 'string'
      OR jsonb_typeof(p_intake->'priority') <> 'string'
      OR jsonb_typeof(p_intake->'masterSpecification') <> 'object' THEN
     RETURN NULL;
@@ -116,13 +118,16 @@ BEGIN
     RETURN NULL;
   END IF;
   FOREACH v_key IN ARRAY ARRAY['application', 'productType', 'estimatedVolume', 'targetTimeline', 'nextAction'] LOOP
-    IF jsonb_typeof(p_intake->v_key) = 'string' AND char_length(p_intake->>v_key) >
-      CASE WHEN v_key = 'nextAction' THEN 1000 ELSE 240 END THEN
+    IF jsonb_typeof(p_intake->v_key) = 'string' AND (
+      (v_key = 'nextAction' AND char_length(p_intake->>v_key) > 1000)
+      OR (v_key <> 'nextAction' AND char_length(p_intake->>v_key) > 240)
+    ) THEN
       RETURN NULL;
     END IF;
   END LOOP;
   v_spec := p_intake->'masterSpecification';
-  IF (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(v_spec) AS key) IS DISTINCT FROM v_spec_allowed
+  IF (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(v_spec) AS key)
+       IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_spec_allowed) AS allowed(key))
      OR EXISTS (
        SELECT 1 FROM unnest(ARRAY[
          'changeSummary', 'customerOrInternalOwner', 'developmentScope',
@@ -136,6 +141,8 @@ BEGIN
      OR jsonb_array_length(v_spec->'workstreams') NOT BETWEEN 1 AND 5 THEN
     RETURN NULL;
   END IF;
+  -- Required specification fields are all strings; the surrounding predicate
+  -- above validates shape before these value bounds are evaluated.
   IF NULLIF(btrim(v_spec->>'changeSummary'), '') IS NULL
      OR char_length(v_spec->>'changeSummary') NOT BETWEEN 3 AND 1000
      OR NULLIF(btrim(v_spec->>'proposedName'), '') IS NULL
