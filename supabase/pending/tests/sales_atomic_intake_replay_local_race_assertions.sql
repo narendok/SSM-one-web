@@ -44,6 +44,7 @@ $result_wait$;
 DO $assert$
 DECLARE
   v_receipts integer; v_opportunities integer; v_specs integer; v_versions integer; v_audits integer;
+  v_expected integer;
   v_results integer; v_distinct_opportunity_ids integer; v_distinct_spec_ids integer;
   v_distinct_version_ids integer; v_distinct_numbers integer; v_replayed integer;
 BEGIN
@@ -55,12 +56,19 @@ BEGIN
   IF v_opportunities <> v_specs OR v_opportunities <> v_versions OR v_opportunities <> v_audits THEN
     RAISE EXCEPTION 'Race left mismatched opportunity/spec/version/audit rows';
   END IF;
-  IF current_setting('app.race_label', true) = 'same_key_same_payload' AND (v_receipts <> 1 OR v_opportunities <> 1) THEN
+  v_expected := CASE current_setting('app.race_label', true)
+    WHEN 'same_key_same_payload' THEN 1
+    WHEN 'same_key_changed_payload' THEN 2
+    WHEN 'same_key_actor_conflict' THEN 3
+    WHEN 'different_keys' THEN 5
+    WHEN 'final' THEN 5
+  END;
+  IF current_setting('app.race_label', true) = 'same_key_same_payload' AND (v_receipts <> v_expected OR v_opportunities <> v_expected) THEN
     RAISE EXCEPTION 'Same actor/key/payload did not converge to exactly one receipt and business records';
-  ELSIF current_setting('app.race_label', true) IN ('same_key_changed_payload', 'same_key_actor_conflict') AND (v_receipts <> 2 OR v_opportunities <> 2) THEN
+  ELSIF current_setting('app.race_label', true) IN ('same_key_changed_payload', 'same_key_actor_conflict') AND (v_receipts <> v_expected OR v_opportunities <> v_expected) THEN
     RAISE EXCEPTION 'Conflicting same-key race left records from the rejected worker';
-  ELSIF current_setting('app.race_label', true) IN ('different_keys', 'final') AND (v_receipts <> 4 OR v_opportunities <> 4) THEN
-    RAISE EXCEPTION 'Different-key race did not leave exactly four receipts/opportunities after conflict rollbacks';
+  ELSIF current_setting('app.race_label', true) IN ('different_keys', 'final') AND (v_receipts <> v_expected OR v_opportunities <> v_expected) THEN
+    RAISE EXCEPTION 'Different-key race did not leave exactly five receipts/opportunities after conflict rollbacks';
   END IF;
   IF (SELECT count(*) FROM public.sales_opportunities) <> (SELECT count(DISTINCT opportunity_number) FROM public.sales_opportunities) THEN
     RAISE EXCEPTION 'Concurrent allocator produced duplicate opportunity numbers';
