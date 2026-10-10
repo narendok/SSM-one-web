@@ -93,15 +93,17 @@ BEGIN
         IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_allowed) AS allowed(key)) THEN
     RETURN NULL;
   END IF;
+  -- A JSON null is represented by SQL NULL in jsonb_typeof, so use explicit
+  -- null-aware comparisons rather than NOT IN (which propagates SQL NULL).
   IF jsonb_typeof(p_intake->'name') <> 'string'
-     OR jsonb_typeof(p_intake->'application') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'productType') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'primarySalesOwnerUserId') NOT IN ('null', 'string')
+     OR jsonb_typeof(p_intake->'application') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'application') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'productType') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'productType') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'primarySalesOwnerUserId') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'primarySalesOwnerUserId') IS DISTINCT FROM 'string'
      OR jsonb_typeof(p_intake->'ndaRequired') <> 'boolean'
-     OR jsonb_typeof(p_intake->'estimatedVolume') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'targetTimeline') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'nextAction') NOT IN ('null', 'string')
-     OR jsonb_typeof(p_intake->'nextActionDate') NOT IN ('null', 'string')
+     OR jsonb_typeof(p_intake->'estimatedVolume') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'estimatedVolume') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'targetTimeline') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'targetTimeline') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'nextAction') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'nextAction') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_intake->'nextActionDate') IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'nextActionDate') IS DISTINCT FROM 'string'
      OR jsonb_typeof(p_intake->'priority') <> 'string'
      OR jsonb_typeof(p_intake->'masterSpecification') <> 'object' THEN
     RETURN NULL;
