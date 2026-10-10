@@ -95,10 +95,11 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(screen.queryByText("Pinned authorized source")).toBeNull();
   });
 
-  it("terminates an empty authorized source response without fabricated source fields", async () => {
+  it("terminates an invalid empty authorized source response without fabricated source fields", async () => {
     previewSource.mockResolvedValue(undefined);
     renderPreview();
-    expect(await screen.findByText("UNVERIFIED — authorized source returned no record")).toBeTruthy();
+    expect(await screen.findByText("UNVERIFIED — authorized source unavailable")).toBeTruthy();
+    expect(await screen.findByText(/data is undefined/)).toBeTruthy();
     expect(screen.queryByText("Loading authorized source…")).toBeNull();
     expect(screen.queryByText("Pinned authorized source")).toBeNull();
   });
