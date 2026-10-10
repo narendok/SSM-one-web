@@ -13,6 +13,7 @@ race_setup = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_loca
 race_worker = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_race_worker.sql").read_text()
 race_assertions = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_race_assertions.sql").read_text()
 lock_setup = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_lock_setup.sql").read_text()
+lock_holder = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_lock_holder.sql").read_text()
 lock_worker = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_lock_worker.sql").read_text()
 lock_assertions = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_lock_assertions.sql").read_text()
 failpoint_acceptance = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_failpoint_acceptance.sql").read_text()
@@ -50,9 +51,10 @@ checks = {
     "local fixture proves allocator locking": "FOR UPDATE" in local_fixture and "document_numbering_config" in local_fixture,
     "local acceptance covers replay conflicts invalid source rollback and races": all(fragment in local_acceptance for fragment in ("Exact replay", "changed payload", "different actor", "invalid source", "rollback", "Two-session race")),
     "local acceptance restores its disposable fixture": local_acceptance.rstrip().endswith("ROLLBACK;"),
-    "local lock wait uses the exact request-key advisory lock": "pg_advisory_lock(hashtextextended(:'request_key'" in lock_worker and "LOCK_WAIT_DEMONSTRATED" in race_runner,
+    "local lock holder uses the exact contract transaction advisory lock": "pg_advisory_xact_lock(hashtextextended(:'request_key'" in lock_holder,
+    "local worker is observed blocked on the exact contract advisory lock": "CONTRACT_LOCK_WAIT_OBSERVED" in race_runner and "pg_stat_activity" in race_runner and "pg_locks" in race_runner and "Lock:advisory:1" in race_runner,
     "local lock wait revokes before release": "sales_manage = false" in lock_assertions and "released = true" in lock_assertions,
-    "local lock wait requires post-release denial without records": "LOCK_WAIT_DENIAL_PASS" in race_runner and "receipts_for_key=" in race_runner and "total_opportunities=" in race_runner,
+    "local lock wait requires post-release denial without records": "CONTRACT_LOCK_DENIAL_PASS" in race_runner and "specifications=" in race_runner and "audits=" in race_runner,
     "local receipt replay lock wait is seeded": "receipt_replay" in lock_setup and "000000000202" in race_runner,
     "local fixture supports receipt insertion failpoint": "sales_intake_fail_receipt" in failpoint_acceptance,
     "local failpoints cover specification version and receipt": all(point in failpoint_acceptance for point in ("master_specifications", "master_specification_versions", "sales_opportunity_intake_receipts")),

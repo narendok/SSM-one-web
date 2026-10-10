@@ -1,23 +1,10 @@
--- Invoked by one independent local psql worker. It holds the contract's exact
--- request-key advisory lock until the controller proves it is waiting.
+-- Invoked by one independent local psql worker. It calls the proposal directly;
+-- an independent holder owns the exact contract lock before this starts.
 \set ON_ERROR_STOP on
+\set VERBOSITY verbose
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
-SELECT pg_advisory_lock(hashtextextended(:'request_key', 0));
-UPDATE public.sales_intake_lock_wait_cases SET ready = true WHERE case_label = :'case_label';
-SELECT set_config('app.case_label', :'case_label', false);
-DO $wait$
-DECLARE v_deadline timestamptz := clock_timestamp() + interval '15 seconds'; v_released boolean;
-BEGIN
-  LOOP
-    SELECT released INTO v_released FROM public.sales_intake_lock_wait_cases WHERE case_label = current_setting('app.case_label', true);
-    IF v_released THEN RETURN; END IF;
-    IF clock_timestamp() >= v_deadline THEN RAISE EXCEPTION 'Lock-wait release timeout'; END IF;
-    PERFORM pg_sleep(0.02);
-  END LOOP;
-END;
-$wait$;
-SELECT pg_advisory_unlock(hashtextextended(:'request_key', 0));
+SELECT 'LOCK_WORKER_BACKEND_PID=' || pg_backend_pid()::text;
 SELECT * FROM public.create_sales_opportunity_with_initial_master_specification(
   '00000000-0000-4000-8000-000000000010'::uuid,
   '00000000-0000-4000-8000-000000000011'::uuid,

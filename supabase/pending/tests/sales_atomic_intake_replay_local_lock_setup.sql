@@ -9,6 +9,7 @@ INSERT INTO public.sales_enquiries VALUES ('00000000-0000-4000-8000-000000000012
 CREATE TABLE public.sales_intake_lock_wait_cases (
   case_label text PRIMARY KEY,
   request_key uuid NOT NULL UNIQUE,
+  holder_ready boolean NOT NULL DEFAULT false,
   ready boolean NOT NULL DEFAULT false,
   released boolean NOT NULL DEFAULT false
 );
