@@ -3,6 +3,7 @@
 
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
+SELECT set_config('structured_draft.authorization_case', :'authorization_case', false);
 DO $worker$
 DECLARE
   v_draft_id uuid; v_revision_id uuid; v_revision_number integer; v_replayed boolean;
