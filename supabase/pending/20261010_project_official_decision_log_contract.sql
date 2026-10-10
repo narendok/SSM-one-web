@@ -98,56 +98,117 @@ WHERE false;
 REVOKE ALL ON TABLE public.project_official_decision_log FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE public.project_official_decision_log TO service_role;
 
-CREATE OR REPLACE FUNCTION public.project_official_decision_canonical_payload(
-  p_project_bom_item_id uuid,
-  p_source_page_reference text,
-  p_action_intent text,
-  p_expected_source_revision text,
-  p_note text,
-  p_amendment_parent_decision_id uuid,
-  p_alternative_reference text,
-  p_exception_reference text,
-  p_evidence jsonb
+-- PROPOSED server request adapter. It accepts one exact JSONB representation,
+-- preserves every manual string byte, and rejects unsupported/ambiguous shapes.
+-- Client-side payload comparison is local-only. This JSONB result, produced
+-- after future server-derived source resolution, is the receipt authority.
+CREATE OR REPLACE FUNCTION public.project_official_decision_request_adapter(
+  p_request jsonb
 ) RETURNS jsonb
 LANGUAGE sql
 IMMUTABLE
 SET search_path = public
 AS $$
-  SELECT jsonb_build_object(
-    'project_bom_item_id', p_project_bom_item_id,
-    'source_page_reference', btrim(p_source_page_reference),
-    'action_intent', btrim(p_action_intent),
-    'expected_source_revision', btrim(p_expected_source_revision),
-    'note', p_note,
-    'amendment_parent_decision_id', p_amendment_parent_decision_id,
-    'alternative_reference', nullif(btrim(coalesce(p_alternative_reference, '')), ''),
-    'exception_reference', nullif(btrim(coalesce(p_exception_reference, '')), ''),
-    'evidence', COALESCE((
-      SELECT jsonb_agg(entry.value ORDER BY entry.value::text COLLATE "C")
-      FROM jsonb_array_elements(COALESCE(p_evidence, '[]'::jsonb)) AS entry(value)
-    ), '[]'::jsonb)
-  )
+  SELECT CASE
+    WHEN jsonb_typeof(p_request) <> 'object'
+      OR p_request ?| ARRAY[
+        'projectBomItemId', 'sourceLocator', 'amendment',
+        'project_bom_item_id', 'source_page_reference',
+        'amendment_parent_decision_id'
+      ]
+      OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(p_request) AS key)
+         IS DISTINCT FROM ARRAY[
+           'actionIntent', 'alternativeReference', 'evidenceReferences',
+           'exceptionReference', 'expectedSourceRevision', 'note',
+           'sourcePageReference'
+         ]
+      OR jsonb_typeof(p_request->'actionIntent') <> 'string'
+      OR jsonb_typeof(p_request->'sourcePageReference') <> 'string'
+      OR jsonb_typeof(p_request->'expectedSourceRevision') <> 'string'
+      OR jsonb_typeof(p_request->'note') <> 'string'
+      OR jsonb_typeof(p_request->'evidenceReferences') <> 'array'
+      OR jsonb_typeof(p_request->'alternativeReference') NOT IN ('null', 'string')
+      OR jsonb_typeof(p_request->'exceptionReference') NOT IN ('null', 'string')
+      OR jsonb_array_length(p_request->'evidenceReferences') > 32
+      OR NULLIF(btrim(p_request->>'actionIntent'), '') IS NULL
+      OR NULLIF(btrim(p_request->>'sourcePageReference'), '') IS NULL
+      OR NULLIF(btrim(p_request->>'expectedSourceRevision'), '') IS NULL
+      OR NULLIF(btrim(p_request->>'note'), '') IS NULL
+      OR char_length(p_request->>'actionIntent') > 512
+      OR char_length(p_request->>'sourcePageReference') > 512
+      OR char_length(p_request->>'expectedSourceRevision') > 512
+      OR char_length(p_request->>'note') > 512
+      OR (jsonb_typeof(p_request->'alternativeReference') = 'string'
+          AND (NULLIF(btrim(p_request->>'alternativeReference'), '') IS NULL
+            OR char_length(p_request->>'alternativeReference') > 512))
+      OR (jsonb_typeof(p_request->'exceptionReference') = 'string'
+          AND (NULLIF(btrim(p_request->>'exceptionReference'), '') IS NULL
+            OR char_length(p_request->>'exceptionReference') > 512))
+      OR EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(p_request->'evidenceReferences') AS evidence(value)
+        WHERE jsonb_typeof(evidence.value) <> 'object'
+          OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(evidence.value) AS key)
+             IS DISTINCT FROM ARRAY['contributorReference', 'evidenceReference', 'scopeReference']
+          OR jsonb_typeof(evidence.value->'evidenceReference') <> 'string'
+          OR jsonb_typeof(evidence.value->'contributorReference') <> 'string'
+          OR jsonb_typeof(evidence.value->'scopeReference') <> 'string'
+          OR NULLIF(btrim(evidence.value->>'evidenceReference'), '') IS NULL
+          OR NULLIF(btrim(evidence.value->>'contributorReference'), '') IS NULL
+          OR NULLIF(btrim(evidence.value->>'scopeReference'), '') IS NULL
+          OR char_length(evidence.value->>'evidenceReference') > 512
+          OR char_length(evidence.value->>'contributorReference') > 512
+          OR char_length(evidence.value->>'scopeReference') > 512
+      )
+    THEN NULL
+    ELSE jsonb_build_object(
+      'actionIntent', p_request->'actionIntent',
+      'sourcePageReference', p_request->'sourcePageReference',
+      'expectedSourceRevision', p_request->'expectedSourceRevision',
+      'note', p_request->'note',
+      'evidenceReferences', COALESCE((
+        SELECT jsonb_agg(evidence.value ORDER BY evidence.value::text COLLATE "C")
+        FROM jsonb_array_elements(p_request->'evidenceReferences') AS evidence(value)
+      ), '[]'::jsonb),
+      'alternativeReference', p_request->'alternativeReference',
+      'exceptionReference', p_request->'exceptionReference'
+    )
+  END
+$$;
+
+-- PROPOSED receipt canonicalizer. The protected action must inject only
+-- server-derived projectBomItemId and amendmentParentDecisionId after it has
+-- authorized and locked the source; neither is accepted in p_request.
+CREATE OR REPLACE FUNCTION public.project_official_decision_canonical_payload(
+  p_project_bom_item_id uuid,
+  p_amendment_parent_decision_id uuid,
+  p_request jsonb
+) RETURNS jsonb
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN adapted.payload IS NULL THEN NULL
+    ELSE adapted.payload || jsonb_build_object(
+      'projectBomItemId', p_project_bom_item_id,
+      'amendmentParentDecisionId', p_amendment_parent_decision_id
+    )
+  END
+  FROM (SELECT public.project_official_decision_request_adapter(p_request) AS payload) AS adapted
 $$;
 
 CREATE OR REPLACE FUNCTION public.project_official_decision_payload_hash(
   p_project_bom_item_id uuid,
-  p_source_page_reference text,
-  p_action_intent text,
-  p_expected_source_revision text,
-  p_note text,
   p_amendment_parent_decision_id uuid,
-  p_alternative_reference text,
-  p_exception_reference text,
-  p_evidence jsonb
+  p_request jsonb
 ) RETURNS text
 LANGUAGE sql
 IMMUTABLE
 SET search_path = public
 AS $$
   SELECT md5(public.project_official_decision_canonical_payload(
-    p_project_bom_item_id, p_source_page_reference, p_action_intent,
-    p_expected_source_revision, p_note, p_amendment_parent_decision_id,
-    p_alternative_reference, p_exception_reference, p_evidence
+    p_project_bom_item_id, p_amendment_parent_decision_id, p_request
   )::text)
 $$;
 
@@ -156,14 +217,8 @@ $$;
 -- Sales transition contracts define their exact authorization predicates.
 CREATE OR REPLACE FUNCTION public.append_project_official_decision(
   p_project_bom_item_id uuid,
-  p_source_page_reference text,
-  p_action_intent text,
-  p_expected_source_revision text,
-  p_note text,
   p_amendment_parent_decision_id uuid,
-  p_alternative_reference text,
-  p_exception_reference text,
-  p_evidence jsonb,
+  p_request jsonb,
   p_request_key uuid
 ) RETURNS uuid
 LANGUAGE plpgsql
@@ -182,6 +237,7 @@ DECLARE
   v_payload_hash text;
   v_evidence_entry jsonb;
   v_evidence_index integer := 0;
+  v_adapted_request jsonb;
 BEGIN
   IF v_actor_id IS NULL THEN
     RAISE EXCEPTION 'Authentication is required';
@@ -191,23 +247,18 @@ BEGIN
   -- and approved source-page/item authority mapping are available.
   IF p_request_key IS NULL
      OR p_project_bom_item_id IS NULL
-     OR NULLIF(btrim(p_source_page_reference), '') IS NULL
-     OR NULLIF(btrim(p_action_intent), '') IS NULL
-     OR NULLIF(btrim(p_expected_source_revision), '') IS NULL
-     OR NULLIF(btrim(p_note), '') IS NULL
-     OR char_length(btrim(p_source_page_reference)) > 512
-     OR char_length(btrim(p_action_intent)) > 512
-     OR char_length(btrim(p_expected_source_revision)) > 512
-     OR char_length(p_note) > 512
-     OR p_action_intent <> 'project-bom-note'
-     OR (p_evidence IS NOT NULL AND jsonb_typeof(p_evidence) <> 'array')
-     OR COALESCE(jsonb_array_length(p_evidence), 0) > 32 THEN
+     OR p_amendment_parent_decision_id IS NOT NULL
+     OR public.project_official_decision_request_adapter(p_request) IS NULL THEN
+    RAISE EXCEPTION 'A valid bounded project-BOM official decision request is required';
+  END IF;
+  v_adapted_request := public.project_official_decision_request_adapter(p_request);
+  IF v_adapted_request->>'actionIntent' <> 'project-bom-note' THEN
     RAISE EXCEPTION 'A valid bounded project-BOM official decision request is required';
   END IF;
 
   -- Each evidence reference is bounded, shape-fixed, and kept only as
   -- contributor-scoped contextual provenance. The server derives its actor.
-  FOR v_evidence_entry IN SELECT value FROM jsonb_array_elements(COALESCE(p_evidence, '[]'::jsonb))
+  FOR v_evidence_entry IN SELECT value FROM jsonb_array_elements(v_adapted_request->'evidenceReferences')
   LOOP
     IF jsonb_typeof(v_evidence_entry) <> 'object'
        OR (SELECT count(*) FROM jsonb_object_keys(v_evidence_entry)) <> 3
@@ -270,19 +321,15 @@ BEGIN
      ) THEN
     RAISE EXCEPTION 'Current active project membership and project authority are required';
   END IF;
-  IF v_actual_revision IS NULL OR v_actual_revision <> p_expected_source_revision THEN
+  IF v_actual_revision IS NULL OR v_actual_revision <> v_adapted_request->>'expectedSourceRevision' THEN
     RAISE EXCEPTION 'Project BOM source revision conflict';
   END IF;
 
   v_payload_canonical := public.project_official_decision_canonical_payload(
-    p_project_bom_item_id, p_source_page_reference, p_action_intent,
-    p_expected_source_revision, p_note, p_amendment_parent_decision_id,
-    p_alternative_reference, p_exception_reference, p_evidence
+    p_project_bom_item_id, p_amendment_parent_decision_id, p_request
   );
   v_payload_hash := public.project_official_decision_payload_hash(
-    p_project_bom_item_id, p_source_page_reference, p_action_intent,
-    p_expected_source_revision, p_note, p_amendment_parent_decision_id,
-    p_alternative_reference, p_exception_reference, p_evidence
+    p_project_bom_item_id, p_amendment_parent_decision_id, p_request
   );
 
   SELECT * INTO v_prior
@@ -317,13 +364,13 @@ BEGIN
     action_intent, expected_source_revision, note, actor_user_id,
     amendment_parent_decision_id, alternative_reference, exception_reference
   ) VALUES (
-    v_project_id, v_project_bom_id, p_project_bom_item_id, btrim(p_source_page_reference),
-    btrim(p_action_intent), btrim(p_expected_source_revision), p_note, v_actor_id,
-    p_amendment_parent_decision_id, nullif(btrim(coalesce(p_alternative_reference, '')), ''),
-    nullif(btrim(coalesce(p_exception_reference, '')), '')
+    v_project_id, v_project_bom_id, p_project_bom_item_id, v_adapted_request->>'sourcePageReference',
+    v_adapted_request->>'actionIntent', v_adapted_request->>'expectedSourceRevision', v_adapted_request->>'note', v_actor_id,
+    p_amendment_parent_decision_id, v_adapted_request->>'alternativeReference',
+    v_adapted_request->>'exceptionReference'
   ) RETURNING id INTO v_decision_id;
 
-  FOR v_evidence_entry IN SELECT value FROM jsonb_array_elements(COALESCE(p_evidence, '[]'::jsonb))
+  FOR v_evidence_entry IN SELECT value FROM jsonb_array_elements(v_adapted_request->'evidenceReferences')
   LOOP
     INSERT INTO public.project_official_decision_evidence (
       decision_id, evidence_reference, contributor_reference, scope_reference, contributor_user_id
@@ -343,9 +390,10 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.append_project_official_decision(uuid, text, text, text, text, uuid, text, text, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.project_official_decision_canonical_payload(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.project_official_decision_payload_hash(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.append_project_official_decision(uuid, uuid, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_official_decision_request_adapter(jsonb) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_official_decision_canonical_payload(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_official_decision_payload_hash(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated, service_role;
 
 -- Direct writes, including service-role UPDATE/DELETE, are denied by explicit
 -- table privileges and by omission of INSERT/UPDATE/DELETE policies. Caller reads are deliberately denied until exact active project
@@ -366,5 +414,7 @@ USING (false);
 -- server-owned identifiers, re-checks revocation after locks before replay/write,
 -- defines evidence/contributor provenance, and passes isolated non-admin,
 -- SET ROLE authenticated, rollback, replay, conflict, cross-project, and
--- two-session acceptance. Canonical SQL/TypeScript parity and amendment-chain
--- concurrency remain separately blocked and are not established by this file.
+-- two-session acceptance. Cross-runtime byte/hash parity is intentionally not
+-- required: JSONB canonicalization is the server receipt authority and the TS
+-- comparison helper remains local-only. Amendment-chain concurrency remains
+-- separately blocked and is not established by this file.
