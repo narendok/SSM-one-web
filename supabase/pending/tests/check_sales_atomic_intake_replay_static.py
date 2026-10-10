@@ -21,6 +21,7 @@ checks = {
     "source pairing is explicit": "Contact/customer source mismatch" in sql and "Enquiry/customer/contact source mismatch" in sql,
     "opportunity number remains server generated": "opportunity_number" in sql and "NULL, p_customer_id" in sql and "next_business_number('opportunity'" in sql,
     "master number uses established allocator": "public.next_business_number('master_specification', 'MS', NULL)" in sql,
+    "canonical payload conditional length expression is valid": "AND char_length(p_intake->>v_key) > CASE WHEN v_key = 'nextAction' THEN 1000 ELSE 240 END THEN" in sql,
     "one transaction writes opportunity spec version audit receipt": all(fragment in sql for fragment in ("INSERT INTO public.sales_opportunities", "INSERT INTO public.master_specifications", "INSERT INTO public.master_specification_versions", "INSERT INTO public.activity_log", "INSERT INTO public.sales_opportunity_intake_receipts")),
     "exact actor source payload replay is required": "v_prior.requested_by = v_actor_id" in sql and "v_prior.canonical_payload = v_canonical" in sql and "v_prior.payload_hash = v_payload_hash" in sql,
     "receipt functions remain ungranted": "GRANT EXECUTE ON FUNCTION public.create_sales_opportunity_with_initial_master_specification" not in sql and "GRANT EXECUTE ON FUNCTION public.lookup_sales_opportunity_intake_receipt" not in sql,
