@@ -6,13 +6,13 @@
 
 | Item | Value |
 | --- | --- |
-| Reviewed repository HEAD | Pending final verification after this source-only compatibility split |
+| Reviewed repository HEAD | `9e1bbecc0cafbcd084d36091af499ec812a39359` |
 | Only permitted future installation target | `egjotuxqguifnvdnflan` |
 | Explicitly excluded production target | `yyrvduosyyaluifqvwkr` |
 | Phase 1 pending intake/provenance proposal | `supabase/pending/20261005_client_requirement_intake.sql` |
-| Phase 1 SHA-256 | Pending final verification after this source-only compatibility split |
+| Phase 1 SHA-256 | `d6aba12ea5a9f5ae78eadd88195e18cfc47db2473d8bffc31eb6eaabc96c538c` |
 | Phase 2 separately gated direct-write compatibility transition | `supabase/pending/20261011_requirement_feasibility_direct_write_compatibility_transition.sql` |
-| Phase 2 SHA-256 | Pending final verification after this source-only compatibility split |
+| Phase 2 SHA-256 | `08c761bd709dea0f25baadfd564e8e141ebaf448d4fd4cc26b832157350185d4` |
 
 `dee4a625…` is a stale pre-split SHA-256 of the former entire 841-line intake proposal file, not a view-only hash. It is not approval evidence for either phase. Phase 1 retains external intake, protected feasibility RPCs, immutable source pins, and the invoker provenance view. Phase 2 contains only the deferred legacy scope-helper removal and feasibility direct-write/policy removal.
 
