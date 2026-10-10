@@ -174,7 +174,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     previewSource.mockResolvedValue(source);
     let firstResolve: (value: { data: { id: string; name: string; part_number: string; manufacturer: string | null }[]; error: null }) => void = () => undefined;
     const first = new Promise<{ data: { id: string; name: string; part_number: string; manufacturer: string | null }[]; error: null }>((resolve) => { firstResolve = resolve; });
-    const limit = vi.fn().mockReturnValueOnce(first).mockResolvedValueOnce({ data: [], error: null });
+    const limit = vi.fn().mockResolvedValueOnce({ data: [], error: null }).mockReturnValueOnce(first);
     vi.mocked(supabase.from).mockReturnValue({ select: () => ({ or: () => ({ limit }) }) } as never);
     const user = userEvent.setup();
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><StructuredTemplatePreview project={{ id: "project-id", name: "Test project", code: "TEST" }} /></QueryClientProvider>);
@@ -182,11 +182,12 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await user.click(screen.getByRole("tab", { name: "BOM review" }));
     await user.click(screen.getByRole("button", { name: "Add Optional local scratch rows row" }));
     const search = screen.getByLabelText("Search caller-visible components for Optional local scratch rows row 1");
+    await user.type(search, "new");
+    await screen.findByText("No caller-visible components match this search. Your local row is unchanged.");
+    await user.clear(search);
     await user.type(search, "ol");
     expect(await screen.findByLabelText("Searching components")).toBeTruthy();
     await user.clear(search);
-    await user.type(search, "new");
-    await screen.findByText("No caller-visible components match this search. Your local row is unchanged.");
     firstResolve({ data: [{ id: "stale", name: "Stale result", part_number: "STALE", manufacturer: null }], error: null });
     await waitFor(() => expect(screen.queryByRole("option", { name: /Stale result/ })).toBeNull());
 
