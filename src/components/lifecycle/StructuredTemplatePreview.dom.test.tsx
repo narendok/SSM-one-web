@@ -54,6 +54,16 @@ function ReturnToProposalHarness() {
   return <><button onClick={() => setDocumentsOpen(true)}>Open previews</button>{documentsOpen ? <><button onClick={() => setDocumentsOpen(false)}>Back to proposal</button><StructuredTemplatePreview localEdits={localEdits} onLocalEditsChange={setLocalEdits} /></> : <p>Proposal overview</p>}</>;
 }
 
+function ScopedReturnToProposalHarness() {
+  const [documentsOpen, setDocumentsOpen] = useState(true);
+  const [activeSource, setActiveSource] = useState("first");
+  const [localEdits, setLocalEdits] = useState<Record<string, string>>({});
+  const sourcePin = activeSource === "first"
+    ? { opportunityNumber: "OPPORTUNITY-2026-0013", specificationNumber: "MASTER-2026-0001", versionNumber: 1 }
+    : { opportunityNumber: "OPPORTUNITY-2026-0099", specificationNumber: "MASTER-2026-0099", versionNumber: 2 };
+  return <><button onClick={() => { setLocalEdits({}); setActiveSource("second"); setDocumentsOpen(true); }}>Open other proposal</button>{documentsOpen ? <><button onClick={() => setDocumentsOpen(false)}>Back to proposal</button><StructuredTemplatePreview sourcePin={sourcePin} localEdits={localEdits} onLocalEditsChange={setLocalEdits} /></> : <p>Proposal overview</p>}</>;
+}
+
 afterEach(() => {
   cleanup();
   previewSource.mockReset();
@@ -138,6 +148,19 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect((screen.getByLabelText("Local decision note") as HTMLTextAreaElement).value).toBe("Keep review while returning.");
     await user.click(screen.getByRole("tab", { name: "Product Requirements Specification" }));
     expect((screen.getByLabelText("Power requirement") as HTMLInputElement).value).toBe("Keep PRS while returning.");
+  });
+
+  it("clears local edits before opening a different opportunity and pinned revision", async () => {
+    previewSource.mockResolvedValue(source);
+    const user = userEvent.setup();
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ScopedReturnToProposalHarness /></QueryClientProvider>);
+
+    const scope = await screen.findByLabelText("Scope statement");
+    await user.clear(scope);
+    await user.type(scope, "Only the first proposal may show this.");
+    await user.click(screen.getByRole("button", { name: "Back to proposal" }));
+    await user.click(screen.getByRole("button", { name: "Open other proposal" }));
+    expect((await screen.findByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("TBC");
   });
 
   it("renders the exact successful authorized source pin instead of TBC fallback fields", async () => {
