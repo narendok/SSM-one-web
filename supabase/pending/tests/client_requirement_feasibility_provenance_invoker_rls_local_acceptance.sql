@@ -52,8 +52,8 @@ BEGIN
   SELECT * INTO v_row FROM public.requirement_feasibility_review_provenance
   WHERE review_id = '00000000-0000-4000-8000-000000000085';
   IF v_row.provenance_status <> 'AVAILABLE'
-     OR v_row.verified_source_revision_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000081'::uuid
-     OR v_row.verified_master_specification_version_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000071'::uuid THEN
+     OR v_row.source_revision_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000081'::uuid
+     OR v_row.master_specification_version_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000071'::uuid THEN
     RAISE EXCEPTION 'LOCAL_CASE_FAIL owner invoker did not receive exact visible provenance';
   END IF;
 END;
