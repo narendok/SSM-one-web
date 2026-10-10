@@ -90,7 +90,7 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM jsonb_object_keys(p_intake) AS key WHERE key <> ALL(v_allowed))
      OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(p_intake) AS key)
-        IS DISTINCT FROM v_allowed THEN
+        IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_allowed) AS allowed(key)) THEN
     RETURN NULL;
   END IF;
   IF jsonb_typeof(p_intake->'name') <> 'string'
@@ -124,7 +124,8 @@ BEGIN
     END IF;
   END LOOP;
   v_spec := p_intake->'masterSpecification';
-  IF (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(v_spec) AS key) IS DISTINCT FROM v_spec_allowed
+  IF (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(v_spec) AS key)
+       IS DISTINCT FROM (SELECT array_agg(key ORDER BY key) FROM unnest(v_spec_allowed) AS allowed(key))
      OR EXISTS (
        SELECT 1 FROM unnest(ARRAY[
          'changeSummary', 'customerOrInternalOwner', 'developmentScope',
