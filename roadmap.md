@@ -10,6 +10,8 @@
 
 ## Current compatibility hardening
 
+- [ ] Review the unapplied atomic Sales intake/replay proposal: [`20261010_sales_atomic_intake_replay.sql`](supabase/pending/20261010_sales_atomic_intake_replay.sql) binds an existing customer and optional verified contact/enquiry to one opportunity, initial Master Specification, activity record, and actor-bound receipt. It reuses server-generated opportunity/Master Specification numbering, authorizes before and after locks/replay, and has no application wiring or grants. **Blocked:** disposable isolated database acceptance for real caller transport, rollback, races, revocation-after-wait, and non-admin RLS.
+
 - [ ] Prepare (source-only) the legacy Sales requirement-write compatibility group: retire the legacy server facade, revoke authenticated direct requirement/revision writes only with protected creation and legitimate revision/approval operations preserved, and prove numbering plus caller-authenticated acceptance. **Blocked from application:** isolated caller-authenticated database acceptance; no live SQL, data, users, grants, enablement, or publishing.
 
 ## Maintenance
