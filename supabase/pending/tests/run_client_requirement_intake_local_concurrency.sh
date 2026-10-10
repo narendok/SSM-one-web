@@ -34,18 +34,13 @@ run_case() {
   local worker="$root/supabase/pending/tests/client_requirement_intake_local_concurrency.sql"
   psql "${psql_args[@]}" --set="case_name=$case_name" <<'SQL' >"$log_dir/${case_name}_barrier.out" 2>"$log_dir/${case_name}_barrier.err" & local barrier_pid=$!
 BEGIN;
-INSERT INTO public.client_requirement_concurrency_barrier (case_name) VALUES (:'case_name');
 SELECT pg_advisory_xact_lock(hashtextextended('00000000-0000-4000-8000-000000000095', 0));
-UPDATE public.client_requirement_concurrency_barrier SET ready = true WHERE case_name = :'case_name';
-SELECT pg_sleep(0.01)
-FROM generate_series(1, 100)
-WHERE NOT (SELECT released FROM public.client_requirement_concurrency_barrier WHERE case_name = :'case_name');
+SELECT pg_sleep(0.20);
 COMMIT;
 SQL
-  until run_psql -Atqc "SELECT ready FROM public.client_requirement_concurrency_barrier WHERE case_name = '$case_name'" | grep -qx t; do sleep 0.01; done
+  sleep 0.03
   psql "${psql_args[@]}" --set="submission_title=$title_a" --set="submission_payload=$payload_a" -f "$worker" >"$log_dir/${case_name}_a.out" 2>"$log_dir/${case_name}_a.err" & local pid_a=$!
   psql "${psql_args[@]}" --set="submission_title=$title_b" --set="submission_payload=$payload_b" -f "$worker" >"$log_dir/${case_name}_b.out" 2>"$log_dir/${case_name}_b.err" & local pid_b=$!
-  run_psql -c "UPDATE public.client_requirement_concurrency_barrier SET released = true WHERE case_name = '$case_name';" >/dev/null
   wait "$barrier_pid"
   wait "$pid_a"; local status_a=$?
   wait "$pid_b"; local status_b=$?
