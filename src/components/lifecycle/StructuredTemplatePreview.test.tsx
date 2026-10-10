@@ -106,6 +106,16 @@ describe("local structured preview draft safety", () => {
     expect(markup).not.toContain("allow-scripts");
   });
 
+  it("shows specialized malformed local table input as a correction error instead of silently rendering an empty preview", () => {
+    const item = structuredLifecycleTemplatePreviews.find((candidate) => candidate.kind === "PDI");
+    if (!item) throw new Error("Expected PDI preview definition.");
+    const content = buildStructuredPreviewContent("PDI", source, { "PDI:PDI_ROWS": "not json" });
+    expect(content).toEqual(expect.objectContaining({ content: "", error: expect.stringContaining("Table rows must be valid JSON") }));
+    const markup = renderToStaticMarkup(<FormattedPreview item={item} source={source} userEdits={{ "PDI:PDI_ROWS": "not json" }} error={content.error} controlledText={content.content} />);
+    expect(markup).toContain("Local preview input needs correction");
+    expect(markup).toContain("Table rows must be valid JSON");
+  });
+
   it("retains manual fields across template switches and routes an exit through the discard guard", () => {
     const edits = { "SOR:SCOPE_STATEMENT": "Retain me", "PRS:POWER_REQUIREMENT": "24 V" };
     expect(localEditsForStructuredPreview("SOR", edits)).toEqual({ SCOPE_STATEMENT: "Retain me" });

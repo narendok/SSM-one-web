@@ -26,6 +26,7 @@ import {
   structuredLifecycleTemplatePreviews,
   tableRowsForOutput,
   taxInvoiceLineTotals,
+  validateSpecializedLocalPreviewPayload,
   validateLocalTableRows,
   type BomCostRow,
   type EditableField,
@@ -100,6 +101,12 @@ export function buildStructuredPreviewContent(
 ) {
   try {
     const edits = localEditsForStructuredPreview(kind, userEdits);
+    if (!isStructuredSalesPreviewKind(kind)) {
+      const validation = validateSpecializedLocalPreviewPayload(kind, edits);
+      if (!validation.ok) {
+        return { content: "", error: validation.errors.map((issue) => `${issue.path}: ${issue.message}`).join(" ") };
+      }
+    }
     const content = isStructuredSalesPreviewKind(kind)
       ? renderStructuredSalesLocalDraftHtml(kind, source, edits)
       : renderStructuredLifecycleTemplatePreview(kind, source, edits).content;
@@ -1096,6 +1103,11 @@ export function FormattedPreview({
           React-rendered text and tables only; source and local text are escaped and never executed.
         </p>
       </div>
+      {error ? (
+        <p role="alert" className="border border-destructive/40 p-3 text-sm text-destructive">
+          Local preview input needs correction: {error}
+        </p>
+      ) : null}
       {item.kind === "COMMERCIAL_QUOTATION" ? (
         <>
           <OutputTable
