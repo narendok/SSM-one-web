@@ -8,6 +8,10 @@ harness = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_accepta
 local_runner = (Path(__file__).resolve().parent / "run_sales_atomic_intake_local_acceptance.sh").read_text()
 local_fixture = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_fixture.sql").read_text()
 local_acceptance = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_installed_acceptance.sql").read_text()
+race_runner = (Path(__file__).resolve().parent / "run_sales_atomic_intake_local_race_acceptance.sh").read_text()
+race_setup = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_race_setup.sql").read_text()
+race_worker = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_race_worker.sql").read_text()
+race_assertions = (Path(__file__).resolve().parent / "sales_atomic_intake_replay_local_race_assertions.sql").read_text()
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
@@ -42,6 +46,13 @@ checks = {
     "local fixture proves allocator locking": "FOR UPDATE" in local_fixture and "document_numbering_config" in local_fixture,
     "local acceptance covers replay conflicts invalid source rollback and races": all(fragment in local_acceptance for fragment in ("Exact replay", "changed payload", "different actor", "invalid source", "rollback", "Two-session race")),
     "local acceptance restores its disposable fixture": local_acceptance.rstrip().endswith("ROLLBACK;"),
+    "local race runner rejects remote targets": "Refusing a non-local PostgreSQL target." in race_runner and "LOCAL_SALES_INTAKE_DISPOSABLE" in race_runner,
+    "local race runner bounds worker waits": "timeout 20s psql" in race_runner and "interval '15 seconds'" in race_worker,
+    "local race workers use independent psql sessions": race_runner.count("timeout 20s psql") >= 2,
+    "local race readiness is durable": "sales_intake_race_barriers" in race_setup and "ready_workers" in race_worker,
+    "local race avoids sleep-only coordination": "pg_advisory_xact_lock" in race_worker and "released" in race_assertions,
+    "local race covers same key conflicts and distinct keys": all(label in race_runner for label in ("same_key_same_payload", "same_key_changed_payload", "same_key_actor_conflict", "different_keys")),
+    "local race asserts allocation and atomic row counts": "count(DISTINCT opportunity_number)" in race_assertions and "mismatched opportunity/spec/version/audit rows" in race_assertions,
 }
 failed = [name for name, passed in checks.items() if not passed]
 for name, passed in checks.items():
