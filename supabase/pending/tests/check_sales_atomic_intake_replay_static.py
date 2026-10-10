@@ -29,7 +29,7 @@ checks = {
     "acceptance rolls back": harness.rstrip().endswith("ROLLBACK;"),
     "concurrency and rollback remain explicit acceptance gates": "Two distinct authenticated sessions race" in harness and "complete transaction rolls back" in harness,
     "local runner rejects remote targets": "LOCALHOST_ONLY_HOSTS" in local_runner and "Refusing a non-local" in local_runner,
-    "local runner limits sockets to the fresh task root": "LOCAL_SALES_INTAKE_PRIVATE_SOCKET_ROOT" in local_runner and "startsWith('/tmp/sales_atomic_acceptance_')" in local_runner and "Connection options are not accepted" in local_runner,
+    "local runner limits sockets to the fresh task root": "LOCAL_SALES_INTAKE_PRIVATE_SOCKET_ROOT" in local_runner and "startsWith('/tmp/sales_atomic_acceptance_')" in local_runner and "Connection options are not accepted" in local_runner and "--host=\"$socket_host\"" in local_runner,
     "local runner requires disposable confirmation": "LOCAL_SALES_INTAKE_DISPOSABLE" in local_runner and "yes" in local_runner,
     "local installed transport is explicit and separate": "GRANT EXECUTE ON FUNCTION public.create_sales_opportunity_with_initial_master_specification" in local_runner and "local disposable fixture only" in local_runner,
     "local fixture proves allocator locking": "FOR UPDATE" in local_fixture and "document_numbering_config" in local_fixture,

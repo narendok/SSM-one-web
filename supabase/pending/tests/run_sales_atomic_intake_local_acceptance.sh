@@ -47,7 +47,9 @@ const isPrivateSocket = Boolean(privateSocketRoot)
 if (!['postgresql:', 'postgres:'].includes(parsed.protocol) || !(isLoopback || isPrivateSocket)) {
   throw new Error('Refusing a non-local PostgreSQL target.')
 }
-if (parsed.port || parsed.search || parsed.hash) throw new Error('Connection options are not accepted by the local runner.')
+if ((isLoopback && parsed.port && !/^(5432|55432)$/.test(parsed.port)) || parsed.search || parsed.hash) {
+  throw new Error('Connection options are not accepted by the local runner.')
+}
 if (!/^\/sales_atomic_acceptance_[a-z0-9_]+$/i.test(parsed.pathname)) {
   throw new Error('The local database name must start with sales_atomic_acceptance_.')
 }
@@ -59,17 +61,34 @@ proposal="$root/supabase/pending/20261010_sales_atomic_intake_replay.sql"
 preinstall="$root/supabase/pending/tests/sales_atomic_intake_replay_local_preinstall.sql"
 acceptance="$root/supabase/pending/tests/sales_atomic_intake_replay_local_installed_acceptance.sql"
 
+psql_args=(--set=ON_ERROR_STOP=1)
+if [[ -n "${LOCAL_SALES_INTAKE_PRIVATE_SOCKET_ROOT:-}" ]]; then
+  socket_host="$(node --input-type=module - "$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL" <<'NODE'
+const parsed = new URL(process.argv[2])
+console.log(decodeURIComponent(parsed.hostname))
+NODE
+)"
+  database_name="$(node --input-type=module - "$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL" <<'NODE'
+const parsed = new URL(process.argv[2])
+console.log(parsed.pathname.slice(1))
+NODE
+)"
+  psql_args+=(--host="$socket_host" --port="${LOCAL_SALES_INTAKE_PRIVATE_SOCKET_PORT:-55432}" --username="${LOCAL_SALES_INTAKE_PRIVATE_SOCKET_USER:-sales_atomic_local}" --dbname="$database_name")
+else
+  psql_args+=("$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL")
+fi
+
 if [[ "$mode" == "preinstall" ]]; then
-  psql "$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL" --set=ON_ERROR_STOP=1 -f "$preinstall"
+  psql "${psql_args[@]}" -f "$preinstall"
   exit 0
 fi
 
-psql "$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL" --set=ON_ERROR_STOP=1 -f "$fixture"
-psql "$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL" --set=ON_ERROR_STOP=1 -f "$proposal"
+psql "${psql_args[@]}" -f "$fixture"
+psql "${psql_args[@]}" -f "$proposal"
 # This grant is local disposable fixture only; it is intentionally absent from
 # the pending proposal and must not be copied into a reviewed deployment.
-psql "$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL" --set=ON_ERROR_STOP=1 <<'SQL'
+psql "${psql_args[@]}" <<'SQL'
 GRANT EXECUTE ON FUNCTION public.create_sales_opportunity_with_initial_master_specification(uuid, uuid, uuid, jsonb, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.lookup_sales_opportunity_intake_receipt(uuid) TO authenticated;
 SQL
-psql "$LOCAL_SALES_INTAKE_ACCEPTANCE_DATABASE_URL" --set=ON_ERROR_STOP=1 -f "$acceptance"
+psql "${psql_args[@]}" -f "$acceptance"
