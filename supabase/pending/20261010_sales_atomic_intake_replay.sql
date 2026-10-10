@@ -137,7 +137,7 @@ BEGIN
          'changeSummary', 'customerOrInternalOwner', 'developmentScope',
          'environmentAndIp', 'exclusions', 'industryApplication', 'interfaces',
          'powerAndUnits', 'productFamily', 'proposedName', 'requestedStandards',
-         'requirementSummary', 'schedule', 'volumes'
+         'requirementSummary', 'schedule', 'volumes', 'connectivityAndGnss'
        ]) AS required(key)
        WHERE jsonb_typeof(v_spec->required.key) <> 'string'
      )
