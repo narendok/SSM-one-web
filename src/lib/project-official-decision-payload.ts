@@ -9,6 +9,10 @@ export const projectOfficialDecisionPayloadLimits = {
   evidenceReferences: 32,
 } as const;
 
+function codePointLength(value: string): number {
+  return Array.from(value).length;
+}
+
 export type ProjectOfficialDecisionPayloadError = { path: string; message: string };
 
 export type ProjectOfficialDecisionSourceLocator = {
@@ -59,7 +63,7 @@ function readOpaqueReference(value: unknown, path: string, errors: ProjectOffici
     errors.push({ path, message: "A non-empty opaque reference is required." });
     return null;
   }
-  if (value.length > projectOfficialDecisionPayloadLimits.referenceCharacters) {
+  if (codePointLength(value) > projectOfficialDecisionPayloadLimits.referenceCharacters) {
     errors.push({ path, message: `Reference exceeds ${projectOfficialDecisionPayloadLimits.referenceCharacters} characters.` });
     return null;
   }
@@ -145,7 +149,7 @@ export function validateProjectOfficialDecisionRequestPayload(input: unknown): P
   const note = typeof record.note === "string" && record.note.trim() ? record.note : null;
   if (!note) {
     errors.push({ path: "note", message: "A non-empty short human-authored note is required." });
-  } else if (note.length > projectOfficialDecisionPayloadLimits.noteCharacters) {
+  } else if (codePointLength(note) > projectOfficialDecisionPayloadLimits.noteCharacters) {
     errors.push({ path: "note", message: `Note exceeds ${projectOfficialDecisionPayloadLimits.noteCharacters} characters.` });
   }
   const evidenceReferences = readEvidenceReferences(record.evidenceReferences, errors);
