@@ -5,10 +5,13 @@
 -- wired to any application action. It must be reviewed against the final
 -- committed-project transition contracts before using lov_database--migration.
 --
--- Verified existing authority: public.has_permission(uuid, text) and the
--- existing projects.view / projects.manage permission keys. No verified
--- department-specific Hardware, Purchase, or Sales-exception permission exists;
--- this contract consequently fails closed for those action kinds.
+-- Verified existing authority: public.has_permission(uuid, text), the existing
+-- projects.view / projects.manage permission keys, and active employee-backed
+-- public.project_team_members membership. No verified committed-project action
+-- authority maps a source page/item locator to a caller. This proposal therefore
+-- exposes neither caller reads nor append authority until that missing mapping is
+-- accepted; future Hardware, Purchase, and Sales-exception action kinds remain
+-- fail-closed.
 --
 -- Scope: committed projects and authoritative existing project BOM items only.
 -- It does not alter Sales proposals, candidate workflow state, inventory,
@@ -34,8 +37,8 @@ CREATE TABLE public.project_official_decisions (
   CONSTRAINT project_official_decisions_note_short CHECK (length(btrim(note)) BETWEEN 1 AND 512),
   CONSTRAINT project_official_decisions_no_self_amendment CHECK (amendment_parent_decision_id IS NULL OR amendment_parent_decision_id <> id)
 );
-GRANT SELECT ON public.project_official_decisions TO authenticated;
-GRANT ALL ON public.project_official_decisions TO service_role;
+REVOKE ALL ON TABLE public.project_official_decisions FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.project_official_decisions TO service_role;
 ALTER TABLE public.project_official_decisions ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE public.project_official_decision_evidence (
@@ -50,8 +53,8 @@ CREATE TABLE public.project_official_decision_evidence (
   CONSTRAINT project_official_decision_evidence_contributor_reference_nonblank CHECK (length(btrim(contributor_reference)) > 0),
   CONSTRAINT project_official_decision_evidence_scope_reference_nonblank CHECK (length(btrim(scope_reference)) > 0)
 );
-GRANT SELECT ON public.project_official_decision_evidence TO authenticated;
-GRANT ALL ON public.project_official_decision_evidence TO service_role;
+REVOKE ALL ON TABLE public.project_official_decision_evidence FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.project_official_decision_evidence TO service_role;
 ALTER TABLE public.project_official_decision_evidence ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE public.project_official_decision_receipts (
@@ -65,12 +68,13 @@ CREATE TABLE public.project_official_decision_receipts (
   CONSTRAINT project_official_decision_receipts_payload_hash_nonblank CHECK (length(btrim(payload_hash)) > 0),
   CONSTRAINT project_official_decision_receipts_payload_canonical_object CHECK (jsonb_typeof(payload_canonical) = 'object')
 );
-GRANT ALL ON public.project_official_decision_receipts TO service_role;
+REVOKE ALL ON TABLE public.project_official_decision_receipts FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.project_official_decision_receipts TO service_role;
 ALTER TABLE public.project_official_decision_receipts ENABLE ROW LEVEL SECURITY;
 
--- Caller-scoped, security-invoker read projection. It relies only on the
--- verified project read boundary and deliberately exposes neither receipts nor
--- their canonical payload/hash. Direct base-table writes remain without policy.
+-- Caller-scoped, security-invoker read projection. It intentionally returns no
+-- rows until the deployment gate identifies a verified exact committed-project
+-- membership-and-permission authority. It never exposes receipts or direct writes.
 CREATE VIEW public.project_official_decision_log
 WITH (security_invoker = true)
 AS
@@ -90,10 +94,9 @@ SELECT
   decision.created_at,
   '[]'::jsonb AS evidence
 FROM public.project_official_decisions decision
-JOIN public.projects project ON project.id = decision.project_id
-WHERE public.has_any_permission(auth.uid(), ARRAY['projects.view', 'projects.manage'])
-;
-GRANT SELECT ON public.project_official_decision_log TO authenticated;
+WHERE false;
+REVOKE ALL ON TABLE public.project_official_decision_log FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.project_official_decision_log TO service_role;
 
 CREATE OR REPLACE FUNCTION public.project_official_decision_canonical_payload(
   p_project_bom_item_id uuid,
@@ -180,9 +183,12 @@ DECLARE
   v_evidence_entry jsonb;
   v_evidence_index integer := 0;
 BEGIN
-  IF v_actor_id IS NULL OR NOT public.has_permission(v_actor_id, 'projects.manage') THEN
-    RAISE EXCEPTION 'Project management permission is required';
+  IF v_actor_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication is required';
   END IF;
+  -- Deployment gate: a permission alone is intentionally insufficient. Do not
+  -- enable append authority until an exact active committed-project membership
+  -- and approved source-page/item authority mapping are available.
   IF p_request_key IS NULL
      OR p_project_bom_item_id IS NULL
      OR NULLIF(btrim(p_source_page_reference), '') IS NULL
@@ -206,6 +212,9 @@ BEGIN
     IF jsonb_typeof(v_evidence_entry) <> 'object'
        OR (SELECT count(*) FROM jsonb_object_keys(v_evidence_entry)) <> 3
        OR NOT (v_evidence_entry ? 'evidenceReference' AND v_evidence_entry ? 'contributorReference' AND v_evidence_entry ? 'scopeReference')
+       OR jsonb_typeof(v_evidence_entry->'evidenceReference') <> 'string'
+       OR jsonb_typeof(v_evidence_entry->'contributorReference') <> 'string'
+       OR jsonb_typeof(v_evidence_entry->'scopeReference') <> 'string'
        OR NULLIF(btrim(v_evidence_entry->>'evidenceReference'), '') IS NULL
        OR NULLIF(btrim(v_evidence_entry->>'contributorReference'), '') IS NULL
        OR NULLIF(btrim(v_evidence_entry->>'scopeReference'), '') IS NULL
@@ -217,9 +226,24 @@ BEGIN
     v_evidence_index := v_evidence_index + 1;
   END LOOP;
 
-  -- Authorize before receipt lookup. The verified existing boundary has no
-  -- department-specific authority, so this intentionally fails closed for all
-  -- future action intents until their independent contracts are accepted.
+  -- Authorize before receipt lookup. Existing project membership proves only
+  -- membership; it does not verify this requested page/item action. Fail closed
+  -- until a reviewed authority maps the exact active membership plus existing
+  -- permission to a server-derived source-page/item action.
+  IF NOT public.has_permission(v_actor_id, 'projects.manage')
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.project_team_members membership
+       JOIN public.employees member_employee ON member_employee.id = membership.employee_id
+       WHERE member_employee.user_id = v_actor_id
+         AND member_employee.employment_status = 'ACTIVE'
+     ) THEN
+    RAISE EXCEPTION 'Exact active project membership and project authority are required';
+  END IF;
+  RAISE EXCEPTION 'Official decision append authority is not installed: exact committed-project source action mapping is unresolved';
+
+  -- The following reviewed implementation sketch remains unreachable until the
+  -- deployment gate above is replaced in one acceptance-tested contract.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text, 0));
   SELECT bom.project_id, bom.id, bom.revision
   INTO v_project_id, v_project_bom_id, v_actual_revision
@@ -231,6 +255,20 @@ BEGIN
   FOR UPDATE OF project, bom, item;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Committed project BOM source is unavailable';
+  END IF;
+  -- Re-check current actor authority after target locks and before any replay or
+  -- write. The final enabled contract must bind membership to v_project_id and
+  -- derive the exact source page/item reference server-side.
+  IF NOT public.has_permission(v_actor_id, 'projects.manage')
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.project_team_members membership
+       JOIN public.employees member_employee ON member_employee.id = membership.employee_id
+       WHERE membership.project_id = v_project_id
+         AND member_employee.user_id = v_actor_id
+         AND member_employee.employment_status = 'ACTIVE'
+     ) THEN
+    RAISE EXCEPTION 'Current active project membership and project authority are required';
   END IF;
   IF v_actual_revision IS NULL OR v_actual_revision <> p_expected_source_revision THEN
     RAISE EXCEPTION 'Project BOM source revision conflict';
@@ -305,33 +343,28 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.append_project_official_decision(uuid, text, text, text, text, uuid, text, text, jsonb, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.append_project_official_decision(uuid, text, text, text, text, uuid, text, text, jsonb, uuid) TO authenticated, service_role;
-REVOKE ALL ON FUNCTION public.project_official_decision_canonical_payload(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.project_official_decision_payload_hash(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.append_project_official_decision(uuid, text, text, text, text, uuid, text, text, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_official_decision_canonical_payload(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_official_decision_payload_hash(uuid, text, text, text, text, uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
 
--- Direct writes are denied by omission of INSERT/UPDATE/DELETE policies. The
--- read policy mirrors the verified project read boundary; its project-scoping
--- remains a deployment gate because existing project reads are permission-wide.
-CREATE POLICY project_official_decisions_project_read
+-- Direct writes are denied by privilege and by omission of INSERT/UPDATE/DELETE
+-- policies. Caller reads are deliberately denied until exact active project
+-- membership plus existing permission can be proven for the target project.
+CREATE POLICY project_official_decisions_project_read_denied_pending_authority
 ON public.project_official_decisions
 FOR SELECT TO authenticated
-USING (public.has_any_permission(auth.uid(), ARRAY['projects.view', 'projects.manage']));
+USING (false);
 
-CREATE POLICY project_official_decision_evidence_project_read
+CREATE POLICY project_official_decision_evidence_project_read_denied_pending_authority
 ON public.project_official_decision_evidence
 FOR SELECT TO authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.project_official_decisions decision
-    WHERE decision.id = project_official_decision_evidence.decision_id
-      AND public.has_any_permission(auth.uid(), ARRAY['projects.view', 'projects.manage'])
-  )
-);
+USING (false);
 
 -- DEPLOYMENT GATE: do not apply until a reviewed executable authority maps each
--- future action intent to a verified project membership/department permission,
--- narrows project visibility to exact caller scope, defines server-derived page
--- and source identifiers, and passes isolated non-admin, rollback, replay,
--- conflict, cross-project, and two-session acceptance.
+-- future action intent to an exact active project-team membership plus verified
+-- existing permission, derives the committed project and source page/item from
+-- server-owned identifiers, re-checks revocation after locks before replay/write,
+-- defines evidence/contributor provenance, and passes isolated non-admin,
+-- SET ROLE authenticated, rollback, replay, conflict, cross-project, and
+-- two-session acceptance. Canonical SQL/TypeScript parity and amendment-chain
+-- concurrency remain separately blocked and are not established by this file.
