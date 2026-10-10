@@ -84,13 +84,15 @@ function readEvidenceReferences(value: unknown, errors: ProjectOfficialDecisionP
     return null;
   }
 
+  let hasSparseEntries = false;
   for (let index = 0; index < value.length; index += 1) {
     if (!(index in value)) {
       errors.push({ path: `evidenceReferences[${index}]`, message: "Evidence references must not contain sparse entries." });
+      hasSparseEntries = true;
     }
   }
 
-  if (errors.length) return null;
+  if (hasSparseEntries) return null;
 
   const references: ProjectOfficialDecisionEvidenceReference[] = [];
   value.forEach((entry, index) => {
