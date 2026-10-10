@@ -10,6 +10,7 @@ import { StructuredPreviewExitDialog } from "./StructuredPreviewExitBoundary";
 import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-template-previews";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { ProposalDetail } from "@/routes/_authenticated/sales";
 
 const source = mapMasterSpecificationSource({
   opportunityId: "opportunity-id",
@@ -50,6 +51,7 @@ vi.mock("@/lib/project-bom.functions", async (importOriginal) => {
 });
 
 vi.mock("@tanstack/react-router", () => ({
+  createFileRoute: () => (options: unknown) => options,
   Link: ({ children }: { children: ReactNode }) => <a href="/bom">{children}</a>,
 }));
 
@@ -182,6 +184,33 @@ function DeferredActorSourceHarness() {
     <>
       <button onClick={() => setActorId("actor-b")}>Switch actor</button>
       <StructuredTemplatePreview actorId={actorId} />
+    </>
+  );
+}
+
+function ProposalDetailDialogHarness() {
+  const [open, setOpen] = useState(true);
+  const detail = {
+    opportunity: {
+      id: "opportunity-id",
+      opportunity_number: "OPPORTUNITY-2026-0013",
+    },
+    specification: {
+      id: "specification-id",
+      specification_number: "MASTER-2026-0001",
+      current_version: 1,
+      customer_id: "customer-id",
+    },
+  } as never;
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Reopen proposal</button>
+      <ProposalDetail
+        detail={open ? detail : null}
+        requirements={[]}
+        onOpenChange={setOpen}
+        actorId="actor-a"
+      />
     </>
   );
 }
@@ -780,6 +809,37 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       throw new Error("Discard confirmation did not open from the built-in Close button.");
     await user.click(within(confirmation).getByRole("button", { name: "Discard edits" }));
     await waitFor(() => expect(screen.getByText("Exited preview")).toBeTruthy());
+  });
+
+  it("keeps local preview text when the real proposal dialog returns from documents, while Close still prompts", async () => {
+    previewSource.mockResolvedValue(source);
+    vi.mocked(supabase.from).mockReturnValue({
+      select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }) }),
+    } as never);
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ProposalDetailDialogHarness />
+      </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Preview documents" }));
+    const scope = await screen.findByLabelText("Scope statement");
+    await user.clear(scope);
+    await user.type(scope, "Keep this proposal-local draft");
+
+    await user.click(screen.getByRole("button", { name: "Back to proposal" }));
+    expect(screen.queryByText("Discard unsaved local edits?")).toBeNull();
+    expect(await screen.findByRole("button", { name: "Preview documents" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Preview documents" }));
+    expect((await screen.findByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe(
+      "Keep this proposal-local draft",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(await screen.findByText("Discard unsaved local edits?")).toBeTruthy();
   });
 
   it("exits clean previews by Escape and built-in Close without confirmation, and reopens without stale dirty state", async () => {

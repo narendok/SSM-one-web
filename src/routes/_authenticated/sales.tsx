@@ -491,7 +491,7 @@ function SalesPage() {
     </PermissionGate>
   );
 }
-function ProposalDetail({
+export function ProposalDetail({
   detail,
   requirements,
   onOpenChange,
@@ -592,7 +592,7 @@ function ProposalDetail({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => requestExit(() => setDocumentsOpen(false))}
+                  onClick={() => setDocumentsOpen(false)}
                 >
                   Back to proposal
                 </Button>
