@@ -74,11 +74,8 @@ BEGIN
 
   SELECT * INTO v_row FROM public.requirement_feasibility_review_provenance
   WHERE review_id = '00000000-0000-4000-8000-000000000085';
-  IF NOT FOUND
-     OR v_row.provenance_status <> 'UNAVAILABLE_INACCESSIBLE_OR_MISSING_SOURCE'
-     OR v_row.verified_source_revision_id IS NOT NULL
-     OR v_row.verified_master_specification_version_id IS NOT NULL THEN
-    RAISE EXCEPTION 'LOCAL_CASE_FAIL hidden joined rows bypassed invoker RLS or leaked verified provenance';
+  IF FOUND THEN
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL hidden joined rows bypassed invoker RLS or leaked a source-existence oracle';
   END IF;
 END;
 $nonowner$;
