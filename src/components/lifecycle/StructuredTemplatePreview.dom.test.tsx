@@ -473,7 +473,13 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       );
       return { client };
     })();
-    const queryKey = ["structured-template-source", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1];
+    const queryKey = [
+      "structured-template-source",
+      "actor-a",
+      "OPPORTUNITY-2026-0013",
+      "MASTER-2026-0001",
+      1,
+    ];
     await screen.findByLabelText("Scope statement");
     await screen.findByText("version-id");
     client.setQueryData(
@@ -502,19 +508,17 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
 
   it("does not request project BOMs for the unprojected source while local scratch rows are edited and selected", async () => {
     previewSource.mockResolvedValue(source);
-    const select = vi
-      .fn()
-      .mockResolvedValue({
-        data: [
-          {
-            id: "component-1",
-            name: "Catalogue description",
-            part_number: "CAT-001",
-            manufacturer: "Catalogue maker",
-          },
-        ],
-        error: null,
-      });
+    const select = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "component-1",
+          name: "Catalogue description",
+          part_number: "CAT-001",
+          manufacturer: "Catalogue maker",
+        },
+      ],
+      error: null,
+    });
     vi.mocked(supabase.from).mockReturnValue({
       select: () => ({ or: () => ({ limit: select }) }),
     } as never);
@@ -559,19 +563,17 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
 
   it("adopts only empty BOM component fields and retains local edits through reselection, switching, and source conflict", async () => {
     previewSource.mockResolvedValue(source);
-    const select = vi
-      .fn()
-      .mockResolvedValue({
-        data: [
-          {
-            id: "component-1",
-            name: "Catalogue description",
-            part_number: "CAT-001",
-            manufacturer: "Catalogue maker",
-          },
-        ],
-        error: null,
-      });
+    const select = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "component-1",
+          name: "Catalogue description",
+          part_number: "CAT-001",
+          manufacturer: "Catalogue maker",
+        },
+      ],
+      error: null,
+    });
     vi.mocked(supabase.from).mockReturnValue({
       select: () => ({ or: () => ({ limit: select }) }),
     } as never);
@@ -598,19 +600,17 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       "ca",
     );
     await user.click(await screen.findByRole("option", { name: /Catalogue description/ }));
-    const secondSelect = vi
-      .fn()
-      .mockResolvedValue({
-        data: [
-          {
-            id: "component-2",
-            name: "Replacement description",
-            part_number: "CAT-002",
-            manufacturer: "Replacement maker",
-          },
-        ],
-        error: null,
-      });
+    const secondSelect = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "component-2",
+          name: "Replacement description",
+          part_number: "CAT-002",
+          manufacturer: "Replacement maker",
+        },
+      ],
+      error: null,
+    });
     vi.mocked(supabase.from).mockReturnValue({
       select: () => ({ or: () => ({ limit: secondSelect }) }),
     } as never);
