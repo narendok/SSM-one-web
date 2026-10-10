@@ -194,22 +194,6 @@ BEGIN
   -- The receipt lock serializes same-key calls. Re-check after taking it: a
   -- concurrent transaction can have created the receipt between the first read
   -- and lock acquisition only when an older deployment lacked this ordering.
-  SELECT * INTO v_prior
-  FROM public.external_requirement_submission_requests
-  WHERE request_key = p_request_key
-  FOR UPDATE;
-  IF FOUND THEN
-    IF v_prior.requested_by = v_actor_id
-       AND v_prior.external_contact_id = v_contact_id
-       AND v_prior.opportunity_id = p_opportunity_id
-       AND v_prior.customer_id = p_customer_id
-       AND v_prior.payload_hash = v_payload_hash
-       AND v_prior.payload_canonical IS NOT NULL
-       AND v_prior.payload_canonical = v_payload_canonical THEN
-      RETURN v_prior.requirement_id;
-    END IF;
-    RAISE EXCEPTION 'Request key conflicts with a different caller or payload';
-  END IF;
   INSERT INTO public.customer_requirements (
     opportunity_id, customer_id, title, status, current_revision, customer_reference,
     requirement_data, submitted_at, created_by
