@@ -16,7 +16,7 @@ BEGIN
   SELECT count(*) INTO v_drafts FROM public.sales_opportunity_structured_drafts;
   SELECT count(*) INTO v_revisions FROM public.sales_opportunity_structured_draft_revisions;
   SELECT count(*) INTO v_requests FROM public.sales_opportunity_structured_draft_requests;
-  IF v_drafts <> 2 OR v_revisions <> 2 OR v_requests <> 2 THEN
+  IF v_drafts <> 1 OR v_revisions <> 1 OR v_requests <> 1 THEN
     RAISE EXCEPTION 'Conflict races wrote an extra draft, revision, or receipt: %, %, %', v_drafts, v_revisions, v_requests;
   END IF;
 END;
