@@ -4,6 +4,8 @@
 SELECT set_config('request.jwt.claim.sub', :'actor_id', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
 SELECT set_config('structured_draft.test_payload', :'payload', false);
+SELECT set_config('structured_draft.test_case_name', :'case_name', false);
+SELECT set_config('structured_draft.test_worker_label', :'worker_label', false);
 
 DO $worker$
 DECLARE
@@ -22,11 +24,19 @@ BEGIN
       '00000000-0000-4000-8000-000000000601'
     );
     INSERT INTO public.structured_draft_conflict_race_results (case_name, worker_label, outcome, draft_id, revision_id, revision_number, replayed)
-    VALUES (:'case_name', :'worker_label', 'returned', v_draft_id, v_revision_id, v_revision_number, v_replayed);
+    VALUES (
+      current_setting('structured_draft.test_case_name'),
+      current_setting('structured_draft.test_worker_label'),
+      'returned', v_draft_id, v_revision_id, v_revision_number, v_replayed
+    );
   EXCEPTION WHEN OTHERS THEN
     GET STACKED DIAGNOSTICS v_state = RETURNED_SQLSTATE, v_message = MESSAGE_TEXT;
     INSERT INTO public.structured_draft_conflict_race_results (case_name, worker_label, outcome, sqlstate, message)
-    VALUES (:'case_name', :'worker_label', 'error', v_state, v_message);
+    VALUES (
+      current_setting('structured_draft.test_case_name'),
+      current_setting('structured_draft.test_worker_label'),
+      'error', v_state, v_message
+    );
   END;
 END;
 $worker$;
