@@ -43,4 +43,5 @@ $worker$;
 
 SELECT case_name, worker_label, outcome, sqlstate, message, draft_id, revision_id, revision_number, replayed
 FROM public.structured_draft_conflict_race_results
-WHERE case_name = :'case_name' AND worker_label = :'worker_label';
+WHERE case_name = current_setting('structured_draft.test_case_name')
+  AND worker_label = current_setting('structured_draft.test_worker_label');
