@@ -61,9 +61,9 @@ BEGIN
 END;
 $assert$;
 
-SELECT :'race_label' AS race_label, worker_label, opportunity_id, opportunity_number,
+SELECT current_setting('race_label', true) AS race_label, worker_label, opportunity_id, opportunity_number,
   master_specification_id, master_specification_number,
   master_specification_version_id, master_specification_version_number, replayed
 FROM public.sales_intake_race_results
-WHERE race_label = :'race_label'
+WHERE race_label = current_setting('race_label', true)
 ORDER BY worker_label;

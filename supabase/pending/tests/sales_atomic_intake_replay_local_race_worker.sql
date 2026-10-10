@@ -20,7 +20,9 @@ COMMIT;
 SELECT set_config('race_label', :'race_label', false);
 
 DO $wait$
-DECLARE v_released boolean; v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
+DECLARE
+  v_released boolean;
+  v_deadline timestamptz := clock_timestamp() + interval '15 seconds';
 BEGIN
   LOOP
     SELECT released INTO v_released FROM public.sales_intake_race_barriers WHERE race_label = current_setting('race_label', true);
