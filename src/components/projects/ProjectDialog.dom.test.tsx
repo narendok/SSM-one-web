@@ -14,7 +14,10 @@ const toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn(
 
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/lib/lifecycle-template-settings", () => ({ isLifecycleTemplateActionAvailable: () => false }));
-vi.mock("@tanstack/react-start", () => ({ useServerFn: () => vi.fn() }));
+vi.mock("@tanstack/react-start", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-start")>("@tanstack/react-start");
+  return { ...actual, useServerFn: () => vi.fn() };
+});
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
