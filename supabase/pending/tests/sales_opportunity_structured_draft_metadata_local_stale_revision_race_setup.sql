@@ -21,6 +21,9 @@ CREATE TABLE public.structured_draft_stale_revision_race_results (
 
 INSERT INTO public.structured_draft_stale_revision_race_control (singleton) VALUES (true);
 
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
+SELECT set_config('request.jwt.claim.role', 'authenticated', false);
+
 CREATE TABLE public.structured_draft_stale_revision_race_baseline AS
 SELECT * FROM public.save_sales_opportunity_structured_draft_revision(
   '00000000-0000-4000-8000-000000000201',
