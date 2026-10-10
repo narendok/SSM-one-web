@@ -34,7 +34,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StructuredPreviewExitDialog } from "@/components/lifecycle/StructuredPreviewExitBoundary";
 import {
-  fetchSalesOverview,
   type CustomerRequirement,
   type MasterSpecificationSummary,
   type SalesOpportunity,
