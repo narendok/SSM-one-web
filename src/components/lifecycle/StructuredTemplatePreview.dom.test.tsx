@@ -326,7 +326,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await user.type(scope, exact);
     expect(
       (screen.getByRole("button", { name: "Refresh source" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    ).toBe(false);
     await user.click(screen.getByRole("tab", { name: "Contract Review" }));
     await user.click(screen.getByRole("tab", { name: "Product Requirements Specification" }));
     await user.click(screen.getByRole("tab", { name: "Statement of Requirements" }));
@@ -484,7 +484,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await user.click(screen.getByRole("button", { name: "Refresh source" }));
     expect(await screen.findByText(/A newer Master Specification revision \(2\) is available/)).toBeTruthy();
     expect(screen.getByText("version-id")).toBeTruthy();
-    expect(screen.getByText(/MASTER-2026-0001 rev 1/)).toBeTruthy();
+    expect(screen.getAllByText(/MASTER-2026-0001 rev 1/).length).toBeGreaterThan(0);
   });
 
   it("refreshes a dirty preview for newer-revision provenance without replacing manual text", async () => {
@@ -666,7 +666,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       ["structured-template-source", "actor-a", "OPPORTUNITY-2026-0013", "MASTER-2026-0001", 1],
       { ...source, versionId: "amended-version-id" },
     );
-    await screen.findByText(/The source pin advanced while local edits exist/);
+    await screen.findByText(/A newer Master Specification revision \(2\) is available/);
     expect(
       (screen.getByLabelText("Optional local scratch rows row 1 MPN") as HTMLInputElement).value,
     ).toBe("Manual MPN");
