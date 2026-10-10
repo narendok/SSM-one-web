@@ -121,13 +121,6 @@ function SalesPage() {
       }),
     [sales.data?.feasibilityProvenance],
   );
-  const closeProposal = (open: boolean) => {
-    if (!open) {
-      setLocalPreviewEdits({});
-      setDetail(null);
-    }
-  };
-
   return (
     <PermissionGate permission="sales.view" fallback={<AccessDenied />}>
       <div className="space-y-6">
