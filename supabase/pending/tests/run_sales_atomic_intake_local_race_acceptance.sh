@@ -124,8 +124,10 @@ run_lock_wait_case() {
   printf 'LOCK_WAIT_WORKER_STATUS case=%s status=%s\n' "$label" "$status"
   [[ "$status" != 0 ]] || { cat "$log_dir/worker.log" >&2; return 1; }
   [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunity_intake_receipts WHERE request_key = '$key'")" == "0" ]] || return 1
-  [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunities")" == "0" ]] || return 1
-  printf 'LOCK_WAIT_DENIAL_PASS case=%s receipts=0 opportunities=0\n' "$label"
+  local expected_opportunities=0
+  [[ "$label" == "receipt_replay" ]] && expected_opportunities=1
+  [[ "$(run_psql -Atqc "SELECT count(*) FROM public.sales_opportunities")" == "$expected_opportunities" ]] || return 1
+  printf 'LOCK_WAIT_DENIAL_PASS case=%s receipts_for_key=0 total_opportunities=%s\n' "$label" "$expected_opportunities"
   rm -rf "$log_dir"
 }
 
