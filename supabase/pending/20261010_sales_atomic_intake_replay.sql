@@ -15,9 +15,25 @@
 --   append-only version trigger; and
 -- * public.activity_log's existing Sales audit shape.
 --
--- The server validates/locks every supplied existing source. There is no
--- verified authority for a client to create or choose customer/contact/enquiry
--- records inside this transaction, so such inputs are denied rather than inferred.
+-- Current deployed source access is deliberately global rather than ownership
+-- scoped: the "Sales teams view customers/customer contacts/enquiries" SELECT
+-- policies in `supabase/migrations/20260923173813_447b78e0-6a60-4d69-875a-6b5c7d32691f.sql`
+-- allow a caller with sales.manage to read every RLS-visible source row. The
+-- corresponding "Authenticated users manage customers/customer contacts/enquiries"
+-- policies use sales.manage or admin for writes. This proposal preserves that
+-- verified authority; it does not invent per-customer ownership.
+--
+-- The authoritative allocator is public.next_business_number: deployed source
+-- shows `FOR UPDATE` on the active document_numbering_config row and an UPDATE
+-- returning the next sequence. The sales_opportunities_assign_business_code
+-- trigger calls it when opportunity_number is NULL/blank. See
+-- `supabase/migrations/20260923173813_447b78e0-6a60-4d69-875a-6b5c7d32691f.sql`
+-- for the Sales policies and the currently deployed definitions queried from
+-- public.next_business_number / public.assign_stabilization_codes. This is
+-- source proof only; isolated concurrent transaction acceptance remains required.
+--
+-- The server validates and locks every supplied existing source. It neither
+-- creates sources nor infers a source identity from browser text.
 -- Existing deployed direct-write paths are intentionally untouched by this file.
 
 CREATE TABLE public.sales_opportunity_intake_receipts (
@@ -369,3 +385,10 @@ REVOKE ALL ON FUNCTION public.lookup_sales_opportunity_intake_receipt(uuid) FROM
 -- actual authenticated caller transport, no direct mutations, same-key races,
 -- permission revocation while waiting, source mismatch denial, receipt isolation,
 -- full rollback at every write point, RLS, and non-administrator least privilege.
+-- An active non-admin Sales manager must prove valid use of existing RLS-visible
+-- customer/contact/enquiry sources, while a caller without sales.manage is denied.
+-- The row-locked numbering source has been inspected, but its concurrent behavior
+-- must still be proven by isolated acceptance. After that acceptance is installed,
+-- only the combined intake transition may call this protected action; legacy
+-- opportunity/specification entry points remain unchanged until their separate
+-- controlled-write/direct-mutation-denial transition is accepted.
