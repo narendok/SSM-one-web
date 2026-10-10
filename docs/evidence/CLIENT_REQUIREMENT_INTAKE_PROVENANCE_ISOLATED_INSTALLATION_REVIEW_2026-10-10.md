@@ -6,15 +6,17 @@
 
 | Item | Value |
 | --- | --- |
-| Reviewed repository HEAD | `f81de56bb07eb0efc49cb5ec0ef59c1e5b37f567` |
+| Reviewed repository HEAD | Pending final verification after this source-only compatibility split |
 | Only permitted future installation target | `egjotuxqguifnvdnflan` |
 | Explicitly excluded production target | `yyrvduosyyaluifqvwkr` |
-| Full pending proposal | `supabase/pending/20261005_client_requirement_intake.sql` |
-| Full proposal SHA-256 | `dee4a6254cab56a84848713bab9dadb1a06b1c0cbc784bab1f1d5e3a3c15f026` |
+| Phase 1 pending intake/provenance proposal | `supabase/pending/20261005_client_requirement_intake.sql` |
+| Phase 1 SHA-256 | Pending final verification after this source-only compatibility split |
+| Phase 2 separately gated direct-write compatibility transition | `supabase/pending/20261011_requirement_feasibility_direct_write_compatibility_transition.sql` |
+| Phase 2 SHA-256 | Pending final verification after this source-only compatibility split |
 
-`dee4a625…` is the SHA-256 of the **entire 841-line intake proposal file**, not a view-only hash. It includes external intake, feasibility assignment and response receipts, protected routines, immutable source pins, and the provenance view.
+`dee4a625…` is a stale pre-split SHA-256 of the former entire 841-line intake proposal file, not a view-only hash. It is not approval evidence for either phase. Phase 1 retains external intake, protected feasibility RPCs, immutable source pins, and the invoker provenance view. Phase 2 contains only the deferred legacy scope-helper removal and feasibility direct-write/policy removal.
 
-Any changed byte, target mismatch, pre-existing incompatible object, or unverified connection identity is a stop condition. The earlier five-file approval does **not** cover this source pin, this view, the post-lock authorization revalidation, or any installation/transport action described here.
+Any changed byte, target mismatch, pre-existing incompatible object, or unverified connection identity is a stop condition. The earlier five-file approval does **not** cover either new phase hash, this view, the post-lock authorization revalidation, or any installation/transport action described here.
 
 ## 2. Exact changed contract inventory
 
@@ -42,7 +44,7 @@ Any changed byte, target mismatch, pre-existing incompatible object, or unverifi
 | `external_requirement_submission_requests` | Adds nullable `payload_canonical` if an older draft table exists, plus an object-shape check accepting `NULL`. | Legacy receipts without canonical payload remain deliberately non-replayable; they must use a new request key. |
 | `requirement_feasibility_reviews` | Adds nullable explicit source revision/version IDs and numbers plus applicable workstreams; adds all-null-or-complete-pin check. | No legacy backfill. Unpinned legacy rows remain readable but report `UNAVAILABLE_LEGACY_OR_MISSING_PIN` when joins are readable. |
 | `customer_requirement_revisions` | Adds unique `(requirement_id, revision_number)` if absent. | Must be preflighted for existing duplicate values before install. |
-| `requirement_feasibility_reviews` uniqueness | Replaces only an exactly-shaped legacy unique `(requirement_id, department_id)` constraint with `UNIQUE (source_revision_id, department_id)`. | Preserves historical verdicts and permits a separate review for a new immutable revision. See irreversible/destructive effects below. |
+| `requirement_feasibility_reviews` uniqueness | Replaces only an exactly-shaped legacy unique `(requirement_id, department_id)` constraint with `UNIQUE (source_revision_id, department_id)`. | Preserves historical verdicts and permits a separate review for a new immutable revision. This remains a Phase 1 non-additive change. |
 
 ### Explicitly not created or activated
 
@@ -78,17 +80,27 @@ No user-interface wiring, Save action, generation/publishing path, background wo
 - Historical pins retain their referenced revision/version even after a requirement header or Master Specification advances.
 - Invalid or incomplete workstreams fail protected assignment rather than creating a speculative applicability result.
 
-## 5. Non-additive / irreversible effects requiring explicit review
+## 5. Installation phases and non-additive effects
 
-This proposal is **not additive-only**.
+### Phase 1 — intake, protected feasibility paths, historical pins, and invoker provenance
+
+`20261005_client_requirement_intake.sql` remains non-additive only for the exact legacy submission and response signature removals and the feasibility uniqueness replacement:
 
 1. It conditionally drops any `requirement_feasibility_reviews` unique constraint whose exact ordered keys are `(requirement_id, department_id)`, then adds `requirement_feasibility_reviews_revision_department_key` on `(source_revision_id, department_id)`.
 2. It drops the former five-argument `submit_external_customer_requirement(...)` signature if present, after revoking its execution.
-3. It drops the former three-argument `external_requirement_scope_allows(...)` signature if present, after revoking its execution.
-4. It drops the former five-argument `record_requirement_feasibility_response(...)` signature if present, after revoking its execution.
-5. It revokes authenticated `INSERT`, `UPDATE`, and `DELETE` on `requirement_feasibility_reviews` and drops the policy named `Sales users manage feasibility reviews` if it exists.
+3. It drops the former five-argument `record_requirement_feasibility_response(...)` signature if present, after revoking its execution.
 
-These changes can break deployed callers, dependencies, or historical workflows. The proposal avoids `CASCADE`, but successful application still changes callable/API and direct-write behavior. A preflight must inventory dependent functions, views, policies, triggers, grants, application callers, and constraint names before any installation decision. There is no automatic down migration in this source-only packet.
+These signature removals remain in Phase 1 because the six-argument protected functions use a request key for canonical replay; keeping the old callable overload would retain a path that bypasses that binding. They still require a target-bound dependency inventory and separate installation approval. No `CASCADE` is used.
+
+### Phase 2 — separately gated direct-write compatibility transition
+
+`20261011_requirement_feasibility_direct_write_compatibility_transition.sql` contains only the operations deferred from Phase 1:
+
+1. revoke and drop the former three-argument `external_requirement_scope_allows(uuid,uuid,uuid)` overload if it exists;
+2. revoke authenticated `INSERT`, `UPDATE`, and `DELETE` on `requirement_feasibility_reviews`; and
+3. drop the `Sales users manage feasibility reviews` policy if it exists.
+
+Phase 1 deliberately retains those legacy paths. That preserves existing behavior only; it does **not** establish that direct writers or the legacy scope helper are safe, approved, or production-ready. Phase 2 requires its own target-bound dependency/compatibility preflight, direct-writer migration proof, protected-path caller acceptance, rollback/restore plan, and explicit approval. There is no automatic down migration for either phase.
 
 ## 6. Dependency and collision preflight — read-only only
 
@@ -100,7 +112,7 @@ Once target binding is proven, capture read-only evidence for:
 2. Exact schemas, column types/nullability/defaults, foreign keys, indexes, constraints, policies, triggers, and grants for `external_requirement_submission_requests`, `requirement_feasibility_reviews`, `customer_requirement_revisions`, `customer_requirements`, `master_specifications`, `master_specification_versions`, `external_portal_access`, `external_contacts`, `external_parties`, `sales_opportunities`, `employees`, `employee_departments`, and `activity_log`.
 3. Exact signatures, owners, security modes, search paths, dependencies, and existing privileges for every same-named/overloaded function in Section 2, plus `external_current_contact_id`, `external_current_party_id`, and `has_permission`.
 4. Existing data compatibility: duplicate `(requirement_id, revision_number)` rows; duplicate/legacy feasibility rows; rows that would violate all-null-or-complete pins; existing receipt-table rows and payload shape; constraint/policy names targeted by conditional drops.
-5. Dependencies/callers of every candidate dropped overload, legacy unique constraint, direct feasibility-write grant, and `Sales users manage feasibility reviews` policy.
+5. Phase 1 dependencies/callers of the old submission/response overloads and legacy unique constraint; Phase 2 dependencies/callers of the three-argument helper, direct feasibility-write grant, and `Sales users manage feasibility reviews` policy.
 6. Existing non-admin external contact and engineering reviewer identities, normal authenticated caller transport, permission/department membership, source rows, and auditable isolated cleanup capacity. Do not create or modify any of them.
 7. RLS/grant matrix for every source relation and exact expected owner/invoker behavior; no service-role, owner, synthetic-GUC, or admin-only substitute proves end-user access.
 
@@ -111,7 +123,7 @@ Stop on absent/mismatched prerequisites, collisions, unknown dependency scope, i
 - Intake holds a transaction advisory lock by request key, revalidates external identity/scope after waiting, locks the receipt row, and writes header/revision/audit/receipt as one transaction. A failure should roll back the entire graph, but this must be proven on the isolated target with its actual triggers/policies.
 - The receipt table's unique `requirement_id` and immutable replay binding must be checked against existing data and concurrent callers.
 - Assignment locks requirement, exact revision, review, and Master version; response locks the same governed source sequence. Actual target lock order, trigger interactions, deadlock behavior, and statement timeouts remain unverified.
-- The proposal includes destructive grant/policy/signature/constraint changes with no supplied reversal migration. Installation rollback strategy must be an isolated snapshot/approved restoration plan, not ad hoc deletion.
+- Phase 1 includes signature/constraint changes; Phase 2 includes the deferred helper, grant, and policy changes. Neither phase supplies a reversal migration. Each installation rollback strategy must use an isolated snapshot/approved restoration plan, not ad hoc deletion.
 - Managed test fixtures must be uniquely recorded by request key and cleaned up only with a dependency-safe, approved isolated procedure; no broad delete and no historical-row edits.
 
 ## 8. Executed local synthetic evidence
@@ -137,7 +149,7 @@ Synthetic limitations: these runs use owner fixture sessions, fixture-only grant
 After a separate installation approval, and only on `egjotuxqguifnvdnflan`, all of the following remain required:
 
 1. Read-only preflight in Section 6, including collisions/dependencies and actual object signatures.
-2. Install-time migration transaction behavior and approved restore/rollback rehearsal for each destructive change.
+2. Phase 1 install-time transaction behavior and approved restore/rollback rehearsal for its signature/constraint changes; separately, the same proof for every Phase 2 helper/grant/policy removal.
 3. Default post-install transport/privilege verification: direct receipt read/write denial, private-helper denial, non-granted projection denial, and any expected denied RPC paths.
 4. Real external authenticated caller: valid scoped submission; exact replay; payload/actor/key conflicts; expiry/revocation; cross-customer/opportunity rejection; direct underlying-table denial; full transaction rollback after an isolated failure boundary.
 5. Real two-session external concurrency: same key/same canonical payload; same key/conflicting payload; revocation while waiting for both fresh request and existing receipt replay.
@@ -149,17 +161,20 @@ After a separate installation approval, and only on `egjotuxqguifnvdnflan`, all 
 ## 10. Separate approvals required
 
 1. **Isolated read-only preflight approval** for the target-bound inspection in Section 6. This approval authorizes no installation.
-2. **Isolated installation approval** for exactly the full-file hash `dee4a6254cab56a84848713bab9dadb1a06b1c0cbc784bab1f1d5e3a3c15f026`, including the non-additive changes in Section 5.
-3. **Existing-identity/caller acceptance approval** to use already approved isolated identities and unique disposable fixtures after installation; no user, role, or permission changes are included.
-4. **Any additional caller-access approval** if the provenance view is to be exposed to authenticated users. This packet proposes no such grant.
-5. **Future frontend/Save/generation/publish enablement approval**. None is included here.
+2. **Phase 1 isolated installation approval** for its final full-file hash only, including its signature/constraint changes.
+3. **Phase 2 isolated transition approval** for its final full-file hash only, after its separate direct-writer/helper dependency evidence and compatibility acceptance pass.
+4. **Existing-identity/caller acceptance approval** to use already approved isolated identities and unique disposable fixtures after installation; no user, role, or permission changes are included.
+5. **Any additional caller-access approval** if the provenance view is to be exposed to authenticated users. This packet proposes no such grant.
+6. **Future frontend/Save/generation/publish enablement approval**. None is included here.
 
 No one approval substitutes for another. Prior five-file approval does not authorize any item above.
 
 ## 11. Exact source paths and content-integrity check
 
 - Review packet: `docs/evidence/CLIENT_REQUIREMENT_INTAKE_PROVENANCE_ISOLATED_INSTALLATION_REVIEW_2026-10-10.md`
-- Pending full proposal: `supabase/pending/20261005_client_requirement_intake.sql`
+- Phase 1 pending intake/provenance proposal: `supabase/pending/20261005_client_requirement_intake.sql`
+- Phase 2 deferred direct-write compatibility transition: `supabase/pending/20261011_requirement_feasibility_direct_write_compatibility_transition.sql`
+- Split static guard: `supabase/pending/tests/check_client_requirement_intake_compatibility_split.sh`
 - Managed acceptance specification: `supabase/pending/tests/client_requirement_intake_acceptance.sql`
 - Guarded isolated preflight runner: `supabase/pending/tests/run_client_requirement_intake_isolated_acceptance.sh`
 - Local intake evidence runners: `supabase/pending/tests/run_client_requirement_intake_local_acceptance.sh`, `supabase/pending/tests/run_client_requirement_intake_local_concurrency.sh`, `supabase/pending/tests/run_client_requirement_intake_local_revocation_wait.sh`, `supabase/pending/tests/run_client_requirement_intake_local_revocation_replay_wait.sh`
