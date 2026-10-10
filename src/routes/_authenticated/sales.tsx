@@ -493,18 +493,15 @@ function SalesPage() {
 function ProposalDetail({
   detail,
   requirements,
-  localPreviewEdits,
-  onLocalPreviewEditsChange,
   onOpenChange,
 }: {
   detail: SalesDetail | null;
   requirements: CustomerRequirement[];
-  localPreviewEdits: Record<string, string>;
-  onLocalPreviewEditsChange: (edits: Record<string, string>) => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [previewDirty, setPreviewDirty] = useState(false);
+  const [localPreviewEdits, setLocalPreviewEdits] = useState<Record<string, string>>({});
   const specification = useQuery({
     queryKey: [
       "master_specification",
