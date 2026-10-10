@@ -597,7 +597,7 @@ function ProposalDetail({
               <StructuredTemplatePreview
                 sourcePin={sourcePin}
                 localEdits={localPreviewEdits}
-                onLocalEditsChange={onLocalPreviewEditsChange}
+                onLocalEditsChange={setLocalPreviewEdits}
                 onDirtyChange={setPreviewDirty}
               />
             </div>
