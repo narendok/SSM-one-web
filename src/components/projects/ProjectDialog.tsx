@@ -32,7 +32,7 @@ export function ProjectDialog({ open, onOpenChange, editing, onSaved, defaultDep
     let projectSaved = false;
     try {
       const query = editing ? sb.from("projects").update(payload).eq("id", editing.id) : sb.from("projects").insert(payload);
-      const { data: savedProject, error } = await query.select("id").single();
+      const { data: savedProject, error } = await query.select("id,project_drive_node_id").single();
       if (error || !savedProject) throw new Error(error?.message ?? "Project could not be saved.");
       projectSaved = true;
       await Promise.all([
@@ -41,7 +41,8 @@ export function ProjectDialog({ open, onOpenChange, editing, onSaved, defaultDep
         queryClient.invalidateQueries({ queryKey: ["drive_children"] }),
         queryClient.invalidateQueries({ queryKey: ["department_drive_roots", departmentId] }),
       ]);
-      toast.success(editing ? "Project updated" : "Project created with its folder structure");
+      const savedMessage = editing ? "Project updated" : "Project created";
+      toast.success(savedProject.project_drive_node_id ? `${savedMessage}. Project Drive root is linked.` : savedMessage);
       if (isLifecycleTemplateActionAvailable()) {
         try {
           const outcome = await generateDrafts({ data: { projectId: savedProject.id } });
