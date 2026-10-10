@@ -133,7 +133,7 @@ run_lock_wait_case() {
   wait "$worker_pid" && worker_status=0 || worker_status=$?
   printf 'CONTRACT_LOCK_WAIT_STATUS case=%s holder=%s worker=%s\n' "$label" "$holder_status" "$worker_status"
   [[ "$holder_status" == 0 && "$worker_status" != 0 ]] || { cat "$log_dir/holder.log" "$log_dir/worker.log" >&2; return 1; }
-  rg -q '42501.*Sales management permission is required|Sales management permission is required.*42501' "$log_dir/worker.log" || { cat "$log_dir/worker.log" >&2; return 1; }
+  rg -q 'ERROR:.*42501: Sales management permission is required|ERROR:.*Sales management permission is required' "$log_dir/worker.log" || { cat "$log_dir/worker.log" >&2; return 1; }
   ! rg -q '^\([0-9]+ row' "$log_dir/worker.log" || { cat "$log_dir/worker.log" >&2; return 1; }
   local expected_receipts=0 expected_opportunities=0 expected_specs=0 expected_versions=0 expected_audits=0
   if [[ "$label" == "receipt_replay" ]]; then
