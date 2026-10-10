@@ -49,6 +49,10 @@ No direct external table policy or grant is widened: the pending routine is the 
 
 The intake UI remains disabled until an isolated authenticated external-contact acceptance proves the protected RPC, atomic audit rollback, expiry/revocation/wrong-pair denial, direct-table denial, and caller RLS. No policy or live data changed.
 
+### 2026-10-11 local-only lock-wait addendum
+
+The current pending proposal SHA-256 is `aed3553a9d556953d01cf6b10371e10c14575eca656800872195323a819ce010`; earlier local acceptance notes pinned `b5cbee1799b63e9835a3b6760358c67312620eeebf6989a78515b49972cfa3b3` and are stale. The proposal now re-derives contact/party and revalidates active scoped access plus party/customer and opportunity/customer bindings **after** the request-key advisory lock and before receipt lookup/replay or any write. New local-only runners cover (1) a new request denied after deactivation committed during the lock wait, with a `0/0/0/0` header/revision/audit/receipt graph, and (2) an already-created same-actor/canonical-payload receipt denied after that same wait/deactivation sequence, with no result returned and its existing `1/1/1/1` graph unchanged. These ran only against disposable owner-session fixtures with synthetic JWT GUCs and fixture-only execution permission; they are not evidence of managed RLS, JWT transport, grants, identities, deployment, or approval.
+
 ## Exact migration and proposal paths
 
 ### Deployed Master Specification migration
