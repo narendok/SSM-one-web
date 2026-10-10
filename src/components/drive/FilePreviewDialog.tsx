@@ -5,7 +5,7 @@ import Papa from "papaparse";
 import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { downloadNode, extOf, formatBytes, signedUrl, type DriveNode } from "@/lib/drive";
+import { downloadNode, extOf, formatBytes, previewUrl, type DriveNode } from "@/lib/drive";
 
 const StlViewer = lazy(() => import("./StlViewer"));
 
@@ -24,7 +24,7 @@ export function FilePreviewDialog({
     setError(null);
     if (!node?.storage_path) return;
     let cancelled = false;
-    signedUrl(node.storage_path, 3600)
+    previewUrl(node.storage_path, 3600)
       .then((u) => !cancelled && setUrl(u))
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Could not open this file"));
     return () => {

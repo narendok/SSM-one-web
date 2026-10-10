@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fetchRevisions, formatBytes, signedUrl, uploadRevision, type DriveNode } from "@/lib/drive";
+import { downloadRevision, fetchRevisions, formatBytes, uploadRevision, type DriveNode, type DriveRevision } from "@/lib/drive";
 
 export function RevisionsDialog({
   node,
@@ -44,11 +44,12 @@ export function RevisionsDialog({
     }
   }
 
-  async function openRevision(path: string) {
+  async function downloadHistoricalRevision(revision: DriveRevision) {
+    if (!node) return;
     try {
-      window.open(await signedUrl(path), "_blank", "noopener");
+      await downloadRevision(node, revision);
     } catch {
-      toast.error("Could not open that version");
+      toast.error("Could not download that version");
     }
   }
 
@@ -94,7 +95,7 @@ export function RevisionsDialog({
                   {r.change_summary || "No note"} · {formatBytes(r.file_size_bytes)} ·{" "}
                   {new Date(r.created_at).toLocaleDateString()}
                 </span>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openRevision(r.storage_path)}>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => downloadHistoricalRevision(r)}>
                   <Download className="h-4 w-4" />
                 </Button>
               </div>
