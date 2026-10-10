@@ -26,7 +26,7 @@ checks = {
     "canonical payload rejects unknown nested keys without array null ambiguity": "EXISTS (SELECT 1 FROM jsonb_object_keys(v_spec) AS key WHERE key <> ALL(v_spec_allowed))" in sql,
     "nested key inspection follows object shape validation": sql.index("IF jsonb_typeof(v_spec) <> 'object' THEN") < sql.index("EXISTS (SELECT 1 FROM jsonb_object_keys(v_spec) AS key WHERE key <> ALL(v_spec_allowed))"),
     "canonical payload requires every emitted specification scalar": "'connectivityAndGnss', 'environmentAndIp'" in sql and "'requirementSummary', 'schedule', 'volumes', 'connectivityAndGnss'" in sql,
-    "jsonb key removals are unambiguous": "(v_canonical->'masterSpecification') - 'changeSummary'::text" in sql and "v_spec_data - 'changeSummary'::text" in sql,
+    "jsonb key removals are unambiguous": "v_spec_data := v_canonical->'masterSpecification';" in sql and "v_spec_data - 'changeSummary'::text" in sql,
     "canonical payload accepts explicit JSON null optionals": "IS DISTINCT FROM 'null' AND jsonb_typeof(p_intake->'application') IS DISTINCT FROM 'string'" in sql,
     "one transaction writes opportunity spec version audit receipt": all(fragment in sql for fragment in ("INSERT INTO public.sales_opportunities", "INSERT INTO public.master_specifications", "INSERT INTO public.master_specification_versions", "INSERT INTO public.activity_log", "INSERT INTO public.sales_opportunity_intake_receipts")),
     "exact actor source payload replay is required": "v_prior.requested_by = v_actor_id" in sql and "v_prior.canonical_payload = v_canonical" in sql and "v_prior.payload_hash = v_payload_hash" in sql,

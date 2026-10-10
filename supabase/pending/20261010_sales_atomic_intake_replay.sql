@@ -309,7 +309,7 @@ BEGIN
     NULLIF(v_canonical->>'nextActionDate', '')::date, v_actor_id
   ) RETURNING * INTO v_opportunity;
 
-  v_spec_data := (v_canonical->'masterSpecification') - 'changeSummary'::text;
+  v_spec_data := v_canonical->'masterSpecification';
   INSERT INTO public.master_specifications (
     specification_number, opportunity_id, customer_id, title, status, current_version, created_by
   ) VALUES (
