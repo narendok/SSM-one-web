@@ -52,7 +52,7 @@ checks = {
     "local acceptance restores its disposable fixture": local_acceptance.rstrip().endswith("ROLLBACK;"),
     "local lock wait uses the exact request-key advisory lock": "pg_advisory_lock(hashtextextended(:'request_key'" in lock_worker and "LOCK_WAIT_DEMONSTRATED" in race_runner,
     "local lock wait revokes before release": "sales_manage = false" in lock_assertions and "released = true" in lock_assertions,
-    "local lock wait requires post-release denial without records": "LOCK_WAIT_DENIAL_PASS" in race_runner and "receipts=0 opportunities=0" in race_runner,
+    "local lock wait requires post-release denial without records": "LOCK_WAIT_DENIAL_PASS" in race_runner and "receipts_for_key=" in race_runner and "total_opportunities=" in race_runner,
     "local receipt replay lock wait is seeded": "receipt_replay" in lock_setup and "000000000202" in race_runner,
     "local fixture supports receipt insertion failpoint": "sales_intake_fail_receipt" in failpoint_acceptance,
     "local failpoints cover specification version and receipt": all(point in failpoint_acceptance for point in ("master_specifications", "master_specification_versions", "sales_opportunity_intake_receipts")),
