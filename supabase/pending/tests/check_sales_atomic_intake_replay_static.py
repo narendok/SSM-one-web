@@ -50,7 +50,7 @@ checks = {
     "local fixture proves allocator locking": "FOR UPDATE" in local_fixture and "document_numbering_config" in local_fixture,
     "local acceptance covers replay conflicts invalid source rollback and races": all(fragment in local_acceptance for fragment in ("Exact replay", "changed payload", "different actor", "invalid source", "rollback", "Two-session race")),
     "local acceptance restores its disposable fixture": local_acceptance.rstrip().endswith("ROLLBACK;"),
-    "local lock wait uses the exact request-key advisory lock": "pg_advisory_xact_lock(hashtextextended(:'request_key'" in lock_worker and "LOCK_WAIT_DEMONSTRATED" in race_runner,
+    "local lock wait uses the exact request-key advisory lock": "pg_advisory_lock(hashtextextended(:'request_key'" in lock_worker and "LOCK_WAIT_DEMONSTRATED" in race_runner,
     "local lock wait revokes before release": "sales_manage = false" in lock_assertions and "released = true" in lock_assertions,
     "local lock wait requires post-release denial without records": "LOCK_WAIT_DENIAL_PASS" in race_runner and "receipts=0 opportunities=0" in race_runner,
     "local receipt replay lock wait is seeded": "receipt_replay" in lock_setup and "000000000202" in race_runner,
