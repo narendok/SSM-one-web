@@ -190,7 +190,7 @@ export function StructuredTemplatePreview({
   const sourceAdvanced = Boolean(
     source.data &&
       Number.isInteger(source.data.currentVersionNumber) &&
-      source.data.currentVersionNumber > source.data.versionNumber,
+      (source.data.currentVersionNumber ?? 0) > source.data.versionNumber,
   );
   const updateLocalEdit = (field: string, value: string) => {
     setUserEdits((current) => ({ ...current, [editKey(kind, field)]: value }));
