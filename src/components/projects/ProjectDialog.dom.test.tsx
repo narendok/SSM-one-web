@@ -6,13 +6,15 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProjectDialog } from "./ProjectDialog";
 
-const insert = vi.fn();
-const update = vi.fn();
-const projectSelect = vi.fn();
-const projectSingle = vi.fn();
-const toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() };
+const mocks = vi.hoisted(() => ({
+  insert: vi.fn(),
+  update: vi.fn(),
+  projectSelect: vi.fn(),
+  projectSingle: vi.fn(),
+  toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() },
+}));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("sonner", () => ({ toast: mocks.toast }));
 vi.mock("@/lib/lifecycle-template-settings", () => ({ isLifecycleTemplateActionAvailable: () => false }));
 vi.mock("@tanstack/react-start", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-start")>("@tanstack/react-start");
@@ -30,10 +32,10 @@ vi.mock("@/integrations/supabase/client", () => ({
         return departmentsQuery;
       }
       const projectQuery = {
-        insert,
-        update,
+        insert: mocks.insert,
+        update: mocks.update,
         eq: () => projectQuery,
-        select: projectSelect,
+        select: mocks.projectSelect,
       };
       return projectQuery;
     },
@@ -63,10 +65,10 @@ async function saveNamedProject(user: ReturnType<typeof userEvent.setup>) {
 }
 
 beforeEach(() => {
-  insert.mockImplementation(() => ({ select: projectSelect }));
-  update.mockImplementation(() => ({ eq: () => ({ select: projectSelect }) }));
-  projectSelect.mockImplementation(() => ({ single: projectSingle }));
-  projectSingle.mockResolvedValue({ data: { id: "project-1", project_drive_node_id: null }, error: null });
+  mocks.insert.mockImplementation(() => ({ select: mocks.projectSelect }));
+  mocks.update.mockImplementation(() => ({ eq: () => ({ select: mocks.projectSelect }) }));
+  mocks.projectSelect.mockImplementation(() => ({ single: mocks.projectSingle }));
+  mocks.projectSingle.mockResolvedValue({ data: { id: "project-1", project_drive_node_id: null }, error: null });
 });
 
 afterEach(() => {
@@ -81,35 +83,35 @@ describe("ProjectDialog save reporting", () => {
 
     await saveNamedProject(user);
 
-    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Project created"));
-    expect(toast.success).not.toHaveBeenCalledWith(expect.stringContaining("folder structure"));
-    expect(insert).toHaveBeenCalledTimes(1);
-    expect(update).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith("Project created"));
+    expect(mocks.toast.success).not.toHaveBeenCalledWith(expect.stringContaining("folder structure"));
+    expect(mocks.insert).toHaveBeenCalledTimes(1);
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 
   it("reports an update and only confirms the caller-visible Drive root pointer when returned", async () => {
-    projectSingle.mockResolvedValueOnce({ data: { id: "project-1", project_drive_node_id: "drive-root-1" }, error: null });
+    mocks.projectSingle.mockResolvedValueOnce({ data: { id: "project-1", project_drive_node_id: "drive-root-1" }, error: null });
     const user = userEvent.setup();
     renderDialog(project);
 
     await user.click(screen.getByRole("button", { name: "Save project" }));
 
-    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Project updated. Project Drive root is linked."));
-    expect(update).toHaveBeenCalledTimes(1);
-    expect(insert).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith("Project updated. Project Drive root is linked."));
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect(mocks.insert).not.toHaveBeenCalled();
   });
 
   it("keeps the dialog open after a save error and never retries the mutation automatically", async () => {
-    projectSingle.mockResolvedValueOnce({ data: null, error: { message: "Project save denied" } });
+    mocks.projectSingle.mockResolvedValueOnce({ data: null, error: { message: "Project save denied" } });
     const user = userEvent.setup();
     renderDialog();
 
     await saveNamedProject(user);
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Project save denied"));
+    await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith("Project save denied"));
     expect(screen.getByRole("dialog")).toBeTruthy();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(insert).toHaveBeenCalledTimes(1);
-    expect(toast.success).not.toHaveBeenCalled();
+    expect(mocks.insert).toHaveBeenCalledTimes(1);
+    expect(mocks.toast.success).not.toHaveBeenCalled();
   });
 });
