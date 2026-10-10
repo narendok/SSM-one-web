@@ -37,7 +37,7 @@ CREATE TABLE public.project_official_decisions (
   CONSTRAINT project_official_decisions_note_short CHECK (length(btrim(note)) BETWEEN 1 AND 512),
   CONSTRAINT project_official_decisions_no_self_amendment CHECK (amendment_parent_decision_id IS NULL OR amendment_parent_decision_id <> id)
 );
-REVOKE ALL ON TABLE public.project_official_decisions FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.project_official_decisions FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE public.project_official_decisions TO service_role;
 ALTER TABLE public.project_official_decisions ENABLE ROW LEVEL SECURITY;
 
@@ -53,7 +53,7 @@ CREATE TABLE public.project_official_decision_evidence (
   CONSTRAINT project_official_decision_evidence_contributor_reference_nonblank CHECK (length(btrim(contributor_reference)) > 0),
   CONSTRAINT project_official_decision_evidence_scope_reference_nonblank CHECK (length(btrim(scope_reference)) > 0)
 );
-REVOKE ALL ON TABLE public.project_official_decision_evidence FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.project_official_decision_evidence FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE public.project_official_decision_evidence TO service_role;
 ALTER TABLE public.project_official_decision_evidence ENABLE ROW LEVEL SECURITY;
 
@@ -68,7 +68,7 @@ CREATE TABLE public.project_official_decision_receipts (
   CONSTRAINT project_official_decision_receipts_payload_hash_nonblank CHECK (length(btrim(payload_hash)) > 0),
   CONSTRAINT project_official_decision_receipts_payload_canonical_object CHECK (jsonb_typeof(payload_canonical) = 'object')
 );
-REVOKE ALL ON TABLE public.project_official_decision_receipts FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.project_official_decision_receipts FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE public.project_official_decision_receipts TO service_role;
 ALTER TABLE public.project_official_decision_receipts ENABLE ROW LEVEL SECURITY;
 
@@ -95,7 +95,7 @@ SELECT
   '[]'::jsonb AS evidence
 FROM public.project_official_decisions decision
 WHERE false;
-REVOKE ALL ON TABLE public.project_official_decision_log FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.project_official_decision_log FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE public.project_official_decision_log TO service_role;
 
 CREATE OR REPLACE FUNCTION public.project_official_decision_canonical_payload(
