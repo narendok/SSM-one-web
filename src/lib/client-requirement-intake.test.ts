@@ -9,6 +9,7 @@ import { createSalesBaselineReadbackAdapter, createSalesBoundRequirementReadback
 
 const pendingSql = readFileSync("supabase/pending/20261005_client_requirement_intake.sql", "utf8");
 const acceptanceSql = readFileSync("supabase/pending/tests/client_requirement_intake_acceptance.sql", "utf8");
+const compatibilityTransitionSql = readFileSync("supabase/pending/20261011_requirement_feasibility_direct_write_compatibility_transition.sql", "utf8");
 const salesBoundSql = readFileSync("supabase/pending/20261006_sales_bound_requirement_creation.sql", "utf8");
 const salesBoundAcceptanceSql = readFileSync("supabase/pending/tests/sales_bound_requirement_creation_acceptance.sql", "utf8");
 const salesBoundConcurrencyHarness = readFileSync("supabase/pending/tests/sales_bound_requirement_creation_concurrency_acceptance.sh", "utf8");
@@ -124,8 +125,9 @@ describe("client requirement intake contract", () => {
     expect(pendingSql).toContain("FROM public.external_requirement_submission_requests");
     expect(pendingSql).toContain("FOR UPDATE;");
     expect(pendingSql).toContain("external_requirement_submission_canonical_payload");
-    expect(pendingSql).toContain("to_regprocedure('public.external_requirement_scope_allows(uuid,uuid,uuid)') IS NOT NULL");
-    expect(pendingSql).toContain("DROP FUNCTION public.external_requirement_scope_allows(uuid,uuid,uuid)");
+    expect(pendingSql).not.toContain("to_regprocedure('public.external_requirement_scope_allows(uuid,uuid,uuid)') IS NOT NULL");
+    expect(pendingSql).not.toContain("DROP FUNCTION public.external_requirement_scope_allows(uuid,uuid,uuid)");
+    expect(compatibilityTransitionSql).toContain("DROP FUNCTION public.external_requirement_scope_allows(uuid,uuid,uuid)");
     expect(pendingSql).not.toContain("GRANT EXECUTE ON FUNCTION public.external_requirement_scope_allows");
   });
 
@@ -137,10 +139,12 @@ describe("client requirement intake contract", () => {
   });
 
   it("uses protected assignment and response routines instead of a caller-settable reviewer marker", () => {
-    expect(pendingSql).toContain("A clean installation has no former three-argument scope helper");
-    expect(pendingSql).toContain("never use CASCADE here");
-    expect(pendingSql).toContain("REVOKE INSERT, UPDATE, DELETE ON TABLE public.requirement_feasibility_reviews FROM authenticated");
-    expect(pendingSql).toContain('DROP POLICY IF EXISTS "Sales users manage feasibility reviews"');
+    expect(pendingSql).toContain("former three-argument scope helper is deliberately retained");
+    expect(pendingSql).not.toContain("REVOKE INSERT, UPDATE, DELETE ON TABLE public.requirement_feasibility_reviews FROM authenticated");
+    expect(pendingSql).not.toContain('DROP POLICY IF EXISTS "Sales users manage feasibility reviews"');
+    expect(compatibilityTransitionSql).toContain("REVOKE INSERT, UPDATE, DELETE ON TABLE public.requirement_feasibility_reviews FROM authenticated");
+    expect(compatibilityTransitionSql).toContain('DROP POLICY IF EXISTS "Sales users manage feasibility reviews"');
+    expect(compatibilityTransitionSql).toContain("Do not use CASCADE.");
     expect(pendingSql).toContain("CREATE OR REPLACE FUNCTION public.assign_requirement_feasibility_review");
     expect(pendingSql).toContain("A terminal review is immutable history; a new requirement revision is required for another feasibility review");
     expect(pendingSql).toContain("source_revision_id uuid REFERENCES public.customer_requirement_revisions(id) ON DELETE RESTRICT");
