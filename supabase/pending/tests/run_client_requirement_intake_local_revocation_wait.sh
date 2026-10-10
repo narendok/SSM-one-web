@@ -42,8 +42,8 @@ wait "$locker_pid"
 waiter_status=0; wait "$waiter_pid" || waiter_status=$?
 [[ "$waiter_status" == "3" ]] || { cat "$log_dir/waiter.err" >&2; exit 1; }
 grep -Fq 'ERROR:  Client requirement access is inactive, expired, revoked, or outside its granted scope' "$log_dir/waiter.err" || { cat "$log_dir/waiter.err" >&2; exit 1; }
-for relation in customer_requirements customer_requirement_revisions activity_log external_requirement_submission_requests; do
-  [[ "$(run_psql -Atqc "SELECT count(*) FROM public.$relation WHERE CASE WHEN '$relation' = 'activity_log' THEN action = 'external_submitted' AND after_data->>'request_key' = '00000000-0000-4000-8000-000000000096' WHEN '$relation' = 'external_requirement_submission_requests' THEN request_key = '00000000-0000-4000-8000-000000000096' ELSE false END")" == "0" ]] || { echo "LOCAL_CASE_FAIL post-revocation wait created $relation data" >&2; exit 1; }
-done
-[[ "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirements WHERE customer_reference = 'REQ-REVOKED-WAIT'")" == "0" && "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions WHERE requirement_id IN (SELECT id FROM public.customer_requirements WHERE customer_reference = 'REQ-REVOKED-WAIT')")" == "0" ]] || { echo 'LOCAL_CASE_FAIL post-revocation wait created requirement graph' >&2; exit 1; }
+[[ "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirements WHERE customer_reference = 'REQ-REVOKED-WAIT'")" == "0" ]] || { echo 'LOCAL_CASE_FAIL post-revocation wait created a requirement header' >&2; exit 1; }
+[[ "$(run_psql -Atqc "SELECT count(*) FROM public.customer_requirement_revisions WHERE requirement_id IN (SELECT id FROM public.customer_requirements WHERE customer_reference = 'REQ-REVOKED-WAIT')")" == "0" ]] || { echo 'LOCAL_CASE_FAIL post-revocation wait created a requirement revision' >&2; exit 1; }
+[[ "$(run_psql -Atqc "SELECT count(*) FROM public.activity_log WHERE action = 'external_submitted' AND after_data->>'request_key' = '00000000-0000-4000-8000-000000000096'")" == "0" ]] || { echo 'LOCAL_CASE_FAIL post-revocation wait created an audit record' >&2; exit 1; }
+[[ "$(run_psql -Atqc "SELECT count(*) FROM public.external_requirement_submission_requests WHERE request_key = '00000000-0000-4000-8000-000000000096'")" == "0" ]] || { echo 'LOCAL_CASE_FAIL post-revocation wait created a request receipt' >&2; exit 1; }
 printf 'CLIENT_REQUIREMENT_LOCAL_REVOCATION_WAIT_PASS initial_scope=authorized revocation=committed_before_unlock waiter_sqlstate=P0001 request_graph=0/0/0/0\n'
