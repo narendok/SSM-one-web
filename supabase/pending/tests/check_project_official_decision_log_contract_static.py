@@ -2,8 +2,8 @@
 """Static guard for the unapplied project official decision-log proposal."""
 from pathlib import Path
 
-root = Path(__file__).resolve().parents[2]
-sql = (root / "20261010_project_official_decision_log_contract.sql").read_text()
+pending = Path(__file__).resolve().parents[1]
+sql = (pending / "20261010_project_official_decision_log_contract.sql").read_text()
 harness = (Path(__file__).resolve().parent / "project_official_decision_log_contract_acceptance.sql").read_text()
 
 checks = {
