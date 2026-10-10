@@ -44,7 +44,6 @@ const project = {
 };
 
 function renderPanel(initialDocuments?: typeof historyRows) {
-  historyQuery.mockImplementation(() => Promise.resolve({ data: initialDocuments ?? historyRows, error: null }));
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: initialDocuments ? Infinity : 0 } } });
   if (initialDocuments) queryClient.setQueryData(["lifecycle-generated-documents", project.id], initialDocuments);
   const root = createRootRoute({ component: () => <LifecycleDocumentDraftPanel project={project} /> });
@@ -107,7 +106,7 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
 
     await selectReadyDraft(user);
     await user.click(screen.getByRole("button", { name: "Generate draft" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Protected action rejected");
+    expect((await screen.findByRole("alert")).textContent).toContain("Protected action rejected");
     expect(screen.getByText(/DOC-001 · template v2/)).toBeTruthy();
     expect(invalidate).not.toHaveBeenCalled();
   });
@@ -119,7 +118,7 @@ describe("LifecycleDocumentDraftPanel history reads", () => {
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
     await user.click(await screen.findByRole("button", { name: "Refresh department drafts" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("1 drafts need attention: Template scope unavailable");
+    expect((await screen.findByRole("alert")).textContent).toContain("1 drafts need attention: Template scope unavailable");
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["lifecycle-generated-documents", project.id] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["drive_children"] });
   });
