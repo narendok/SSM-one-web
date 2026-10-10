@@ -86,6 +86,17 @@ def main() -> None:
     require(rollback_acceptance.read_text(), "update_receipt", "update receipt rollback case")
     require(rollback_assertions.read_text(), "STRUCTURED_DRAFT_ROLLBACK_ACCEPTANCE_PASS", "rollback success marker")
     require(rollback_runner.read_text(), "Refusing a non-private local structured-draft rollback target", "rollback local-only runner refusal")
+    authorization_setup = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_authorization_after_lock_setup.sql"
+    authorization_worker = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_authorization_after_lock_worker.sql"
+    authorization_assertions = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_authorization_after_lock_assertions.sql"
+    authorization_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_authorization_after_lock.sh"
+    require(authorization_setup.read_text(), "LOCAL DISPOSABLE AUTHORIZATION-AFTER-LOCK FIXTURE ONLY", "authorization-after-lock fixture boundary")
+    require(authorization_worker.read_text(), "Its save call must wait inside the contract", "authorization-after-lock worker boundary")
+    require(authorization_assertions.read_text(), "Authorization-after-lock denial changed persisted draft contents", "authorization-after-lock exact-state assertion")
+    require(authorization_assertions.read_text(), "Sales management permission is required", "authorization-after-lock denial assertion")
+    require(authorization_runner.read_text(), "CONTRACT_CONTENTION_OBSERVED case=%s worker_lock=%s", "authorization-after-lock lock evidence")
+    require(authorization_runner.read_text(), "FIXTURE_PERMISSION_REVOCATION_COMMITTED case=%s", "authorization-after-lock committed revocation")
+    require(authorization_runner.read_text(), "Fixture-only transport; the pending proposal remains fully revoked by default.", "authorization-after-lock fixture transport boundary")
     print("structured draft metadata static checks: PASS")
 
 
