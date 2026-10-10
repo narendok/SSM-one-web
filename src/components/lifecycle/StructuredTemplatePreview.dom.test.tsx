@@ -174,8 +174,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     previewSource.mockResolvedValue(source);
     let firstResolve: (value: { data: { id: string; name: string; part_number: string; manufacturer: string | null }[]; error: null }) => void = () => undefined;
     const first = new Promise<{ data: { id: string; name: string; part_number: string; manufacturer: string | null }[]; error: null }>((resolve) => { firstResolve = resolve; });
-    const second = vi.fn().mockResolvedValue({ data: [], error: null });
-    const limit = vi.fn().mockReturnValueOnce(first).mockImplementation(second);
+    const limit = vi.fn().mockReturnValueOnce(first).mockResolvedValueOnce({ data: [], error: null });
     vi.mocked(supabase.from).mockReturnValue({ select: () => ({ or: () => ({ limit }) }) } as never);
     const user = userEvent.setup();
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><StructuredTemplatePreview project={{ id: "project-id", name: "Test project", code: "TEST" }} /></QueryClientProvider>);
