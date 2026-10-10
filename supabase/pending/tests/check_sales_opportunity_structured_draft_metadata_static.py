@@ -59,6 +59,10 @@ def main() -> None:
     stale_worker = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_stale_revision_race_worker.sql"
     stale_assertions = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_stale_revision_race_assertions.sql"
     stale_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_stale_revision_race.sh"
+    rollback_setup = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_rollback_setup.sql"
+    rollback_acceptance = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_rollback_acceptance.sql"
+    rollback_assertions = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_rollback_assertions.sql"
+    rollback_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_rollback_acceptance.sh"
     require(fixture.read_text(), "LOCAL DISPOSABLE FIXTURE ONLY", "local fixture boundary")
     require(runtime.read_text(), "STRUCTURED_DRAFT_LOCAL_ACCEPTANCE_PASS", "runtime acceptance success marker")
     require(runner.read_text(), "Refusing a non-private local structured-draft acceptance target.", "local-only runner refusal")
@@ -75,6 +79,13 @@ def main() -> None:
     require(stale_assertions.read_text(), "v_drafts <> 1 OR v_revisions <> 2 OR v_requests <> 2", "stale no-loser-write assertion")
     require(stale_runner.read_text(), "CONTRACT_CONTENTION_OBSERVED workers=%s", "stale contract lock observation")
     require(stale_runner.read_text(), "Fixture-only transport; the pending proposal remains fully revoked by default.", "stale fixture-only transport boundary")
+    require(rollback_setup.read_text(), "STRUCTURED_DRAFT_TEST_FAILPOINT", "rollback failpoint trigger")
+    require(rollback_acceptance.read_text(), "create_revision", "create revision rollback case")
+    require(rollback_acceptance.read_text(), "create_receipt", "create receipt rollback case")
+    require(rollback_acceptance.read_text(), "update_revision", "update revision rollback case")
+    require(rollback_acceptance.read_text(), "update_receipt", "update receipt rollback case")
+    require(rollback_assertions.read_text(), "STRUCTURED_DRAFT_ROLLBACK_ACCEPTANCE_PASS", "rollback success marker")
+    require(rollback_runner.read_text(), "Refusing a non-private local structured-draft rollback target.", "rollback local-only runner refusal")
     print("structured draft metadata static checks: PASS")
 
 
