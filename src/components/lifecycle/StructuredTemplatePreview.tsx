@@ -263,18 +263,18 @@ export function StructuredTemplatePreview({
       actorId ?? "signed-out",
       capabilitySourceId,
     ],
-    queryFn: () =>
-      source.data
-        ? discoverCapability({
-            data: {
-              opportunityId: source.data.opportunityId,
-              customerId: source.data.customerId,
-              masterSpecificationId: source.data.specificationId,
-              masterSpecificationVersionId: source.data.versionId,
-            },
-          })
-        : Promise.resolve(null),
-    enabled: Boolean(actorId && capabilitySourceId),
+    queryFn: () => {
+      if (!source.data) throw new Error("The pinned Sales source is unavailable.");
+      return discoverCapability({
+        data: {
+          opportunityId: source.data.opportunityId,
+          customerId: source.data.customerId,
+          masterSpecificationId: source.data.specificationId,
+          masterSpecificationVersionId: source.data.versionId,
+        },
+      });
+    },
+    enabled: Boolean(actorId && capabilitySourceId && isStructuredSalesPreviewKind(kind)),
     retry: false,
   });
   const structuredHistory = useQuery({
