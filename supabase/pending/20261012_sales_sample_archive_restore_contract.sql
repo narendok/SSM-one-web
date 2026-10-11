@@ -192,6 +192,11 @@ BEGIN
     IF v_receipt.actor_user_id=v_actor AND v_receipt.action='RESTORE' AND v_receipt.payload_hash=v_hash THEN RETURN QUERY SELECT v_receipt.id,true; RETURN; END IF;
     RAISE EXCEPTION 'Restore request key conflicts';
   END IF;
+  IF (SELECT count(*) FROM public.sales_sample_archive_manifest_items WHERE manifest_id=p_archive_manifest_id) <> 10 THEN RAISE EXCEPTION 'Archive manifest does not contain the exact reviewed root set'; END IF;
+  PERFORM public.sales_sample_archive_canonical_roots((
+    SELECT jsonb_agg(jsonb_build_object('kind', root_kind, 'id', root_id, 'displayNumber', display_number) ORDER BY root_kind, display_number, root_id)
+    FROM public.sales_sample_archive_manifest_items WHERE manifest_id=p_archive_manifest_id
+  ));
   INSERT INTO public.sales_sample_archive_manifests(action,request_key,actor_user_id,reason,payload_hash,prior_manifest_id,result) VALUES('RESTORE',p_request_key,v_actor,btrim(p_reason),v_hash,p_archive_manifest_id,'{}') RETURNING id INTO v_manifest;
   FOR v_item IN
     SELECT *
@@ -200,12 +205,11 @@ BEGIN
     ORDER BY item.root_kind,item.display_number
     FOR UPDATE
   LOOP
-    IF (SELECT count(*) FROM public.sales_sample_archive_manifest_items WHERE manifest_id=p_archive_manifest_id) <> 10 THEN RAISE EXCEPTION 'Archive manifest does not contain the exact reviewed root set'; END IF;
     IF v_item.root_kind='OPPORTUNITY' THEN
-      PERFORM 1 FROM public.sales_opportunities WHERE id=v_item.root_id AND opportunity_number=v_item.display_number AND archive_manifest_id=p_archive_manifest_id AND archived_at IS NOT NULL FOR UPDATE;
+      PERFORM 1 FROM public.sales_opportunities WHERE id=v_item.root_id AND opportunity_number=v_item.display_number AND name='SYNTHETIC ONLY — Automotive Vehicle Tracker' AND customer_id='03e06115-a7d4-4965-9e92-9c37462f5ddc'::uuid AND stage='new' AND status='active' AND archive_manifest_id=p_archive_manifest_id AND archived_at IS NOT NULL FOR UPDATE;
       IF NOT FOUND OR v_item.prior_state IS DISTINCT FROM jsonb_build_object('stage','new','status','active','name','SYNTHETIC ONLY — Automotive Vehicle Tracker','customerId','03e06115-a7d4-4965-9e92-9c37462f5ddc','archivedAt',NULL) THEN RAISE EXCEPTION 'Archived opportunity no longer matches its manifest'; END IF;
     ELSE
-      PERFORM 1 FROM public.customer_requirements WHERE id=v_item.root_id AND requirement_number=v_item.display_number AND archive_manifest_id=p_archive_manifest_id AND archived_at IS NOT NULL FOR UPDATE;
+      PERFORM 1 FROM public.customer_requirements WHERE id=v_item.root_id AND requirement_number=v_item.display_number AND title='testcust' AND customer_id='a2f299d4-f8ba-4c5c-8dcf-5437bb21166e'::uuid AND opportunity_id='0f965acc-5f00-4e3d-9000-9176d739a38c'::uuid AND status='draft' AND current_revision=1 AND archive_manifest_id=p_archive_manifest_id AND archived_at IS NOT NULL FOR UPDATE;
       IF NOT FOUND OR v_item.prior_state IS DISTINCT FROM jsonb_build_object('status','draft','title','testcust','customerId','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','opportunityId','0f965acc-5f00-4e3d-9000-9176d739a38c','currentRevision',1,'archivedAt',NULL) THEN RAISE EXCEPTION 'Archived requirement no longer matches its manifest'; END IF;
     END IF;
     v_snapshot:=public.sales_sample_archive_dependency_snapshot(v_item.root_kind,v_item.root_id);
