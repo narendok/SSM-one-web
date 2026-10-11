@@ -193,7 +193,13 @@ BEGIN
     RAISE EXCEPTION 'Restore request key conflicts';
   END IF;
   INSERT INTO public.sales_sample_archive_manifests(action,request_key,actor_user_id,reason,payload_hash,prior_manifest_id,result) VALUES('RESTORE',p_request_key,v_actor,btrim(p_reason),v_hash,p_archive_manifest_id,'{}') RETURNING id INTO v_manifest;
-  FOR v_item IN SELECT * FROM public.sales_sample_archive_manifest_items WHERE manifest_id=p_archive_manifest_id ORDER BY root_kind,display_number FOR UPDATE LOOP
+  FOR v_item IN
+    SELECT *
+    FROM public.sales_sample_archive_manifest_items AS item
+    WHERE item.manifest_id=p_archive_manifest_id
+    ORDER BY item.root_kind,item.display_number
+    FOR UPDATE
+  LOOP
     IF v_item.root_kind='OPPORTUNITY' THEN
       PERFORM 1 FROM public.sales_opportunities WHERE id=v_item.root_id AND opportunity_number=v_item.display_number AND archive_manifest_id=p_archive_manifest_id AND archived_at IS NOT NULL FOR UPDATE;
       IF NOT FOUND THEN RAISE EXCEPTION 'Archived opportunity no longer matches its manifest'; END IF;
