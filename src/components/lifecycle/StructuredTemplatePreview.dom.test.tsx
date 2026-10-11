@@ -49,7 +49,7 @@ vi.mock("@/lib/structured-sales-draft.functions", () => ({
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: vi.fn(), storage: { from: vi.fn() } },
+  supabase: { from: vi.fn(), rpc: vi.fn(), storage: { from: vi.fn() } },
 }));
 
 vi.mock("@/lib/project-bom.functions", async (importOriginal) => {
@@ -249,6 +249,7 @@ afterEach(() => {
   previewSource.mockReset();
   discoverStructuredSalesDraftCapabilityMock.mockReset().mockResolvedValue(null);
   vi.mocked(supabase.from).mockReset();
+  vi.mocked(supabase.rpc).mockReset();
   vi.mocked(supabase.storage.from).mockReset();
   fetchProjectBomsMock.mockReset().mockResolvedValue([]);
   fetchProjectBomItemsMock.mockReset().mockResolvedValue(null);
