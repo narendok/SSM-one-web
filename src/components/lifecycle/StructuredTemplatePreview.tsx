@@ -256,7 +256,7 @@ export function StructuredTemplatePreview({
   );
   const verifiedSource = actorId ? source.data : undefined;
   const capabilitySourceId = verifiedSource
-    ? `${source.data.opportunityId}:${source.data.customerId}:${source.data.specificationId}:${source.data.versionId}`
+    ? `${verifiedSource.opportunityId}:${verifiedSource.customerId}:${verifiedSource.specificationId}:${verifiedSource.versionId}`
     : null;
   const isSalesDraftKind = isStructuredSalesPreviewKind(kind);
   const capabilityDiscovery = useQuery({

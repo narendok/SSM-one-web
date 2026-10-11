@@ -50,7 +50,7 @@ export const discoverStructuredSalesDraftCapability = createServerFn({ method: "
 
     // REVIEW-ONLY DEPENDENCY: this RPC must prove caller authorization, source
     // pins, and one active private location while exposing no private tables.
-    const { data: location, error: locationError } = await context.supabase.rpc(
+    const { data: location, error: locationError } = await (context.supabase as any).rpc(
       "discover_sales_opportunity_structured_draft_location",
       {
         p_opportunity_id: data.opportunityId,
@@ -64,7 +64,7 @@ export const discoverStructuredSalesDraftCapability = createServerFn({ method: "
       throw new Error("The private Sales draft location could not be verified.");
     }
 
-    const first = location?.[0];
+    const first = Array.isArray(location) ? location[0] : null;
     if (!first || typeof first.location_id !== "string" || typeof first.storage_bucket !== "string" || typeof first.storage_path_prefix !== "string") {
       return null;
     }
