@@ -19,6 +19,8 @@ CREATE TABLE public.component_candidate_submissions (
 );
 GRANT SELECT ON public.component_candidate_submissions TO service_role;
 ALTER TABLE public.component_candidate_submissions ENABLE ROW LEVEL SECURITY;
+-- Pending caller projections below grant SELECT only at installation time;
+-- no INSERT, UPDATE, or DELETE capability is declared for authenticated.
 
 CREATE TABLE public.component_candidate_payload_revisions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -430,4 +432,5 @@ CREATE POLICY component_candidate_decisions_read_projection_scope
   ON public.component_candidate_decisions FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM public.component_candidate_submissions candidate WHERE candidate.id = component_candidate_decisions.candidate_id));
 
+GRANT SELECT ON public.component_candidate_submissions, public.component_candidate_payload_revisions, public.component_candidate_decisions TO authenticated;
 GRANT SELECT ON public.component_candidate_submitter_read, public.component_candidate_hardware_read, public.component_candidate_purchase_handoff_read TO authenticated;
