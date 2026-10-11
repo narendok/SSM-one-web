@@ -1,9 +1,10 @@
 -- REVIEW-ONLY PHASE B BINDING VALIDATION. NO INSERT, UPDATE, DELETE, POLICY, GRANT, OR JOURNAL CHANGE.
--- This checks the exact already-known source and Sales client folder. It does not create a location binding.
+-- This checks the exact already-known source, Sales client folder, and its complete ancestry.
+-- It does not create a location binding.
 
 BEGIN READ ONLY;
 
-WITH pinned AS (
+WITH RECURSIVE pinned AS (
   SELECT o.id AS opportunity_id, o.customer_id, ms.id AS master_specification_id, msv.id AS version_id
   FROM public.sales_opportunities AS o
   JOIN public.master_specifications AS ms ON ms.id = '7a3aba95-61f6-495a-a280-f37a3be77670'::uuid
@@ -17,28 +18,43 @@ WITH pinned AS (
   FROM public.drive_nodes
   WHERE id = '020dcca5-7809-4287-88cd-537d837a3eee'::uuid
 ), ancestry AS (
-  SELECT f.id, f.parent_id, 1 AS depth, ARRAY[f.id] AS path FROM folder AS f
+  SELECT f.id, f.parent_id, 1 AS depth, ARRAY[f.id]::uuid[] AS path, false AS cycle_detected
+  FROM folder AS f
   UNION ALL
-  SELECT n.id, n.parent_id, a.depth + 1, a.path || n.id
-  FROM public.drive_nodes AS n JOIN ancestry AS a ON a.parent_id = n.id
-  WHERE a.depth < 64 AND NOT n.id = ANY(a.path)
+  SELECT n.id, n.parent_id, a.depth + 1, a.path || n.id, n.id = ANY(a.path)
+  FROM public.drive_nodes AS n
+  JOIN ancestry AS a ON a.parent_id = n.id
+  WHERE a.depth < 64 AND NOT a.cycle_detected
+), ancestry_validation AS (
+  SELECT
+    count(*) AS observed_nodes,
+    bool_or(id = '0c3e85df-f901-4bb9-9ea7-ee2072658faa'::uuid) AS exact_root_reached,
+    bool_or(cycle_detected) AS cycle_detected,
+    bool_or(depth = 64 AND parent_id IS NOT NULL) AS depth_truncated
+  FROM ancestry
+), root AS (
+  SELECT id, parent_id, department_id, project_id, name, node_type, is_locked, is_trashed, storage_bucket, storage_path
+  FROM public.drive_nodes
+  WHERE id = '0c3e85df-f901-4bb9-9ea7-ee2072658faa'::uuid
 )
-SELECT pinned.*, folder.*,
-  (folder.department_id = 'db21a9b2-2cd4-4891-9151-064bef8a7cb4'::uuid) AS matches_sales_department,
+SELECT pinned.*, folder.*, root.id AS expected_sales_root_id,
+  (folder.department_id = 'db21a9b2-2cd4-4891-9151-064bef8a7cb4'::uuid) AS target_matches_sales_department,
   (lower(folder.node_type) = 'folder' AND folder.is_locked AND NOT folder.is_trashed
    AND folder.project_id IS NULL AND folder.storage_bucket IS NULL AND folder.storage_path IS NULL) AS target_folder_valid,
-  (SELECT count(*) < 64 FROM ancestry) AS ancestry_depth_valid
-FROM pinned CROSS JOIN folder;
+  (root.id IS NOT NULL AND root.department_id = folder.department_id
+   AND lower(root.node_type) = 'folder' AND root.is_locked AND NOT root.is_trashed
+   AND root.project_id IS NULL AND root.storage_bucket IS NULL AND root.storage_path IS NULL) AS exact_sales_root_valid,
+  coalesce(ancestry_validation.exact_root_reached, false) AS exact_sales_root_reached,
+  NOT coalesce(ancestry_validation.cycle_detected, false) AS ancestry_has_no_cycle,
+  NOT coalesce(ancestry_validation.depth_truncated, false) AS ancestry_not_depth_truncated,
+  ancestry_validation.observed_nodes
+FROM pinned
+CROSS JOIN folder
+CROSS JOIN root
+CROSS JOIN ancestry_validation;
 
--- The approver must identify an existing locked, non-trashed Sales root from this output.
--- The target folder must descend from that root; do not infer a root or insert a binding here.
-SELECT id, parent_id, department_id, project_id, name, node_type, is_locked, is_trashed, storage_bucket, storage_path
-FROM public.drive_nodes
-WHERE department_id = 'db21a9b2-2cd4-4891-9151-064bef8a7cb4'::uuid
-  AND lower(node_type) = 'folder'
-ORDER BY parent_id NULLS FIRST, name, id;
-
--- Phase B approval record must bind this exact prefix, but this review script never writes it.
+-- All seven booleans above must be true before a separately authorized binding is considered.
+-- This review does not infer a root, write a binding, or substitute an ancestor.
 SELECT 'sales/opportunity/a6c62c81-1cc2-4804-b1c5-c004c6730b52/'::text AS required_private_storage_prefix;
 
 ROLLBACK;
