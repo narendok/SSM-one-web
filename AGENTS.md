@@ -5,3 +5,4 @@
 - Keep editable structured DOCX generation local until an accepted materialization contract binds immutable source/template/schema pins, an assigned responsible employee, and the private Drive/register revision atomically; department membership alone is never document authorization.
 - Keep lifecycle document discovery bound to the committed project and its category; project overview access, Sales access, and normal administrator status must not bypass the accepted assigned-person resolver.
 - Direct Sales document navigation may reuse only an existing active, locked, non-trashed Sales location bound to the exact opportunity/source; it must never fabricate a project, folder, or document authority.
+- Sample cleanup remains review-only until a supported root-level archive/restore workflow can retain dependencies and replay audit evidence; Drive trash alone is not such a workflow.
