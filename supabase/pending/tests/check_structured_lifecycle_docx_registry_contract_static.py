@@ -29,7 +29,7 @@ for primitive in (
     "department_process_templates", "department_process_template_document_revisions",
     "employees", "employee_departments", "project_team_members",
     "responsible_employee_id", "reviewer_employee_id", "active_document_revision_id",
-    "FOR UPDATE", "CURRENT immutable approved template pin", "extensions.gen_random_uuid()",
+    "FOR UPDATE", "Current immutable approved template pin", "extensions.gen_random_uuid()",
 ):
     need(primitive, primitive)
 
