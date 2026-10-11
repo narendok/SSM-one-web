@@ -51,7 +51,7 @@ COMMIT;
 ALTER TABLE public.component_candidate_payload_revisions FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.component_candidate_decisions FORCE ROW LEVEL SECURITY;
 CREATE POLICY local_read_scope_hide_pinned_revision ON public.component_candidate_payload_revisions AS RESTRICTIVE FOR SELECT TO authenticated
-  USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000002'::uuid AND candidate_id = '40000000-0000-4000-8000-000000000052'::uuid));
+  USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000002'::uuid AND candidate_id = (SELECT candidate_id FROM approved_candidate)));
 CREATE POLICY local_read_scope_hide_approved_decision ON public.component_candidate_decisions AS RESTRICTIVE FOR SELECT TO authenticated
   USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000003'::uuid AND candidate_id = (SELECT candidate_id FROM approved_candidate)));
 
@@ -62,7 +62,7 @@ DO $$ BEGIN
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.component_candidate_hardware_read) <> 2 OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read WHERE candidate_id = '40000000-0000-4000-8000-000000000052'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_payload_revisions WHERE candidate_id = '40000000-0000-4000-8000-000000000052'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) THEN RAISE EXCEPTION 'Hardware reader scope exposed hidden revision, cross-project, or fallback candidate data'; END IF;
+  IF (SELECT count(*) FROM public.component_candidate_hardware_read) <> 1 OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read WHERE candidate_id = (SELECT candidate_id FROM approved_candidate)) OR EXISTS (SELECT 1 FROM public.component_candidate_payload_revisions WHERE candidate_id = (SELECT candidate_id FROM approved_candidate)) OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) THEN RAISE EXCEPTION 'Hardware reader scope exposed hidden revision, cross-project, or fallback candidate data'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DO $$ BEGIN
