@@ -33,5 +33,18 @@ psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission
 if ! wait "$worker_one"; then cat "$work_dir/worker-one.out" >&2; exit 1; fi
 if ! wait "$worker_two"; then cat "$work_dir/worker-two.out" >&2; exit 1; fi
 psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_concurrency_assertions.sql"
+# Revoke team authority after the submission function acquires its serialized
+# request lock. Its authorization check after the wait must deny every write.
+psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_revocation_setup.sql"
+psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_revocation_worker.sql" >"$work_dir/revocation-worker.out" 2>&1 & revocation_worker=$!
+for _ in $(seq 1 150); do
+  if [[ "$(psql "${psql_args[@]}" -Atqc "SELECT reached FROM public.candidate_test_wait_controls WHERE name = 'component_candidate_submission_after_request_lock'")" == "t" ]]; then break; fi
+  sleep 0.02
+done
+[[ "$(psql "${psql_args[@]}" -Atqc "SELECT reached FROM public.candidate_test_wait_controls WHERE name = 'component_candidate_submission_after_request_lock'")" == "t" ]] || { echo "Revocation worker did not reach serialized waitpoint" >&2; exit 1; }
+psql "${psql_args[@]}" -c "DELETE FROM public.project_team_members WHERE id = '00000000-0000-4000-8000-000000000219'; UPDATE public.candidate_test_wait_controls SET release = true WHERE name = 'component_candidate_submission_after_request_lock';"
+if wait "$revocation_worker"; then cat "$work_dir/revocation-worker.out" >&2; echo "Revoked worker unexpectedly succeeded" >&2; exit 1; fi
+rg -q "Candidate submission requires" "$work_dir/revocation-worker.out" || { cat "$work_dir/revocation-worker.out" >&2; exit 1; }
+psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_revocation_assertions.sql"
 python3 "$root/supabase/pending/tests/check_bom_candidate_submission_static.py"
 printf 'BOM_CANDIDATE_SUBMISSION_LOCAL_ACCEPTANCE_PASS=true\n'

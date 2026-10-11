@@ -8,6 +8,7 @@ fixture = (Path(__file__).resolve().parent / "bom_candidate_submission_local_fix
 acceptance = (Path(__file__).resolve().parent / "bom_candidate_submission_local_acceptance.sql").read_text()
 runner = (Path(__file__).resolve().parent / "run_bom_candidate_submission_local_acceptance.sh").read_text()
 concurrency = (Path(__file__).resolve().parent / "bom_candidate_submission_local_concurrency_assertions.sql").read_text()
+revocation = (Path(__file__).resolve().parent / "bom_candidate_submission_local_revocation_assertions.sql").read_text()
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
@@ -25,7 +26,9 @@ checks = {
     "project and request are serialized": "component-candidate-project:" in sql and "component-candidate-request:" in sql,
     "canonical payload is immutable revision one": "revision_number integer NOT NULL CHECK (revision_number = 1)" in sql and "component_candidate_submission_canonical_payload" in sql,
     "acceptance covers manual bom replay denials and rollback": all(token in acceptance for token in ("Manual line remains untouched", "Exact replay", "Incomplete handover", "Mismatched project handover", "Unauthorized actor", "Receipt failure did not roll back", "ROLLBACK;")),
+    "acceptance covers baseline department and linkage denials": all(token in acceptance for token in ("Baseline without approver", "Baseline without approval time", "Active baseline", "Superseded baseline", "Inactive Hardware department", "Non-Hardware department", "Missing Hardware department", "Mismatched customer lineage", "Mismatched opportunity lineage")),
     "concurrency asserts one persisted result": "BOM_CANDIDATE_SUBMISSION_CONCURRENCY_PASS=true" in concurrency and "Concurrent exact replay wrote more than one header" in concurrency,
+    "serialized authority revocation is denied": "BOM_CANDIDATE_SUBMISSION_REVOCATION_PASS=true" in revocation and "Revoked actor created a candidate" in revocation and "candidate_test_waitpoint" in sql,
     "runner is explicitly disposable": "LOCAL_BOM_CANDIDATE_DISPOSABLE" in runner and "/tmp/bom_candidate_submission_local_" in runner,
     "fixture is local only": "LOCAL DISPOSABLE FIXTURE ONLY" in fixture,
 }
