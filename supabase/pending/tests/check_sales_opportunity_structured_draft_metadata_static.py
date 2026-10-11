@@ -139,6 +139,29 @@ def main() -> None:
     require(materialization_acceptance.read_text(), "changed replay accepted", "replay mismatch assertion")
     require(materialization_acceptance.read_text(), "immutable history changed", "immutable audit assertion")
     require(materialization_runner.read_text(), "MATERIALIZATION_EXECUTION_COMPLETE=true", "materialization disposable runner")
+    staged_phase_a = Path(__file__).resolve().parents[3] / "docs/evidence/sql-editor/20261011_sales_structured_draft_phase_a_install.sql"
+    staged_phase_b = Path(__file__).resolve().parents[3] / "docs/evidence/sql-editor/20261011_sales_structured_draft_phase_b_binding_review.sql"
+    staged_phase_c = Path(__file__).resolve().parents[3] / "docs/evidence/sql-editor/20261011_sales_structured_draft_phase_c_managed_acceptance_rollback.sql"
+    staged_phase_d = Path(__file__).resolve().parents[3] / "docs/evidence/sql-editor/20261011_sales_structured_draft_phase_d_activation.sql"
+    staged_flow = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_staged_flow_local_acceptance.sql"
+    staged_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_staged_flow_local_acceptance.sh"
+    require(staged_phase_a.read_text(), "BEGIN;", "phase A transaction begin")
+    require(staged_phase_a.read_text(), "COMMIT;", "phase A transaction commit")
+    forbid(staged_phase_a.read_text(), "GRANT EXECUTE ON FUNCTION", "phase A authenticated execute grant")
+    forbid(staged_phase_a.read_text(), "CREATE POLICY \"Sales structured drafts insert", "phase A Storage policy activation")
+    require(staged_phase_b.read_text(), "BEGIN READ ONLY;", "phase B read-only transaction")
+    require(staged_phase_b.read_text(), "a6c62c81-1cc2-4804-b1c5-c004c6730b52", "phase B approved opportunity")
+    require(staged_phase_b.read_text(), "020dcca5-7809-4287-88cd-537d837a3eee", "phase B approved Sales folder")
+    require(staged_phase_c.read_text(), "SET LOCAL ROLE authenticated", "phase C role-scoped check")
+    require(staged_phase_c.read_text(), "does NOT establish auth.uid()", "phase C actor-authentication boundary")
+    require(staged_phase_c.read_text(), "ROLLBACK;", "phase C forced rollback")
+    require(staged_phase_d.read_text(), "BEGIN;", "phase D transaction begin")
+    require(staged_phase_d.read_text(), "COMMIT;", "phase D transaction commit")
+    require(staged_phase_d.read_text(), "GRANT EXECUTE ON FUNCTION public.commit_sales_opportunity_structured_draft_materialization", "phase D activation grant")
+    require(staged_flow.read_text(), "phase A leaked authenticated execute", "staged flow no-early-grant assertion")
+    require(staged_flow.read_text(), "phase C rollback leaked access or history", "staged flow rollback assertion")
+    require(staged_flow.read_text(), "STRUCTURED_DRAFT_STAGED_FLOW_LOCAL_ACCEPTANCE_PASS", "staged-flow success marker")
+    require(staged_runner.read_text(), "STAGED_FLOW_EXECUTION_COMPLETE=true", "staged-flow disposable runner")
     print("structured draft metadata static checks: PASS")
 
 
