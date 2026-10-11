@@ -204,11 +204,10 @@ BEGIN
   JOIN public.departments hardware ON hardware.id = membership.department_id AND hardware.code = 'HARDWARE' AND hardware.is_active
   WHERE candidate.id = p_candidate_id
     AND candidate.submitted_by <> p_actor
-  -- Authorization reads must not lock the mutable authority graph before an
-  -- advisory wait. Otherwise a concurrent membership revocation blocks behind
-  -- this call's pre-wait read and cannot commit before the post-wait check.
-  -- The candidate and its immutable revision remain the only locked records.
-  FOR UPDATE OF candidate, revision;
+  -- Do not lock the mutable authority graph before an advisory wait: a
+  -- concurrent membership revocation must commit before the post-wait check.
+  -- Candidate/revision locking happens in the decision function after it has
+  -- passed this authority boundary and found no replay receipt.
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate decision requires an active Hardware reviewer with engineering.approve, an exact immutable revision, and no self-review';
   END IF;
@@ -296,6 +295,14 @@ BEGIN
       RETURN;
     END IF;
     RAISE EXCEPTION 'Decision request key conflicts with a different actor or canonical payload';
+  END IF;
+  -- Lock the state transition only after the post-wait authority/replay path.
+  -- Re-scope after the candidate lock before evaluating the initial state.
+  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
+  SELECT scope.* INTO v_scope
+  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
   IF v_scope.candidate_status <> 'SUBMITTED' THEN RAISE EXCEPTION 'Candidate is no longer submitted'; END IF;
   v_target_status := CASE v_payload ->> 'decision' WHEN 'APPROVE' THEN 'APPROVED_PENDING_PURCHASE' ELSE 'REJECTED' END;
