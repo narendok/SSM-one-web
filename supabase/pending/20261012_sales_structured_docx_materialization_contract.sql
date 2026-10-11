@@ -158,7 +158,7 @@ BEGIN
   IF p_request_key IS NULL OR btrim(coalesce(p_template_key,'')) = '' OR p_template_version <= 0 OR p_template_schema_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Invalid DOCX request pins'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|', p_opportunity_id::text, p_request_key::text), 0));
   SELECT * INTO v_existing FROM public.sales_opportunity_structured_docx_requests AS existing_request WHERE existing_request.request_key = p_request_key FOR UPDATE;
-  SELECT * INTO v_html_request FROM public.sales_opportunity_structured_draft_requests WHERE request_key = p_structured_draft_request_key AND requested_by = v_actor AND opportunity_id = p_opportunity_id AND customer_id = p_customer_id FOR UPDATE;
+  SELECT * INTO v_html_request FROM public.sales_opportunity_structured_draft_requests AS structured_request WHERE structured_request.request_key = p_structured_draft_request_key AND structured_request.requested_by = v_actor AND structured_request.opportunity_id = p_opportunity_id AND structured_request.customer_id = p_customer_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Pinned structured Sales revision is not owned by this actor and source'; END IF;
   SELECT * INTO v_revision FROM public.sales_opportunity_structured_draft_revisions WHERE id = v_html_request.revision_id FOR UPDATE;
   SELECT * INTO v_draft FROM public.sales_opportunity_structured_drafts WHERE id = v_html_request.draft_id FOR UPDATE;
