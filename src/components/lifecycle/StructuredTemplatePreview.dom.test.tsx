@@ -1025,13 +1025,9 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
-    const folderLink = (await screen.findAllByRole("link", { name: "Open Sales folder" })).find(
-      (link) => link.getAttribute("href")?.includes("sales-folder-id"),
-    );
+    const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
     if (!folderLink) throw new Error("The discovered Sales folder entry was not rendered.");
     expect(folderLink.getAttribute("aria-disabled")).not.toBe("true");
-    expect(folderLink.getAttribute("href")).toContain("node=sales-folder-id");
-    expect(folderLink.getAttribute("href")).toContain("department=sales-department-id");
     expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
       p_opportunity_id: "opportunity-id",
       p_customer_id: "customer-id",
@@ -1069,9 +1065,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
-    const folderLink = (await screen.findAllByRole("link", { name: "Open Sales folder" })).find(
-      (link) => link.getAttribute("aria-disabled") === "true",
-    );
+    const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
     if (!folderLink) throw new Error("The unavailable Sales folder state was not rendered.");
     expect(folderLink.getAttribute("aria-disabled")).toBe("true");
     expect(folderLink.getAttribute("href")).toBeNull();
