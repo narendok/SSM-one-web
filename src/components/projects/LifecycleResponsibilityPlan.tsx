@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, RefreshCw, Settings2 } from "lucide-react";
+import { AlertCircle, ClipboardList, RefreshCw, Settings2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { fetchCanonicalDepartments, type CanonicalDepartment } from "@/lib/tasks";
 import {
   connectedLifecycleResponsibilityDefaults,
+  connectedLifecyclePreparationDefaults,
   lifecycleResponsibilitySettingsStatus,
   stagesForResponsibilityDefault,
   type CompanyStageRead,
@@ -87,6 +88,21 @@ export function LifecycleResponsibilityPlan({ compact = false }: { compact?: boo
               </section>;
             })}
           </div>}
+    {!compact && !stages.isPending && !departments.isPending && !stages.isError && !departments.isError && stages.data?.length ? <section className="mt-6 border-t pt-5">
+      <div className="flex items-start gap-2"><ClipboardList className="mt-0.5 size-4 text-primary" /><div><h4 className="text-sm font-medium">Stage deliverable & task preparation preview</h4><p className="mt-1 text-xs text-muted-foreground">Uses visible company stages and department lookup only. It preserves manual tasks and creates no task, dependency, handoff, notification, approval, or release.</p></div></div>
+      <div className="mt-4 space-y-3">
+        {connectedLifecyclePreparationDefaults.map((preparation, index) => {
+          const visibleStages = stages.data.filter((stage) => stage.stage_code >= `HW_${String(preparation.stageRange[0]).padStart(2, "0")}` && stage.stage_code <= `HW_${String(preparation.stageRange[1]).padStart(2, "0")}`);
+          return <div key={preparation.key} className="border-l-2 border-muted pl-3">
+            <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{preparation.title}</p><Badge variant="outline">{visibleStages.map((stage) => stage.stage_code).join(" · ") || "No visible stages"}</Badge><Badge variant="secondary">Preview only</Badge></div>
+            <p className="mt-1 text-xs text-muted-foreground">Lead: {departmentName(preparation.leadDepartment, departmentsByCode)} · Participants: {preparation.participatingDepartments.map((code) => departmentName(code, departmentsByCode)).join(" · ") || "None"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Deliverables: {preparation.deliverables.join(" · ")}</p>
+            {index > 0 && <p className="mt-1 text-xs text-muted-foreground">Dependency: visible prior-stage records are planning context only; their status does not release this work.</p>}
+            {preparation.purchaseHandoff === "HARDWARE_APPROVED_HANDOFF_REQUIRED" && <p className="mt-1 text-xs text-muted-foreground">Purchase handoff: only an existing Hardware-approved handoff may be used; this preview neither confirms nor creates one.</p>}
+          </div>;
+        })}
+      </div>
+    </section> : null}
     <div className="mt-4 flex items-start gap-2 border-t pt-4 text-xs text-muted-foreground"><AlertCircle className="mt-0.5 size-3.5 shrink-0" /><p>{settingsStatus.message} {lifecycleResponsibilityOverrideContract.title} stay inactive; changes above are local to this screen and do not change template stages, project assignments, history, tasks, handoffs, or notifications.</p></div>
   </Card>;
 }
