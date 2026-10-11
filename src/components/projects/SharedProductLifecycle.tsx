@@ -42,6 +42,23 @@ export function SharedProductLifecycle({
       return { tasks: tasks.data ?? [], boms: boms.data ?? [], inputs: inputs.data ?? [], research: research.data ?? [], gates: gates.data ?? [], changes: changes.data ?? [], process: process.data ?? [] };
     },
   });
+  const {
+    data: gates = [],
+    isLoading: areGatesLoading,
+    isError: hasGateError,
+    error: gateError,
+    refetch: refetchGates,
+  } = useQuery({
+    queryKey: ["shared_product_lifecycle_gates", project.id],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("project_stage_gates")
+        .select("id,status")
+        .eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const openTasks = snapshot?.tasks.filter((task: any) => task.status !== "done").length ?? 0;
   const linkedBoms = snapshot?.boms.filter((bom: any) => bom.source_drive_node_id && bom.source_drive_revision_id).length ?? 0;
@@ -65,7 +82,7 @@ export function SharedProductLifecycle({
     linkedBoms ? `${linkedBoms} revision-linked BOM${linkedBoms === 1 ? "" : "s"}` : "BOM source not linked",
   ];
 
-  const gateStatusCounts = (snapshot?.gates ?? []).reduce((counts: Record<string, number>, gate: any) => {
+  const gateStatusCounts = gates.reduce((counts: Record<string, number>, gate: any) => {
     const status = String(gate.status ?? "unrecorded").replaceAll("_", " ");
     counts[status] = (counts[status] ?? 0) + 1;
     return counts;
@@ -124,16 +141,16 @@ export function SharedProductLifecycle({
         </div>
         <div className="border-l-2 border-muted pl-3">
           <p className="text-xs text-muted-foreground">Accessible gate records</p>
-          {isLoading ? (
+          {areGatesLoading ? (
             <p className="mt-1 text-sm text-muted-foreground">Loading accessible gate records…</p>
-          ) : isError ? (
+          ) : hasGateError ? (
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-destructive">
-              <span>Gate records could not be loaded{error instanceof Error ? `: ${error.message}` : "."}</span>
-              <Button size="sm" variant="outline" onClick={() => void refetch()}>
+              <span>Gate records could not be loaded{gateError instanceof Error ? `: ${gateError.message}` : "."}</span>
+              <Button size="sm" variant="outline" onClick={() => void refetchGates()}>
                 <RefreshCw className="size-3.5" /> Retry
               </Button>
             </div>
-          ) : !snapshot?.gates.length ? (
+          ) : !gates.length ? (
             <p className="mt-1 text-sm text-muted-foreground">No gate records are currently accessible for this project.</p>
           ) : (
             <div className="mt-2 flex flex-wrap gap-2">
