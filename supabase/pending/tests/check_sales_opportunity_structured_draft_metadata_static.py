@@ -66,6 +66,24 @@ def main() -> None:
     require(audit_runtime.read_text(), "audit mutation accepted", "audit immutability acceptance")
     require(audit_runtime.read_text(), "denied location changed receipt graph", "location denial rollback acceptance")
     require(audit_runner.read_text(), "AUDIT_LOCATION_EXECUTION_COMPLETE=true", "audit/location disposable runner")
+    discovery_sql = (PENDING_ROOT / "20261011_sales_opportunity_structured_draft_capability_discovery.sql").read_text()
+    discovery_signature = "public.discover_sales_opportunity_structured_draft_location(uuid, uuid, uuid, uuid)"
+    require(discovery_sql, "public.resolve_sales_opportunity_structured_draft_location(\n    p_opportunity_id,\n    p_customer_id,\n    location.id", "capability uses the trusted location resolver in opportunity/customer/location order")
+    require(discovery_sql, "AND public.can_access_department_drive(\n      v_actor,\n      resolved.department_id,\n      NULL", "capability requires live department Drive access")
+    require(discovery_sql, "location.private_storage_bucket = resolved.storage_bucket", "capability validates resolved private bucket")
+    require(discovery_sql, "location.private_storage_prefix = resolved.storage_path_prefix", "capability validates resolved private prefix")
+    require(discovery_sql, "location.location_purpose = 'STRUCTURED_DRAFT'", "capability requires structured-draft binding")
+    require(discovery_sql, "location.status = 'ACTIVE'", "capability requires active binding")
+    require(discovery_sql, "JOIN public.master_specifications AS specification", "capability pins Master Specification to opportunity/customer")
+    require(discovery_sql, "version.specification_id = specification.id", "capability pins Master Specification version")
+    require(discovery_sql, "IF v_actor IS NULL OR NOT public.has_permission(v_actor, 'sales.manage')", "capability requires Sales management access")
+    forbid(discovery_sql, "can_access_sales_structured_draft_object", "object-read authorization in first-save capability")
+    forbid(discovery_sql, "sales_opportunity_structured_draft_materializations", "prior materialization requirement in first-save capability")
+    require(discovery_sql, f"REVOKE ALL ON FUNCTION {discovery_signature} FROM PUBLIC, anon, service_role;", "default-revoked capability transport")
+    grant_index = discovery_sql.index(f"GRANT EXECUTE ON FUNCTION {discovery_signature} TO authenticated;")
+    revoke_index = discovery_sql.index(f"REVOKE ALL ON FUNCTION {discovery_signature} FROM PUBLIC, anon, service_role;")
+    if revoke_index > grant_index:
+        raise SystemExit("FAIL: capability transport grant precedes the explicit revoke")
     fixture = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_fixture.sql"
     runtime = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_installed_acceptance.sql"
     runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_acceptance.sh"
