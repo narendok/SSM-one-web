@@ -37,6 +37,11 @@ export type LifecycleStageReadiness = {
   blockers: string[];
 };
 
+export type RequirementRevisionRelation = {
+  state: "PINNED_CURRENT" | "NEWER_REQUIREMENT_REVISION" | "REQUIREMENT_UNAVAILABLE";
+  message: string;
+};
+
 export const connectedLifecycleResponsibilityDefaults: LifecycleResponsibilityDefault[] = [
   {
     key: "intake",
@@ -210,6 +215,34 @@ export function lifecycleStageReadiness(stages: CompanyStageRead[], stageCode: s
     ...(!responsibility ? ["No default workstream is mapped to the recorded project stage."] : []),
   ];
   return { stage, responsibility, prerequisites, blockers };
+}
+
+/**
+ * Compares recorded revision facts without treating either revision or status
+ * as an approval, release, or readiness signal.
+ */
+export function requirementRevisionRelation(
+  pinnedBaselineRevision: number,
+  currentRequirementRevision: number | null | undefined,
+): RequirementRevisionRelation {
+  if (currentRequirementRevision === null || currentRequirementRevision === undefined) {
+    return {
+      state: "REQUIREMENT_UNAVAILABLE",
+      message: "The requirement record is not accessible, so the pinned revision cannot be compared.",
+    };
+  }
+
+  if (currentRequirementRevision > pinnedBaselineRevision) {
+    return {
+      state: "NEWER_REQUIREMENT_REVISION",
+      message: `Requirement revision ${currentRequirementRevision} is newer than this pinned baseline revision ${pinnedBaselineRevision}. Review the controlled change context; no acceptance is implied.`,
+    };
+  }
+
+  return {
+    state: "PINNED_CURRENT",
+    message: `Pinned baseline revision ${pinnedBaselineRevision} matches the latest accessible requirement revision ${currentRequirementRevision}. This does not confirm approval, release, or readiness.`,
+  };
 }
 
 export function lifecycleResponsibilitySettingsStatus() {

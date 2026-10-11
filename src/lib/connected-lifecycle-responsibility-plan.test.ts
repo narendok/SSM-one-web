@@ -4,6 +4,7 @@ import {
   lifecycleResponsibilitySettingsStatus,
   lifecycleStageReadiness,
   preparationDefaultForStage,
+  requirementRevisionRelation,
   responsibilityDefaultForStage,
   stagePreparationSummary,
   stagesForResponsibilityDefault,
@@ -75,5 +76,19 @@ describe("connected lifecycle responsibility defaults", () => {
       "Recorded project stage INITIATION is not an accessible active company lifecycle stage.",
       "No default workstream is mapped to the recorded project stage.",
     ]);
+  });
+
+  it("flags a newer accessible requirement revision without treating the comparison as approval", () => {
+    expect(requirementRevisionRelation(1, 2)).toMatchObject({
+      state: "NEWER_REQUIREMENT_REVISION",
+      message: expect.stringContaining("no acceptance is implied"),
+    });
+    expect(requirementRevisionRelation(1, 1)).toMatchObject({
+      state: "PINNED_CURRENT",
+      message: expect.stringContaining("does not confirm approval"),
+    });
+    expect(requirementRevisionRelation(1, null)).toMatchObject({
+      state: "REQUIREMENT_UNAVAILABLE",
+    });
   });
 });

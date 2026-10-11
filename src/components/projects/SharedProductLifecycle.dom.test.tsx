@@ -40,9 +40,12 @@ const project = {
   project_drive_node_id: "root-123", completion_notes: null, archived_at: null, created_at: "2026-10-09T00:00:00Z", updated_at: "2026-10-09T00:00:00Z",
 };
 
-function renderLifecycle(callbacks = { onOpenDelivery: vi.fn(), onOpenFiles: vi.fn(), onOpenTasks: vi.fn() }) {
+function renderLifecycle(
+  callbacks = { onOpenDelivery: vi.fn(), onOpenFiles: vi.fn(), onOpenTasks: vi.fn() },
+  lifecycleProject = project,
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const root = createRootRoute({ component: () => <SharedProductLifecycle project={project} {...callbacks} /> });
+  const root = createRootRoute({ component: () => <SharedProductLifecycle project={lifecycleProject} {...callbacks} /> });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   return render(<QueryClientProvider client={queryClient}><RouterProvider router={router} /></QueryClientProvider>);
 }
@@ -64,7 +67,7 @@ describe("SharedProductLifecycle governed reads", () => {
     renderLifecycle();
 
     expect((await screen.findByText(/Gate records could not be loaded/)).parentElement?.textContent).toContain("infinite recursion detected in policy");
-    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Retry" }).length).toBeGreaterThan(0);
     expect(await screen.findByText("Draft lifecycle automation plan")).toBeTruthy();
     expect(screen.queryByText("No gate records are currently accessible for this project.")).toBeNull();
   });
@@ -79,7 +82,7 @@ describe("SharedProductLifecycle governed reads", () => {
 
     expect((await screen.findByText(/Governed lifecycle records could not be loaded/)).parentElement?.textContent).toContain("Governed lifecycle records could not be loaded: Process records unavailable");
     expect(screen.queryByText("Loading available governed records…")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(screen.getAllByRole("button", { name: "Retry" }).at(-1) as HTMLButtonElement);
     await waitFor(() => expect(screen.getByText("Required source inputs")).toBeTruthy());
   });
 
@@ -97,5 +100,25 @@ describe("SharedProductLifecycle governed reads", () => {
 
     expect(callbacks.onOpenTasks).toHaveBeenCalledTimes(1);
     expect(callbacks.onOpenFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the recorded requirement revision relationship without calling it approval or release", async () => {
+    readLifecycle.mockResolvedValue({ data: [], error: null });
+    readGates.mockResolvedValue({ data: [], error: null });
+    readStages.mockResolvedValue({ data: [], error: null });
+    readBaseline.mockResolvedValue({
+      data: {
+        baseline_number: "MASTER-2026-0001",
+        revision_number: 1,
+        status: "APPROVED",
+        requirement: { requirement_number: "OPPORTUNITY-2026-0013", current_revision: 2 },
+      },
+      error: null,
+    });
+
+    renderLifecycle(undefined, { ...project, requirement_baseline_id: "baseline-123" } as typeof project & { requirement_baseline_id: string });
+
+    expect(await screen.findByText(/Requirement revision 2 is newer than this pinned baseline revision 1/)).toBeTruthy();
+    expect(screen.getByText(/no acceptance is implied/)).toBeTruthy();
   });
 });
