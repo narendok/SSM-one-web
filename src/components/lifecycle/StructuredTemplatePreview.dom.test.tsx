@@ -49,7 +49,7 @@ vi.mock("@/lib/structured-sales-draft.functions", () => ({
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: vi.fn(), storage: { from: vi.fn() } },
+  supabase: { from: vi.fn(), rpc: vi.fn(), storage: { from: vi.fn() } },
 }));
 
 vi.mock("@/lib/project-bom.functions", async (importOriginal) => {
@@ -249,6 +249,7 @@ afterEach(() => {
   previewSource.mockReset();
   discoverStructuredSalesDraftCapabilityMock.mockReset().mockResolvedValue(null);
   vi.mocked(supabase.from).mockReset();
+  vi.mocked(supabase.rpc).mockReset();
   vi.mocked(supabase.storage.from).mockReset();
   fetchProjectBomsMock.mockReset().mockResolvedValue([]);
   fetchProjectBomItemsMock.mockReset().mockResolvedValue(null);
@@ -879,24 +880,60 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
 
   it("keeps local preview text when the real proposal dialog returns from documents, while Close still prompts", async () => {
     previewSource.mockResolvedValue(source);
-    vi.mocked(supabase.from).mockReturnValue({
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            single: () =>
-              Promise.resolve({
-                data: {
-                  id: "version-id",
-                  version_number: 1,
-                  change_summary: "Initial intake",
-                  created_at: "2026-10-05T18:37:27.589Z",
-                  specification_data: proposalSpecificationData,
-                },
-                error: null,
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === "master_specification_versions") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: {
+                      id: "version-id",
+                      version_number: 1,
+                      change_summary: "Initial intake",
+                      created_at: "2026-10-05T18:37:27.589Z",
+                      specification_data: proposalSpecificationData,
+                    },
+                    error: null,
+                  }),
               }),
+            }),
+          }),
+        } as never;
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    maybeSingle: () =>
+                      Promise.resolve({
+                        data: {
+                          id: "location-id",
+                          opportunity_id: "opportunity-id",
+                          customer_id: "customer-id",
+                          department_id: "sales-department-id",
+                          drive_root_node_id: "sales-root-id",
+                          target_folder_node_id: "sales-folder-id",
+                          status: "ACTIVE",
+                          location_purpose: "STRUCTURED_DRAFT",
+                        },
+                        error: null,
+                      }),
+                  }),
+                }),
+              }),
+            }),
           }),
         }),
-      }),
+      } as never;
+    });
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: [{ location_id: "location-id", storage_bucket: "private-sales", storage_path_prefix: "sales/" }],
+      error: null,
     } as never);
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -922,6 +959,118 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
 
     await user.click(screen.getByRole("button", { name: "Close" }));
     expect(await screen.findByText("Discard unsaved local edits?")).toBeTruthy();
+  });
+
+  it("opens the exact discovered Sales folder only after binding it to the pinned active source", async () => {
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === "master_specification_versions") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: {
+                      id: "version-id",
+                      version_number: 1,
+                      change_summary: "Initial intake",
+                      created_at: "2026-10-05T18:37:27.589Z",
+                      specification_data: proposalSpecificationData,
+                    },
+                    error: null,
+                  }),
+              }),
+            }),
+          }),
+        } as never;
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    maybeSingle: () =>
+                      Promise.resolve({
+                        data: {
+                          id: "location-id",
+                          opportunity_id: "opportunity-id",
+                          customer_id: "customer-id",
+                          department_id: "sales-department-id",
+                          drive_root_node_id: "sales-root-id",
+                          target_folder_node_id: "sales-folder-id",
+                          status: "ACTIVE",
+                          location_purpose: "STRUCTURED_DRAFT",
+                        },
+                        error: null,
+                      }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      } as never;
+    });
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: [{ location_id: "location-id", storage_bucket: "private-sales", storage_path_prefix: "sales/" }],
+      error: null,
+    } as never);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ProposalDetailDialogHarness />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
+    const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
+    if (!folderLink) throw new Error("The discovered Sales folder entry was not rendered.");
+    expect(folderLink.getAttribute("aria-disabled")).not.toBe("true");
+    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
+      p_opportunity_id: "opportunity-id",
+      p_customer_id: "customer-id",
+      p_master_specification_id: "specification-id",
+      p_master_specification_version_id: "version-id",
+    });
+  });
+
+  it("fails closed when discovery does not return an active binding for the exact Sales source", async () => {
+    vi.mocked(supabase.from).mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            single: () =>
+              Promise.resolve({
+                data: {
+                  id: "version-id",
+                  version_number: 1,
+                  change_summary: "Initial intake",
+                  created_at: "2026-10-05T18:37:27.589Z",
+                  specification_data: proposalSpecificationData,
+                },
+                error: null,
+              }),
+          }),
+        }),
+      }),
+    } as never);
+    vi.mocked(supabase.rpc).mockResolvedValue({ data: [], error: null } as never);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ProposalDetailDialogHarness />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
+    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
+      p_opportunity_id: "opportunity-id",
+      p_customer_id: "customer-id",
+      p_master_specification_id: "specification-id",
+      p_master_specification_version_id: "version-id",
+    });
   });
 
   it("exits clean previews by Escape and built-in Close without confirmation, and reopens without stale dirty state", async () => {
