@@ -42,7 +42,7 @@ CREATE TABLE public.master_specification_versions (
   UNIQUE (specification_id, version_number)
 );
 CREATE TABLE public.drive_nodes (
-  id uuid PRIMARY KEY,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id uuid NULL,
   parent_id uuid NULL,
   name text NOT NULL,
@@ -73,3 +73,12 @@ INSERT INTO public.sales_structured_draft_test_permissions (user_id, sales_manag
   ('00000000-0000-4000-8000-000000000002', true),
   ('00000000-0000-4000-8000-000000000003', false);
 COMMIT;
+CREATE TABLE public.departments (id uuid PRIMARY KEY, code text NOT NULL, name text NOT NULL, is_active boolean NOT NULL DEFAULT true);
+INSERT INTO public.departments(id, code, name) VALUES ('00000000-0000-4000-8000-000000000501', 'SAL', 'Sales');
+ALTER TABLE public.drive_nodes ADD COLUMN file_type text NULL, ADD COLUMN mime_type text NULL, ADD COLUMN file_size_bytes bigint NULL, ADD COLUMN sha256_checksum text NULL, ADD COLUMN current_version integer NOT NULL DEFAULT 1, ADD COLUMN slug text NOT NULL DEFAULT 'fixture', ADD COLUMN metadata jsonb NOT NULL DEFAULT '{}'::jsonb, ADD COLUMN created_by uuid NULL;
+CREATE TABLE public.drive_node_revisions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), node_id uuid NOT NULL REFERENCES public.drive_nodes(id), version integer NOT NULL, file_size_bytes bigint NOT NULL, storage_path text NOT NULL, sha256_checksum text NULL, change_summary text NULL, uploaded_by uuid NULL);
+CREATE TABLE public.document_control_registers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), drive_node_id uuid NOT NULL UNIQUE REFERENCES public.drive_nodes(id), department_id uuid NOT NULL REFERENCES public.departments(id), document_number text NOT NULL UNIQUE, title text NOT NULL, document_status text NOT NULL DEFAULT 'DRAFT', controlled_version integer NOT NULL DEFAULT 1, approval_note text NULL, created_by uuid NOT NULL);
+CREATE FUNCTION public.can_access_department_drive(p_user uuid, p_department uuid, p_project uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
+CREATE FUNCTION public.next_business_number(p_kind text, p_prefix text, p_context text) RETURNS text LANGUAGE sql AS $$ SELECT upper(p_prefix) || '-LOCAL-' || substr(md5(coalesce(p_context,'') || p_kind), 1, 8) $$;
+CREATE SCHEMA storage;
+CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, PRIMARY KEY(bucket_id,name));

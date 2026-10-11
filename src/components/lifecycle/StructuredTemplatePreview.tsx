@@ -49,6 +49,8 @@ import {
   type LocalBomComponentSelection,
 } from "@/lib/local-bom-component-adapter";
 import {
+  structuredSalesDraftHistoryBoundaryMessage,
+  structuredSalesDraftHistoryCapability,
   structuredSalesDraftSaveBoundaryMessage,
   structuredSalesDraftSaveCapability,
 } from "@/lib/structured-sales-draft-capability";
@@ -271,6 +273,10 @@ export function StructuredTemplatePreview({
     isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
   );
   const saveBoundaryMessage = structuredSalesDraftSaveBoundaryMessage(saveCapability);
+  const historyCapability = structuredSalesDraftHistoryCapability(
+    isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
+  );
+  const historyBoundaryMessage = structuredSalesDraftHistoryBoundaryMessage(historyCapability);
   const sourceState = !actorId
     ? "UNVERIFIED — signed-in identity unavailable"
     : source.isPending
@@ -420,9 +426,17 @@ export function StructuredTemplatePreview({
             {saveBoundaryMessage} Export, issuance, release, and controlled document generation
             remain unavailable.
           </p>
-          <Button disabled aria-label="Save unavailable until backend capability is verified" title={saveBoundaryMessage}>
-            <Save className="size-4" /> Save unavailable
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button disabled aria-label="View saved revision history unavailable until backend capability is verified" title={historyBoundaryMessage} variant="outline">
+              <Eye className="size-4" /> History unavailable
+            </Button>
+            <Button disabled aria-label="Download unavailable until backend capability is verified" title={historyBoundaryMessage} variant="outline">
+              <LockKeyhole className="size-4" /> Download unavailable
+            </Button>
+            <Button disabled aria-label="Save unavailable until backend capability is verified" title={saveBoundaryMessage}>
+              <Save className="size-4" /> Save unavailable
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
