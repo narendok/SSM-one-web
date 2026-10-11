@@ -243,7 +243,6 @@ export function StructuredTemplatePreview({
   onDirtyChange?: (dirty: boolean) => void;
   localEdits?: Record<string, string>;
   onLocalEditsChange?: (edits: Record<string, string>) => void;
-  catalogScope?: StructuredDocumentCatalogScope;
 }) {
   const [kind, setKind] = useState<StructuredLifecycleTemplateKind>("SOR");
   const [uncontrolledEdits, setUncontrolledEdits] = useState<Record<string, string>>({});
