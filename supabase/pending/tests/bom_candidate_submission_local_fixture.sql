@@ -11,6 +11,7 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
 END $$;
 GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON public.employees, public.employee_departments, public.departments, public.project_team_members, public.access_roles, public.employee_access_roles, public.access_role_permissions, public.permissions TO authenticated;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 CREATE TABLE public.customers (id uuid PRIMARY KEY);
 CREATE TABLE public.sales_opportunities (id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id));
