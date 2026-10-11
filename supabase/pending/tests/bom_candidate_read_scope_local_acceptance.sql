@@ -45,10 +45,6 @@ CREATE TEMP TABLE project_b_revision AS SELECT id AS revision_id FROM public.com
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 SELECT * FROM public.decide_component_candidate((SELECT candidate_id FROM approved_candidate), (SELECT revision_id FROM approved_revision), 'APPROVE', 'Approved Hardware handoff', '40000000-0000-4000-8000-000000000053') \g /dev/null
 DELETE FROM public.project_team_members WHERE id = '40000000-0000-4000-8000-000000000044';
-CREATE TEMP TABLE read_scope_ids AS SELECT
-  (SELECT candidate_id FROM approved_candidate) AS approved_candidate_id,
-  (SELECT revision_id FROM approved_revision) AS approved_revision_id,
-  (SELECT candidate_id FROM project_b_candidate) AS project_b_candidate_id;
 COMMIT;
 
 -- Local-only selective joined-row policies model caller-RLS suppression without changing pending production policies.
