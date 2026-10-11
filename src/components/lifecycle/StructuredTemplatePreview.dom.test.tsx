@@ -915,7 +915,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(screen.queryByText("Discard unsaved local edits?")).toBeNull();
     expect(await screen.findByRole("button", { name: "Preview documents" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Preview documents" }));
+    await user.click(screen.getByRole("button", { name: "Open Sales documents" }));
     expect((await screen.findByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe(
       "Keep this proposal-local draft",
     );
