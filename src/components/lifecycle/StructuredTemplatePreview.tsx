@@ -394,6 +394,7 @@ export function StructuredTemplatePreview({
                   />
                   {salesGate && (
                     <p
+                      data-testid="structured-sales-source-gate"
                       role={salesGate.state === "SOURCE_UNAVAILABLE" ? "alert" : "status"}
                       className="mt-3 border p-3 text-sm text-muted-foreground"
                     >
@@ -420,7 +421,7 @@ export function StructuredTemplatePreview({
 }
 function SourcePin({ source }: { source: StructuredTemplateSource }) {
   return (
-    <section className="border p-3">
+    <section data-testid="pinned-authorized-source" className="border p-3">
       <div className="flex items-center gap-2">
         <AlertCircle className="size-4 text-primary" />
         <p className="text-sm font-medium">Pinned authorized source</p>
