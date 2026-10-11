@@ -1,5 +1,7 @@
 # PROPOSED project official decision-log contract
 
+> **Scope correction — 2026-10-11:** Earlier use of “division note” in this planning artifact meant a **deviation note**: an approved, bounded exception or change that bypasses a specified standard or requirement. It does **not** mean a departmental decision note. This correction preserves the historical proposed project-decision and BOM-candidate material below. Ordinary BOM candidate submissions or Hardware approvals do not create, grant, or imply a deviation. No executable deviation workflow, authority, status, permission, record, RLS policy, or user action is established by this document.
+
 **Status:** review-only specification. Nothing in this document is installed,
 callable, seeded, granted, or applied. It must not be used to create a note,
 approval, notification, record, or database object.
@@ -36,6 +38,14 @@ the future action requires an official decision. Supporting notes/evidence are
 contextual and optional unless the future action specifically requires an
 exception reason or contributing-party record. No generated copy, approval, or
 note may satisfy this requirement.
+
+## Deviation-note scope correction and verified boundary
+
+A deviation note is a distinct controlled exception/change record. Its minimum future content must identify the source standard and its revision, the bounded exception reason, risk, safeguards, and evidence, the affected project and — where applicable — part, revision, and quantity or a validity period, the required existing authority, and a closure or expiry outcome. An ordinary candidate approval never supplies this exception authority.
+
+**Verified implementation evidence:** `project_change_requests` has generic `change_type`, `change_code`, title, description, impact summary, status, requester, approver, approval timestamp, and implementation timestamp fields. The Project Delivery tab currently exposes `DEVIATION` and `WAIVER` as generic change types. This is not a verified deviation workflow: no source standard/revision, exception reason/risk/safeguards/evidence, affected part/revision/quantity, validity period, expiry/closure semantics, or required-authority mapping is present in its generated schema. No authoritative concession record, deviation-specific state model, or protected approval action was found in the reviewed source.
+
+**Safe current boundary:** Project → Delivery → Engineering changes remains the only relevant existing project link. It may display existing generic change-request rows subject to existing caller access, but it must not be relabeled as a deviation-note register or gain a create/approve action for deviations. Until an authoritative deviation workflow and caller-read contract are verified, any future deviation-specific page must remain disabled/not configured rather than infer authority or reuse candidate approval.
 
 ## PROPOSED future action linkage
 
