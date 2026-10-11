@@ -37,6 +37,9 @@ CREATE TEMP TABLE approved_candidate AS SELECT candidate_id FROM public.submit_c
 CREATE TEMP TABLE approved_revision AS SELECT id AS revision_id FROM public.component_candidate_payload_revisions WHERE candidate_id = (SELECT candidate_id FROM approved_candidate);
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 SELECT * FROM public.decide_component_candidate((SELECT candidate_id FROM approved_candidate), (SELECT revision_id FROM approved_revision), 'APPROVE', 'Approved Hardware handoff', '40000000-0000-4000-8000-000000000053') \g /dev/null
+CREATE TEMP TABLE read_scope_ids AS SELECT
+  (SELECT candidate_id FROM pending_candidate) AS pending_candidate_id,
+  (SELECT candidate_id FROM approved_candidate) AS approved_candidate_id;
 COMMIT;
 
 SET ROLE authenticated;
@@ -51,7 +54,7 @@ END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DO $$ BEGIN
   IF (SELECT count(*) FROM public.component_candidate_purchase_handoff_read) <> 1 THEN RAISE EXCEPTION 'Purchase reader did not receive only approved handoff'; END IF;
-  IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE candidate_id = (SELECT candidate_id FROM pending_candidate)) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%Hidden supplier%' OR row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%42%') THEN RAISE EXCEPTION 'Purchase handoff leaked pending or private payload fields'; END IF;
+  IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE candidate_id = (SELECT pending_candidate_id FROM read_scope_ids)) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%Hidden supplier%' OR row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%42%') THEN RAISE EXCEPTION 'Purchase handoff leaked pending or private payload fields'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000004', false);
 DO $$ BEGIN
