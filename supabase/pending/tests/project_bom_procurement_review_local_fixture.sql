@@ -1,0 +1,12 @@
+CREATE SCHEMA auth;
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+CREATE TABLE public.employees(id uuid PRIMARY KEY, user_id uuid UNIQUE, employment_status text NOT NULL);
+CREATE TABLE public.departments(id uuid PRIMARY KEY, code text NOT NULL, is_active boolean NOT NULL);
+CREATE TABLE public.employee_departments(employee_id uuid NOT NULL REFERENCES public.employees(id), department_id uuid NOT NULL REFERENCES public.departments(id), PRIMARY KEY(employee_id, department_id));
+CREATE TABLE public.projects(id uuid PRIMARY KEY, project_manager_employee_id uuid REFERENCES public.employees(id));
+CREATE TABLE public.project_team_members(project_id uuid NOT NULL REFERENCES public.projects(id), employee_id uuid NOT NULL REFERENCES public.employees(id), PRIMARY KEY(project_id, employee_id));
+CREATE TABLE public.project_boms(id uuid PRIMARY KEY, project_id uuid NOT NULL REFERENCES public.projects(id), bom_number text NOT NULL, revision text, updated_at timestamptz NOT NULL DEFAULT clock_timestamp());
+CREATE TABLE public.project_bom_items(id uuid PRIMARY KEY, bom_id uuid NOT NULL REFERENCES public.project_boms(id), line_index integer NOT NULL);
+CREATE TABLE public.components(id uuid PRIMARY KEY, part_number text NOT NULL, manufacturer text, name text NOT NULL);
+CREATE TABLE public.permission_test_grants(user_id uuid NOT NULL, permission_key text NOT NULL, PRIMARY KEY(user_id, permission_key));
+CREATE FUNCTION public.has_permission(p_user uuid, p_key text) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT EXISTS (SELECT 1 FROM public.permission_test_grants WHERE user_id=p_user AND permission_key=p_key) $$;
