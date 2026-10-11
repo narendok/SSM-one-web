@@ -279,16 +279,10 @@ BEGIN
   v_payload := public.component_candidate_decision_canonical_payload(p_candidate_id, p_expected_revision_id, p_decision, p_decision_note);
   v_payload_hash := md5(v_payload::text);
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
-  -- This is the fresh post-wait authority boundary. Scope only locks the
-  -- candidate/revision, so concurrent authority revocation can commit while
-  -- this transaction waits and is visible to this READ COMMITTED statement.
-  SELECT scope.* INTO v_scope
-  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
-  END IF;
   SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
+    -- Replays authorize only after the request serialization wait, so a
+    -- committed revocation cannot be bypassed by an old terminal receipt.
     SELECT scope.* INTO v_scope
     FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
     IF NOT FOUND THEN
@@ -299,6 +293,12 @@ BEGIN
       RETURN;
     END IF;
     RAISE EXCEPTION 'Decision request key conflicts with a different actor or canonical payload';
+  END IF;
+  -- New decisions authorize only after the request serialization wait.
+  SELECT scope.* INTO v_scope
+  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
   -- Lock the state transition only after the post-wait authority/replay path.
   -- The request lock serializes idempotent calls; the candidate lock serializes
