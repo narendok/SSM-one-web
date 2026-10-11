@@ -116,7 +116,7 @@ describe("SharedProductLifecycle governed reads", () => {
       error: null,
     });
 
-    renderLifecycle(undefined, { ...project, requirement_baseline_id: "baseline-123" });
+    renderLifecycle(undefined, { ...project, requirement_baseline_id: "baseline-123" } as typeof project & { requirement_baseline_id: string });
 
     expect(await screen.findByText(/Requirement revision 2 is newer than this pinned baseline revision 1/)).toBeTruthy();
     expect(screen.getByText(/no acceptance is implied/)).toBeTruthy();
