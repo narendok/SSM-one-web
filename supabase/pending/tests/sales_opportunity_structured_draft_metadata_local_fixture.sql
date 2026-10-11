@@ -97,3 +97,4 @@ CREATE FUNCTION public.next_business_number(p_kind text, p_prefix text, p_contex
 CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, PRIMARY KEY(bucket_id,name));
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon;
