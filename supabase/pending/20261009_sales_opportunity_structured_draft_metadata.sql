@@ -116,7 +116,9 @@ CREATE TRIGGER sales_opportunity_structured_draft_revisions_immutable
 CREATE TRIGGER sales_opportunity_structured_draft_requests_immutable
   BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_draft_requests
   FOR EACH ROW EXECUTE FUNCTION public.reject_sales_opportunity_structured_draft_history_mutation();
-REVOKE ALL ON FUNCTION public.reject_sales_opportunity_structured_draft_history_mutation() FROM PUBLIC, anon, authenticated;
+-- New functions inherit PUBLIC EXECUTE unless it is removed. `authenticated`
+-- has no direct grant here, so removing PUBLIC preserves its effective denial.
+REVOKE ALL ON FUNCTION public.reject_sales_opportunity_structured_draft_history_mutation() FROM PUBLIC, anon;
 
 CREATE OR REPLACE FUNCTION public.sales_opportunity_structured_draft_schema_hash(
   p_document_kind text
@@ -408,10 +410,13 @@ BEGIN
   RETURN QUERY SELECT v_draft.id, v_revision.id, v_revision.revision_number, false;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_schema_hash(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_canonical_payload(text, jsonb) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_source_fingerprint(uuid, uuid, uuid, uuid, integer, text, text, jsonb, timestamptz) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
+-- These functions are created above and carry no direct authenticated grants.
+-- Revoking PUBLIC (and anon explicitly) leaves authenticated denied until the
+-- separate activation contract grants one of the approved entry points.
+REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_schema_hash(text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_canonical_payload(text, jsonb) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.sales_opportunity_structured_draft_source_fingerprint(uuid, uuid, uuid, uuid, integer, text, text, jsonb, timestamptz) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid) FROM PUBLIC, anon, service_role;
 
 -- Deliberately absent: Drive, storage, controlled-register, document-number, or
 -- controlled-document materialization. This metadata-only proposal must not be used to issue,

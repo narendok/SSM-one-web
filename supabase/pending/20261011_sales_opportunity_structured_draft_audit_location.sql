@@ -84,7 +84,9 @@ CREATE TRIGGER sales_opportunity_structured_draft_revision_locations_immutable
 CREATE TRIGGER sales_opportunity_structured_draft_audit_events_immutable
   BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_draft_audit_events
   FOR EACH ROW EXECUTE FUNCTION public.reject_sales_opportunity_structured_draft_audit_mutation();
-REVOKE ALL ON FUNCTION public.reject_sales_opportunity_structured_draft_audit_mutation() FROM PUBLIC, anon, authenticated;
+-- No direct authenticated grant exists for this new internal helper; removing
+-- PUBLIC preserves the reviewed effective denial for authenticated callers.
+REVOKE ALL ON FUNCTION public.reject_sales_opportunity_structured_draft_audit_mutation() FROM PUBLIC, anon;
 
 CREATE OR REPLACE FUNCTION public.save_sales_opportunity_structured_draft_at_location(
   p_opportunity_id uuid,
@@ -176,7 +178,8 @@ BEGIN
   RETURN QUERY SELECT v_saved.draft_id, v_saved.revision_id, v_saved.revision_number, v_saved.replayed;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.save_sales_opportunity_structured_draft_at_location(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
+-- Activation alone may grant this approved entry point to authenticated.
+REVOKE ALL ON FUNCTION public.save_sales_opportunity_structured_draft_at_location(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid, uuid) FROM PUBLIC, anon, service_role;
 
 -- Deliberately absent: storage.objects writes, Storage API calls, upload URLs,
 -- file bytes, document-control register rows, document numbers, approval,
