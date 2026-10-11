@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -71,6 +71,99 @@ export function ProjectOperationalTab({ projectId, kind }: { projectId: string; 
     </>}
     <OperationalDialog projectId={projectId} config={config} open={open} onOpenChange={setOpen} onSaved={refresh} />
   </div>;
+}
+
+type LinkedBaseline = {
+  id: string;
+  baseline_number: string;
+  revision_number: number;
+  status: string;
+  approved_at: string | null;
+  requirement: { id: string; requirement_number: string; title: string; current_revision: number } | null;
+};
+
+type ProjectHandover = {
+  id: string;
+  status: string;
+  handover_notes: string | null;
+  initiated_at: string | null;
+  baseline_id: string;
+};
+
+export function ProjectRequirementContext({ projectId, baselineId }: { projectId: string; baselineId: string | null }) {
+  const baselineQuery = useQuery({
+    queryKey: ["project_requirement_baseline", projectId, baselineId],
+    enabled: Boolean(baselineId),
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("requirement_baselines")
+        .select("id,baseline_number,revision_number,status,approved_at,requirement:customer_requirements(id,requirement_number,title,current_revision)")
+        .eq("id", baselineId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as LinkedBaseline | null;
+    },
+  });
+  const handoverQuery = useQuery({
+    queryKey: ["project_sales_handover", projectId, baselineId],
+    enabled: Boolean(baselineId),
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("sales_project_handovers")
+        .select("id,status,handover_notes,initiated_at,baseline_id")
+        .eq("project_id", projectId)
+        .eq("baseline_id", baselineId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as ProjectHandover | null;
+    },
+  });
+
+  const isLoading = baselineQuery.isLoading || handoverQuery.isLoading;
+  const failures = [baselineQuery.error, handoverQuery.error].filter(Boolean);
+  const readFailed = failures.length > 0;
+  const errorMessage = failures[0] instanceof Error ? failures[0].message : "Read unavailable";
+  const retry = () => {
+    void baselineQuery.refetch();
+    void handoverQuery.refetch();
+  };
+
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">Requirement baseline & handover</p>
+          <p className="mt-1 text-sm text-muted-foreground">Linked commercial records are shown as recorded; this view does not confirm approval or release.</p>
+        </div>
+        {baselineId && <span className="font-mono text-xs text-muted-foreground">Linked baseline</span>}
+      </div>
+      {!baselineId ? (
+        <p className="mt-4 text-sm text-muted-foreground">No requirement baseline is linked to this project.</p>
+      ) : isLoading ? (
+        <p className="mt-4 text-sm text-muted-foreground">Loading linked requirement baseline and handover…</p>
+      ) : readFailed ? (
+        <div role="alert" className="mt-4 flex flex-wrap items-center gap-2 text-sm text-destructive">
+          <span>Linked requirement records could not be loaded. {errorMessage}</span>
+          <Button variant="outline" size="sm" onClick={retry}><RefreshCw className="size-3.5" /> Retry</Button>
+        </div>
+      ) : !baselineQuery.data ? (
+        <p className="mt-4 text-sm text-muted-foreground">The linked requirement baseline is not currently accessible.</p>
+      ) : (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="space-y-2 border-l-2 border-primary/30 pl-3">
+            <p className="text-xs font-medium text-muted-foreground">Linked baseline</p>
+            <p className="font-medium">{baselineQuery.data.baseline_number} · revision {baselineQuery.data.revision_number}</p>
+            <div className="flex flex-wrap gap-2"><Badge variant="outline">{baselineQuery.data.status}</Badge>{baselineQuery.data.approved_at && <Badge variant="secondary">Recorded {baselineQuery.data.approved_at.slice(0, 10)}</Badge>}</div>
+            {baselineQuery.data.requirement ? <p className="text-sm text-muted-foreground">{baselineQuery.data.requirement.requirement_number} · {baselineQuery.data.requirement.title} · current revision {baselineQuery.data.requirement.current_revision}</p> : <p className="text-sm text-muted-foreground">No accessible requirement record is linked to this baseline.</p>}
+          </div>
+          <div className="space-y-2 border-l-2 border-muted pl-3">
+            <p className="text-xs font-medium text-muted-foreground">Project handover</p>
+            {handoverQuery.data ? <><div className="flex flex-wrap gap-2"><Badge variant="outline">{handoverQuery.data.status}</Badge>{handoverQuery.data.initiated_at && <Badge variant="secondary">Recorded {handoverQuery.data.initiated_at.slice(0, 10)}</Badge>}</div>{handoverQuery.data.handover_notes ? <p className="text-sm text-muted-foreground">{handoverQuery.data.handover_notes}</p> : <p className="text-sm text-muted-foreground">No handover notes are recorded.</p>}</> : <p className="text-sm text-muted-foreground">No handover record is currently accessible for this linked baseline.</p>}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
 }
 
 function OperationalDialog({ projectId, config, open, onOpenChange, onSaved }: { projectId: string; config: EntityConfig; open: boolean; onOpenChange: (value: boolean) => void; onSaved: () => void }) {
