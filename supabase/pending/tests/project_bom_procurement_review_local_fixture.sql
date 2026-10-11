@@ -1,3 +1,6 @@
+CREATE ROLE anon;
+CREATE ROLE authenticated;
+CREATE ROLE service_role;
 CREATE SCHEMA auth;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 CREATE TABLE public.employees(id uuid PRIMARY KEY, user_id uuid UNIQUE, employment_status text NOT NULL);
