@@ -9,6 +9,7 @@ printf "listen_addresses = ''\nport = %s\nunix_socket_directories = '%s'\nshared
 for _ in $(seq 1 150); do psql --host="$socket_dir" --port="$port" --username=lovable --dbname=postgres -Atqc 'select 1' >/dev/null 2>&1 && break; sleep .1; done
 createdb --host="$socket_dir" --port="$port" --username=lovable "$database"; args=(--set=ON_ERROR_STOP=1 --host="$socket_dir" --port="$port" --username=lovable --dbname="$database")
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_metadata_local_fixture.sql"
+psql "${args[@]}" -f "$root/docs/evidence/sql-editor/20261011_sales_structured_draft_phase_b_binding_review.sql"
 psql "${args[@]}" -f "$root/docs/evidence/sql-editor/20261011_sales_structured_draft_phase_a_install.sql"
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_staged_flow_local_acceptance.sql"
 printf 'STAGED_FLOW_EXECUTION_COMPLETE=true\n'

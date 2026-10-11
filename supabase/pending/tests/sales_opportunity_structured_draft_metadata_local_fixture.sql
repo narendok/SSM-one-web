@@ -90,6 +90,19 @@ COMMIT;
 CREATE TABLE public.departments (id uuid PRIMARY KEY, code text NOT NULL, name text NOT NULL, is_active boolean NOT NULL DEFAULT true);
 INSERT INTO public.departments(id, code, name) VALUES ('00000000-0000-4000-8000-000000000501', 'SAL', 'Sales');
 ALTER TABLE public.drive_nodes ADD COLUMN file_type text NULL, ADD COLUMN mime_type text NULL, ADD COLUMN file_size_bytes bigint NULL, ADD COLUMN sha256_checksum text NULL, ADD COLUMN current_version integer NOT NULL DEFAULT 1, ADD COLUMN slug text NOT NULL DEFAULT 'fixture', ADD COLUMN metadata jsonb NOT NULL DEFAULT '{}'::jsonb, ADD COLUMN created_by uuid NULL;
+INSERT INTO public.customers (id, name) VALUES
+  ('03e06115-a7d4-4965-9e92-9c37462f5ddc', 'Phase B Customer');
+INSERT INTO public.sales_opportunities (id, customer_id) VALUES
+  ('a6c62c81-1cc2-4804-b1c5-c004c6730b52', '03e06115-a7d4-4965-9e92-9c37462f5ddc');
+INSERT INTO public.master_specifications (id, opportunity_id, customer_id) VALUES
+  ('7a3aba95-61f6-495a-a280-f37a3be77670', 'a6c62c81-1cc2-4804-b1c5-c004c6730b52', '03e06115-a7d4-4965-9e92-9c37462f5ddc');
+INSERT INTO public.master_specification_versions (id, specification_id, version_number, specification_data, created_at) VALUES
+  ('4914fba5-43a0-4486-b62f-d775a9bb16b9', '7a3aba95-61f6-495a-a280-f37a3be77670', 1, '{"source":"Phase B"}'::jsonb, '2026-10-11T00:00:00Z');
+INSERT INTO public.departments(id, code, name) VALUES
+  ('db21a9b2-2cd4-4891-9151-064bef8a7cb4', 'SAL-PHASE-B', 'Sales Phase B');
+INSERT INTO public.drive_nodes(id, name, node_type, is_locked, is_trashed, department_id, project_id, parent_id, slug) VALUES
+  ('0c3e85df-f901-4bb9-9ea7-ee2072658faa', 'Sales root', 'folder', true, false, 'db21a9b2-2cd4-4891-9151-064bef8a7cb4', NULL, NULL, 'sales-root-phase-b'),
+  ('020dcca5-7809-4287-88cd-537d837a3eee', 'Sales client folder', 'folder', true, false, 'db21a9b2-2cd4-4891-9151-064bef8a7cb4', NULL, '0c3e85df-f901-4bb9-9ea7-ee2072658faa', 'sales-client-phase-b');
 CREATE TABLE public.drive_node_revisions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), node_id uuid NOT NULL REFERENCES public.drive_nodes(id), version integer NOT NULL, file_size_bytes bigint NOT NULL, storage_path text NOT NULL, sha256_checksum text NULL, change_summary text NULL, uploaded_by uuid NULL);
 CREATE TABLE public.document_control_registers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), drive_node_id uuid NOT NULL UNIQUE REFERENCES public.drive_nodes(id), department_id uuid NOT NULL REFERENCES public.departments(id), document_number text NOT NULL UNIQUE, title text NOT NULL, document_status text NOT NULL DEFAULT 'DRAFT', controlled_version integer NOT NULL DEFAULT 1, approval_note text NULL, created_by uuid NOT NULL);
 CREATE FUNCTION public.can_access_department_drive(p_user uuid, p_department uuid, p_project uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
