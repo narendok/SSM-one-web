@@ -1025,9 +1025,9 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
-    expect(folderLink).not.toHaveAttribute("aria-disabled", "true");
-    expect(folderLink).toHaveAttribute("href", expect.stringContaining("node=sales-folder-id"));
-    expect(folderLink).toHaveAttribute("href", expect.stringContaining("department=sales-department-id"));
+    expect(folderLink.getAttribute("aria-disabled")).not.toBe("true");
+    expect(folderLink.getAttribute("href")).toContain("node=sales-folder-id");
+    expect(folderLink.getAttribute("href")).toContain("department=sales-department-id");
     expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
       p_opportunity_id: "opportunity-id",
       p_customer_id: "customer-id",
@@ -1065,8 +1065,8 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
-    expect(folderLink).toHaveAttribute("aria-disabled", "true");
-    expect(folderLink).not.toHaveAttribute("href");
+    expect(folderLink.getAttribute("aria-disabled")).toBe("true");
+    expect(folderLink.getAttribute("href")).toBeNull();
   });
 
   it("exits clean previews by Escape and built-in Close without confirmation, and reopens without stale dirty state", async () => {
