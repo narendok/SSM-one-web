@@ -9,7 +9,7 @@ import type { Project } from "@/lib/projects";
 import { createLifecycleDraftPlan } from "@/lib/lifecycle-draft-plan";
 import { LifecycleDocumentDraftPanel } from "@/components/projects/LifecycleDocumentDraftPanel";
 import { LifecycleResponsibilityPlan } from "@/components/projects/LifecycleResponsibilityPlan";
-import { lifecycleStageReadiness, type CompanyStageRead } from "@/lib/connected-lifecycle-responsibility-plan";
+import { lifecycleStageReadiness, requirementRevisionRelation, type CompanyStageRead } from "@/lib/connected-lifecycle-responsibility-plan";
 
 const sb = supabase as any;
 
@@ -135,6 +135,9 @@ export function SharedProductLifecycle({
     return counts;
   }, {} as Record<string, number>);
   const stageReadiness = lifecycleStageReadiness(stages.data ?? [], project.project_stage, Boolean(baseline.data));
+  const revisionRelation = baseline.data
+    ? requirementRevisionRelation(baseline.data.revision_number, baseline.data.requirement?.current_revision)
+    : null;
   const lifecycleContextLoading = baseline.isLoading || stages.isLoading;
   const lifecycleContextError = baseline.error ?? stages.error;
 
@@ -225,7 +228,7 @@ export function SharedProductLifecycle({
         : lifecycleContextError ? <div role="alert" className="mt-4 flex flex-wrap items-center gap-2 text-sm text-destructive"><span>Stage planning context could not be loaded{lifecycleContextError instanceof Error ? `: ${lifecycleContextError.message}` : "."}</span><Button size="sm" variant="outline" onClick={() => { void baseline.refetch(); void stages.refetch(); }}><RefreshCw className="size-3.5" /> Retry</Button></div>
           : <div className="mt-4 grid gap-4 lg:grid-cols-3">
             <div className="border-l-2 border-primary/30 pl-3"><p className="text-xs text-muted-foreground">Recorded stage & workstream</p><p className="mt-1 text-sm font-medium">{stageReadiness.stage?.stage_code ?? project.project_stage.replaceAll("_", " ")}</p><p className="mt-1 text-xs text-muted-foreground">{stageReadiness.responsibility ? `Planning owner: ${stageReadiness.responsibility.leadDepartment} · participants: ${stageReadiness.responsibility.participatingDepartments.join(" · ") || "None"}` : "No lifecycle workstream is inferred for this recorded project stage."}</p></div>
-            <div className="border-l-2 border-muted pl-3"><p className="text-xs text-muted-foreground">Pinned requirement revision</p>{baseline.data ? <><p className="mt-1 text-sm font-medium">{baseline.data.baseline_number} · revision {baseline.data.revision_number}</p><p className="mt-1 text-xs text-muted-foreground">{baseline.data.requirement ? `${baseline.data.requirement.requirement_number} · current requirement revision ${baseline.data.requirement.current_revision}` : "Requirement record is not accessible."} · recorded status: {baseline.data.status}</p></> : <p className="mt-1 text-sm text-muted-foreground">No accessible pinned requirement baseline.</p>}</div>
+            <div className="border-l-2 border-muted pl-3"><p className="text-xs text-muted-foreground">Pinned requirement revision</p>{baseline.data ? <><p className="mt-1 text-sm font-medium">{baseline.data.baseline_number} · revision {baseline.data.revision_number}</p><p className="mt-1 text-xs text-muted-foreground">{baseline.data.requirement ? `${baseline.data.requirement.requirement_number} · current requirement revision ${baseline.data.requirement.current_revision}` : "Requirement record is not accessible."} · recorded status: {baseline.data.status}</p>{revisionRelation && <p className={revisionRelation.state === "NEWER_REQUIREMENT_REVISION" ? "mt-3 text-xs text-destructive" : "mt-3 text-xs text-muted-foreground"}>{revisionRelation.message}</p>}</> : <p className="mt-1 text-sm text-muted-foreground">No accessible pinned requirement baseline.</p>}</div>
             <div className="border-l-2 border-muted pl-3"><p className="text-xs text-muted-foreground">Planning prerequisites</p><ul className="mt-1 space-y-1 text-xs text-muted-foreground">{stageReadiness.prerequisites.map((prerequisite) => <li key={prerequisite}>{prerequisite}</li>)}</ul>{stageReadiness.blockers.length ? <div className="mt-3"><p className="text-xs font-medium text-destructive">Blockers to resolve</p><ul className="mt-1 space-y-1 text-xs text-muted-foreground">{stageReadiness.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul></div> : <p className="mt-3 text-xs text-muted-foreground">No source-link or stage-mapping blocker is visible. Review governed records separately.</p>}</div>
           </div>}
     </Card>

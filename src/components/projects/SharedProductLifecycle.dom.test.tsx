@@ -98,4 +98,24 @@ describe("SharedProductLifecycle governed reads", () => {
     expect(callbacks.onOpenTasks).toHaveBeenCalledTimes(1);
     expect(callbacks.onOpenFiles).toHaveBeenCalledTimes(1);
   });
+
+  it("shows the recorded requirement revision relationship without calling it approval or release", async () => {
+    readLifecycle.mockResolvedValue({ data: [], error: null });
+    readGates.mockResolvedValue({ data: [], error: null });
+    readStages.mockResolvedValue({ data: [], error: null });
+    readBaseline.mockResolvedValue({
+      data: {
+        baseline_number: "MASTER-2026-0001",
+        revision_number: 1,
+        status: "APPROVED",
+        requirement: { requirement_number: "OPPORTUNITY-2026-0013", current_revision: 2 },
+      },
+      error: null,
+    });
+
+    renderLifecycle();
+
+    expect(await screen.findByText(/Requirement revision 2 is newer than this pinned baseline revision 1/)).toBeTruthy();
+    expect(screen.getByText(/no acceptance is implied/)).toBeTruthy();
+  });
 });
