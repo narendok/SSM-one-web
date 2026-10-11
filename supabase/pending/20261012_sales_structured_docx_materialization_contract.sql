@@ -291,6 +291,6 @@ REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_assignment() FROM PUBL
 REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_storage_attempt() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, service_role;
-REVOKE ALL ON FUNCTION public.register_sales_structured_docx_storage_attempt(uuid,uuid,uuid,uuid,text,text,text,bigint) FROM PUBLIC, anon, service_role;
+REVOKE ALL ON FUNCTION public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,bigint) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.read_sales_structured_docx_materializations(uuid,uuid,uuid) FROM PUBLIC, anon, service_role;
