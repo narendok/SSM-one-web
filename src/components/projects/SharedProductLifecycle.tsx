@@ -9,6 +9,7 @@ import type { Project } from "@/lib/projects";
 import { createLifecycleDraftPlan } from "@/lib/lifecycle-draft-plan";
 import { LifecycleDocumentDraftPanel } from "@/components/projects/LifecycleDocumentDraftPanel";
 import { LifecycleResponsibilityPlan } from "@/components/projects/LifecycleResponsibilityPlan";
+import { lifecycleStageReadiness, type CompanyStageRead } from "@/lib/connected-lifecycle-responsibility-plan";
 
 const sb = supabase as any;
 
@@ -19,6 +20,13 @@ const phases = [
   { title: "Engineering release", detail: "Design records, gates, changes, and type-approval evidence.", state: "release" },
   { title: "Production readiness", detail: "Exact BOM source, lead-time planning, test/jig and calibration prerequisites.", state: "readiness" },
 ];
+
+type LinkedBaseline = {
+  baseline_number: string;
+  revision_number: number;
+  status: string;
+  requirement: { requirement_number: string; current_revision: number } | null;
+};
 
 export function SharedProductLifecycle({
   project,
@@ -64,6 +72,33 @@ export function SharedProductLifecycle({
       return data ?? [];
     },
   });
+  const baseline = useQuery({
+    queryKey: ["shared_product_lifecycle_baseline", project.id, project.requirement_baseline_id],
+    enabled: Boolean(project.requirement_baseline_id),
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("requirement_baselines")
+        .select("baseline_number,revision_number,status,requirement:customer_requirements(requirement_number,current_revision)")
+        .eq("id", project.requirement_baseline_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as LinkedBaseline | null;
+    },
+  });
+  const stages = useQuery({
+    queryKey: ["shared_product_lifecycle_company_stages"],
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("company_process_stages")
+        .select("id,stage_code,title,sort_order,requires_gated_handover")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as CompanyStageRead[];
+    },
+  });
 
   const openTasks = snapshot?.tasks.filter((task: any) => task.status !== "done").length ?? 0;
   const linkedBoms = snapshot?.boms.filter((bom: any) => bom.source_drive_node_id && bom.source_drive_revision_id).length ?? 0;
@@ -92,6 +127,9 @@ export function SharedProductLifecycle({
     counts[status] = (counts[status] ?? 0) + 1;
     return counts;
   }, {} as Record<string, number>);
+  const stageReadiness = lifecycleStageReadiness(stages.data ?? [], project.project_stage, Boolean(baseline.data));
+  const lifecycleContextLoading = baseline.isLoading || stages.isLoading;
+  const lifecycleContextError = baseline.error ?? stages.error;
 
   return <div className="space-y-5">
     <Card className="border-primary/20 p-5">
@@ -166,6 +204,23 @@ export function SharedProductLifecycle({
           )}
         </div>
       </div>
+    </Card>
+
+    <Card className="p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium">Stage planning context</p>
+          <p className="mt-1 text-sm text-muted-foreground">Prerequisites and workstreams are planning references only. They do not confirm completion, approval, handover, or release.</p>
+        </div>
+        <Badge variant="outline">READ ONLY</Badge>
+      </div>
+      {lifecycleContextLoading ? <p className="mt-4 text-sm text-muted-foreground">Loading accessible stage and requirement context…</p>
+        : lifecycleContextError ? <div role="alert" className="mt-4 flex flex-wrap items-center gap-2 text-sm text-destructive"><span>Stage planning context could not be loaded{lifecycleContextError instanceof Error ? `: ${lifecycleContextError.message}` : "."}</span><Button size="sm" variant="outline" onClick={() => { void baseline.refetch(); void stages.refetch(); }}><RefreshCw className="size-3.5" /> Retry</Button></div>
+          : <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <div className="border-l-2 border-primary/30 pl-3"><p className="text-xs text-muted-foreground">Recorded stage & workstream</p><p className="mt-1 text-sm font-medium">{stageReadiness.stage?.stage_code ?? project.project_stage.replaceAll("_", " ")}</p><p className="mt-1 text-xs text-muted-foreground">{stageReadiness.responsibility ? `Planning owner: ${stageReadiness.responsibility.leadDepartment} · participants: ${stageReadiness.responsibility.participatingDepartments.join(" · ") || "None"}` : "No lifecycle workstream is inferred for this recorded project stage."}</p></div>
+            <div className="border-l-2 border-muted pl-3"><p className="text-xs text-muted-foreground">Pinned requirement revision</p>{baseline.data ? <><p className="mt-1 text-sm font-medium">{baseline.data.baseline_number} · revision {baseline.data.revision_number}</p><p className="mt-1 text-xs text-muted-foreground">{baseline.data.requirement ? `${baseline.data.requirement.requirement_number} · current requirement revision ${baseline.data.requirement.current_revision}` : "Requirement record is not accessible."} · recorded status: {baseline.data.status}</p></> : <p className="mt-1 text-sm text-muted-foreground">No accessible pinned requirement baseline.</p>}</div>
+            <div className="border-l-2 border-muted pl-3"><p className="text-xs text-muted-foreground">Planning prerequisites</p><ul className="mt-1 space-y-1 text-xs text-muted-foreground">{stageReadiness.prerequisites.map((prerequisite) => <li key={prerequisite}>{prerequisite}</li>)}</ul>{stageReadiness.blockers.length ? <div className="mt-3"><p className="text-xs font-medium text-destructive">Blockers to resolve</p><ul className="mt-1 space-y-1 text-xs text-muted-foreground">{stageReadiness.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul></div> : <p className="mt-3 text-xs text-muted-foreground">No source-link or stage-mapping blocker is visible. Review governed records separately.</p>}</div>
+          </div>}
     </Card>
 
     <Card className="p-5">

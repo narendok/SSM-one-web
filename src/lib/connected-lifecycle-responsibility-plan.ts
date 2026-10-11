@@ -30,6 +30,13 @@ export type CompanyStageRead = {
   requires_gated_handover: boolean;
 };
 
+export type LifecycleStageReadiness = {
+  stage: CompanyStageRead | null;
+  responsibility: LifecycleResponsibilityDefault | null;
+  prerequisites: string[];
+  blockers: string[];
+};
+
 export const connectedLifecycleResponsibilityDefaults: LifecycleResponsibilityDefault[] = [
   {
     key: "intake",
@@ -182,6 +189,27 @@ export function stagePreparationSummary(stages: CompanyStageRead[], stageCode: s
     ? stages.filter((stage) => preparationDefaultForStage(stage.stage_code)?.key === preparation.key)
     : [];
   return { preparation, matchingStages };
+}
+
+/**
+ * Builds a read-only stage planning summary from a recorded project-stage code.
+ * It deliberately does not derive completion, approval, or release from any
+ * stage or task status.
+ */
+export function lifecycleStageReadiness(stages: CompanyStageRead[], stageCode: string, hasRequirementBaseline: boolean): LifecycleStageReadiness {
+  const stage = stages.find((candidate) => candidate.stage_code === stageCode) ?? null;
+  const responsibility = responsibilityDefaultForStage(stageCode);
+  const prerequisites = [
+    "Pinned requirement baseline",
+    ...(responsibility && responsibility.stageRange[0] > 1 ? ["Visible records from the preceding lifecycle workstream"] : []),
+    ...(stage?.requires_gated_handover ? ["Existing governed handover record"] : []),
+  ];
+  const blockers = [
+    ...(!hasRequirementBaseline ? ["No requirement baseline is linked to this project."] : []),
+    ...(!stage ? [`Recorded project stage ${stageCode} is not an accessible active company lifecycle stage.`] : []),
+    ...(!responsibility ? ["No default workstream is mapped to the recorded project stage."] : []),
+  ];
+  return { stage, responsibility, prerequisites, blockers };
 }
 
 export function lifecycleResponsibilitySettingsStatus() {
