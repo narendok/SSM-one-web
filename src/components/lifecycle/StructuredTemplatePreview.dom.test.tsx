@@ -1024,8 +1024,9 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       </QueryClientProvider>,
     );
 
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
     const folderLink = (await screen.findAllByRole("link", { name: "Open Sales folder" })).find(
-      (link) => link.getAttribute("href")?.includes("node=sales-folder-id"),
+      (link) => link.getAttribute("href")?.includes("sales-folder-id"),
     );
     if (!folderLink) throw new Error("The discovered Sales folder entry was not rendered.");
     expect(folderLink.getAttribute("aria-disabled")).not.toBe("true");
@@ -1067,6 +1068,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       </QueryClientProvider>,
     );
 
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
     const folderLink = (await screen.findAllByRole("link", { name: "Open Sales folder" })).find(
       (link) => link.getAttribute("aria-disabled") === "true",
     );
