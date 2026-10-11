@@ -14,17 +14,11 @@ const readStages = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: (table: string) => ({
-      select: () => ({
-        eq: () => table === "project_stage_gates"
-          ? readGates().then((result: { data: unknown; error: unknown }) => result.error ? Promise.reject(result.error) : result)
-          : table === "requirement_baselines"
-            ? ({ maybeSingle: readBaseline })
-            : table === "company_process_stages"
-              ? ({ order: () => readStages().then((result: { data: unknown; error: unknown }) => result.error ? Promise.reject(result.error) : result) })
-              : ({ order: () => readLifecycle().then((result: { data: unknown; error: unknown }) => result.error ? Promise.reject(result.error) : result) }),
-      }),
-    }),
+    from: (table: string) => {
+      const execute = () => table === "project_stage_gates" ? readGates() : table === "requirement_baselines" ? readBaseline() : table === "company_process_stages" ? readStages() : readLifecycle();
+      const query = { select: () => query, eq: () => query, order: execute, maybeSingle: execute };
+      return query;
+    },
   },
 }));
 
@@ -58,7 +52,7 @@ afterEach(() => {
 describe("SharedProductLifecycle governed reads", () => {
   it("settles the 42P17 gate read as unavailable while unaffected lifecycle records remain usable", async () => {
     readLifecycle.mockResolvedValue({ data: [], error: null });
-    readGates.mockResolvedValue({ data: null, error: { message: "infinite recursion detected in policy", code: "42P17" } });
+    readGates.mockRejectedValue({ message: "infinite recursion detected in policy", code: "42P17" });
     readStages.mockResolvedValue({ data: [], error: null });
 
     renderLifecycle();
@@ -71,7 +65,7 @@ describe("SharedProductLifecycle governed reads", () => {
 
   it("settles governed automation failures instead of leaving its panel loading", async () => {
     const user = userEvent.setup();
-    readLifecycle.mockResolvedValueOnce({ data: null, error: new Error("Process records unavailable") }).mockResolvedValue({ data: [], error: null });
+    readLifecycle.mockRejectedValueOnce(new Error("Process records unavailable")).mockResolvedValue({ data: [], error: null });
     readGates.mockResolvedValue({ data: [], error: null });
     readStages.mockResolvedValue({ data: [], error: null });
 
