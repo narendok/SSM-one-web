@@ -79,4 +79,5 @@ ALTER TABLE public.drive_nodes ADD COLUMN file_type text NULL, ADD COLUMN mime_t
 CREATE TABLE public.drive_node_revisions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), node_id uuid NOT NULL REFERENCES public.drive_nodes(id), version integer NOT NULL, file_size_bytes bigint NOT NULL, storage_path text NOT NULL, sha256_checksum text NULL, change_summary text NULL, uploaded_by uuid NULL);
 CREATE TABLE public.document_control_registers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), drive_node_id uuid NOT NULL UNIQUE REFERENCES public.drive_nodes(id), department_id uuid NOT NULL REFERENCES public.departments(id), document_number text NOT NULL UNIQUE, title text NOT NULL, document_status text NOT NULL DEFAULT 'DRAFT', controlled_version integer NOT NULL DEFAULT 1, approval_note text NULL, created_by uuid NOT NULL);
 CREATE FUNCTION public.next_business_number(p_kind text, p_prefix text, p_context text) RETURNS text LANGUAGE sql AS $$ SELECT upper(p_prefix) || '-LOCAL-' || substr(md5(coalesce(p_context,'') || p_kind), 1, 8) $$;
+CREATE SCHEMA storage;
 CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, PRIMARY KEY(bucket_id,name));
