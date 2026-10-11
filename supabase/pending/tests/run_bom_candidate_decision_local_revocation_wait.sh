@@ -52,6 +52,17 @@ create_candidate() {
 }
 revision_for() { run_psql -Atqc "SELECT id FROM public.component_candidate_payload_revisions WHERE candidate_id = '$1'::uuid"; }
 waiter_name='bom_candidate_decision_revocation_waiter'
+wait_for_locker_lock() {
+  local lock_prefix="$1" lock_value="$2"
+  for _ in $(seq 1 100); do
+    local observed
+    observed="$(run_psql -Atqc "WITH key AS (SELECT hashtextextended('$lock_prefix' || '$lock_value', 0) AS value) SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_locks lock CROSS JOIN key WHERE lock.locktype = 'advisory' AND lock.granted AND lock.classid::bigint = ((key.value >> 32) & 4294967295) AND lock.objid::bigint = (key.value & 4294967295)) THEN 'locker-holds-exact-decision-lock' ELSE '' END")"
+    [[ "$observed" == 'locker-holds-exact-decision-lock' ]] && return 0
+    sleep 0.02
+  done
+  echo "LOCAL_CASE_FAIL locker did not hold exact decision advisory lock for $lock_prefix$lock_value" >&2
+  return 1
+}
 wait_for_exact_lock() {
   local lock_prefix="$1" lock_value="$2"
   for _ in $(seq 1 100); do
