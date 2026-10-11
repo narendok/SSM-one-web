@@ -181,7 +181,7 @@ CREATE OR REPLACE FUNCTION public.record_sales_structured_docx_object_verificati
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_existing public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE;
 BEGIN
-  IF current_setting('request.jwt.claim.sub', true) IS NOT NULL THEN RAISE EXCEPTION 'Only the trusted DOCX object verifier may record object facts'; END IF;
+  IF NULLIF(current_setting('request.jwt.claim.sub', true), '') IS NOT NULL THEN RAISE EXCEPTION 'Only the trusted DOCX object verifier may record object facts'; END IF;
   IF p_object_version IS NULL OR btrim(p_object_version) = '' OR p_sha256_checksum !~ '^[a-f0-9]{64}$' OR p_size_bytes IS NULL OR p_size_bytes <= 0 OR p_size_bytes > 10485760 OR NOT p_ooxml_content_types OR NOT p_ooxml_word_document OR p_html_detected OR btrim(coalesce(p_verifier_service,'')) = '' THEN RAISE EXCEPTION 'Trusted verifier rejected DOCX bytes'; END IF;
   SELECT * INTO v_request FROM public.sales_opportunity_structured_docx_requests AS verified_request WHERE verified_request.request_key = p_request_key FOR UPDATE;
   IF NOT FOUND OR p_storage_bucket <> 'project-drive' OR p_storage_path <> (SELECT private_storage_prefix || p_request_key::text || '-draft.docx' FROM public.sales_opportunity_document_locations WHERE id = v_request.location_id) THEN RAISE EXCEPTION 'Trusted DOCX verification does not match the exact request location'; END IF;
