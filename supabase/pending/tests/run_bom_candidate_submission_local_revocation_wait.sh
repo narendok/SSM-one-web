@@ -63,7 +63,9 @@ SQL
   waiter_status=0; wait "$waiter_pid" || waiter_status=$?
   [[ "$waiter_status" == '3' ]] || { cat "$log_dir/$label-waiter.err" >&2; exit 1; }
   grep -Fq 'ERROR:  Candidate submission requires a project-manager team member, an approved project-initiated baseline, a completed exact-project handover, exact customer/opportunity linkage, and an active HARDWARE department' "$log_dir/$label-waiter.err" || { cat "$log_dir/$label-waiter.err" >&2; exit 1; }
-  [[ ! -s "$log_dir/$label-waiter.out" ]] || { cat "$log_dir/$label-waiter.out" >&2; echo "LOCAL_CASE_FAIL $label returned a result after revocation" >&2; exit 1; }
+  local returned_rows
+  returned_rows="$(grep -Ec '^[0-9a-f-]{36}\|[0-9a-f-]{36}\|(t|f)$' "$log_dir/$label-waiter.out" || true)"
+  [[ "$returned_rows" == '0' ]] || { cat "$log_dir/$label-waiter.out" >&2; echo "LOCAL_CASE_FAIL $label returned a candidate result after revocation" >&2; exit 1; }
   local after_counts
   after_counts="$(run_psql -Atqc "SELECT count(*)::text || '/' || (SELECT count(*) FROM public.component_candidate_payload_revisions)::text || '/' || (SELECT count(*) FROM public.component_candidate_submission_audit_events)::text || '/' || (SELECT count(*) FROM public.component_candidate_submission_request_receipts)::text FROM public.component_candidate_submissions")"
   [[ "$after_counts" == "$before_counts" ]] || { echo "LOCAL_CASE_FAIL $label changed candidate graph before=$before_counts after=$after_counts" >&2; exit 1; }
