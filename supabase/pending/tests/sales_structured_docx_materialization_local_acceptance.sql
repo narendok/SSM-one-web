@@ -18,7 +18,9 @@ INSERT INTO public.sales_opportunity_structured_docx_assignments(id,opportunity_
 UPDATE public.master_specifications SET current_version_id='00000000-0000-4000-8000-000000000401' WHERE id='00000000-0000-4000-8000-000000000301';
 CREATE TEMP TABLE requested AS SELECT * FROM public.request_sales_structured_docx_materialization(
  '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000901','sales-sor-local',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','00000000-0000-4000-8000-000000000902');
+SELECT set_config('request.jwt.claim.sub', NULL, true);
 SELECT public.record_sales_structured_docx_object_verification('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM requested),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,true,true,false,'local-ooxml-verifier');
+SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
 CREATE TEMP TABLE committed AS SELECT * FROM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sor-draft.docx','project-drive',(SELECT storage_path FROM requested),'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512);
 DO $assert$
 DECLARE v_before integer;
