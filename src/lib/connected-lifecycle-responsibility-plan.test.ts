@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   connectedLifecycleResponsibilityDefaults,
   lifecycleResponsibilitySettingsStatus,
+  preparationDefaultForStage,
   responsibilityDefaultForStage,
+  stagePreparationSummary,
   stagesForResponsibilityDefault,
 } from "./connected-lifecycle-responsibility-plan";
 
@@ -34,5 +36,21 @@ describe("connected lifecycle responsibility defaults", () => {
       available: false,
       message: expect.stringContaining("Local planning adjustments are unsaved"),
     });
+  });
+
+  it("prepares deterministic stage deliverables without creating work or treating a handoff as approval", () => {
+    expect(preparationDefaultForStage("HW_01")).toMatchObject({ key: "intake", leadDepartment: "SAL" });
+    expect(preparationDefaultForStage("HW_09")).toMatchObject({ key: "poc", leadDepartment: "RND" });
+    expect(preparationDefaultForStage("HW_23")).toMatchObject({
+      key: "release_readiness",
+      purchaseHandoff: "HARDWARE_APPROVED_HANDOFF_REQUIRED",
+    });
+    expect(preparationDefaultForStage("HW_30")).toMatchObject({ key: "dispatch", leadDepartment: "PROD" });
+    expect(preparationDefaultForStage("OTHER_01")).toBeNull();
+    expect(stagePreparationSummary([
+      { id: "1", stage_code: "HW_22", title: "22", sort_order: 22, requires_gated_handover: false },
+      { id: "2", stage_code: "HW_23", title: "23", sort_order: 23, requires_gated_handover: false },
+      { id: "3", stage_code: "HW_30", title: "30", sort_order: 30, requires_gated_handover: false },
+    ], "HW_23").matchingStages.map((stage) => stage.stage_code)).toEqual(["HW_22", "HW_23"]);
   });
 });

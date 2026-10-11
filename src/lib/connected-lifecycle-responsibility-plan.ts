@@ -11,6 +11,17 @@ export type LifecycleResponsibilityDefault = {
   handoff: string | null;
 };
 
+export type LifecyclePreparationPreview = {
+  key: string;
+  title: string;
+  stageRange: readonly [number, number];
+  leadDepartment: LifecycleDepartmentCode;
+  participatingDepartments: LifecycleDepartmentCode[];
+  deliverables: string[];
+  dependency: string | null;
+  purchaseHandoff: "NOT_APPLICABLE" | "HARDWARE_APPROVED_HANDOFF_REQUIRED";
+};
+
 export type CompanyStageRead = {
   id: string;
   stage_code: string;
@@ -122,6 +133,21 @@ export const connectedLifecycleResponsibilityDefaults: LifecycleResponsibilityDe
   },
 ];
 
+export const connectedLifecyclePreparationDefaults: LifecyclePreparationPreview[] = connectedLifecycleResponsibilityDefaults.map((responsibility) => ({
+  key: responsibility.key,
+  title: responsibility.title,
+  stageRange: responsibility.stageRange,
+  leadDepartment: responsibility.leadDepartment,
+  participatingDepartments: responsibility.participatingDepartments,
+  deliverables: responsibility.deliverables,
+  dependency: responsibility.key === "intake"
+    ? null
+    : `Visible ${connectedLifecycleResponsibilityDefaults[Math.max(0, connectedLifecycleResponsibilityDefaults.indexOf(responsibility) - 1)]?.title ?? "previous"} stage records remain the planning dependency.`,
+  purchaseHandoff: responsibility.key === "release_readiness"
+    ? "HARDWARE_APPROVED_HANDOFF_REQUIRED"
+    : "NOT_APPLICABLE",
+}));
+
 export function lifecycleStageNumber(stageCode: string) {
   const match = /^HW_(\d{2})$/.exec(stageCode);
   return match ? Number(match[1]) : null;
@@ -140,6 +166,22 @@ export function stagesForResponsibilityDefault(
   responsibility: LifecycleResponsibilityDefault,
 ) {
   return stages.filter((stage) => responsibilityDefaultForStage(stage.stage_code)?.key === responsibility.key);
+}
+
+export function preparationDefaultForStage(stageCode: string) {
+  const stageNumber = lifecycleStageNumber(stageCode);
+  if (stageNumber === null) return null;
+  return connectedLifecyclePreparationDefaults.find(({ stageRange }) =>
+    stageNumber >= stageRange[0] && stageNumber <= stageRange[1],
+  ) ?? null;
+}
+
+export function stagePreparationSummary(stages: CompanyStageRead[], stageCode: string) {
+  const preparation = preparationDefaultForStage(stageCode);
+  const matchingStages = preparation
+    ? stages.filter((stage) => preparationDefaultForStage(stage.stage_code)?.key === preparation.key)
+    : [];
+  return { preparation, matchingStages };
 }
 
 export function lifecycleResponsibilitySettingsStatus() {
