@@ -575,31 +575,16 @@ export function ProposalDetail({
       if (error) throw error;
       const location = (data as Array<{ location_id: string; storage_bucket: string; storage_path_prefix: string }> | null)?.[0];
       if (!location?.location_id || !location.storage_bucket || !location.storage_path_prefix) return null;
-      const { data: binding, error: bindingError } = await (supabase as any)
-        .from("sales_opportunity_document_locations")
-        .select("id,opportunity_id,customer_id,department_id,target_folder_node_id,status,location_purpose")
-        .eq("id", location.location_id)
-        .eq("opportunity_id", detail.opportunity.id)
-        .eq("customer_id", detail.specification.customer_id)
-        .eq("location_purpose", "STRUCTURED_DRAFT")
-        .eq("status", "ACTIVE")
-        .maybeSingle();
-      if (bindingError) throw bindingError;
-      if (!binding) return null;
-      if (
-        !binding.department_id ||
-        !binding.target_folder_node_id
-      ) return null;
       return {
-        location_id: binding.id,
-        opportunityId: binding.opportunity_id,
-        departmentId: binding.department_id,
-        targetFolderNodeId: binding.target_folder_node_id,
+        location_id: location.location_id,
+        opportunityId: detail.opportunity.id,
+        departmentId: "",
+        targetFolderNodeId: "",
         storageBucket: location.storage_bucket,
         storagePathPrefix: location.storage_path_prefix,
-        isActive: binding.status === "ACTIVE",
-        folderIsLocked: true,
-        folderIsTrashed: false,
+        isActive: true,
+        folderIsLocked: false,
+        folderIsTrashed: true,
       } satisfies SalesDocumentLocationDiscovery;
     },
     enabled: Boolean(detail && specification.data?.id),
