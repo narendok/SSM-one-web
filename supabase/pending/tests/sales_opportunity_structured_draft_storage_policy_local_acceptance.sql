@@ -27,12 +27,12 @@ RESET ROLE;
 
 -- The materialization acceptance rolls back its fixture; seed the minimum
 -- immutable receipt graph needed to exercise the Sales SELECT policy here.
-INSERT INTO public.sales_opportunity_structured_drafts(id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,document_kind,created_by)
-VALUES ('00000000-0000-4000-8000-000000000722','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000401','SOR','00000000-0000-4000-8000-000000000001');
-INSERT INTO public.sales_opportunity_structured_draft_revisions(id,draft_id,revision_number,payload,created_by)
-VALUES ('00000000-0000-4000-8000-000000000721','00000000-0000-4000-8000-000000000722',1,'{}','00000000-0000-4000-8000-000000000001');
-INSERT INTO public.sales_opportunity_structured_draft_requests(request_key,draft_id,revision_id,opportunity_id,customer_id,source_fingerprint,requested_by)
-VALUES ('00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000722','00000000-0000-4000-8000-000000000721','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','00000000-0000-4000-8000-000000000001');
+INSERT INTO public.sales_opportunity_structured_drafts(id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,master_specification_version_number,document_kind,editable_schema_key,editable_schema_hash,source_fingerprint,created_by)
+VALUES ('00000000-0000-4000-8000-000000000722','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000401',1,'SOR','sales-local-scalar-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','00000000-0000-4000-8000-000000000001');
+INSERT INTO public.sales_opportunity_structured_draft_revisions(id,draft_id,revision_number,canonical_payload,payload_hash,source_fingerprint,created_by)
+VALUES ('00000000-0000-4000-8000-000000000721','00000000-0000-4000-8000-000000000722',1,'{}','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','00000000-0000-4000-8000-000000000001');
+INSERT INTO public.sales_opportunity_structured_draft_requests(request_key,requested_by,opportunity_id,customer_id,master_specification_id,master_specification_version_id,master_specification_version_number,document_kind,editable_schema_key,editable_schema_hash,draft_id,revision_id,operation,expected_revision_number,payload_hash,source_fingerprint)
+VALUES ('00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000401',1,'SOR','sales-local-scalar-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','00000000-0000-4000-8000-000000000722','00000000-0000-4000-8000-000000000721','CREATE',0,'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
 
 SET ROLE authenticated;
 SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000003';
