@@ -24,6 +24,7 @@ function validateRequest(input: StructuredDocxVerificationRequest) {
 
 function sameAuthority(input: StructuredDocxVerificationRequest, actorId: string, scope: AuthorizedStructuredDocxObject) {
   return scope.actorId === actorId && scope.assignmentId === input.assignmentId && scope.requestKey === input.requestKey && scope.projectId === input.projectId && scope.documentKind === input.documentKind
+    && UUID.test(scope.departmentId) && UUID.test(scope.responsibleEmployeeId) && UUID.test(scope.templateId) && UUID.test(scope.templateDocumentRevisionId)
     && scope.storageBucket === "project-drive" && scope.storagePath.endsWith(`${input.requestKey}-draft.docx`) && scope.objectVersion.trim().length > 0
     && scope.sourceFingerprint === input.sourceFingerprint && scope.templateKey === input.templateKey && scope.templateVersion === input.templateVersion && scope.templateSchemaHash === input.templateSchemaHash;
 }
