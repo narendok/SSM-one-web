@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { lifecycleAcceptanceEnabled } from "./lifecycle-acceptance-gate";
+import { structuredDocxRegistryStatus } from "./structured-lifecycle-docx-registry";
 
 export type LifecycleTemplateRead = {
   id: string;
@@ -74,3 +75,5 @@ export function lifecycleTemplateMutationStatus() {
     message: "Protected draft content, cloning, activation, retirement, and stage actions are acceptance-pending and cannot change records from this register.",
   } as const;
 }
+
+export { structuredDocxRegistryStatus };

@@ -13,7 +13,7 @@ import { StructuredTemplatePreview } from "@/components/lifecycle/StructuredTemp
 import { LifecycleResponsibilityPlan } from "@/components/projects/LifecycleResponsibilityPlan";
 import { fetchCanonicalDepartments } from "@/lib/tasks";
 import { retireLifecycleTemplate } from "@/lib/lifecycle-actions.functions";
-import { fetchLifecycleTemplateSettings, lifecycleTemplateMutationStatus, type LifecycleTemplateRead, type LifecycleTemplateStageRead } from "@/lib/lifecycle-template-settings";
+import { fetchLifecycleTemplateSettings, lifecycleTemplateMutationStatus, structuredDocxRegistryStatus, type LifecycleTemplateRead, type LifecycleTemplateStageRead } from "@/lib/lifecycle-template-settings";
 import { readWorkspaceDepartmentId, WORKSPACE_CONTEXT_EVENT } from "@/lib/workspace-context";
 
 export const Route = createFileRoute("/_authenticated/settings/lifecycle")({
@@ -47,6 +47,7 @@ function LifecycleTemplateSettings() {
     return grouped;
   }, [data]);
   const mutationStatus = lifecycleTemplateMutationStatus();
+  const registryStatus = structuredDocxRegistryStatus();
   const queryClient = useQueryClient();
   const retire = useServerFn(retireLifecycleTemplate);
   const retirement = useMutation({
@@ -73,6 +74,11 @@ function LifecycleTemplateSettings() {
         <p className="mt-1 text-xs text-muted-foreground">Draft bodies can be prepared locally. Saving, activation and retirement require protected backend acceptance.</p>
       </div></div>
     </Card>}
+    <Card className="p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-sm font-semibold">Document responsibility register</h2><p className="mt-1 text-xs text-muted-foreground">Approved template versions and assigned-person access will be managed here after protected registry acceptance. Existing document history is unchanged.</p></div><Badge variant="outline">REVIEW ONLY</Badge></div>
+      <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled>Assign responsibility</Button><Button size="sm" variant="outline" disabled>Revoke assignment</Button><Button size="sm" variant="outline" disabled>Approve template version</Button></div>
+      <p className="mt-3 text-xs text-muted-foreground">{registryStatus.message}</p>
+    </Card>
     <LifecycleResponsibilityPlan />
     <StructuredTemplatePreview />
     <div className="flex flex-wrap gap-2">{departments.map((department) =>
