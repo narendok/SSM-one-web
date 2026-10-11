@@ -906,16 +906,16 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       </QueryClientProvider>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "Preview documents" }));
+    await user.click(await screen.findByRole("button", { name: "Open Sales documents" }));
     const scope = await screen.findByLabelText("Scope statement");
     await user.clear(scope);
     await user.type(scope, "Keep this proposal-local draft");
 
     await user.click(screen.getByRole("button", { name: "Back to proposal" }));
     expect(screen.queryByText("Discard unsaved local edits?")).toBeNull();
-    expect(await screen.findByRole("button", { name: "Preview documents" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Open Sales documents" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Preview documents" }));
+    await user.click(screen.getByRole("button", { name: "Open Sales documents" }));
     expect((await screen.findByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe(
       "Keep this proposal-local draft",
     );
