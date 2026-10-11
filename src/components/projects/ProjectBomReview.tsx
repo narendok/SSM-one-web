@@ -21,7 +21,8 @@ export const projectBomReviewContractState = {
 } as const;
 
 function newReviewRow(): ReviewRow {
-  return { id: crypto.randomUUID(), reference: "", quantity: "", manualNote: "", kind: "existing", componentId: "", mpn: "", manufacturer: "", description: "" };
+  const id = crypto.randomUUID();
+  return { id, lineId: id, reference: "", quantity: "", manualNote: "", kind: "existing", componentId: "", mpn: "", manufacturer: "", description: "" };
 }
 
 function formatBomPin(bom: ProjectBomSummary | undefined) {
