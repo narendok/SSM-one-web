@@ -379,7 +379,11 @@ export function StructuredTemplatePreview({
     () => buildStructuredPreviewContent(kind, source.data ?? null, userEdits),
     [kind, source.data, userEdits],
   );
-  const salesGate = structuredSalesDocumentGate(kind, source.data ?? null);
+  // Keep local manual fields available while an identity/source transition is
+  // in progress; only a settled authenticated source result can block them.
+  const salesGate = actorId && !source.isPending
+    ? structuredSalesDocumentGate(kind, source.data ?? null)
+    : null;
   const saveCapability = structuredSalesDraftSaveCapability(
     isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
     capabilityDiscovery.data,
