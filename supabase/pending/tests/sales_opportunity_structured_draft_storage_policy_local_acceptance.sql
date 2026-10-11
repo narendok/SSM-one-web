@@ -1,6 +1,7 @@
 -- LOCAL DISPOSABLE POLICY ACCEPTANCE ONLY. It models all eight pre-existing
 -- permissive project-drive policies, then proves the reviewed replacement.
 \set ON_ERROR_STOP on
+BEGIN;
 
 CREATE POLICY project_drive_read ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'project-drive');
 CREATE POLICY project_drive_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'project-drive');
@@ -14,8 +15,8 @@ CREATE POLICY "Project managers delete project files" ON storage.objects FOR DEL
 INSERT INTO storage.objects(bucket_id, name) VALUES
   ('project-drive', 'sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html'),
   ('project-drive', 'projects/retained-engineering-file.html');
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000003';
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000003';
 DO $baseline$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM storage.objects WHERE name LIKE 'sales/opportunity/%') THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL expected pre-remediation PM Sales-prefix leak'; END IF;
@@ -24,8 +25,8 @@ RESET ROLE;
 
 \ir ../20261011_sales_opportunity_structured_draft_materialization_activation.sql
 
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000003';
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000003';
 DO $pm$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM storage.objects WHERE name = 'projects/retained-engineering-file.html') THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL PM lost non-Sales read'; END IF;
@@ -36,10 +37,13 @@ BEGIN
 END $pm$;
 RESET ROLE;
 
+INSERT INTO public.drive_nodes(id,name,node_type,is_locked,is_trashed,department_id,parent_id,slug) VALUES ('00000000-0000-4000-8000-000000000612','Opportunity B folder','folder',true,false,'00000000-0000-4000-8000-000000000501','00000000-0000-4000-8000-000000000610','opportunity-b');
+INSERT INTO public.sales_opportunity_document_locations(id,opportunity_id,customer_id,department_id,drive_root_node_id,target_folder_node_id,private_storage_bucket,private_storage_prefix,location_purpose,authorized_by,authorized_at,created_by) VALUES ('00000000-0000-4000-8000-000000000711','00000000-0000-4000-8000-000000000202','00000000-0000-4000-8000-000000000102','00000000-0000-4000-8000-000000000501','00000000-0000-4000-8000-000000000610','00000000-0000-4000-8000-000000000612','project-drive','sales/opportunity/00000000-0000-4000-8000-000000000202/','STRUCTURED_DRAFT','00000000-0000-4000-8000-000000000001',now(),'00000000-0000-4000-8000-000000000001');
+
 INSERT INTO public.sales_opportunity_structured_draft_materializations(id,request_key,structured_draft_revision_id,location_id,drive_node_id,drive_revision_id,document_control_register_id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,document_kind,source_fingerprint,rendered_sha256_checksum,storage_bucket,storage_path,size_bytes,requested_by)
 SELECT '00000000-0000-4000-8000-000000000901', request_key, revision_id, '00000000-0000-4000-8000-000000000710', '00000000-0000-4000-8000-000000000801', '00000000-0000-4000-8000-000000000802', '00000000-0000-4000-8000-000000000803', opportunity_id, customer_id, master_specification_id, master_specification_version_id, document_kind, source_fingerprint, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'project-drive', 'sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html', 42, requested_by FROM public.sales_opportunity_structured_draft_requests WHERE request_key='00000000-0000-4000-8000-000000000720';
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
+SET ROLE authenticated;
+SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
 DO $sales$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM storage.objects WHERE name='sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html') THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL Sales actor cannot read own materialization'; END IF;
@@ -49,7 +53,7 @@ BEGIN
 END $sales$;
 RESET ROLE;
 
-SET LOCAL ROLE anon;
+SET ROLE anon;
 DO $anon$
 BEGIN
   IF EXISTS (SELECT 1 FROM storage.objects) THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL unauthenticated read allowed'; END IF;
@@ -63,3 +67,4 @@ BEGIN
   IF has_function_privilege('anon','public.resolve_sales_opportunity_structured_draft_location(uuid,uuid,uuid)','EXECUTE') THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL anonymous resolver execute grant'; END IF;
 END $grants$;
 SELECT 'STRUCTURED_DRAFT_STORAGE_POLICY_LOCAL_ACCEPTANCE_PASS' AS result;
+ROLLBACK;
