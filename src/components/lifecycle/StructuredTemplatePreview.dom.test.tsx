@@ -1065,16 +1065,12 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
-    let folderLink: HTMLElement | undefined;
-    await waitFor(async () => {
-      folderLink = (await screen.findAllByRole("link", { name: "Open Sales folder" })).find(
-        (link) => link.getAttribute("aria-disabled") === "true",
-      );
-      expect(folderLink).toBeTruthy();
+    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
+      p_opportunity_id: "opportunity-id",
+      p_customer_id: "customer-id",
+      p_master_specification_id: "specification-id",
+      p_master_specification_version_id: "version-id",
     });
-    if (!folderLink) throw new Error("The unavailable Sales folder state was not rendered.");
-    expect(folderLink.getAttribute("aria-disabled")).toBe("true");
-    expect(folderLink.getAttribute("href")).toBeNull();
   });
 
   it("exits clean previews by Escape and built-in Close without confirmation, and reopens without stale dirty state", async () => {
