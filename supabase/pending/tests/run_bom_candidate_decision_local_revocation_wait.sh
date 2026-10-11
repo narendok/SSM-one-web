@@ -87,7 +87,7 @@ run_case() {
   psql "${psql_args[@]}" <<SQL >"$log_dir/$label-locker.out" 2>"$log_dir/$label-locker.err" & locker_pid=$!
 BEGIN;
 SELECT pg_advisory_xact_lock(hashtextextended('$lock_prefix' || '$lock_value', 0));
-SELECT pg_sleep(0.25);
+SELECT pg_sleep(3);
 COMMIT;
 SQL
   wait_for_locker_lock "$lock_prefix" "$lock_value"
@@ -96,6 +96,7 @@ SQL
   run_psql -c "$revoke_sql" >/dev/null
   wait "$locker_pid"
   waiter_status=0; wait "$waiter_pid" || waiter_status=$?
+  grep -Fq 'LOCAL_WORKER_PREWAIT auth_uid=30000000-0000-4000-8000-000000000002 has_permission=true active_hardware_membership=true scope_rows=1' "$log_dir/$label-waiter.out" || { cat "$log_dir/$label-waiter.out" "$log_dir/$label-waiter.err" >&2; echo "LOCAL_CASE_FAIL $label worker prewait authorization did not hold" >&2; exit 1; }
   [[ "$waiter_status" == '3' ]] || { cat "$log_dir/$label-waiter.err" >&2; exit 1; }
   grep -Fq 'ERROR:  Candidate decision requires active Hardware membership and engineering.approve authority' "$log_dir/$label-waiter.err" || { cat "$log_dir/$label-waiter.err" >&2; exit 1; }
   [[ "$(grep -Ec '^[0-9a-f-]{36}\|[0-9a-f-]{36}\|(t|f)$' "$log_dir/$label-waiter.out" || true)" == '0' ]] || { cat "$log_dir/$label-waiter.out" >&2; echo "LOCAL_CASE_FAIL $label returned a decision result after revocation" >&2; exit 1; }
