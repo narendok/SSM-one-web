@@ -602,7 +602,9 @@ export function StructuredTemplatePreview({
     try {
       const payload = localEditsForStructuredPreview(kind, effectiveEdits);
       const renderedDocx = await renderStructuredLifecycleDocx(kind, source.data ?? null, payload);
-      const objectUrl = URL.createObjectURL(new Blob([renderedDocx.bytes], { type: renderedDocx.mimeType }));
+      const copy = new Uint8Array(renderedDocx.bytes.byteLength);
+      copy.set(renderedDocx.bytes);
+      const objectUrl = URL.createObjectURL(new Blob([copy.buffer], { type: renderedDocx.mimeType }));
       const download = document.createElement("a");
       download.href = objectUrl;
       download.download = renderedDocx.fileName;
