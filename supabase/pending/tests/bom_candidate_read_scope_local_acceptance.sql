@@ -45,8 +45,9 @@ CREATE TEMP TABLE project_b_revision AS SELECT id AS revision_id FROM public.com
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 SELECT * FROM public.decide_component_candidate((SELECT candidate_id FROM approved_candidate), (SELECT revision_id FROM approved_revision), 'APPROVE', 'Approved Hardware handoff', '40000000-0000-4000-8000-000000000053') \g /dev/null
 DELETE FROM public.project_team_members WHERE id = '40000000-0000-4000-8000-000000000044';
-CREATE TEMP TABLE local_read_scope_ids ON COMMIT PRESERVE ROWS AS
-SELECT (SELECT candidate_id FROM approved_candidate) AS approved_candidate_id;
+CREATE TEMP TABLE local_read_scope_ids ON COMMIT PRESERVE ROWS AS SELECT
+  (SELECT candidate_id FROM approved_candidate) AS approved_candidate_id,
+  (SELECT candidate_id FROM project_b_candidate) AS project_b_candidate_id;
 COMMIT;
 GRANT SELECT ON local_read_scope_ids TO authenticated;
 
@@ -81,7 +82,7 @@ DO $$ BEGIN
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.component_candidate_purchase_handoff_read) <> 1 OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE candidate_id IN ('40000000-0000-4000-8000-000000000051'::uuid, (SELECT candidate_id FROM project_b_candidate))) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%Hidden supplier%') OR EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'component_candidate_purchase_handoff_read' AND column_name IN ('cost', 'supplier', 'supplier_url', 'datasheet_url', 'notes', 'submitted_by', 'decided_by')) THEN RAISE EXCEPTION 'Purchase handoff leaked non-approved, cross-project, or private payload data'; END IF;
+  IF (SELECT count(*) FROM public.component_candidate_purchase_handoff_read) <> 1 OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE candidate_id IN ('40000000-0000-4000-8000-000000000051'::uuid, (SELECT project_b_candidate_id FROM local_read_scope_ids))) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%Hidden supplier%') OR EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'component_candidate_purchase_handoff_read' AND column_name IN ('cost', 'supplier', 'supplier_url', 'datasheet_url', 'notes', 'submitted_by', 'decided_by')) THEN RAISE EXCEPTION 'Purchase handoff leaked non-approved, cross-project, or private payload data'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000004', false);
 DO $$ BEGIN
