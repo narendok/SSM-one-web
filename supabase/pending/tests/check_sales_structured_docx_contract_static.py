@@ -21,7 +21,7 @@ for table in ('sales_opportunity_structured_docx_assignments', 'sales_opportunit
     need(sql, f'GRANT ALL ON public.{table} TO service_role;', f'{table} service grant only')
     need(sql, f'ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY;', f'{table} RLS')
 need(sql, "responsible_employee_id", 'responsible employee pin')
-need(sql, "v_employee.user_id = v_actor AND employment_status = 'ACTIVE'", 'active employee actor check')
+need(sql, "v_employee.user_id <> v_actor OR v_employee.employment_status <> 'ACTIVE'", 'active employee actor check')
 need(sql, 'public.employee_departments', 'department membership recheck')
 need(sql, 'public.can_access_department_drive', 'scoped Drive recheck')
 need(sql, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 'OOXML MIME pin')
