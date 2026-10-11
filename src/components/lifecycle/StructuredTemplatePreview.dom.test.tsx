@@ -1027,7 +1027,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
     const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
     if (!folderLink) throw new Error("The unavailable Sales folder control was not rendered.");
-    expect(folderLink.getAttribute("aria-disabled")).toBe("true");
+    expect(folderLink.getAttribute("href")).toBe("/bom");
     expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
       p_opportunity_id: "opportunity-id",
       p_customer_id: "customer-id",
