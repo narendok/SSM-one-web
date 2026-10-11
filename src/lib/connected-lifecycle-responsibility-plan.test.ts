@@ -30,6 +30,9 @@ describe("connected lifecycle responsibility defaults", () => {
       { id: "2", stage_code: "HW_24", title: "24", sort_order: 24, requires_gated_handover: true },
       { id: "3", stage_code: "OTHER_01", title: "Other", sort_order: 25, requires_gated_handover: false },
     ], readiness).map((stage) => stage.stage_code)).toEqual(["HW_22", "HW_24"]);
-    expect(lifecycleResponsibilitySettingsStatus().available).toBe(false);
+    expect(lifecycleResponsibilitySettingsStatus()).toMatchObject({
+      available: false,
+      message: expect.stringContaining("Local planning adjustments are unsaved"),
+    });
   });
 });

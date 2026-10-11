@@ -145,6 +145,6 @@ export function stagesForResponsibilityDefault(
 export function lifecycleResponsibilitySettingsStatus() {
   return {
     available: false,
-    message: "Saved responsibility overrides and stage-triggered preparation remain unavailable until a protected, idempotent lifecycle settings contract is accepted.",
+    message: "Local planning adjustments are unsaved. Persistent overrides and stage-triggered preparation remain unavailable until protected contracts are accepted.",
   } as const;
 }
