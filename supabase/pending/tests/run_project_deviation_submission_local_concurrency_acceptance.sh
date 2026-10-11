@@ -36,7 +36,7 @@ SELECT pg_backend_pid();
 SELECT set_config('request.jwt.claim.sub', '50000000-0000-4000-8000-000000000001', false);
 SELECT deviation_submission_id, deviation_revision_id, replayed FROM public.submit_project_deviation(:'project'::uuid, :'source_register'::uuid, :'source_revision'::uuid, :'payload'::jsonb, :'evidence'::jsonb, :'request_key'::uuid);
 SQL
-echo $!; }
+worker_pid=$!; echo "$worker_pid"; }
 wait_for_file() { local file=$1; for _ in $(seq 1 200); do [[ -s "$file" ]] && return; sleep 0.02; done; echo "worker PID file missing: $file" >&2; exit 1; }
 hold_lock() { local token=$1; q "INSERT INTO public.deviation_test_sync(token) VALUES ('$token')"; psql "${psql_args[@]}" -v token="$token" -v project="$project" >"$work_dir/$token.holder.out" 2>"$work_dir/$token.holder.err" <<'SQL' &
 \set ON_ERROR_STOP on
@@ -44,7 +44,7 @@ BEGIN;
 SELECT public.deviation_test_hold_project_lock(:'project'::uuid, :'token');
 COMMIT;
 SQL
-echo $!; }
+holder_pid=$!; echo "$holder_pid"; }
 assert_waiting_exact_lock() { local pid=$1; local actual; actual="$(q "SELECT count(*) FROM pg_locks WHERE pid = $pid AND locktype = 'advisory' AND NOT granted AND classid = ((hashtextextended('project-deviation-project:' || '$project', 0) >> 32) & 4294967295)::oid AND objid = (hashtextextended('project-deviation-project:' || '$project', 0) & 4294967295)::oid")"; assert_eq "$actual" 1 "same worker prewait exact project advisory lock"; }
 release_lock() { local token=$1 holder=$2; q "UPDATE public.deviation_test_sync SET released = true WHERE token = '$token'"; wait "$holder"; }
 counts() { q "SELECT count(*) || ':' || (SELECT count(*) FROM public.project_deviation_submission_revisions) || ':' || (SELECT count(*) FROM public.project_deviation_submission_evidence) || ':' || (SELECT count(*) FROM public.project_deviation_submission_audit_events) || ':' || (SELECT count(*) FROM public.project_deviation_submission_request_receipts) FROM public.project_deviation_submissions"; }
