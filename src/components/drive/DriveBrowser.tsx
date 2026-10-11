@@ -74,10 +74,11 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   const activeDepartment = useMemo(() => departments.find((department) => department.id === activeDepartmentId) ?? null, [departments, activeDepartmentId]);
   const canBrowseProjectBoms = canPresentProjectBoms(activeDepartment);
   const childrenKey = ["drive_children", projectId, activeDepartmentId, folderId];
-  const { data: nodes = [], isLoading, isError, error } = useQuery({
+  const { data: nodes = [], isLoading, isError, error, refetch: refetchChildren } = useQuery({
     queryKey: childrenKey,
     queryFn: () => fetchChildren(folderId, projectId, activeDepartmentId),
     enabled: Boolean(projectId || activeDepartmentId || canBrowseAllWorkspaces),
+    retry: false,
   });
   const { data: crumbs = [] } = useQuery({
     queryKey: ["drive_crumbs", folderId],
@@ -447,8 +448,8 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
         )
        ) : isLoading ? (
         <Card className="p-8 text-center text-muted-foreground">Loading…</Card>
-      ) : isError ? (
-        <Card className="border-destructive/40 bg-destructive/5 p-8 text-center text-sm text-destructive">{error instanceof Error ? error.message : "This folder could not be loaded with your current access."}</Card>
+       ) : isError ? (
+        <Card role="alert" className="border-destructive/40 bg-destructive/5 p-8 text-center text-sm text-destructive"><p>{error instanceof Error ? `Project files could not be loaded. ${error.message}` : "Project files could not be loaded with your current access."}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => void refetchChildren()}>Retry</Button></Card>
        ) : visible.length === 0 ? (
         <Card className="p-8 text-center text-muted-foreground">
           No accessible items are stored in this folder.
