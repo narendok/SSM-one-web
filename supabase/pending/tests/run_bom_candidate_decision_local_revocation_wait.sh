@@ -72,7 +72,7 @@ SELECT pg_advisory_xact_lock(hashtextextended('$lock_prefix' || '$lock_value', 0
 SELECT pg_sleep(0.25);
 COMMIT;
 SQL
-  sleep 0.02
+  wait_for_locker_lock "$lock_prefix" "$lock_value"
   psql "${psql_args[@]}" --set=candidate_id="$candidate_id" --set=revision_id="$revision_id" --set=decision="$decision" --set=decision_note="$note" --set=request_key="$request_key" -f "$root/supabase/pending/tests/bom_candidate_decision_local_revocation_wait_worker.sql" >"$log_dir/$label-waiter.out" 2>"$log_dir/$label-waiter.err" & waiter_pid=$!
   wait_for_exact_lock "$lock_prefix" "$lock_value"
   run_psql -c "$revoke_sql" >/dev/null
