@@ -85,7 +85,11 @@ function ProjectDetailPage() {
     },
   });
 
-  const { data: projectTasks = [] } = useQuery({
+  const {
+    data: projectTasks,
+    isLoading: areTasksLoading,
+    isError: hasTaskError,
+  } = useQuery({
     queryKey: ["project_workspace_tasks", projectId],
     queryFn: () => fetchTasks(projectId),
   });
@@ -94,12 +98,13 @@ function ProjectDetailPage() {
   if (!project)
     return <Card className="p-8 text-center text-muted-foreground">Project not found.</Card>;
 
-  const openTaskCount = projectTasks.filter((task) =>
+  const visibleTasks = projectTasks ?? [];
+  const openTaskCount = visibleTasks.filter((task) =>
     OPEN_TASK_STATUSES.includes(task.status),
   ).length;
-  const completedTaskCount = projectTasks.filter((task) => task.status === "done").length;
-  const taskProgress = projectTasks.length
-    ? Math.round((completedTaskCount / projectTasks.length) * 100)
+  const completedTaskCount = visibleTasks.filter((task) => task.status === "done").length;
+  const taskProgress = visibleTasks.length
+    ? Math.round((completedTaskCount / visibleTasks.length) * 100)
     : 0;
 
   return (
@@ -161,11 +166,15 @@ function ProjectDetailPage() {
             <SnapshotCard
               icon={ClipboardList}
               label="Open work"
-              value={String(openTaskCount)}
+              value={areTasksLoading ? "…" : hasTaskError ? "—" : String(openTaskCount)}
               detail={
-                projectTasks.length
-                  ? `${completedTaskCount} of ${projectTasks.length} tasks complete`
-                  : "No visible project tasks"
+                areTasksLoading
+                  ? "Checking visible project tasks"
+                  : hasTaskError
+                    ? "Visible task data is unavailable"
+                    : visibleTasks.length
+                      ? `${completedTaskCount} of ${visibleTasks.length} visible tasks done`
+                      : "No visible project tasks"
               }
             />
             <SnapshotCard
@@ -190,14 +199,25 @@ function ProjectDetailPage() {
             <Card className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium">Delivery progress</p>
+                  <p className="text-sm font-medium">Visible task completion</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Based on the project tasks currently visible to you.
+                    {areTasksLoading
+                      ? "Checking the project tasks currently visible to you."
+                      : hasTaskError
+                        ? "Visible task data is currently unavailable."
+                        : visibleTasks.length
+                          ? "Based only on the project tasks currently visible to you."
+                          : "No project tasks are currently visible to you."}
                   </p>
                 </div>
-                <span className="text-2xl font-semibold">{taskProgress}%</span>
+                <span className="text-2xl font-semibold">
+                  {areTasksLoading || hasTaskError || !visibleTasks.length ? "—" : `${taskProgress}%`}
+                </span>
               </div>
-              <Progress className="mt-4" value={taskProgress} />
+              <Progress
+                className="mt-4"
+                value={areTasksLoading || hasTaskError || !visibleTasks.length ? 0 : taskProgress}
+              />
               <div className="mt-4 flex flex-wrap gap-2">
                 <ProjectAreaLink
                   onOpen={setActiveTab}
@@ -234,9 +254,13 @@ function ProjectDetailPage() {
             <Card className="p-4">
               <p className="text-sm font-medium">Current focus</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {openTaskCount
-                  ? `${openTaskCount} open task${openTaskCount === 1 ? "" : "s"} needs attention in this project.`
-                  : "No open project tasks are visible."}
+                {areTasksLoading
+                  ? "Checking visible project tasks."
+                  : hasTaskError
+                    ? "Open-task information is currently unavailable."
+                    : openTaskCount
+                      ? `${openTaskCount} open task${openTaskCount === 1 ? "" : "s"} needs attention in this project.`
+                      : "No open project tasks are visible."}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Badge variant="outline">{project.status}</Badge>
