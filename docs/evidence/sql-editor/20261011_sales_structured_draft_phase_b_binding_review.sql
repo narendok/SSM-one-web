@@ -53,7 +53,7 @@ CROSS JOIN folder
 CROSS JOIN root
 CROSS JOIN ancestry_validation;
 
--- All seven booleans above must be true before a separately authorized binding is considered.
+-- All six booleans above must be true before a separately authorized binding is considered.
 -- This review does not infer a root, write a binding, or substitute an ancestor.
 SELECT 'sales/opportunity/a6c62c81-1cc2-4804-b1c5-c004c6730b52/'::text AS required_private_storage_prefix;
 

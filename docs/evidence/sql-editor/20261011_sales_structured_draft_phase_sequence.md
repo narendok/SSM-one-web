@@ -19,14 +19,16 @@ The former combined four-source bundle is **deprecated and must not be executed*
 1. **Preflight.** Run the existing read-only preflight, then Phase B review. Stop on any discrepancy.
 2. **Phase A.** Run `20261011_sales_structured_draft_phase_a_install.sql` as one transaction. It embeds only sources 1–3, with no authenticated EXECUTE grants and no Storage policy changes.
 3. **Phase B.** Run `20261011_sales_structured_draft_phase_b_binding_review.sql` read-only. A separately reviewed administrator action may later create exactly one active `STRUCTURED_DRAFT` binding using the verified Sales root/target ancestry and prefix `sales/opportunity/a6c62c81-1cc2-4804-b1c5-c004c6730b52/`. This package does not contain that write because the root and approver/authorization provenance must be independently verified.
-4. **Phase C.** Run managed caller acceptance through the real authenticated transport, with the rollback-only review script as its boundary/checklist. `SET LOCAL ROLE authenticated` changes database privileges only; it does not populate or authenticate `auth.uid()`. Any temporary EXECUTE grant is transaction-local and must roll back. No policy or persistent grant may be used before evidence is accepted.
-5. **Phase D.** After Phases B/C evidence and separate action-time approval, run `20261011_sales_structured_draft_phase_d_activation.sql` as one transaction. It contains only approved source 4: policy replacement and the five persistent authenticated grants.
+4. **Phase C1 — operator logic.** Run `20261011_sales_structured_draft_phase_c_managed_acceptance_rollback.sql` in the SQL editor after Phase A and binding evidence. It uses a clearly labelled operator claim simulation and transaction-local grants to exercise save/replay/audit logic, then rolls back. It is not caller-authentication evidence.
+5. **Phase D.** After Phase B and accepted C1 operator-logic evidence, plus separate action-time approval, run `20261011_sales_structured_draft_phase_d_activation.sql` as one transaction. It contains only approved source 4: policy replacement and the five persistent authenticated grants.
+6. **Phase C2 — genuine caller.** Only after Phase D, use the existing signed-in application browser/session and its supported RPC/client function path to call the deployed entry point. The browser bearer establishes `auth.uid()`; SQL-editor claims and `SET ROLE` do not. Verify caller success, exact replay, wrong actor/source/location denial, and caller-scoped reads. If no deployed client/RPC wrapper exists, that wrapper is a separate source change and C2 remains blocked rather than being simulated.
 
 ## Unresolved gates
 
 - An administrator must still verify and approve the exact Sales root ancestor and binding provenance; the target folder alone is insufficient.
-- Managed acceptance requires a real existing authorized actor and a supported caller-authenticated transport. SQL editor `postgres` execution and `SET ROLE` are not evidence of that actor.
-- Phase D requires accepted managed evidence and renewed action-time approval because it changes Storage policies and grants.
+- C1 requires an existing authorized actor and approved verified private-location binding; it is operator simulation only.
+- C2 requires a real existing authorized actor, the Phase D persistent grants, and an existing deployed RPC/client wrapper. SQL editor `postgres` execution and `SET ROLE` are not evidence of that actor.
+- Phase D requires accepted C1 evidence and renewed action-time approval because it changes Storage policies and grants.
 
 ## Source manifest
 
