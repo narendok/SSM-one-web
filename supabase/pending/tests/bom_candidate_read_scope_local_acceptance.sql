@@ -32,7 +32,6 @@ INSERT INTO public.sales_project_handovers VALUES ('40000000-0000-4000-8000-0000
 -- A distinct project where the same Hardware and Purchase callers are not team members.
 INSERT INTO public.projects VALUES ('40000000-0000-4000-8000-000000000034', '40000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000021');
 INSERT INTO public.project_boms VALUES ('40000000-0000-4000-8000-000000000035', '40000000-0000-4000-8000-000000000034');
-INSERT INTO public.project_team_members VALUES ('40000000-0000-4000-8000-000000000044', '40000000-0000-4000-8000-000000000034', '40000000-0000-4000-8000-000000000021');
 INSERT INTO public.sales_project_handovers VALUES ('40000000-0000-4000-8000-000000000036', '40000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000034', 'completed');
 
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', false);
@@ -57,7 +56,7 @@ CREATE POLICY local_read_scope_hide_approved_decision ON public.component_candid
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', false);
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.component_candidate_submitter_read) <> 2 OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) OR EXISTS (SELECT 1 FROM public.component_candidate_submitter_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) THEN RAISE EXCEPTION 'Submitter read scope exposed or hid candidates incorrectly: submitter=% hardware=% purchase=% project_b_submitter=%', (SELECT count(*) FROM public.component_candidate_submitter_read), (SELECT count(*) FROM public.component_candidate_hardware_read), (SELECT count(*) FROM public.component_candidate_purchase_handoff_read), EXISTS (SELECT 1 FROM public.component_candidate_submitter_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid); END IF;
+  IF (SELECT count(*) FROM public.component_candidate_submitter_read) <> 2 OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) OR EXISTS (SELECT 1 FROM public.component_candidate_submitter_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) THEN RAISE EXCEPTION 'Submitter read scope exposed or hid candidates incorrectly'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 DO $$ BEGIN
