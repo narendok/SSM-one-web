@@ -40,9 +40,9 @@ const project = {
   project_drive_node_id: "root-123", completion_notes: null, archived_at: null, created_at: "2026-10-09T00:00:00Z", updated_at: "2026-10-09T00:00:00Z",
 };
 
-function renderLifecycle() {
+function renderLifecycle(callbacks = { onOpenDelivery: vi.fn(), onOpenFiles: vi.fn(), onOpenTasks: vi.fn() }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const root = createRootRoute({ component: () => <SharedProductLifecycle project={project} onOpenDelivery={vi.fn()} onOpenFiles={vi.fn()} onOpenTasks={vi.fn()} /> });
+  const root = createRootRoute({ component: () => <SharedProductLifecycle project={project} {...callbacks} /> });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   return render(<QueryClientProvider client={queryClient}><RouterProvider router={router} /></QueryClientProvider>);
 }
@@ -81,5 +81,21 @@ describe("SharedProductLifecycle governed reads", () => {
     expect(screen.queryByText("Loading available governed records…")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(screen.getByText("Required source inputs")).toBeTruthy());
+  });
+
+  it("opens the existing project-scoped tasks and files areas from lifecycle controls", async () => {
+    const user = userEvent.setup();
+    const callbacks = { onOpenDelivery: vi.fn(), onOpenFiles: vi.fn(), onOpenTasks: vi.fn() };
+    readLifecycle.mockResolvedValue({ data: [], error: null });
+    readGates.mockResolvedValue({ data: [], error: null });
+    readStages.mockResolvedValue({ data: [], error: null });
+
+    renderLifecycle(callbacks);
+
+    await user.click(await screen.findByRole("button", { name: "Open project tasks" }));
+    await user.click(screen.getByRole("button", { name: "Open project files" }));
+
+    expect(callbacks.onOpenTasks).toHaveBeenCalledTimes(1);
+    expect(callbacks.onOpenFiles).toHaveBeenCalledTimes(1);
   });
 });
