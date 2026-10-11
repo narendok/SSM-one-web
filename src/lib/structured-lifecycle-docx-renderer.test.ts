@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import { mapMasterSpecificationSource, serializeLocalTableRows, structuredLifecycleTemplatePreviews } from "./lifecycle-structured-template-previews";
 import { renderStructuredLifecycleDocx } from "./structured-lifecycle-docx-renderer";
+import { verifyStructuredLifecycleDocxBytes } from "./structured-lifecycle-docx-verifier";
 
 const source = mapMasterSpecificationSource({
   opportunityId: "opportunity-id", opportunityNumber: "OPPORTUNITY-2026-0013", opportunityName: "Tracker",
@@ -88,5 +89,29 @@ describe("structured lifecycle DOCX renderer", () => {
       expect(wideTableWidths).toHaveLength(1);
       expect(wideTableWidths[0]?.[0].match(/<w:gridCol/g)?.length).toBe(kind === "BOM_COST_TRACKER" ? 10 : 12);
     }
+  });
+
+  it("verifies genuine editable DOCX bytes, including paragraphs and tables", async () => {
+    const rendered = await renderStructuredLifecycleDocx("COMMERCIAL_QUOTATION", source, {
+      QUOTE_LINE_ROWS: serializeLocalTableRows([{ id: "row-1", line: "1", description: "Verified", quantity: "0", unitPrice: "0", currency: "SEK", leadTime: "TBC" }]),
+    });
+    await expect(verifyStructuredLifecycleDocxBytes(rendered.bytes)).resolves.toMatchObject({
+      sha256Checksum: expect.stringMatching(/^[a-f0-9]{64}$/), sizeBytes: rendered.bytes.byteLength, paragraphs: expect.any(Number), tables: expect.any(Number),
+    });
+  });
+
+  it("rejects renamed HTML, invalid ZIPs, modified packages, and external relationships", async () => {
+    const rendered = await renderStructuredLifecycleDocx("SOR", source, { SCOPE_STATEMENT: "Bounded verifier" });
+    const html = new TextEncoder().encode("<!doctype html><html><body>not DOCX</body></html>");
+    await expect(verifyStructuredLifecycleDocxBytes(html)).rejects.toThrow("not a ZIP package");
+    await expect(verifyStructuredLifecycleDocxBytes(new Uint8Array([0x50, 0x4b, 0x03, 0x04]))).rejects.toThrow("valid ZIP package");
+
+    const modified = await JSZip.loadAsync(rendered.bytes);
+    modified.file("word/document.xml", "<!doctype html><html><body>replaced</body></html>");
+    await expect(verifyStructuredLifecycleDocxBytes(await modified.generateAsync({ type: "uint8array" }))).rejects.toThrow("missing editable Word document XML");
+
+    const external = await JSZip.loadAsync(rendered.bytes);
+    external.file("word/_rels/document.xml.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="officeDocument" Target="https://untrusted.example/doc.xml" TargetMode="External"/></Relationships>');
+    await expect(verifyStructuredLifecycleDocxBytes(await external.generateAsync({ type: "uint8array" }))).rejects.toThrow("external");
   });
 });
