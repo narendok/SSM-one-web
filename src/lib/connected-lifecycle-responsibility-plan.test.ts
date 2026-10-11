@@ -1,0 +1,35 @@
+import { describe, expect, it } from "vitest";
+import {
+  connectedLifecycleResponsibilityDefaults,
+  lifecycleResponsibilitySettingsStatus,
+  responsibilityDefaultForStage,
+  stagesForResponsibilityDefault,
+} from "./connected-lifecycle-responsibility-plan";
+
+describe("connected lifecycle responsibility defaults", () => {
+  it("covers the authoritative HW_01 through HW_37 vocabulary without inventing a stage code", () => {
+    for (let number = 1; number <= 37; number += 1) {
+      expect(responsibilityDefaultForStage(`HW_${String(number).padStart(2, "0")}`)).not.toBeNull();
+    }
+    expect(responsibilityDefaultForStage("OTHER_01")).toBeNull();
+  });
+
+  it("keeps hardware BOM qualification and the governed Purchase handoff separate", () => {
+    expect(responsibilityDefaultForStage("HW_09")).toMatchObject({
+      key: "poc",
+      leadDepartment: "RND",
+    });
+    expect(responsibilityDefaultForStage("HW_23")?.handoff).toContain("Purchase receives an approved handoff");
+  });
+
+  it("only groups the provided company stages and leaves persistence explicitly unavailable", () => {
+    const readiness = connectedLifecycleResponsibilityDefaults.find((item) => item.key === "release_readiness");
+    if (!readiness) throw new Error("Release-readiness mapping is required for this test.");
+    expect(stagesForResponsibilityDefault([
+      { id: "1", stage_code: "HW_22", title: "22", sort_order: 22, requires_gated_handover: false },
+      { id: "2", stage_code: "HW_24", title: "24", sort_order: 24, requires_gated_handover: true },
+      { id: "3", stage_code: "OTHER_01", title: "Other", sort_order: 25, requires_gated_handover: false },
+    ], readiness).map((stage) => stage.stage_code)).toEqual(["HW_22", "HW_24"]);
+    expect(lifecycleResponsibilitySettingsStatus().available).toBe(false);
+  });
+});
