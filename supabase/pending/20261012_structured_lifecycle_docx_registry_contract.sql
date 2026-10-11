@@ -157,28 +157,144 @@ BEGIN
 END;
 $$;
 
--- Assignment/template management requires a separately accepted scoped authority
--- mapping. These stubs intentionally remain unavailable; no default department,
--- Sales, Operations, or administrator bypass is created by this proposal.
+-- Registry management is limited to the existing lifecycle department-management
+-- predicate plus an active project-team member. This deliberately does not treat
+-- ordinary project visibility, Sales visibility, or administrator status alone as
+-- a document-assignment bypass. The caller is derived from auth.uid(); all entries
+-- are request-key replay protected and append immutable audit facts.
+CREATE OR REPLACE FUNCTION public.assert_structured_lifecycle_docx_registry_manager(
+  p_project_id uuid, p_department_id uuid
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_actor uuid := public.lifecycle_actor();
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.projects project
+    JOIN public.project_team_members membership ON membership.project_id = project.id
+    JOIN public.employees employee ON employee.id = membership.employee_id
+    WHERE project.id = p_project_id AND project.status = 'active'
+      AND employee.user_id = v_actor AND employee.employment_status = 'ACTIVE'
+  ) THEN RAISE EXCEPTION 'Active project-team membership is required for registry management'; END IF;
+  IF NOT public.lifecycle_can_manage_department(v_actor, p_department_id)
+     OR NOT public.can_access_department_drive(v_actor, p_department_id, p_project_id) THEN
+    RAISE EXCEPTION 'Scoped department document-management authority is required';
+  END IF;
+  RETURN v_actor;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.assign_structured_lifecycle_docx_responsibility(
   p_project_id uuid, p_department_id uuid, p_document_kind text, p_responsible_employee_id uuid,
   p_reviewer_employee_id uuid, p_request_key uuid
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-BEGIN RAISE EXCEPTION 'Structured lifecycle DOCX assignment management requires separately accepted authority mapping'; END;
+DECLARE v_actor uuid; v_existing_audit public.structured_lifecycle_docx_registry_audit_events%ROWTYPE;
+  v_existing public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE; v_assignment uuid;
+  v_payload_hash text;
+BEGIN
+  IF p_request_key IS NULL OR p_document_kind NOT IN ('SOR','NDA','COMMERCIAL_QUOTATION','CONTRACT_REVIEW','PRS','BOM','DFMEA','MANUFACTURING_CONTROL_PLAN','DVPR','PDI','COMMERCIAL_TAX_INVOICE','ANNUAL_SKILL_MATRIX')
+     OR p_responsible_employee_id IS NULL OR (p_reviewer_employee_id IS NOT NULL AND p_reviewer_employee_id = p_responsible_employee_id) THEN
+    RAISE EXCEPTION 'Invalid structured DOCX responsibility assignment payload';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',p_project_id::text,p_document_kind), 0));
+  v_actor := public.assert_structured_lifecycle_docx_registry_manager(p_project_id, p_department_id);
+  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object('project_id',p_project_id,'department_id',p_department_id,'document_kind',p_document_kind,'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id)::text, 'UTF8'), 'sha256'), 'hex');
+  SELECT * INTO v_existing_audit FROM public.structured_lifecycle_docx_registry_audit_events WHERE actor_user_id=v_actor AND request_key=p_request_key FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing_audit.action='ASSIGNED' AND v_existing_audit.payload_hash=v_payload_hash THEN RETURN v_existing_audit.assignment_id; END IF;
+    RAISE EXCEPTION 'Registry request key conflicts with a different assignment payload';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_departments membership ON membership.employee_id=employee.id AND membership.department_id=p_department_id WHERE employee.id=p_responsible_employee_id AND employee.employment_status='ACTIVE')
+     OR (p_reviewer_employee_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_departments membership ON membership.employee_id=employee.id AND membership.department_id=p_department_id WHERE employee.id=p_reviewer_employee_id AND employee.employment_status='ACTIVE')) THEN
+    RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department members';
+  END IF;
+  SELECT * INTO v_existing FROM public.structured_lifecycle_docx_responsibility_assignments WHERE project_id=p_project_id AND document_kind=p_document_kind AND status='ACTIVE' FOR UPDATE;
+  IF FOUND THEN RAISE EXCEPTION 'An active structured DOCX responsibility assignment already exists for this project and document kind'; END IF;
+  INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(project_id,department_id,document_kind,responsible_employee_id,reviewer_employee_id,assigned_by,created_by)
+  VALUES(p_project_id,p_department_id,p_document_kind,p_responsible_employee_id,p_reviewer_employee_id,v_actor,v_actor) RETURNING id INTO v_assignment;
+  INSERT INTO public.structured_lifecycle_docx_registry_audit_events(request_key,actor_user_id,action,assignment_id,payload_hash,after_data)
+  VALUES(p_request_key,v_actor,'ASSIGNED',v_assignment,v_payload_hash,jsonb_build_object('assignment_id',v_assignment,'project_id',p_project_id,'department_id',p_department_id,'document_kind',p_document_kind,'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id));
+  RETURN v_assignment;
+END;
 $$;
+
 CREATE OR REPLACE FUNCTION public.revoke_structured_lifecycle_docx_responsibility(p_assignment_id uuid, p_request_key uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-BEGIN RAISE EXCEPTION 'Structured lifecycle DOCX assignment management requires separately accepted authority mapping'; END;
+DECLARE v_assignment public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE; v_actor uuid;
+  v_existing_audit public.structured_lifecycle_docx_registry_audit_events%ROWTYPE; v_payload_hash text;
+BEGIN
+  IF p_assignment_id IS NULL OR p_request_key IS NULL THEN RAISE EXCEPTION 'Assignment and request key are required'; END IF;
+  SELECT * INTO v_assignment FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=p_assignment_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Structured DOCX responsibility assignment is unavailable'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',v_assignment.project_id::text,v_assignment.document_kind), 0));
+  SELECT * INTO v_assignment FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=p_assignment_id FOR UPDATE;
+  v_actor := public.assert_structured_lifecycle_docx_registry_manager(v_assignment.project_id, v_assignment.department_id);
+  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object('assignment_id',p_assignment_id,'action','REVOKED')::text, 'UTF8'), 'sha256'), 'hex');
+  SELECT * INTO v_existing_audit FROM public.structured_lifecycle_docx_registry_audit_events WHERE actor_user_id=v_actor AND request_key=p_request_key FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing_audit.action='REVOKED' AND v_existing_audit.payload_hash=v_payload_hash THEN RETURN; END IF;
+    RAISE EXCEPTION 'Registry request key conflicts with a different revocation payload';
+  END IF;
+  IF v_assignment.status <> 'ACTIVE' THEN RAISE EXCEPTION 'Only an active structured DOCX responsibility assignment may be revoked'; END IF;
+  UPDATE public.structured_lifecycle_docx_responsibility_assignments SET status='REVOKED',revoked_by=v_actor,revoked_at=now() WHERE id=p_assignment_id;
+  INSERT INTO public.structured_lifecycle_docx_registry_audit_events(request_key,actor_user_id,action,assignment_id,payload_hash,before_data,after_data)
+  VALUES(p_request_key,v_actor,'REVOKED',p_assignment_id,v_payload_hash,jsonb_build_object('status','ACTIVE'),jsonb_build_object('status','REVOKED','assignment_id',p_assignment_id));
+END;
 $$;
+
 CREATE OR REPLACE FUNCTION public.approve_structured_lifecycle_docx_template_pin(
   p_department_id uuid, p_document_kind text, p_template_id uuid, p_template_document_revision_id uuid,
   p_template_schema_hash text, p_request_key uuid
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-BEGIN RAISE EXCEPTION 'Structured lifecycle DOCX template approval requires separately accepted authority mapping'; END;
+DECLARE v_actor uuid := public.lifecycle_actor(); v_template public.department_process_templates%ROWTYPE;
+  v_revision public.department_process_template_document_revisions%ROWTYPE; v_existing_audit public.structured_lifecycle_docx_registry_audit_events%ROWTYPE;
+  v_existing public.structured_lifecycle_docx_template_pins%ROWTYPE; v_pin uuid; v_payload_hash text;
+BEGIN
+  IF p_request_key IS NULL OR p_document_kind NOT IN ('SOR','NDA','COMMERCIAL_QUOTATION','CONTRACT_REVIEW','PRS','BOM','DFMEA','MANUFACTURING_CONTROL_PLAN','DVPR','PDI','COMMERCIAL_TAX_INVOICE','ANNUAL_SKILL_MATRIX') OR p_template_schema_hash !~ '^[a-f0-9]{64}$' THEN
+    RAISE EXCEPTION 'Invalid structured DOCX template approval payload';
+  END IF;
+  SELECT * INTO v_template FROM public.department_process_templates WHERE id=p_template_id AND department_id=p_department_id FOR UPDATE;
+  IF NOT FOUND OR v_template.status <> 'ACTIVE' OR v_template.active_document_revision_id IS DISTINCT FROM p_template_document_revision_id THEN RAISE EXCEPTION 'Template approval requires the current active immutable template revision'; END IF;
+  IF NOT public.lifecycle_can_manage_department(v_actor,p_department_id) OR NOT public.can_access_department_drive(v_actor,p_department_id,NULL) THEN RAISE EXCEPTION 'Scoped department document-management authority is required'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-template',p_department_id::text,p_document_kind), 0));
+  SELECT * INTO v_revision FROM public.department_process_template_document_revisions WHERE id=p_template_document_revision_id AND template_id=v_template.id FOR SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Template approval requires the exact immutable template revision'; END IF;
+  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object('department_id',p_department_id,'document_kind',p_document_kind,'template_id',p_template_id,'template_document_revision_id',p_template_document_revision_id,'template_schema_hash',p_template_schema_hash)::text, 'UTF8'), 'sha256'), 'hex');
+  SELECT * INTO v_existing_audit FROM public.structured_lifecycle_docx_registry_audit_events WHERE actor_user_id=v_actor AND request_key=p_request_key FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing_audit.action='TEMPLATE_APPROVED' AND v_existing_audit.payload_hash=v_payload_hash THEN RETURN v_existing_audit.template_pin_id; END IF;
+    RAISE EXCEPTION 'Registry request key conflicts with a different template approval payload';
+  END IF;
+  SELECT * INTO v_existing FROM public.structured_lifecycle_docx_template_pins WHERE department_id=p_department_id AND document_kind=p_document_kind AND status='APPROVED' FOR UPDATE;
+  IF FOUND THEN RAISE EXCEPTION 'An approved structured DOCX template already exists for this department and document kind'; END IF;
+  INSERT INTO public.structured_lifecycle_docx_template_pins(department_id,document_kind,template_id,template_document_revision_id,template_key,template_version,template_schema_hash,approved_by,request_key,payload_hash,created_by)
+  VALUES(p_department_id,p_document_kind,p_template_id,p_template_document_revision_id,v_template.template_key,v_template.version,p_template_schema_hash,v_actor,p_request_key,v_payload_hash,v_actor) RETURNING id INTO v_pin;
+  INSERT INTO public.structured_lifecycle_docx_registry_audit_events(request_key,actor_user_id,action,template_pin_id,payload_hash,after_data)
+  VALUES(p_request_key,v_actor,'TEMPLATE_APPROVED',v_pin,v_payload_hash,jsonb_build_object('template_pin_id',v_pin,'department_id',p_department_id,'document_kind',p_document_kind,'template_id',p_template_id,'template_document_revision_id',p_template_document_revision_id));
+  RETURN v_pin;
+END;
 $$;
+
 CREATE OR REPLACE FUNCTION public.revoke_structured_lifecycle_docx_template_pin(p_template_pin_id uuid, p_request_key uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-BEGIN RAISE EXCEPTION 'Structured lifecycle DOCX template approval requires separately accepted authority mapping'; END;
+DECLARE v_pin public.structured_lifecycle_docx_template_pins%ROWTYPE; v_actor uuid := public.lifecycle_actor();
+  v_existing_audit public.structured_lifecycle_docx_registry_audit_events%ROWTYPE; v_payload_hash text;
+BEGIN
+  IF p_template_pin_id IS NULL OR p_request_key IS NULL THEN RAISE EXCEPTION 'Template pin and request key are required'; END IF;
+  SELECT * INTO v_pin FROM public.structured_lifecycle_docx_template_pins WHERE id=p_template_pin_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Structured DOCX template pin is unavailable'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-template',v_pin.department_id::text,v_pin.document_kind), 0));
+  SELECT * INTO v_pin FROM public.structured_lifecycle_docx_template_pins WHERE id=p_template_pin_id FOR UPDATE;
+  IF NOT public.lifecycle_can_manage_department(v_actor,v_pin.department_id) OR NOT public.can_access_department_drive(v_actor,v_pin.department_id,NULL) THEN RAISE EXCEPTION 'Scoped department document-management authority is required'; END IF;
+  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object('template_pin_id',p_template_pin_id,'action','REVOKED')::text, 'UTF8'), 'sha256'), 'hex');
+  SELECT * INTO v_existing_audit FROM public.structured_lifecycle_docx_registry_audit_events WHERE actor_user_id=v_actor AND request_key=p_request_key FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing_audit.action='TEMPLATE_REVOKED' AND v_existing_audit.payload_hash=v_payload_hash THEN RETURN; END IF;
+    RAISE EXCEPTION 'Registry request key conflicts with a different template revocation payload';
+  END IF;
+  IF v_pin.status <> 'APPROVED' THEN RAISE EXCEPTION 'Only an approved structured DOCX template pin may be revoked'; END IF;
+  UPDATE public.structured_lifecycle_docx_template_pins SET status='REVOKED',revoked_by=v_actor,revoked_at=now() WHERE id=p_template_pin_id;
+  INSERT INTO public.structured_lifecycle_docx_registry_audit_events(request_key,actor_user_id,action,template_pin_id,payload_hash,before_data,after_data)
+  VALUES(p_request_key,v_actor,'TEMPLATE_REVOKED',p_template_pin_id,v_payload_hash,jsonb_build_object('status','APPROVED'),jsonb_build_object('status','REVOKED','template_pin_id',p_template_pin_id));
+END;
 $$;
 
 REVOKE ALL ON FUNCTION public.resolve_structured_lifecycle_docx_registry_scope(uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated, service_role;
