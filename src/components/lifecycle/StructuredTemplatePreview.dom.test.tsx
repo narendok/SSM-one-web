@@ -30,6 +30,7 @@ const source = mapMasterSpecificationSource({
   specificationData: {},
 });
 const previewSource = vi.fn();
+const discoverStructuredSalesDraftCapabilityMock = vi.fn().mockResolvedValue(null);
 const { fetchProjectBomsMock, fetchProjectBomItemsMock } = vi.hoisted(() => ({
   fetchProjectBomsMock: vi.fn(),
   fetchProjectBomItemsMock: vi.fn(),
@@ -37,6 +38,10 @@ const { fetchProjectBomsMock, fetchProjectBomItemsMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/lifecycle-structured-template-previews.functions", () => ({
   fetchStructuredTemplatePreviewSource: (input: unknown) => previewSource(input),
+}));
+
+vi.mock("@/lib/structured-sales-draft.functions", () => ({
+  discoverStructuredSalesDraftCapability: (input: unknown) => discoverStructuredSalesDraftCapabilityMock(input),
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -238,6 +243,7 @@ const proposalSpecificationData = {
 afterEach(() => {
   cleanup();
   previewSource.mockReset();
+  discoverStructuredSalesDraftCapabilityMock.mockReset().mockResolvedValue(null);
   vi.mocked(supabase.from).mockReset();
   fetchProjectBomsMock.mockReset().mockResolvedValue([]);
   fetchProjectBomItemsMock.mockReset().mockResolvedValue(null);
