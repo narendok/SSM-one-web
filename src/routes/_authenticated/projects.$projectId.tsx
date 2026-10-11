@@ -87,7 +87,7 @@ function ProjectDetailPage() {
 
   const { data: projectTasks = [] } = useQuery({
     queryKey: ["project_workspace_tasks", projectId],
-    queryFn: () => fetchTasks({ projectId }),
+    queryFn: () => fetchTasks(projectId),
   });
 
   if (isLoading) return <p className="text-muted-foreground">Loading…</p>;
