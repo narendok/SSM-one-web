@@ -275,6 +275,9 @@ BEGIN
     SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
     SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
     SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
+    END IF;
     IF v_prior.requested_by = v_actor AND v_prior.payload_hash = v_payload_hash AND v_prior.action = v_payload ->> 'decision' THEN
       RETURN QUERY SELECT v_prior.decision_id, v_prior.candidate_id, true;
       RETURN;
