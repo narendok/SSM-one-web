@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Box, Eye, LockKeyhole, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { AlertCircle, Box, Download, Eye, LockKeyhole, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,9 @@ import {
   structuredSalesDraftSaveBoundaryMessage,
   structuredSalesDraftSaveCapability,
 } from "@/lib/structured-sales-draft-capability";
+import { discoverStructuredSalesDraftCapability } from "@/lib/structured-sales-draft.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { canonicalizeStructuredSalesLocalPayload } from "@/lib/structured-sales-local-payload";
 
 export type StructuredTemplatePreviewSourcePin = {
   opportunityNumber: string;
@@ -68,6 +72,7 @@ const sampleSource = {
 const editKey = (kind: StructuredLifecycleTemplateKind, field: string) => `${kind}:${field}`;
 const fieldValue = (value: string) => (value === "" ? "TBC" : value);
 const hasLocalEdits = (userEdits: Record<string, string>) => Object.keys(userEdits).length > 0;
+const structuredDraftStorageLimit = 10 * 1024 * 1024;
 export function shouldWarnBeforeClosingStructuredPreview(dirty: boolean) {
   return dirty;
 }
@@ -83,6 +88,29 @@ export function requestStructuredPreviewExit(
   exit();
 }
 type StructuredSalesPreviewKind = "SOR" | "CONTRACT_REVIEW" | "PRS";
+
+type StructuredSalesDraftHistoryItem = {
+  requestKey: string;
+  revisionId: string;
+  revisionNumber: number;
+  materializationId: string | null;
+  storagePath: string | null;
+  checksum: string | null;
+  createdAt: string;
+};
+
+function revisionFileName(kind: StructuredSalesPreviewKind, revisionNumber: number) {
+  return `${kind.toLowerCase().replaceAll("_", "-")}-draft-rev-${revisionNumber}.html`;
+}
+
+async function sha256Text(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function newRequestKey() {
+  return crypto.randomUUID();
+}
 
 function isStructuredSalesPreviewKind(
   kind: StructuredLifecycleTemplateKind,
@@ -178,6 +206,9 @@ export function StructuredTemplatePreview({
   };
   const [selectedComponentIds, setSelectedComponentIds] = useState<LocalBomComponentSelection>({});
   const [selectedBomId, setSelectedBomId] = useState<string | null>(null);
+  const [requestKeys, setRequestKeys] = useState<Partial<Record<StructuredSalesPreviewKind, string>>>({});
+  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
   const source = useQuery({
     queryKey: [
       "structured-template-source",
@@ -192,6 +223,7 @@ export function StructuredTemplatePreview({
   });
   const listBoms = useServerFn(fetchProjectBoms);
   const getBomItems = useServerFn(fetchProjectBomItems);
+  const discoverCapability = useServerFn(discoverStructuredSalesDraftCapability);
   const linkedProject = project ?? source.data?.project ?? null;
   const effectiveProjectId = projectId ?? linkedProject?.id;
   const projectBoms = useQuery({
@@ -222,6 +254,82 @@ export function StructuredTemplatePreview({
       Number.isInteger(source.data.currentVersionNumber) &&
       (source.data.currentVersionNumber ?? 0) > source.data.versionNumber,
   );
+  const capabilityDiscovery = useQuery({
+    queryKey: [
+      "structured-sales-draft-capability",
+      actorId ?? "signed-out",
+      source.data?.opportunityId,
+      source.data?.customerId,
+      source.data?.specificationId,
+      source.data?.versionId,
+    ],
+    queryFn: () =>
+      source.data
+        ? discoverCapability({
+            data: {
+              opportunityId: source.data.opportunityId,
+              customerId: source.data.customerId,
+              masterSpecificationId: source.data.specificationId,
+              masterSpecificationVersionId: source.data.versionId,
+            },
+          })
+        : Promise.resolve(null),
+    enabled: Boolean(actorId && source.data),
+    retry: false,
+  });
+  const structuredHistory = useQuery({
+    queryKey: ["structured-sales-draft-history", actorId ?? "signed-out", source.data?.opportunityId, source.data?.versionId, kind],
+    queryFn: async (): Promise<StructuredSalesDraftHistoryItem[]> => {
+      if (!source.data || !isStructuredSalesPreviewKind(kind)) return [];
+      const { data: drafts, error: draftsError } = await supabase
+        .from("sales_opportunity_structured_drafts")
+        .select("id")
+        .eq("opportunity_id", source.data.opportunityId)
+        .eq("customer_id", source.data.customerId)
+        .eq("master_specification_id", source.data.specificationId)
+        .eq("master_specification_version_id", source.data.versionId)
+        .eq("document_kind", kind);
+      if (draftsError) throw new Error("Saved draft history could not be read.");
+      const draftIds = (drafts ?? []).map((draft) => draft.id);
+      if (!draftIds.length) return [];
+      const { data: revisions, error: revisionsError } = await supabase
+        .from("sales_opportunity_structured_draft_revisions")
+        .select("id,revision_number,created_at,draft_id")
+        .in("draft_id", draftIds)
+        .order("revision_number", { ascending: false });
+      if (revisionsError) throw new Error("Saved draft revisions could not be read.");
+      const revisionIds = (revisions ?? []).map((revision) => revision.id);
+      if (!revisionIds.length) return [];
+      const { data: receipts, error: receiptsError } = await supabase
+        .from("sales_opportunity_structured_draft_requests")
+        .select("request_key,revision_id")
+        .in("revision_id", revisionIds);
+      if (receiptsError) throw new Error("Saved draft receipts could not be read.");
+      const { data: materializations, error: materializationsError } = await supabase
+        .from("sales_opportunity_structured_draft_materializations")
+        .select("id,request_key,storage_path,rendered_sha256_checksum")
+        .in("structured_draft_revision_id", revisionIds);
+      if (materializationsError) throw new Error("Saved draft materializations could not be read.");
+      const receiptByRevision = new Map((receipts ?? []).map((receipt) => [receipt.revision_id, receipt.request_key]));
+      const materializationByRequest = new Map((materializations ?? []).map((materialization) => [materialization.request_key, materialization]));
+      return (revisions ?? []).flatMap((revision) => {
+        const requestKey = receiptByRevision.get(revision.id);
+        if (!requestKey) return [];
+        const materialization = materializationByRequest.get(requestKey);
+        return [{
+          requestKey,
+          revisionId: revision.id,
+          revisionNumber: revision.revision_number,
+          materializationId: materialization?.id ?? null,
+          storagePath: materialization?.storage_path ?? null,
+          checksum: materialization?.rendered_sha256_checksum ?? null,
+          createdAt: revision.created_at,
+        }];
+      });
+    },
+    enabled: Boolean(actorId && source.data && isStructuredSalesPreviewKind(kind)),
+    retry: false,
+  });
   const updateLocalEdit = (field: string, value: string) => {
     setUserEdits((current) => ({ ...current, [editKey(kind, field)]: value }));
   };
@@ -246,6 +354,7 @@ export function StructuredTemplatePreview({
       onLocalEditsChange?.({});
       setSelectedComponentIds({});
       setSelectedBomId(null);
+      setRequestKeys({});
     }
   }, [scopeChanged, scopeKey, onLocalEditsChange]);
   useEffect(() => {
@@ -271,10 +380,12 @@ export function StructuredTemplatePreview({
   const salesGate = structuredSalesDocumentGate(kind, source.data ?? null);
   const saveCapability = structuredSalesDraftSaveCapability(
     isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
+    capabilityDiscovery.data,
   );
   const saveBoundaryMessage = structuredSalesDraftSaveBoundaryMessage(saveCapability);
   const historyCapability = structuredSalesDraftHistoryCapability(
     isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
+    capabilityDiscovery.data,
   );
   const historyBoundaryMessage = structuredSalesDraftHistoryBoundaryMessage(historyCapability);
   const sourceState = !actorId
@@ -286,6 +397,88 @@ export function StructuredTemplatePreview({
         : !source.data
           ? "UNVERIFIED — authorized source returned no record"
           : null;
+  const saveDraft = async () => {
+    if (!source.data || !isStructuredSalesPreviewKind(kind) || !saveCapability.available || saving) return;
+    const payload = localEditsForStructuredPreview(kind, userEdits);
+    let canonicalPayload: string;
+    try {
+      canonicalPayload = canonicalizeStructuredSalesLocalPayload(kind, payload);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The draft needs correction before it can be saved.");
+      return;
+    }
+    const expectedRevision = structuredHistory.data?.[0]?.revisionNumber ?? 0;
+    const requestKey = requestKeys[kind] ?? newRequestKey();
+    setRequestKeys((current) => ({ ...current, [kind]: requestKey }));
+    setSaving(true);
+    try {
+      const { data: saveResult, error: saveError } = await supabase.rpc("save_sales_opportunity_structured_draft_at_location", {
+        p_opportunity_id: source.data.opportunityId,
+        p_customer_id: source.data.customerId,
+        p_master_specification_id: source.data.specificationId,
+        p_master_specification_version_id: source.data.versionId,
+        p_document_kind: kind,
+        p_expected_revision_number: expectedRevision,
+        p_payload: JSON.parse(canonicalPayload).fields,
+        p_request_key: requestKey,
+        p_private_location_id: saveCapability.locationId,
+      });
+      const receipt = saveResult?.[0];
+      if (saveError || !receipt) throw new Error(saveError?.message ?? "The draft receipt could not be created.");
+      const html = renderStructuredSalesLocalDraftHtml(kind, source.data, payload);
+      const sizeBytes = new TextEncoder().encode(html).byteLength;
+      if (sizeBytes > structuredDraftStorageLimit) throw new Error("The rendered draft exceeds the approved 10 MB storage limit.");
+      const checksum = await sha256Text(html);
+      const storagePath = `${saveCapability.storagePathPrefix}${requestKey}-draft.html`;
+      const { error: uploadError } = await supabase.storage
+        .from(saveCapability.storageBucket)
+        .upload(storagePath, new Blob([html], { type: "text/html;charset=utf-8" }), { contentType: "text/html", upsert: false });
+      if (uploadError) throw new Error(uploadError.message);
+      const { error: attemptError } = await supabase.rpc("register_sales_opportunity_structured_draft_storage_attempt", {
+        p_opportunity_id: source.data.opportunityId,
+        p_customer_id: source.data.customerId,
+        p_location_id: saveCapability.locationId,
+        p_request_key: requestKey,
+        p_storage_bucket: saveCapability.storageBucket,
+        p_storage_path: storagePath,
+        p_sha256_checksum: checksum,
+        p_size_bytes: sizeBytes,
+      });
+      if (attemptError) throw new Error(attemptError.message);
+      const { data: committed, error: commitError } = await supabase.rpc("commit_sales_opportunity_structured_draft_materialization", {
+        p_opportunity_id: source.data.opportunityId,
+        p_customer_id: source.data.customerId,
+        p_location_id: saveCapability.locationId,
+        p_request_key: requestKey,
+        p_file_name: revisionFileName(kind, receipt.revision_number),
+        p_storage_bucket: saveCapability.storageBucket,
+        p_storage_path: storagePath,
+        p_sha256_checksum: checksum,
+        p_size_bytes: sizeBytes,
+      });
+      if (commitError || !committed?.[0]) throw new Error(commitError?.message ?? "The draft could not be materialized.");
+      setRequestKeys((current) => {
+        const next = { ...current };
+        delete next[kind];
+        return next;
+      });
+      await queryClient.invalidateQueries({ queryKey: ["structured-sales-draft-history", actorId ?? "signed-out", source.data.opportunityId, source.data.versionId, kind] });
+      toast.success(receipt.replayed ? "Saved draft replayed." : "Draft saved as an unissued revision.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The draft could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const downloadSavedDraft = async (entry: StructuredSalesDraftHistoryItem) => {
+    if (!entry.storagePath || !entry.materializationId) return;
+    const { data, error } = await supabase.storage.from("project-drive").createSignedUrl(entry.storagePath, 60, { download: revisionFileName(kind as StructuredSalesPreviewKind, entry.revisionNumber) });
+    if (error || !data?.signedUrl) {
+      toast.error(error?.message ?? "The saved draft could not be prepared for download.");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
   return (
     <Card>
       <CardHeader>
@@ -427,17 +620,50 @@ export function StructuredTemplatePreview({
             remain unavailable.
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button disabled aria-label="View saved revision history unavailable until backend capability is verified" title={historyBoundaryMessage} variant="outline">
-              <Eye className="size-4" /> History unavailable
+            <Button
+              disabled={!historyCapability.available || structuredHistory.isLoading}
+              aria-label="View saved revision history"
+              title={historyBoundaryMessage}
+              variant="outline"
+              onClick={() => void structuredHistory.refetch()}
+            >
+              <Eye className="size-4" /> {historyCapability.available ? "Refresh history" : "History unavailable"}
             </Button>
-            <Button disabled aria-label="Download unavailable until backend capability is verified" title={historyBoundaryMessage} variant="outline">
-              <LockKeyhole className="size-4" /> Download unavailable
+            <Button disabled aria-label="Download saved revision" title={historyBoundaryMessage} variant="outline">
+              <Download className="size-4" /> Download
             </Button>
-            <Button disabled aria-label="Save unavailable until backend capability is verified" title={saveBoundaryMessage}>
-              <Save className="size-4" /> Save unavailable
+            <Button disabled={!saveCapability.available || saving || !isStructuredSalesPreviewKind(kind)} aria-label="Save structured Sales draft" title={saveBoundaryMessage} onClick={() => void saveDraft()}>
+              <Save className="size-4" /> {saving ? "Saving…" : saveCapability.available ? "Save draft" : "Save unavailable"}
             </Button>
           </div>
         </div>
+        {capabilityDiscovery.isError && (
+          <p role="alert" className="mt-3 border border-destructive/40 p-3 text-sm text-destructive">
+            Sales draft capability could not be verified: {capabilityDiscovery.error instanceof Error ? capabilityDiscovery.error.message : "Unexpected read error"}
+          </p>
+        )}
+        {historyCapability.available && structuredHistory.isError && (
+          <p role="alert" className="mt-3 border border-destructive/40 p-3 text-sm text-destructive">
+            Saved revision history could not be read: {structuredHistory.error instanceof Error ? structuredHistory.error.message : "Unexpected read error"}
+          </p>
+        )}
+        {historyCapability.available && !structuredHistory.isLoading && !structuredHistory.isError && (
+          <section className="mt-3 border p-3" aria-label="Saved structured Sales draft history">
+            <p className="text-sm font-medium">Saved unissued revisions</p>
+            {structuredHistory.data?.length ? (
+              <div className="mt-2 space-y-2">
+                {structuredHistory.data.map((entry) => (
+                  <div key={entry.requestKey} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span>Revision {entry.revisionNumber} · {new Date(entry.createdAt).toLocaleString()}</span>
+                    <Button size="sm" variant="outline" disabled={!entry.storagePath} onClick={() => void downloadSavedDraft(entry)}>
+                      <Download className="size-4" /> Download
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="mt-1 text-sm text-muted-foreground">No saved revision is visible to you.</p>}
+          </section>
+        )}
       </CardContent>
     </Card>
   );

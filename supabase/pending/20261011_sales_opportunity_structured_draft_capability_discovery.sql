@@ -48,9 +48,9 @@ BEGIN
     AND location.location_purpose = 'STRUCTURED_DRAFT'
     AND location.status = 'ACTIVE'
     AND public.can_access_sales_structured_draft_object(
-      'SELECT',
       location.private_storage_bucket,
-      location.private_storage_prefix
+      location.private_storage_prefix,
+      'SELECT'
     );
 END;
 $$;
