@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { SaxesParser, type SaxesAttributePlain, type SaxesTag } from "saxes";
 
 export const DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -20,16 +21,82 @@ const defaultLimits: Required<StructuredLifecycleDocxVerifierLimits> = {
   maxZipEntries: 256,
   maxUncompressedBytes: 32 * 1024 * 1024,
 };
-
+const relationshipsNamespace = "http://schemas.openxmlformats.org/package/2006/relationships";
+const officeDocumentRelationship = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
+const wordDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
 const textDecoder = new TextDecoder();
+
+type ZipEntryMetadata = { compressedSize: number; uncompressedSize: number };
+type Relationship = { target: string; type: string; targetMode: string | null };
 
 function fail(message: string): never {
   throw new Error(`DOCX verification failed: ${message}`);
 }
 
-function isUnsafeRelationshipTarget(target: string) {
-  const normalized = target.trim().toLowerCase();
-  return /^(?:[a-z][a-z0-9+.-]*:|\\\\|\/\/)/.test(normalized) || normalized.startsWith("/");
+function attributes(tag: SaxesTag) {
+  return Object.values(tag.attributes as Record<string, SaxesAttributePlain>).reduce<Record<string, string>>((result, attribute) => {
+    result[attribute.name] = attribute.value;
+    return result;
+  }, {});
+}
+
+function parseXml(xml: string, path: string, onTag: (tag: SaxesTag, values: Record<string, string>) => void) {
+  let error: Error | null = null;
+  const parser = new SaxesParser({ xmlns: false });
+  parser.ondoctype = () => { error = new Error("DTD is forbidden"); };
+  parser.onerror = (parserError) => { error = parserError; parser.resume(); };
+  parser.onopentag = (tag) => { if (!error) onTag(tag, attributes(tag)); };
+  parser.write(xml).close();
+  if (error) fail(`${path} is not safe XML`);
+}
+
+function normalizedPath(path: string) {
+  const stack: string[] = [];
+  for (const segment of path.replaceAll("\\", "/").split("/")) {
+    if (!segment || segment === ".") continue;
+    if (segment === "..") return null;
+    stack.push(segment);
+  }
+  return stack.join("/");
+}
+
+function relationshipSourcePath(relsPath: string) {
+  if (relsPath === "_rels/.rels") return "";
+  const match = /^(.*)\/_rels\/([^/]+)\.rels$/.exec(relsPath);
+  return match ? `${match[1]}/${match[2]}` : null;
+}
+
+function resolveRelationshipTarget(relsPath: string, target: string) {
+  if (/^(?:[a-z][a-z0-9+.-]*:|\\\\|\/\/|\/)/i.test(target.trim())) return null;
+  const source = relationshipSourcePath(relsPath);
+  if (source === null) return null;
+  const base = source ? source.slice(0, source.lastIndexOf("/") + 1) : "";
+  return normalizedPath(`${base}${target}`);
+}
+
+function checkedLimits(limits: StructuredLifecycleDocxVerifierLimits) {
+  const effective = { ...defaultLimits, ...limits };
+  if (!Object.values(effective).every((value) => Number.isSafeInteger(value) && value > 0)) fail("limits must be positive safe integers");
+  if (effective.maxUncompressedBytes < effective.maxBytes) fail("uncompressed byte limit cannot be smaller than file limit");
+  return effective;
+}
+
+function entryMetadata(entry: JSZip.JSZipObject) {
+  const data = (entry as JSZip.JSZipObject & { _data?: ZipEntryMetadata })._data;
+  if (!data || !Number.isSafeInteger(data.compressedSize) || !Number.isSafeInteger(data.uncompressedSize) || data.compressedSize < 0 || data.uncompressedSize < 0) fail("ZIP entry metadata is invalid");
+  return data;
+}
+
+function relationships(xml: string, path: string) {
+  const values: Relationship[] = [];
+  parseXml(xml, path, (tag, attrs) => {
+    if (tag.name === "Relationships" && attrs.xmlns !== relationshipsNamespace) fail(`${path} has an invalid relationships namespace`);
+    if (tag.name === "Relationship") {
+      if (!attrs.Id || !attrs.Type || !attrs.Target) fail(`${path} has an incomplete relationship`);
+      values.push({ type: attrs.Type, target: attrs.Target, targetMode: attrs.TargetMode ?? null });
+    }
+  });
+  return values;
 }
 
 async function sha256(bytes: Uint8Array) {
@@ -40,54 +107,73 @@ async function sha256(bytes: Uint8Array) {
 }
 
 /**
- * Verifies a bounded OOXML Word package before a future trusted server bridge
- * may record immutable storage facts. It is pure: it neither reads storage nor
- * records a receipt, so it cannot expand authorization on its own.
+ * Pure bounded OOXML inspection. It cannot read storage, issue receipts, or
+ * elevate a caller; a future accepted server-only object reader must bind its
+ * returned facts to an immutable object identity before materialization.
  */
 export async function verifyStructuredLifecycleDocxBytes(
   input: Uint8Array,
   limits: StructuredLifecycleDocxVerifierLimits = {},
 ): Promise<VerifiedStructuredLifecycleDocx> {
-  const effective = { ...defaultLimits, ...limits };
+  const effective = checkedLimits(limits);
   if (!(input instanceof Uint8Array) || input.byteLength === 0) fail("file is empty");
   if (input.byteLength > effective.maxBytes) fail("file exceeds the byte limit");
   if (input.byteLength < 4 || input[0] !== 0x50 || input[1] !== 0x4b) fail("file is not a ZIP package");
 
   let zip: JSZip;
   try {
-    zip = await JSZip.loadAsync(input, { checkCRC32: true });
+    zip = await JSZip.loadAsync(input, { checkCRC32: false });
   } catch {
     fail("file is not a valid ZIP package");
   }
-
   const entries = Object.values(zip.files).filter((entry) => !entry.dir);
   if (entries.length === 0 || entries.length > effective.maxZipEntries) fail("ZIP entry count is outside the allowed limit");
-  if (entries.some((entry) => entry.name.includes("..") || entry.name.startsWith("/") || entry.name.startsWith("\\"))) fail("ZIP contains an unsafe path");
-
-  let totalUncompressedBytes = 0;
-  const contents = new Map<string, string>();
+  let declaredTotal = 0;
   for (const entry of entries) {
-    const bytes = await entry.async("uint8array");
-    totalUncompressedBytes += bytes.byteLength;
-    if (totalUncompressedBytes > effective.maxUncompressedBytes) fail("ZIP expands beyond the allowed limit");
-    if (/\.(?:xml|rels)$/i.test(entry.name) || entry.name === "[Content_Types].xml") contents.set(entry.name, textDecoder.decode(bytes));
+    const original = entry.unsafeOriginalName ?? entry.name;
+    if (!normalizedPath(original) || original.includes("..") || original.startsWith("/") || original.startsWith("\\")) fail("ZIP contains an unsafe original path");
+    const metadata = entryMetadata(entry);
+    declaredTotal += metadata.uncompressedSize;
+    if (!Number.isSafeInteger(declaredTotal) || declaredTotal > effective.maxUncompressedBytes || metadata.uncompressedSize > effective.maxUncompressedBytes) fail("ZIP declared expansion exceeds the allowed limit");
   }
 
-  const contentTypes = contents.get("[Content_Types].xml");
-  const documentXml = contents.get("word/document.xml");
-  const relationships = contents.get("word/_rels/document.xml.rels");
-  if (!contentTypes?.includes("application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml")) fail("missing Word document content type");
-  if (!documentXml?.includes("<w:document")) fail("missing editable Word document XML");
-  if (!relationships?.includes("officeDocument")) fail("missing Word document relationship");
-  if (/<!doctype|<html\b|<script\b/i.test(documentXml) || /<!doctype|<html\b/i.test(contentTypes)) fail("HTML payload detected");
+  const xmlParts = new Map<string, string>();
+  for (const entry of entries.filter((candidate) => candidate.name === "[Content_Types].xml" || /\.(?:xml|rels)$/i.test(candidate.name))) {
+    const metadata = entryMetadata(entry);
+    if (metadata.uncompressedSize > effective.maxUncompressedBytes) fail("XML part exceeds the allowed limit");
+    const bytes = await entry.async("uint8array");
+    if (bytes.byteLength !== metadata.uncompressedSize) fail("ZIP entry size changed while reading");
+    xmlParts.set(entry.name, textDecoder.decode(bytes));
+  }
 
-  const targets = [...relationships.matchAll(/\bTarget="([^"]+)"/g)].map((match) => match[1] ?? "");
-  if (targets.some(isUnsafeRelationshipTarget)) fail("external or absolute relationship target detected");
-  if (/\bTargetMode="External"/i.test(relationships)) fail("external relationship detected");
+  const contentTypes = xmlParts.get("[Content_Types].xml");
+  const rootRelationships = xmlParts.get("_rels/.rels");
+  if (!contentTypes || !rootRelationships) fail("missing OOXML package metadata");
+  let mainDocumentPath: string | null = null;
+  parseXml(contentTypes, "[Content_Types].xml", (tag, attrs) => {
+    if (tag.name === "Types" && attrs.xmlns !== "http://schemas.openxmlformats.org/package/2006/content-types") fail("content types has an invalid namespace");
+    if (tag.name === "Override" && attrs.ContentType === wordDocumentContentType && attrs.PartName?.startsWith("/")) mainDocumentPath = normalizedPath(attrs.PartName.slice(1));
+  });
+  if (!mainDocumentPath || !xmlParts.has(mainDocumentPath)) fail("missing Word document content type or main part");
 
-  const paragraphs = (documentXml.match(/<w:p(?:\s|>)/g) ?? []).length;
-  const tables = (documentXml.match(/<w:tbl(?:\s|>)/g) ?? []).length;
+  const rootOfficeRelationship = relationships(rootRelationships, "_rels/.rels").find((relationship) => relationship.type === officeDocumentRelationship);
+  if (!rootOfficeRelationship || rootOfficeRelationship.targetMode || resolveRelationshipTarget("_rels/.rels", rootOfficeRelationship.target) !== mainDocumentPath) fail("root officeDocument relationship does not bind the declared main document");
+  for (const [path, xml] of xmlParts.entries()) {
+    if (!path.endsWith(".rels")) continue;
+    for (const relationship of relationships(xml, path)) {
+      if (relationship.targetMode?.toLowerCase() === "external" || !resolveRelationshipTarget(path, relationship.target)) fail("external or unsafe relationship detected");
+    }
+  }
+
+  const documentXml = xmlParts.get(mainDocumentPath);
+  if (!documentXml) fail("missing editable Word document XML");
+  let paragraphs = 0;
+  let tables = 0;
+  parseXml(documentXml, mainDocumentPath, (tag) => {
+    if (tag.name === "w:p" || tag.local === "p") paragraphs += 1;
+    if (tag.name === "w:tbl" || tag.local === "tbl") tables += 1;
+    if (["w:altChunk", "w:object", "w:control", "w:script"].includes(tag.name)) fail("active Word content is forbidden");
+  });
   if (paragraphs === 0) fail("document has no editable paragraphs");
-
   return { sha256Checksum: await sha256(input), sizeBytes: input.byteLength, paragraphs, tables };
 }
