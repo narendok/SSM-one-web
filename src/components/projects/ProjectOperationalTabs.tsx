@@ -14,6 +14,12 @@ import { Textarea } from "@/components/ui/textarea";
 
 const sb = supabase as any;
 
+function readErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") return error.message;
+  return "Please try again.";
+}
+
 type EntityConfig = {
   table: string;
   queryKey: string;
@@ -70,7 +76,7 @@ export function ProjectOperationalTab({ projectId, kind }: { projectId: string; 
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-base font-semibold">{config.heading}</h2><p className="text-sm text-muted-foreground">{subtitle}</p></div><Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" />{config.addLabel}</Button></div>
     {isLoading && !hasResolvedRecords ? <p className="text-sm text-muted-foreground">Loading visible records…</p> : <>
-      {isError && <Card role="alert" className="flex flex-wrap items-center justify-between gap-3 p-5 text-sm text-destructive"><span>These records could not be loaded. {error instanceof Error ? error.message : "Please try again."}</span><Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></Card>}
+      {isError && <Card role="alert" className="flex flex-wrap items-center justify-between gap-3 p-5 text-sm text-destructive"><span>These records could not be loaded. {readErrorMessage(error)}</span><Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></Card>}
       {records.length === 0 && !isError ? <Card className="p-8 text-center text-sm text-muted-foreground">{config.empty}</Card> : records.length > 0 ? <div className="space-y-2">{records.map((record: any) => <Card key={record.id} className="p-4"><div className="flex gap-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{record[config.descriptionKey]}</span>{record[config.codeKey] !== record[config.descriptionKey] && <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{record[config.codeKey]}</span>}<Badge variant="outline">{record[config.typeKey]}</Badge><Badge variant="secondary">{record[config.statusKey]}</Badge></div>{record.description && <p className="mt-1 text-sm text-muted-foreground">{record.description}</p>}{record.summary && <p className="mt-1 text-sm text-muted-foreground">{record.summary}</p>}{record.impact_summary && <p className="mt-1 text-sm text-muted-foreground">{record.impact_summary}</p>}{record.evidence_note && <p className="mt-1 text-sm text-muted-foreground">{record.evidence_note}</p>}</div><Button variant="ghost" size="icon" aria-label="Remove record" title="Remove record" onClick={() => remove(record.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></Card>)}</div> : null}
     </>}
     <OperationalDialog projectId={projectId} config={config} open={open} onOpenChange={setOpen} onSaved={refresh} />

@@ -77,11 +77,11 @@ describe("ProjectOperationalTab design-input reads", () => {
   });
 
   it("settles a rejected research read into an unavailable state with Retry", async () => {
-    order.mockRejectedValueOnce(new Error("Policy read failed"));
+    order.mockRejectedValueOnce({ message: "infinite recursion detected in policy" });
 
     renderOperationalInputs("research");
 
-    expect((await screen.findByRole("alert")).textContent).toContain("These records could not be loaded. Policy read failed");
+    expect((await screen.findByRole("alert")).textContent).toContain("These records could not be loaded. infinite recursion detected in policy");
     expect(screen.getByText("Records unavailable")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(screen.queryByText("Loading visible records…")).toBeNull();
