@@ -26,6 +26,16 @@ need(sql, 'public.employee_departments', 'department membership recheck')
 need(sql, 'public.can_access_department_drive', 'scoped Drive recheck')
 need(sql, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 'OOXML MIME pin')
 need(sql, "'-draft.docx'", 'DOCX private object suffix')
+need(sql, 'record_sales_structured_docx_object_verification', 'trusted object verifier receipt')
+need(sql, 'stored_object.version = p_object_version', 'immutable object version check')
+need(sql, 'p_ooxml_content_types', 'OOXML content types verification')
+need(sql, 'p_ooxml_word_document', 'OOXML Word document verification')
+need(sql, 'p_html_detected', 'renamed HTML rejection')
+need(sql, 'current_specification.current_version_id = v_request.master_specification_version_id', 'current Master version recheck')
+need(sql, "document_kind IN ('SOR','CONTRACT_REVIEW')", 'Sales category boundary')
+forbidden_kinds = ("'PRS'", "'BOM'", "'DFMEA'")
+for value in forbidden_kinds:
+    forbid(sql, value, f'unsupported Sales DOCX kind {value}')
 need(sql, 'source_fingerprint', 'immutable source pin')
 need(sql, 'template_schema_hash', 'immutable schema pin')
 need(sql, 'FOR UPDATE', 'locked rechecks')
@@ -34,11 +44,11 @@ need(sql, 'DOCX request key conflicts', 'replay conflict')
 need(sql, 'Structured Sales DOCX history is append-only', 'append-only mutation guard')
 for signature in (
   'public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid)',
-  'public.register_sales_structured_docx_storage_attempt(uuid,uuid,uuid,uuid,text,text,text,bigint)',
+  'public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text)',
   'public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,bigint)',
   'public.read_sales_structured_docx_materializations(uuid,uuid,uuid)',
 ):
-    need(sql, f'REVOKE ALL ON FUNCTION {signature} FROM PUBLIC, anon, service_role;', f'default revoke {signature}')
+    need(sql, f'REVOKE ALL ON FUNCTION {signature} FROM PUBLIC, anon, authenticated, service_role;', f'default revoke {signature}')
     forbid(sql, f'GRANT EXECUTE ON FUNCTION {signature}', f'pre-grant {signature}')
 forbidden = ('CREATE POLICY', 'INSERT INTO public.sales_opportunity_structured_draft_materializations', "mime_type='text/html'", "'-draft.html'")
 for value in forbidden:

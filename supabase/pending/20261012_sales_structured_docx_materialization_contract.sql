@@ -6,16 +6,18 @@
 -- alter a legacy HTML record. Apply only after the reviewed HTML draft/location
 -- contracts and a separate assigned-person authorization source are accepted.
 --
--- The current deployed schema exposes department membership but no exact
--- document-responsibility relation. Therefore the explicit assignment relation
--- below is mandatory: department membership, sales.manage, Drive access, project
--- access, and platform-owner status do not themselves authorize DOCX operations.
+-- The current deployed schema exposes department membership but no accepted
+-- configurable responsibility/template registry or privileged object-byte reader.
+-- Therefore this file deliberately has no assignment-management entrypoint and
+-- no caller-facing save/read/download grant. A separate accepted responsibility
+-- source must create/revoke assignments, and a separately privileged verifier
+-- must supply immutable object facts before these functions can be activated.
 
 CREATE TABLE public.sales_opportunity_structured_docx_assignments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id) ON DELETE RESTRICT,
   customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
-  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW','PRS')),
+  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW')),
   department_id uuid NOT NULL REFERENCES public.departments(id) ON DELETE RESTRICT,
   responsible_employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE RESTRICT,
   status text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','REVOKED')),
@@ -42,7 +44,7 @@ CREATE TABLE public.sales_opportunity_structured_docx_requests (
   customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
   master_specification_id uuid NOT NULL REFERENCES public.master_specifications(id) ON DELETE RESTRICT,
   master_specification_version_id uuid NOT NULL REFERENCES public.master_specification_versions(id) ON DELETE RESTRICT,
-  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW','PRS')),
+  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW')),
   editable_schema_key text NOT NULL,
   editable_schema_hash text NOT NULL CHECK (editable_schema_hash ~ '^[a-f0-9]{64}$'),
   source_fingerprint text NOT NULL CHECK (source_fingerprint ~ '^[a-f0-9]{64}$'),
@@ -64,6 +66,9 @@ CREATE TABLE public.sales_opportunity_structured_docx_storage_attempts (
   storage_path text NOT NULL,
   sha256_checksum text NOT NULL CHECK (sha256_checksum ~ '^[a-f0-9]{64}$'),
   size_bytes bigint NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 10485760),
+  object_version text NOT NULL,
+  ooxml_verified_at timestamptz NOT NULL,
+  verified_by_service text NOT NULL,
   staged_by uuid NOT NULL,
   staged_at timestamptz NOT NULL DEFAULT now(),
   consumed_at timestamptz NULL,
@@ -86,7 +91,7 @@ CREATE TABLE public.sales_opportunity_structured_docx_materializations (
   customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
   master_specification_id uuid NOT NULL REFERENCES public.master_specifications(id) ON DELETE RESTRICT,
   master_specification_version_id uuid NOT NULL REFERENCES public.master_specification_versions(id) ON DELETE RESTRICT,
-  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW','PRS')),
+  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW')),
   template_key text NOT NULL,
   template_version integer NOT NULL,
   template_schema_hash text NOT NULL CHECK (template_schema_hash ~ '^[a-f0-9]{64}$'),
@@ -150,6 +155,9 @@ BEGIN
     OR NEW.storage_path IS DISTINCT FROM OLD.storage_path
     OR NEW.sha256_checksum IS DISTINCT FROM OLD.sha256_checksum
     OR NEW.size_bytes IS DISTINCT FROM OLD.size_bytes
+    OR NEW.object_version IS DISTINCT FROM OLD.object_version
+    OR NEW.ooxml_verified_at IS DISTINCT FROM OLD.ooxml_verified_at
+    OR NEW.verified_by_service IS DISTINCT FROM OLD.verified_by_service
     OR (OLD.consumed_at IS NOT NULL AND NEW.consumed_at IS DISTINCT FROM OLD.consumed_at)
   THEN
     RAISE EXCEPTION 'Structured Sales DOCX storage receipt is immutable after staging';
@@ -160,6 +168,34 @@ $$;
 CREATE TRIGGER sales_structured_docx_storage_attempts_guard BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_storage_attempts FOR EACH ROW EXECUTE FUNCTION public.guard_sales_structured_docx_storage_attempt();
 CREATE TRIGGER sales_structured_docx_materializations_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_materializations FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
 CREATE TRIGGER sales_structured_docx_audits_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_audit_events FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
+
+-- This receipt is the only supported bridge from a separately authenticated
+-- trusted object verifier. Browser-controlled SHA/size values are intentionally
+-- not accepted by the materialization path. The verifier must read immutable
+-- object bytes, calculate SHA-256/size, reject non-ZIP/OOXML/HTML payloads, and
+-- bind a storage object version or immutable generation before calling this RPC.
+CREATE OR REPLACE FUNCTION public.record_sales_structured_docx_object_verification(
+  p_request_key uuid, p_storage_bucket text, p_storage_path text, p_object_version text,
+  p_sha256_checksum text, p_size_bytes bigint, p_ooxml_content_types boolean,
+  p_ooxml_word_document boolean, p_html_detected boolean, p_verifier_service text
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_existing public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE;
+BEGIN
+  IF NULLIF(current_setting('request.jwt.claim.sub', true), '') IS NOT NULL THEN RAISE EXCEPTION 'Only the trusted DOCX object verifier may record object facts'; END IF;
+  IF p_object_version IS NULL OR btrim(p_object_version) = '' OR p_sha256_checksum !~ '^[a-f0-9]{64}$' OR p_size_bytes IS NULL OR p_size_bytes <= 0 OR p_size_bytes > 10485760 OR NOT p_ooxml_content_types OR NOT p_ooxml_word_document OR p_html_detected OR btrim(coalesce(p_verifier_service,'')) = '' THEN RAISE EXCEPTION 'Trusted verifier rejected DOCX bytes'; END IF;
+  SELECT * INTO v_request FROM public.sales_opportunity_structured_docx_requests AS verified_request WHERE verified_request.request_key = p_request_key FOR UPDATE;
+  IF NOT FOUND OR p_storage_bucket <> 'project-drive' OR p_storage_path <> (SELECT private_storage_prefix || p_request_key::text || '-draft.docx' FROM public.sales_opportunity_document_locations WHERE id = v_request.location_id) THEN RAISE EXCEPTION 'Trusted DOCX verification does not match the exact request location'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.objects AS stored_object WHERE stored_object.bucket_id = p_storage_bucket AND stored_object.name = p_storage_path AND stored_object.version = p_object_version AND stored_object.archived_at IS NULL AND coalesce(stored_object.is_delete_marker,false) = false) THEN RAISE EXCEPTION 'Trusted DOCX verification object version is missing or replaced'; END IF;
+  SELECT * INTO v_existing FROM public.sales_opportunity_structured_docx_storage_attempts AS existing_attempt WHERE existing_attempt.request_key = p_request_key AND existing_attempt.location_id = v_request.location_id FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing.storage_bucket = p_storage_bucket AND v_existing.storage_path = p_storage_path AND v_existing.object_version = p_object_version AND v_existing.sha256_checksum = p_sha256_checksum AND v_existing.size_bytes = p_size_bytes THEN RETURN v_existing.id; END IF;
+    RAISE EXCEPTION 'Trusted DOCX object verification conflicts with immutable receipt';
+  END IF;
+  INSERT INTO public.sales_opportunity_structured_docx_storage_attempts(request_key,location_id,storage_bucket,storage_path,sha256_checksum,size_bytes,object_version,ooxml_verified_at,verified_by_service,staged_by)
+  VALUES(p_request_key,v_request.location_id,p_storage_bucket,p_storage_path,p_sha256_checksum,p_size_bytes,p_object_version,now(),p_verifier_service,v_request.requested_by) RETURNING id INTO v_existing.id;
+  RETURN v_existing.id;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.resolve_sales_structured_docx_assignment(
   p_opportunity_id uuid, p_customer_id uuid, p_document_kind text, p_assignment_id uuid
@@ -188,9 +224,12 @@ CREATE OR REPLACE FUNCTION public.request_sales_structured_docx_materialization(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_scope record; v_html_request public.sales_opportunity_structured_draft_requests%ROWTYPE; v_revision public.sales_opportunity_structured_draft_revisions%ROWTYPE; v_draft public.sales_opportunity_structured_drafts%ROWTYPE; v_existing public.sales_opportunity_structured_docx_requests%ROWTYPE;
 BEGIN
-  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id, p_customer_id, (SELECT html_request.document_kind FROM public.sales_opportunity_structured_draft_requests AS html_request WHERE html_request.request_key = p_structured_draft_request_key), p_assignment_id);
+  -- All caller flows acquire the request/source lock before assignment/location.
   IF p_request_key IS NULL OR btrim(coalesce(p_template_key,'')) = '' OR p_template_version <= 0 OR p_template_schema_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Invalid DOCX request pins'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|', p_opportunity_id::text, p_request_key::text), 0));
+  SELECT * INTO v_html_request FROM public.sales_opportunity_structured_draft_requests AS structured_request WHERE structured_request.request_key = p_structured_draft_request_key AND structured_request.requested_by = v_actor AND structured_request.opportunity_id = p_opportunity_id AND structured_request.customer_id = p_customer_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Pinned structured Sales revision is not owned by this actor and source'; END IF;
+  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id, p_customer_id, v_html_request.document_kind, p_assignment_id);
   SELECT * INTO v_existing FROM public.sales_opportunity_structured_docx_requests AS existing_request WHERE existing_request.request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_existing.requested_by = v_actor AND v_existing.assignment_id = p_assignment_id AND v_existing.structured_draft_request_key = p_structured_draft_request_key AND v_existing.template_key = p_template_key AND v_existing.template_version = p_template_version AND v_existing.template_schema_hash = p_template_schema_hash THEN
@@ -198,31 +237,15 @@ BEGIN
     END IF;
     RAISE EXCEPTION 'DOCX request key conflicts with a different actor, source, assignment, or template pin';
   END IF;
-  SELECT * INTO v_html_request FROM public.sales_opportunity_structured_draft_requests AS structured_request WHERE structured_request.request_key = p_structured_draft_request_key AND structured_request.requested_by = v_actor AND structured_request.opportunity_id = p_opportunity_id AND structured_request.customer_id = p_customer_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Pinned structured Sales revision is not owned by this actor and source'; END IF;
   SELECT * INTO v_revision FROM public.sales_opportunity_structured_draft_revisions WHERE id = v_html_request.revision_id FOR UPDATE;
   SELECT * INTO v_draft FROM public.sales_opportunity_structured_drafts WHERE id = v_html_request.draft_id FOR UPDATE;
-  IF NOT FOUND OR v_revision.source_fingerprint <> v_html_request.source_fingerprint OR v_draft.master_specification_version_id <> v_html_request.master_specification_version_id THEN RAISE EXCEPTION 'Pinned structured Sales revision changed'; END IF;
+  IF NOT FOUND OR v_revision.source_fingerprint <> v_html_request.source_fingerprint OR v_draft.master_specification_version_id <> v_html_request.master_specification_version_id OR NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_html_request.master_specification_id AND current_specification.current_version_id = v_html_request.master_specification_version_id) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
+  -- No authoritative template registry exists yet. The caller pin remains
+  -- stored only for later verifier comparison; activation must add a template
+  -- registry lookup here instead of trusting this input.
   INSERT INTO public.sales_opportunity_structured_docx_requests(request_key,requested_by,assignment_id,structured_draft_request_key,structured_draft_revision_id,location_id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,document_kind,editable_schema_key,editable_schema_hash,source_fingerprint,payload_hash,template_key,template_version,template_schema_hash)
   VALUES(p_request_key,v_actor,p_assignment_id,p_structured_draft_request_key,v_revision.id,v_scope.location_id,p_opportunity_id,p_customer_id,v_html_request.master_specification_id,v_html_request.master_specification_version_id,v_html_request.document_kind,v_html_request.editable_schema_key,v_html_request.editable_schema_hash,v_revision.source_fingerprint,v_revision.payload_hash,p_template_key,p_template_version,p_template_schema_hash);
   RETURN QUERY SELECT p_request_key, v_scope.storage_bucket, v_scope.storage_path_prefix || p_request_key::text || '-draft.docx', false;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.register_sales_structured_docx_storage_attempt(
-  p_opportunity_id uuid, p_customer_id uuid, p_assignment_id uuid, p_request_key uuid, p_storage_bucket text, p_storage_path text, p_sha256_checksum text, p_size_bytes bigint
-) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE v_actor uuid := auth.uid(); v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_scope record; v_attempt public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE;
-BEGIN
-  SELECT * INTO v_request FROM public.sales_opportunity_structured_docx_requests AS docx_request WHERE docx_request.request_key = p_request_key AND docx_request.requested_by = v_actor AND docx_request.opportunity_id = p_opportunity_id AND docx_request.customer_id = p_customer_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'DOCX request is not owned by this actor and source'; END IF;
-  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,v_request.document_kind,p_assignment_id);
-  IF v_request.assignment_id <> p_assignment_id OR v_request.location_id <> v_scope.location_id OR p_storage_bucket <> v_scope.storage_bucket OR p_storage_path <> v_scope.storage_path_prefix || p_request_key::text || '-draft.docx' OR p_sha256_checksum !~ '^[a-f0-9]{64}$' OR p_size_bytes IS NULL OR p_size_bytes <= 0 OR p_size_bytes > 10485760 THEN RAISE EXCEPTION 'Invalid staged DOCX object'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM storage.objects WHERE bucket_id = p_storage_bucket AND name = p_storage_path) THEN RAISE EXCEPTION 'Staged DOCX object does not exist'; END IF;
-  INSERT INTO public.sales_opportunity_structured_docx_storage_attempts(request_key,location_id,storage_bucket,storage_path,sha256_checksum,size_bytes,staged_by) VALUES(p_request_key,v_scope.location_id,p_storage_bucket,p_storage_path,p_sha256_checksum,p_size_bytes,v_actor) ON CONFLICT(request_key,location_id) DO NOTHING;
-  SELECT * INTO v_attempt FROM public.sales_opportunity_structured_docx_storage_attempts AS docx_attempt WHERE docx_attempt.request_key = p_request_key AND docx_attempt.location_id = v_scope.location_id FOR UPDATE;
-  IF v_attempt.staged_by <> v_actor OR v_attempt.storage_bucket <> p_storage_bucket OR v_attempt.storage_path <> p_storage_path OR v_attempt.sha256_checksum <> p_sha256_checksum OR v_attempt.size_bytes <> p_size_bytes THEN RAISE EXCEPTION 'Staged DOCX object conflicts with immutable attempt provenance'; END IF;
-  RETURN v_attempt.id;
 END;
 $$;
 
@@ -232,18 +255,19 @@ CREATE OR REPLACE FUNCTION public.commit_sales_structured_docx_materialization(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_scope record; v_attempt public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE; v_prior public.sales_opportunity_structured_docx_materializations%ROWTYPE; v_node uuid; v_drive_revision uuid; v_register uuid; v_materialization uuid;
 BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|',p_opportunity_id::text,p_request_key::text),0));
   SELECT * INTO v_request FROM public.sales_opportunity_structured_docx_requests AS docx_request WHERE docx_request.request_key = p_request_key AND docx_request.requested_by = v_actor AND docx_request.opportunity_id = p_opportunity_id AND docx_request.customer_id = p_customer_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'DOCX request is not owned by this actor and source'; END IF;
   SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,v_request.document_kind,p_assignment_id);
-  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|',p_opportunity_id::text,p_request_key::text),0));
-  IF v_request.assignment_id <> p_assignment_id OR v_request.location_id <> v_scope.location_id OR p_storage_bucket <> v_scope.storage_bucket OR p_storage_path <> v_scope.storage_path_prefix || p_request_key::text || '-draft.docx' OR p_sha256_checksum !~ '^[a-f0-9]{64}$' OR p_size_bytes IS NULL OR p_size_bytes <= 0 OR btrim(coalesce(p_file_name,'')) = '' OR p_file_name !~ '\.docx$' THEN RAISE EXCEPTION 'Invalid DOCX materialization payload'; END IF;
+  IF v_request.assignment_id <> p_assignment_id OR v_request.location_id <> v_scope.location_id OR p_storage_bucket <> v_scope.storage_bucket OR p_storage_path <> v_scope.storage_path_prefix || p_request_key::text || '-draft.docx' OR btrim(coalesce(p_file_name,'')) = '' OR p_file_name !~ '\.docx$' THEN RAISE EXCEPTION 'Invalid DOCX materialization payload'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_request.master_specification_id AND current_specification.current_version_id = v_request.master_specification_version_id) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
   SELECT * INTO v_prior FROM public.sales_opportunity_structured_docx_materializations AS prior_materialization WHERE prior_materialization.request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_prior.requested_by = v_actor AND v_prior.assignment_id = p_assignment_id AND v_prior.docx_sha256_checksum = p_sha256_checksum AND v_prior.storage_bucket = p_storage_bucket AND v_prior.storage_path = p_storage_path AND v_prior.size_bytes = p_size_bytes AND p_file_name = (SELECT name FROM public.drive_nodes WHERE id = v_prior.drive_node_id) THEN RETURN QUERY SELECT v_prior.id,v_prior.drive_node_id,v_prior.drive_revision_id,v_prior.document_control_register_id,true; RETURN; END IF;
     RAISE EXCEPTION 'DOCX request key conflicts with a different materialization payload';
   END IF;
   SELECT * INTO v_attempt FROM public.sales_opportunity_structured_docx_storage_attempts AS staged_attempt WHERE staged_attempt.request_key = p_request_key AND staged_attempt.location_id = v_scope.location_id AND staged_attempt.staged_by = v_actor AND staged_attempt.consumed_at IS NULL FOR UPDATE;
-  IF NOT FOUND OR v_attempt.storage_bucket <> p_storage_bucket OR v_attempt.storage_path <> p_storage_path OR v_attempt.sha256_checksum <> p_sha256_checksum OR v_attempt.size_bytes <> p_size_bytes THEN RAISE EXCEPTION 'Staged DOCX object lacks a verified owned attempt receipt'; END IF;
+  IF NOT FOUND OR v_attempt.storage_bucket <> p_storage_bucket OR v_attempt.storage_path <> p_storage_path OR v_attempt.sha256_checksum <> p_sha256_checksum OR v_attempt.size_bytes <> p_size_bytes OR v_attempt.object_version IS NULL OR v_attempt.ooxml_verified_at IS NULL THEN RAISE EXCEPTION 'Staged DOCX object lacks an immutable trusted verifier receipt'; END IF;
   INSERT INTO public.drive_nodes(department_id,project_id,parent_id,name,slug,node_type,file_type,mime_type,file_size_bytes,storage_bucket,storage_path,sha256_checksum,current_version,is_locked,created_by,metadata)
   VALUES(v_scope.department_id,NULL,v_scope.target_folder_node_id,p_file_name,'sales-docx-' || substr(md5(p_request_key::text),1,24),'FILE','OTHER','application/vnd.openxmlformats-officedocument.wordprocessingml.document',p_size_bytes,p_storage_bucket,p_storage_path,p_sha256_checksum,1,false,v_actor,jsonb_build_object('sales_structured_docx',true,'opportunity_id',p_opportunity_id,'structured_draft_revision_id',v_request.structured_draft_revision_id,'request_key',p_request_key,'template_key',v_request.template_key,'template_version',v_request.template_version,'template_schema_hash',v_request.template_schema_hash)) RETURNING id INTO v_node;
   INSERT INTO public.drive_node_revisions(node_id,version,file_size_bytes,storage_path,sha256_checksum,change_summary,uploaded_by) VALUES(v_node,1,p_size_bytes,p_storage_path,p_sha256_checksum,'Initial unissued structured Sales DOCX revision from pinned source/template/schema',v_actor) RETURNING id INTO v_drive_revision;
@@ -269,8 +293,8 @@ $$;
 REVOKE ALL ON FUNCTION public.reject_sales_structured_docx_history_mutation() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_assignment() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_storage_attempt() FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, service_role;
-REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, service_role;
-REVOKE ALL ON FUNCTION public.register_sales_structured_docx_storage_attempt(uuid,uuid,uuid,uuid,text,text,text,bigint) FROM PUBLIC, anon, service_role;
-REVOKE ALL ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,bigint) FROM PUBLIC, anon, service_role;
-REVOKE ALL ON FUNCTION public.read_sales_structured_docx_materializations(uuid,uuid,uuid) FROM PUBLIC, anon, service_role;
+REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,bigint) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.read_sales_structured_docx_materializations(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
