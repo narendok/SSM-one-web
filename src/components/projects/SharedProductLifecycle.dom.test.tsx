@@ -17,12 +17,12 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: (table: string) => ({
       select: () => ({
         eq: () => table === "project_stage_gates"
-          ? readGates()
+          ? readGates().then((result: { data: unknown; error: unknown }) => result.error ? Promise.reject(result.error) : result)
           : table === "requirement_baselines"
             ? ({ maybeSingle: readBaseline })
             : table === "company_process_stages"
-              ? ({ order: () => readStages() })
-              : ({ order: () => readLifecycle() }),
+              ? ({ order: () => readStages().then((result: { data: unknown; error: unknown }) => result.error ? Promise.reject(result.error) : result) })
+              : ({ order: () => readLifecycle().then((result: { data: unknown; error: unknown }) => result.error ? Promise.reject(result.error) : result) }),
       }),
     }),
   },
@@ -71,7 +71,7 @@ describe("SharedProductLifecycle governed reads", () => {
 
   it("settles governed automation failures instead of leaving its panel loading", async () => {
     const user = userEvent.setup();
-    readLifecycle.mockRejectedValueOnce(new Error("Process records unavailable")).mockResolvedValue({ data: [], error: null });
+    readLifecycle.mockResolvedValueOnce({ data: null, error: new Error("Process records unavailable") }).mockResolvedValue({ data: [], error: null });
     readGates.mockResolvedValue({ data: [], error: null });
     readStages.mockResolvedValue({ data: [], error: null });
 
