@@ -54,7 +54,7 @@ END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DO $$ BEGIN
   IF (SELECT count(*) FROM public.component_candidate_purchase_handoff_read) <> 1 THEN RAISE EXCEPTION 'Purchase reader did not receive only approved handoff'; END IF;
-  IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE candidate_id = (SELECT pending_candidate_id FROM read_scope_ids)) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%Hidden supplier%' OR row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%42%') THEN RAISE EXCEPTION 'Purchase handoff leaked pending or private payload fields'; END IF;
+  IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE candidate_id = '40000000-0000-4000-8000-000000000051'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read WHERE row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%Hidden supplier%' OR row_to_json(component_candidate_purchase_handoff_read)::text LIKE '%42%') THEN RAISE EXCEPTION 'Purchase handoff leaked pending or private payload fields'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000004', false);
 DO $$ BEGIN
