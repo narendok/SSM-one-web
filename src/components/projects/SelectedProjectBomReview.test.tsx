@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { savedBomReviewSearch } from "./SelectedProjectBomReview";
 import { projectBomReviewContractState } from "./ProjectBomReview";
-import { analysisLabel, procurementReviewContractState, reviewDecisionLabel, reviewableBomRows } from "@/lib/project-bom-procurement-review";
+import { analysisLabel, procurementReviewContractState, procurementSubmissionAdapter, reviewDecisionLabel, reviewableBomRows } from "@/lib/project-bom-procurement-review";
 
 describe("selected project saved BOM review", () => {
   it("keeps the visible review action inside the authenticated BOM route", () => {
@@ -55,6 +55,24 @@ describe("selected project saved BOM review", () => {
     ]);
     expect(rows.map((row) => row.lineId)).toEqual(["1", "2"]);
     expect(procurementReviewContractState.deployed).toBe(false);
+  });
+
+  it("adapts only complete project/BOM-pinned rows to the exact pending RPC payload shape", () => {
+    const payload = procurementSubmissionAdapter({
+      projectId: "project-id", projectBomId: "bom-id", expectedBomRevision: "7", requestKey: "request-key",
+      rows: [
+        { lineId: "bom-line-id", reference: "R1", quantity: "2", manualNote: "manual", kind: "existing", componentId: "component-id", mpn: "client-forged", manufacturer: "client-forged", description: "client-forged" },
+        { lineId: "", reference: "U1", quantity: "1", manualNote: "", kind: "new", componentId: "", mpn: "NEW-1", manufacturer: "Maker", description: "New part" },
+      ],
+    });
+    expect(payload).toEqual({
+      projectId: "project-id", projectBomId: "bom-id", expectedBomRevision: "7", requestKey: "request-key",
+      rows: [
+        { kind: "existing", sourceBomItemId: "bom-line-id", componentId: "component-id", referenceDesignators: "R1", quantity: 2, manualNote: "manual" },
+        { kind: "new", mpn: "NEW-1", manufacturer: "Maker", description: "New part", referenceDesignators: "U1", quantity: 1, manualNote: undefined },
+      ],
+    });
+    expect(procurementSubmissionAdapter({ projectId: "project-id", projectBomId: "bom-id", expectedBomRevision: null, requestKey: "request-key", rows: [] })).toBeNull();
   });
 
   it("labels Procurement analysis and decisions without turning an allow into technical approval", () => {
