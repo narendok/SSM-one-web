@@ -12,7 +12,17 @@ type ImmutableObjectRecord = {
 
 type PrivateStorageAdmin = Pick<SupabaseClient, "storage"> & {
   from(table: "objects"): {
-    select(columns: string): { eq(column: string, value: string): { eq(column: string, value: string): { is(column: string, value: null): { maybeSingle(): Promise<{ data: ImmutableObjectRecord | null; error: { message: string } | null }> } } } };
+    select(columns: string): {
+      eq(column: string, value: string): {
+        eq(column: string, value: string): {
+          eq(column: string, value: string): {
+            is(column: string, value: null): {
+              maybeSingle(): PromiseLike<{ data: ImmutableObjectRecord | null; error: { message: string } | null }>;
+            };
+          };
+        };
+      };
+    };
   };
 };
 

@@ -14,6 +14,6 @@ export const verifyPrivateStructuredDocxObject = createServerFn({ method: "POST"
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Inspect the exact immutable metadata only; the reader fails closed because the
     // current storage SDK cannot fetch bytes by immutable object version.
-    void createPendingVersionedPrivateDocxReader(supabaseAdmin);
+    void createPendingVersionedPrivateDocxReader(supabaseAdmin as never);
     throw new Error("Private DOCX verification is unavailable until immutable object-version byte reading and protected registry receipt authority are accepted.");
   });
