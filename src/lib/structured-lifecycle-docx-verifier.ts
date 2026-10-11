@@ -44,7 +44,7 @@ function parseXml(xml: string, path: string, onTag: (tag: SaxesTag, values: Reco
   let error: Error | null = null;
   const parser = new SaxesParser({ xmlns: true });
   parser.on("doctype", () => { error = new Error("DTD is forbidden"); });
-  parser.on("error", (parserError) => { error = parserError; parser.resume(); });
+  parser.on("error", (parserError) => { error = parserError; });
   parser.on("opentag", (tag) => { if (!error) onTag(tag as SaxesTag, attributes(tag as SaxesTag)); });
   parser.write(xml).close();
   if (error) fail(`${path} is not safe XML`);
