@@ -63,7 +63,12 @@ vi.mock("@/lib/project-bom.functions", async (importOriginal) => {
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => options,
-  Link: ({ children }: { children: ReactNode }) => <a href="/bom">{children}</a>,
+  Link: ({ children, to, search }: { children: ReactNode; to?: string; search?: { node?: string; department?: string } }) => {
+    const parameters = new URLSearchParams();
+    if (search?.node) parameters.set("node", search.node);
+    if (search?.department) parameters.set("department", search.department);
+    return <a href={`${to ?? "/"}${parameters.size ? `?${parameters.toString()}` : ""}`}>{children}</a>;
+  },
 }));
 
 vi.mock("@tanstack/react-start", async () => {
