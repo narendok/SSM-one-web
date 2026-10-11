@@ -271,7 +271,7 @@ BEGIN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
-  PERFORM 1
+  SELECT * INTO v_scope
   FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
