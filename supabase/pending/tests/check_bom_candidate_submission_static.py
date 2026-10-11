@@ -8,6 +8,8 @@ fixture = (Path(__file__).resolve().parent / "bom_candidate_submission_local_fix
 acceptance = (Path(__file__).resolve().parent / "bom_candidate_submission_local_acceptance.sql").read_text()
 runner = (Path(__file__).resolve().parent / "run_bom_candidate_submission_local_acceptance.sh").read_text()
 concurrency = (Path(__file__).resolve().parent / "bom_candidate_submission_local_concurrency_assertions.sql").read_text()
+revocation_runner = (Path(__file__).resolve().parent / "run_bom_candidate_submission_local_revocation_wait.sh").read_text()
+revocation_worker = (Path(__file__).resolve().parent / "bom_candidate_submission_local_revocation_wait_worker.sql").read_text()
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
@@ -27,6 +29,9 @@ checks = {
     "acceptance covers manual bom replay denials and rollback": all(token in acceptance for token in ("Manual line remains untouched", "Exact replay", "Incomplete handover", "Mismatched project handover", "Unauthorized actor", "Receipt failure did not roll back", "ROLLBACK;")),
     "acceptance covers baseline department lineage and revoked authority denials": all(token in acceptance for token in ("Baseline without approver", "Baseline without approval time", "Active baseline", "Superseded baseline", "Inactive Hardware department", "Non-Hardware department", "Missing Hardware department", "Mismatched customer lineage", "Mismatched opportunity lineage", "Inactive employee", "Revoked team membership")),
     "concurrency asserts one persisted result": "BOM_CANDIDATE_SUBMISSION_CONCURRENCY_PASS=true" in concurrency and "Concurrent exact replay wrote more than one header" in concurrency,
+    "revocation wait uses exact production project lock": all(token in revocation_runner for token in ("component-candidate-project:", "hashtextextended", "pg_locks", "pg_stat_activity", "waiting-on-exact-project-lock")),
+    "revocation wait covers new and replay requests": all(token in revocation_runner for token in ("replay_result_returned=false", "new_request_graph_unchanged=true", "000000000191", "000000000192")),
+    "revocation worker has no production instrumentation": "candidate_test_wait" not in revocation_worker and "submit_component_candidate" in revocation_worker,
     "runner is explicitly disposable": "LOCAL_BOM_CANDIDATE_DISPOSABLE" in runner and "/tmp/bom_candidate_submission_local_" in runner,
     "fixture is local only": "LOCAL DISPOSABLE FIXTURE ONLY" in fixture,
 }
