@@ -204,6 +204,8 @@ export type StructuredSalesDocumentGate = {
 export function structuredSalesDocumentGate(
   kind: StructuredLifecycleTemplateKind,
   source: StructuredTemplateSource | null,
+  persistedRevisionNumber: number | null = null,
+  hasUnsavedEdits = false,
 ): StructuredSalesDocumentGate | null {
   if (!isStructuredSalesPreviewKind(kind)) return null;
   if (!source) {
@@ -215,7 +217,9 @@ export function structuredSalesDocumentGate(
   }
   return {
     state: "VERIFIED",
-    message: `Working from ${source.opportunityNumber} · ${source.specificationNumber} rev ${source.versionNumber}. Local notes remain unsaved and are not an approval, issued document, or release.`,
+    message: persistedRevisionNumber && !hasUnsavedEdits
+      ? `Persisted unissued revision ${persistedRevisionNumber} is based on ${source.opportunityNumber} · ${source.specificationNumber} rev ${source.versionNumber}. No approval, issuance, or release is recorded.`
+      : `Working from ${source.opportunityNumber} · ${source.specificationNumber} rev ${source.versionNumber}. Local notes remain unsaved and are not an approval, issued document, or release.`,
   };
 }
 
@@ -451,7 +455,12 @@ export function StructuredTemplatePreview({
   // Keep local manual fields available while an identity/source transition is
   // in progress; only a settled authenticated source result can block them.
   const salesGate = actorId && !source.isPending
-    ? structuredSalesDocumentGate(kind, source.data ?? null)
+    ? structuredSalesDocumentGate(
+      kind,
+      source.data ?? null,
+      persistedRevision?.payload && !dirty ? persistedRevision.revisionNumber : null,
+      dirty,
+    )
     : null;
   const saveCapability = structuredSalesDraftSaveCapability(
     isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
