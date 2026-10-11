@@ -8,15 +8,24 @@ describe("structured Sales draft Save capability", () => {
     expect(structuredSalesDraftSaveBoundaryMessage(capability)).toContain("exact authorized source revision");
   });
 
-  it("fails closed when the approved backend package is not deployed", () => {
+  it("fails closed when the private location cannot be discovered", () => {
     const capability = structuredSalesDraftSaveCapability(true);
-    expect(capability).toEqual({ available: false, reason: "UNDEPLOYED" });
-    expect(structuredSalesDraftSaveBoundaryMessage(capability)).toContain("immutable audit");
+    expect(capability).toEqual({ available: false, reason: "LOCATION_UNVERIFIED" });
+    expect(structuredSalesDraftSaveBoundaryMessage(capability)).toContain("verified private Sales location");
   });
 });
 
-it("keeps history and private download fail-closed until materialization is deployed", () => {
-  const history = structuredSalesDraftHistoryCapability(true);
-  expect(history).toEqual({ available: false, reason: "UNDEPLOYED" });
-  expect(structuredSalesDraftHistoryBoundaryMessage(history)).toContain("private download");
+it("enables only a fully discovered source-bound capability", () => {
+  const location = {
+    locationId: "dd31a29a-dba3-49ad-abf0-349fcab64280",
+    storageBucket: "project-drive",
+    storagePathPrefix: "sales/opportunity/a6c62c81-1cc2-4804-b1c5-c004c6730b52/",
+  };
+  expect(structuredSalesDraftSaveCapability(true, location)).toEqual({
+    available: true,
+    functionName: "save_sales_opportunity_structured_draft_at_location",
+    materializer: "commit_sales_opportunity_structured_draft_materialization",
+    ...location,
+  });
+  expect(structuredSalesDraftHistoryCapability(true, location)).toEqual({ available: true, locationId: location.locationId });
 });
