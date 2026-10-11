@@ -18,6 +18,7 @@ export type SpecializedLocalPreviewKind = Exclude<StructuredLifecycleTemplateKin
 export type SpecializedLocalPreviewValidation =
   | { ok: true; payload: Record<string, string> }
   | { ok: false; errors: { path: string; message: string }[] };
+export type SpecializedLocalRendererSource = Pick<StructuredTemplateSource, "sourceFields">;
 
 const localRevision = "local-preview-only";
 const tbc = "TBC";
@@ -99,4 +100,24 @@ export function validateStructuredLocalEdits(kind: StructuredLifecycleTemplateKi
   for (let index = 1; index < complete.length; index += 1) if (Number(complete[index - 1].maxQuantity) >= Number(complete[index].minQuantity)) throw new Error("Volume tiers cannot overlap.");
 }
 export function mapMasterSpecificationSource(input: Omit<StructuredTemplateSource, "sourceFields" | "currentVersionNumber"> & { currentVersionNumber?: number | null; specificationData: unknown }): StructuredTemplateSource { const data = input.specificationData && typeof input.specificationData === "object" && !Array.isArray(input.specificationData) ? input.specificationData as Record<string, unknown> : {}; return { ...input, currentVersionNumber: input.currentVersionNumber ?? null, sourceFields: { PROJECT_CODE: input.opportunityNumber, PROJECT_NAME: input.opportunityName, PROJECT_REVISION: `Master Specification rev ${input.versionNumber}`, CUSTOMER_NAME: input.customerName, MASTER_SPECIFICATION: `${input.specificationNumber} rev ${input.versionNumber}`, SOURCE_DOCUMENT: `${input.specificationNumber} revision ${input.versionNumber}`, REQUIREMENT_SUMMARY: text(data.requirementSummary), POWER_AND_UNITS: text(data.powerAndUnits), INTERFACES: text(data.interfaces), CONNECTIVITY_AND_GNSS: text(data.connectivityAndGnss), ENVIRONMENT_AND_IP: text(data.environmentAndIp), VOLUMES: text(data.volumes), REQUESTED_STANDARDS: text(data.requestedStandards), WORKSTREAMS: workstreams(data.workstreams) } }; }
+const traceabilityFields: Partial<Record<SpecializedLocalPreviewKind, readonly [string, string][]>> = {
+  NDA: [["Source pin", "PROJECT_CODE"], ["Customer", "CUSTOMER_NAME"], ["Master Specification", "MASTER_SPECIFICATION"], ["Requirement context", "REQUIREMENT_SUMMARY"]],
+  COMMERCIAL_QUOTATION: [["Source pin", "PROJECT_CODE"], ["Customer", "CUSTOMER_NAME"], ["Master Specification", "MASTER_SPECIFICATION"], ["Requirement context", "REQUIREMENT_SUMMARY"], ["Requested volume", "VOLUMES"]],
+  BOM_COST_TRACKER: [["Source pin", "PROJECT_CODE"], ["Master Specification", "MASTER_SPECIFICATION"], ["Power / units", "POWER_AND_UNITS"], ["Interfaces", "INTERFACES"], ["Requested volume", "VOLUMES"]],
+  DFMEA: [["Source pin", "PROJECT_CODE"], ["Master Specification", "MASTER_SPECIFICATION"], ["Requirement context", "REQUIREMENT_SUMMARY"], ["Workstreams", "WORKSTREAMS"], ["Power / units", "POWER_AND_UNITS"], ["Interfaces", "INTERFACES"]],
+  MANUFACTURING_CONTROL_PLAN: [["Source pin", "PROJECT_CODE"], ["Master Specification", "MASTER_SPECIFICATION"], ["Workstreams", "WORKSTREAMS"], ["Requirement context", "REQUIREMENT_SUMMARY"], ["Requested volume", "VOLUMES"]],
+  DVPR: [["Source pin", "PROJECT_CODE"], ["Master Specification", "MASTER_SPECIFICATION"], ["Requirement context", "REQUIREMENT_SUMMARY"], ["Workstreams", "WORKSTREAMS"], ["Requested standards", "REQUESTED_STANDARDS"], ["Requested volume", "VOLUMES"]],
+  PDI: [["Source pin", "PROJECT_CODE"], ["Master Specification", "MASTER_SPECIFICATION"], ["Requirement context", "REQUIREMENT_SUMMARY"], ["Requested volume", "VOLUMES"]],
+  COMMERCIAL_TAX_INVOICE: [["Source pin", "PROJECT_CODE"], ["Customer", "CUSTOMER_NAME"], ["Master Specification", "MASTER_SPECIFICATION"], ["Requested volume", "VOLUMES"]],
+  ANNUAL_SKILL_MATRIX: [["Source pin", "PROJECT_CODE"], ["Master Specification", "MASTER_SPECIFICATION"]],
+};
+function escapePreviewHtml(value: string) { return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;"); }
+function sourcePreviewValue(source: SpecializedLocalRendererSource | null, key: string) { const descriptor = source?.sourceFields ? Object.getOwnPropertyDescriptor(source.sourceFields, key) : undefined; return typeof descriptor?.value === "string" ? descriptor.value : tbc; }
+/** Deterministic inert source-traceability appendix for every non-Sales local preview. */
+export function renderSpecializedLocalTraceabilityHtml(kind: SpecializedLocalPreviewKind, source: SpecializedLocalRendererSource | null): string {
+  const rows = traceabilityFields[kind] ?? [];
+  const body = rows.map(([label, key]) => `<tr><th scope="row">${escapePreviewHtml(label)}</th><td>${escapePreviewHtml(sourcePreviewValue(source, key))}</td></tr>`).join("");
+  const state = source ? "exact pinned preview context" : "source unavailable — values remain TBC";
+  return `<section><h2>Source traceability</h2><p>${state}. TBC is unresolved and is not a qualification, result, cost, approval, or customer acceptance.</p><table><caption>Read-only source evidence</caption><thead><tr><th>Trace</th><th>Pinned source value</th></tr></thead><tbody>${body}</tbody></table><p>LOCAL PREVIEW ONLY — NOT ISSUED OR CONTROLLED. Local fields remain unsaved.</p></section>`;
+}
 export function renderStructuredLifecycleTemplatePreview(kind: StructuredLifecycleTemplateKind, source: StructuredTemplateSource | null, userEdits: Record<string, string | null> = {}) { const validatedEdits = specializedKind(kind) ? canonicalizeSpecializedLocalPreviewPayload(kind, userEdits) : userEdits; validateStructuredLocalEdits(kind, validatedEdits); const preview = structuredLifecycleTemplatePreviews.find((item) => item.kind === kind); if (!preview) throw new Error("Unsupported structured lifecycle template."); const renderedEdits = { ...validatedEdits, QUOTE_LINE_ROWS: tableText("QUOTE_LINE_ROWS", validatedEdits.QUOTE_LINE_ROWS), VOLUME_TIER_ROWS: tableText("VOLUME_TIER_ROWS", validatedEdits.VOLUME_TIER_ROWS), BOM_COST_ROWS: tableText("BOM_COST_ROWS", validatedEdits.BOM_COST_ROWS), DFMEA_ROWS: tableText("DFMEA_ROWS", validatedEdits.DFMEA_ROWS), CONTROL_PLAN_ROWS: tableText("CONTROL_PLAN_ROWS", validatedEdits.CONTROL_PLAN_ROWS), DVPR_ROWS: tableText("DVPR_ROWS", validatedEdits.DVPR_ROWS), PDI_ROWS: tableText("PDI_ROWS", validatedEdits.PDI_ROWS), TAX_INVOICE_ROWS: tableText("TAX_INVOICE_ROWS", validatedEdits.TAX_INVOICE_ROWS) }; return renderLifecycleDocument({ ...preview.template, documentRevisionId: localRevision }, { ...preview.fields, ...(source?.sourceFields ?? {}), ...renderedEdits }); }
