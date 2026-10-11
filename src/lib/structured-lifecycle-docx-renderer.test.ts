@@ -77,13 +77,16 @@ describe("structured lifecycle DOCX renderer", () => {
       ["BOM_COST_TRACKER", { BOM_COST_ROWS: bomRows }, "&lt;safe&gt;"],
       ["DFMEA", { DFMEA_ROWS: dfmeaRows }, "Power"],
     ] as const) {
-      const { content } = await documentXml((await renderStructuredLifecycleDocx(kind, source, payload)).bytes);
+      const { content: xml } = await documentXml((await renderStructuredLifecycleDocx(kind, source, payload)).bytes);
+      expect(xml).toBeDefined();
+      const content = xml ?? "";
       expect(content).toContain("w:orient=\"landscape\"");
       expect(content).toContain("w:tblHeader");
       expect(content).toContain(escaped);
       expect(content).toContain("w:tblW w:type=\"dxa\" w:w=\"14414\"");
-      const widths = [...content.matchAll(/w:gridCol w:w="(\d+)"/g)].map((match) => Number(match[1]));
-      expect(widths).toContain(1441);
+      const wideTableWidths = [...content.matchAll(/<w:tblW w:type="dxa" w:w="14414"\/>[\s\S]*?<\/w:tbl>/g)];
+      expect(wideTableWidths).toHaveLength(1);
+      expect(wideTableWidths[0]?.[0].match(/<w:gridCol/g)?.length).toBe(kind === "BOM_COST_TRACKER" ? 10 : 12);
     }
   });
 });
