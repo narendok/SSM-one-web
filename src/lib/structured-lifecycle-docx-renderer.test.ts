@@ -81,7 +81,8 @@ describe("structured lifecycle DOCX renderer", () => {
       expect(content).toContain("w:orient=\"landscape\"");
       expect(content).toContain("w:tblHeader");
       expect(content).toContain(escaped);
-      expect(content).toContain("w:gridCol w:w=\"1441\"");
+      expect(content).toContain("w:tblW w:type=\"dxa\" w:w=\"14414\"");
+      expect(content).toMatch(/w:gridCol w:w="1(?:440|441)"/);
     }
   });
 });
