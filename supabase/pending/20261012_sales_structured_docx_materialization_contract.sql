@@ -140,7 +140,7 @@ BEGIN
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.employee_departments ed WHERE ed.employee_id = v_employee.id AND ed.department_id = v_assignment.department_id) THEN RAISE EXCEPTION 'The current actor is not the assigned active responsible person'; END IF;
   IF NOT public.can_access_department_drive(v_actor, v_assignment.department_id, NULL) THEN RAISE EXCEPTION 'The assigned person cannot access the configured department Drive'; END IF;
   -- The location resolver requires the actual location ID; obtain exactly one matching active location only after locking the assignment.
-  SELECT * INTO v_location FROM public.sales_opportunity_document_locations WHERE opportunity_id = p_opportunity_id AND customer_id = p_customer_id AND department_id = v_assignment.department_id AND location_purpose = 'STRUCTURED_DRAFT' AND status = 'ACTIVE' FOR UPDATE;
+  SELECT * INTO v_location FROM public.sales_opportunity_document_locations AS configured_location WHERE configured_location.opportunity_id = p_opportunity_id AND configured_location.customer_id = p_customer_id AND configured_location.department_id = v_assignment.department_id AND configured_location.location_purpose = 'STRUCTURED_DRAFT' AND configured_location.status = 'ACTIVE' FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'No active private Sales location matches the current assignment'; END IF;
   SELECT * INTO v_location FROM public.resolve_sales_opportunity_structured_draft_location(p_opportunity_id, p_customer_id, v_location.id);
   RETURN QUERY SELECT v_assignment.id, v_location.location_id, v_location.department_id, v_location.target_folder_node_id, v_location.storage_bucket, v_location.storage_path_prefix;
