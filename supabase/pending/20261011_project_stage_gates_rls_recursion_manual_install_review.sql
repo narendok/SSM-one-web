@@ -20,7 +20,7 @@ WHERE n.nspname = 'public'
 ORDER BY c.relname;
 
 -- ABORT unless the pre-flight output matches the originals documented in the companion
--- review proposal; then execute the exact repair payload below.
+-- review proposal and owner/BYPASSRLS review is accepted; then execute the exact payload.
 CREATE OR REPLACE FUNCTION public.has_project_team_membership(
   _actor_id uuid,
   _project_id uuid
@@ -36,9 +36,10 @@ AS $$
     FROM public.project_team_members membership
     JOIN public.employees member_employee
       ON member_employee.id = membership.employee_id
-    WHERE membership.project_id = _project_id
+    WHERE auth.uid() IS NOT NULL
+      AND _actor_id = auth.uid()
+      AND membership.project_id = _project_id
       AND member_employee.user_id = _actor_id
-      AND member_employee.employment_status = 'ACTIVE'
   )
 $$;
 
