@@ -6,8 +6,10 @@
 BEGIN;
 DROP SCHEMA IF EXISTS auth CASCADE;
 DROP SCHEMA IF EXISTS public CASCADE;
+DROP SCHEMA IF EXISTS storage CASCADE;
 CREATE SCHEMA public;
 CREATE SCHEMA auth;
+CREATE SCHEMA storage;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 DO $roles$
 BEGIN
@@ -17,7 +19,8 @@ BEGIN
 END;
 $roles$;
 GRANT authenticated TO CURRENT_USER;
-GRANT USAGE ON SCHEMA public, auth TO authenticated;
+GRANT anon TO CURRENT_USER;
+GRANT USAGE ON SCHEMA public, auth, storage TO authenticated, anon;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
   SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
@@ -26,6 +29,14 @@ CREATE FUNCTION public.has_permission(p_actor uuid, p_permission text) RETURNS b
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT p_permission = 'sales.manage' AND EXISTS (
     SELECT 1 FROM public.sales_structured_draft_test_permissions WHERE user_id = p_actor AND sales_manage
+  )
+$$;
+CREATE TABLE public.sales_structured_draft_test_project_permissions (user_id uuid NOT NULL, permission text NOT NULL, PRIMARY KEY(user_id, permission));
+CREATE FUNCTION public.has_any_permission(p_actor uuid, p_permissions text[]) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.sales_structured_draft_test_project_permissions
+    WHERE user_id = p_actor AND permission = ANY(p_permissions)
   )
 $$;
 CREATE TABLE public.customers (id uuid PRIMARY KEY, name text NOT NULL);
@@ -72,6 +83,9 @@ INSERT INTO public.sales_structured_draft_test_permissions (user_id, sales_manag
   ('00000000-0000-4000-8000-000000000001', true),
   ('00000000-0000-4000-8000-000000000002', true),
   ('00000000-0000-4000-8000-000000000003', false);
+INSERT INTO public.sales_structured_draft_test_project_permissions(user_id, permission) VALUES
+  ('00000000-0000-4000-8000-000000000003', 'projects.manage'),
+  ('00000000-0000-4000-8000-000000000004', 'engineering.manage');
 COMMIT;
 CREATE TABLE public.departments (id uuid PRIMARY KEY, code text NOT NULL, name text NOT NULL, is_active boolean NOT NULL DEFAULT true);
 INSERT INTO public.departments(id, code, name) VALUES ('00000000-0000-4000-8000-000000000501', 'SAL', 'Sales');
@@ -80,5 +94,7 @@ CREATE TABLE public.drive_node_revisions (id uuid PRIMARY KEY DEFAULT gen_random
 CREATE TABLE public.document_control_registers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), drive_node_id uuid NOT NULL UNIQUE REFERENCES public.drive_nodes(id), department_id uuid NOT NULL REFERENCES public.departments(id), document_number text NOT NULL UNIQUE, title text NOT NULL, document_status text NOT NULL DEFAULT 'DRAFT', controlled_version integer NOT NULL DEFAULT 1, approval_note text NULL, created_by uuid NOT NULL);
 CREATE FUNCTION public.can_access_department_drive(p_user uuid, p_department uuid, p_project uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
 CREATE FUNCTION public.next_business_number(p_kind text, p_prefix text, p_context text) RETURNS text LANGUAGE sql AS $$ SELECT upper(p_prefix) || '-LOCAL-' || substr(md5(coalesce(p_context,'') || p_kind), 1, 8) $$;
-CREATE SCHEMA storage;
 CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, PRIMARY KEY(bucket_id,name));
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon;

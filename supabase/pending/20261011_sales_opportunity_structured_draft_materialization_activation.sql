@@ -1,13 +1,61 @@
 -- ACTION-TIME APPROVAL REQUIRED. UNDEPLOYED.
--- Apply only after the three pending structured Sales migrations pass isolated
--- caller-authenticated acceptance and an approver records the exact active Sales
--- folder binding. This file intentionally holds the only authenticated transport
--- grants and Storage policy change; do not merge it into the schema contract.
 --
--- The location row must be provisioned by an approved administrator operation
--- before any caller can use this policy. The policy permits only a path derived
--- from that active recorded location and request receipt. It does not grant
--- generic Sales access to project-drive or to other departments' objects.
+-- This contract deliberately replaces every existing permissive project-drive
+-- policy that could otherwise reach the reserved sales/opportunity/ namespace.
+-- Adding a narrow Sales policy alone is unsafe because PostgreSQL combines
+-- permissive policies for the same command with OR.
+--
+-- Before execution, an approver must bind exactly one active location to an
+-- opportunity/customer, a locked Sales Drive folder, and its exact prefix.
+-- Apply only after the three structured-draft contracts pass managed,
+-- caller-authenticated acceptance. Do not merge into schema contracts.
+
+DROP POLICY IF EXISTS project_drive_read ON storage.objects;
+DROP POLICY IF EXISTS project_drive_insert ON storage.objects;
+DROP POLICY IF EXISTS project_drive_update ON storage.objects;
+DROP POLICY IF EXISTS project_drive_delete ON storage.objects;
+DROP POLICY IF EXISTS "Project teams read project files" ON storage.objects;
+DROP POLICY IF EXISTS "Project managers upload project files" ON storage.objects;
+DROP POLICY IF EXISTS "Project managers update project files" ON storage.objects;
+DROP POLICY IF EXISTS "Project managers delete project files" ON storage.objects;
+
+-- Existing project/Engineering access is preserved only for non-reserved paths.
+CREATE POLICY "Project teams read project files"
+ON storage.objects FOR SELECT TO authenticated
+USING (
+  bucket_id = 'project-drive'
+  AND name !~ '^sales/opportunity/'
+  AND public.has_any_permission(auth.uid(), ARRAY['projects.view', 'projects.manage', 'engineering.view', 'engineering.manage'])
+);
+CREATE POLICY "Project managers upload project files"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'project-drive'
+  AND name !~ '^sales/opportunity/'
+  AND public.has_any_permission(auth.uid(), ARRAY['projects.manage', 'engineering.manage'])
+);
+CREATE POLICY "Project managers update project files"
+ON storage.objects FOR UPDATE TO authenticated
+USING (
+  bucket_id = 'project-drive'
+  AND name !~ '^sales/opportunity/'
+  AND public.has_any_permission(auth.uid(), ARRAY['projects.manage', 'engineering.manage'])
+)
+WITH CHECK (
+  bucket_id = 'project-drive'
+  AND name !~ '^sales/opportunity/'
+  AND public.has_any_permission(auth.uid(), ARRAY['projects.manage', 'engineering.manage'])
+);
+CREATE POLICY "Project managers delete project files"
+ON storage.objects FOR DELETE TO authenticated
+USING (
+  bucket_id = 'project-drive'
+  AND name !~ '^sales/opportunity/'
+  AND public.has_any_permission(auth.uid(), ARRAY['projects.manage', 'engineering.manage'])
+);
+
+-- Sales access is receipt- and materialization-bound. It cannot create a
+-- generic project-drive path, read another actor's document, update, or delete.
 CREATE POLICY "Sales structured drafts insert their recorded private prefix"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (
@@ -37,6 +85,7 @@ USING (
       AND materialization.storage_path = name
   )
 );
+
 GRANT EXECUTE ON FUNCTION public.save_sales_opportunity_structured_draft_at_location(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.resolve_sales_opportunity_structured_draft_location(uuid, uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.register_sales_opportunity_structured_draft_storage_attempt(uuid, uuid, uuid, uuid, text, text, text, bigint) TO authenticated;
