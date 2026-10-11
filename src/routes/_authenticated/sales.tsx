@@ -66,30 +66,18 @@ export const Route = createFileRoute("/_authenticated/sales")({
 type SalesDetail = { opportunity: SalesOpportunity; specification: MasterSpecificationSummary };
 type SalesDocumentLocationDiscovery = {
   location_id: string;
-  opportunityId: string;
-  departmentId: string;
-  targetFolderNodeId: string;
-  isActive: boolean;
-  folderIsLocked: boolean;
-  folderIsTrashed: boolean;
 };
 
 function toSalesStructuredDocumentEntry(
   detail: SalesDetail,
   location: SalesDocumentLocationDiscovery | null | undefined,
 ): SalesStructuredDocumentEntry | null {
-  if (!location || location.opportunityId !== detail.opportunity.id) return null;
-  return {
-    opportunityId: detail.opportunity.id,
-    opportunityNumber: detail.opportunity.opportunity_number,
-    specificationNumber: detail.specification.specification_number,
-    versionNumber: detail.specification.current_version,
-    folderNodeId: location.targetFolderNodeId,
-    departmentId: location.departmentId,
-    isActive: location.isActive,
-    folderIsLocked: location.folderIsLocked,
-    folderIsTrashed: location.folderIsTrashed,
-  };
+  void detail;
+  void location;
+  // The discovery contract intentionally returns only private storage capability.
+  // It does not expose a navigable folder node/department pair, so folder navigation
+  // must stay unavailable rather than reconstructing that authority client-side.
+  return null;
 }
 function SalesPage() {
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -572,26 +560,9 @@ export function ProposalDetail({
       );
       if (error) throw error;
       const location = (data as Array<{ location_id: string; storage_bucket: string; storage_path_prefix: string }> | null)?.[0];
-      if (!location) return null;
-      const { data: binding, error: bindingError } = await (supabase as any)
-        .from("sales_opportunity_document_locations")
-        .select("id,opportunity_id,customer_id,department_id,drive_root_node_id,target_folder_node_id,status,location_purpose")
-        .eq("id", location.location_id)
-        .eq("opportunity_id", detail.opportunity.id)
-        .eq("customer_id", detail.specification.customer_id)
-        .eq("location_purpose", "STRUCTURED_DRAFT")
-        .eq("status", "ACTIVE")
-        .maybeSingle();
-      if (bindingError) throw bindingError;
-      if (!binding) return null;
+      if (!location?.location_id || !location.storage_bucket || !location.storage_path_prefix) return null;
       return {
-        location_id: binding.id,
-        opportunityId: binding.opportunity_id,
-        departmentId: binding.department_id,
-        targetFolderNodeId: binding.target_folder_node_id,
-        isActive: binding.status === "ACTIVE",
-        folderIsLocked: true,
-        folderIsTrashed: false,
+        location_id: location.location_id,
       } satisfies SalesDocumentLocationDiscovery;
     },
     enabled: Boolean(detail && specification.data?.id),
