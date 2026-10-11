@@ -12,11 +12,15 @@ CREATE TABLE public.customer_requirements(id uuid PRIMARY KEY,requirement_number
 CREATE TABLE public.customer_requirement_revisions(id uuid PRIMARY KEY,requirement_id uuid NOT NULL REFERENCES public.customer_requirements(id),revision_number integer NOT NULL,status text NOT NULL);
 CREATE TABLE public.requirement_feasibility_reviews(requirement_id uuid NOT NULL);
 CREATE TABLE public.sales_commercial_records(requirement_id uuid NOT NULL);
-CREATE TABLE public.requirement_baselines(requirement_id uuid NOT NULL);
+CREATE TABLE public.requirement_baselines(id uuid PRIMARY KEY DEFAULT extensions.gen_random_uuid(),requirement_id uuid NOT NULL);
 CREATE TABLE public.requirement_change_requests(requirement_id uuid NOT NULL);
 CREATE TABLE public.project_design_inputs(source_requirement_id uuid,source_revision_id uuid);
 CREATE TABLE public.customer_portal_shares(entity_id uuid NOT NULL);
-CREATE TABLE public.activity_log(id uuid PRIMARY KEY DEFAULT extensions.gen_random_uuid(),entity_id uuid,action text NOT NULL DEFAULT 'created',created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE public.activity_log(id uuid PRIMARY KEY DEFAULT extensions.gen_random_uuid(),entity_id uuid,module_key text NOT NULL DEFAULT 'sales',entity_type text NOT NULL DEFAULT 'test',action text NOT NULL DEFAULT 'created',summary text,actor_user_id uuid,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE public.data_provenance(entity_id uuid NOT NULL);
+CREATE TABLE public.entity_registry(entity_id uuid NOT NULL);
+CREATE TABLE public.external_access_events(entity_id uuid NOT NULL);
+CREATE TABLE public.sales_project_handovers(baseline_id uuid NOT NULL);
 CREATE TABLE public.master_specifications(opportunity_id uuid NOT NULL);
 CREATE TABLE public.sales_nda_records(opportunity_id uuid NOT NULL);
 CREATE TABLE public.sales_opportunity_document_locations(opportunity_id uuid NOT NULL);

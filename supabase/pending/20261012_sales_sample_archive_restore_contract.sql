@@ -104,8 +104,12 @@ BEGIN
       'baselines', (SELECT count(*) FROM public.requirement_baselines WHERE requirement_id=p_id),
       'changeRequests', (SELECT count(*) FROM public.requirement_change_requests WHERE requirement_id=p_id),
       'projectDesignInputs', (SELECT count(*) FROM public.project_design_inputs WHERE source_requirement_id=p_id OR source_revision_id IN (SELECT id FROM public.customer_requirement_revisions WHERE requirement_id=p_id)),
+      'handovers', (SELECT count(*) FROM public.sales_project_handovers h JOIN public.requirement_baselines b ON b.id=h.baseline_id WHERE b.requirement_id=p_id),
       'portalShares', (SELECT count(*) FROM public.customer_portal_shares WHERE entity_id=p_id),
-      'history', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'action', action, 'createdAt', created_at) ORDER BY created_at, id) FROM public.activity_log WHERE entity_id=p_id), '[]'::jsonb)
+      'provenance', (SELECT count(*) FROM public.data_provenance WHERE entity_id=p_id),
+      'registry', (SELECT count(*) FROM public.entity_registry WHERE entity_id=p_id),
+      'externalAccess', (SELECT count(*) FROM public.external_access_events WHERE entity_id=p_id),
+      'history', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'moduleKey', module_key, 'entityType', entity_type, 'action', action, 'summary', summary, 'actorUserId', actor_user_id, 'createdAt', created_at) ORDER BY created_at, id) FROM public.activity_log WHERE entity_id=p_id), '[]'::jsonb)
     );
   END IF;
   RETURN jsonb_build_object(
@@ -118,8 +122,45 @@ BEGIN
     'structuredMaterializations', (SELECT count(*) FROM public.sales_opportunity_structured_draft_materializations WHERE opportunity_id=p_id),
     'projects', (SELECT count(*) FROM public.projects WHERE opportunity_id=p_id),
     'portalShares', (SELECT count(*) FROM public.customer_portal_shares WHERE entity_id=p_id),
-    'history', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'action', action, 'createdAt', created_at) ORDER BY created_at, id) FROM public.activity_log WHERE entity_id=p_id), '[]'::jsonb)
+    'provenance', (SELECT count(*) FROM public.data_provenance WHERE entity_id=p_id),
+    'registry', (SELECT count(*) FROM public.entity_registry WHERE entity_id=p_id),
+    'externalAccess', (SELECT count(*) FROM public.external_access_events WHERE entity_id=p_id),
+    'history', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'moduleKey', module_key, 'entityType', entity_type, 'action', action, 'summary', summary, 'actorUserId', actor_user_id, 'createdAt', created_at) ORDER BY created_at, id) FROM public.activity_log WHERE entity_id=p_id), '[]'::jsonb)
   );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.sales_sample_archive_assert_expected_facts(p_kind text, p_id uuid, p_snapshot jsonb)
+RETURNS void LANGUAGE plpgsql IMMUTABLE SET search_path = public, extensions AS $$
+DECLARE v_expected_revisions jsonb; v_expected_history jsonb;
+BEGIN
+  v_expected_history := CASE p_id
+    WHEN '104fb9e2-7f83-40f9-a295-64b37aa8c7ee'::uuid THEN '[{"id":"a8dfcdd9-213b-4bf7-996a-0c3709bf19d9","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'becebb23-e0f2-4264-a78f-fda04275cade'::uuid THEN '[{"id":"80c9a8c1-7915-450a-b169-2ca2e4c9d05c","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN '428d7d9e-25bf-4e98-94d5-416ea56155e3'::uuid THEN '[{"id":"49a39c8d-d666-499f-bbb4-43cbb6851907","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'dc101dd9-89a2-4dad-9903-3b2301a97d3b'::uuid THEN '[{"id":"2a6df3a8-c3c1-45b8-a67d-55ee9656be90","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'd79f58c1-bbee-4940-9e67-88f267f5449b'::uuid THEN '[{"id":"bf9b4664-86c5-43da-bf1b-7b5b910e0fb4","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'aaabd18c-5885-45de-9e0e-da70d4ec491f'::uuid THEN '[{"id":"c2fe8735-07a9-47ec-8231-839eaa0a418b","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0003","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN '36cdc159-57c7-4568-a1b0-ec481f5d3d93'::uuid THEN '[{"id":"c58df5a6-27dd-4d58-b5f4-d2e729deb519","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0004","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN '6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c'::uuid THEN '[{"id":"c75f2fb0-75f2-469b-86a2-bc3ea7440bc7","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0005","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN '2db48440-5424-4e5e-bb5b-01f203a7662f'::uuid THEN '[{"id":"3f387569-4b44-49b6-8da3-0aa6f18fc281","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0006","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'e829dd82-381d-42ab-a808-62979e9156f4'::uuid THEN '[{"id":"7c47d3cb-3102-4b2e-9ffc-ea61044f7bbe","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0007","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    ELSE NULL
+  END;
+  IF v_expected_history IS NULL OR (SELECT jsonb_agg(value - 'createdAt' ORDER BY value->>'id') FROM jsonb_array_elements(p_snapshot->'history') AS row(value)) IS DISTINCT FROM v_expected_history THEN
+    RAISE EXCEPTION 'Reviewed history facts changed';
+  END IF;
+  IF p_kind = 'REQUIREMENT' THEN
+    v_expected_revisions := CASE p_id
+      WHEN 'aaabd18c-5885-45de-9e0e-da70d4ec491f'::uuid THEN '[{"id":"dc0ccda7-b4ee-4d16-b4d5-a11a9ee8e7c6","revisionNumber":1,"status":"working"}]'::jsonb
+      WHEN '36cdc159-57c7-4568-a1b0-ec481f5d3d93'::uuid THEN '[{"id":"23e2a05a-d8b3-421c-b760-e0273143d766","revisionNumber":1,"status":"working"}]'::jsonb
+      WHEN '6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c'::uuid THEN '[{"id":"a3c747a3-cb61-43a6-805a-788848143680","revisionNumber":1,"status":"working"}]'::jsonb
+      WHEN '2db48440-5424-4e5e-bb5b-01f203a7662f'::uuid THEN '[{"id":"1bced975-c1c6-445c-be44-fa988c01e434","revisionNumber":1,"status":"working"}]'::jsonb
+      WHEN 'e829dd82-381d-42ab-a808-62979e9156f4'::uuid THEN '[{"id":"2a238167-050c-4e31-92a3-6d0ab0e611d9","revisionNumber":1,"status":"working"}]'::jsonb
+      ELSE NULL
+    END;
+    IF v_expected_revisions IS NULL OR p_snapshot->'requirementRevisions' IS DISTINCT FROM v_expected_revisions THEN RAISE EXCEPTION 'Reviewed requirement revision facts changed'; END IF;
+  END IF;
 END;
 $$;
 
@@ -165,6 +206,7 @@ BEGIN
       IF NOT FOUND THEN RAISE EXCEPTION 'Reviewed requirement is missing, changed, or already archived'; END IF;
       v_state:=jsonb_build_object('status','draft','title','testcust','customerId','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','opportunityId','0f965acc-5f00-4e3d-9000-9176d739a38c','currentRevision',1,'archivedAt',NULL); v_snapshot:=public.sales_sample_archive_dependency_snapshot('REQUIREMENT',(v_root->>'id')::uuid);
     END IF;
+    PERFORM public.sales_sample_archive_assert_expected_facts(v_root->>'kind',(v_root->>'id')::uuid,v_snapshot);
     PERFORM public.sales_sample_archive_assert_zero_dependencies(v_snapshot);
     INSERT INTO public.sales_sample_archive_manifest_items(manifest_id,root_kind,root_id,display_number,prior_state,dependency_snapshot) VALUES(v_manifest,v_root->>'kind',(v_root->>'id')::uuid,v_root->>'displayNumber',v_state,v_snapshot);
   END LOOP;
@@ -236,6 +278,7 @@ $$;
 REVOKE ALL ON FUNCTION public.sales_sample_archive_can_manage(uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.sales_sample_archive_canonical_roots(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.sales_sample_archive_dependency_snapshot(text,uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.sales_sample_archive_assert_expected_facts(text,uuid,jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.sales_sample_archive_assert_zero_dependencies(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.archive_reviewed_sales_samples(jsonb,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.restore_reviewed_sales_samples(uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
