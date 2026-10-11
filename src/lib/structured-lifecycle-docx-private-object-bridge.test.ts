@@ -21,6 +21,10 @@ describe("private DOCX server bridge", () => {
     const reader: PrivateDocxObjectReader = { readExactObject: async () => { throw new Error("must not read"); } };
     await expect(verifyAndReceiptStructuredDocxObject(input, ids.actorId, authorization({ resolveCurrentRegistryAssignment: async () => ({ ...scope(), actorId: "00000000-0000-0000-0000-000000000099" }) }), reader)).rejects.toThrow("authority changed");
   });
+  it("rejects a cross-department registry scope before reading private bytes", async () => {
+    const reader: PrivateDocxObjectReader = { readExactObject: async () => { throw new Error("must not read"); } };
+    await expect(verifyAndReceiptStructuredDocxObject(input, ids.actorId, authorization({ resolveCurrentRegistryAssignment: async () => ({ ...scope(), departmentId: "00000000-0000-0000-0000-000000000099" }) }), reader)).rejects.toThrow("authority changed");
+  });
   it("rejects object replacement and does not issue a receipt", async () => {
     const bytes = await realDocx(); let issued = false; const reader: PrivateDocxObjectReader = { readExactObject: async () => ({ bucket: "project-drive", path: scope().storagePath, objectVersion: "version-replaced", mimeType: null, bytes }) };
     await expect(verifyAndReceiptStructuredDocxObject(input, ids.actorId, authorization({ issueVerifiedObjectReceipt: async () => { issued = true; return { receiptId: ids.receiptId }; } }), reader)).rejects.toThrow("object changed"); expect(issued).toBe(false);
@@ -30,6 +34,10 @@ describe("private DOCX server bridge", () => {
     await expect(verifyAndReceiptStructuredDocxObject(input, ids.actorId, authorization(), reader)).rejects.toThrow("not a ZIP package");
     const receipt = { receiptId: ids.receiptId, ...scope(), sha256Checksum: "c".repeat(64), sizeBytes: 1, paragraphs: 1, tables: 0 };
     await expect(assertCurrentStructuredDocxReceipt(receipt, ids.actorId, authorization({ recheckRegistryReceiptForCommit: async () => { throw new Error("assignment revoked"); } }))).rejects.toThrow("assignment revoked");
+  });
+  it("rejects a stale template revision and keeps receipt rechecks authoritative", async () => {
+    const bytes = await realDocx(); const reader: PrivateDocxObjectReader = { readExactObject: async () => ({ bucket: "project-drive", path: scope().storagePath, objectVersion: "version-1", mimeType: null, bytes }) };
+    await expect(verifyAndReceiptStructuredDocxObject(input, ids.actorId, authorization({ resolveCurrentRegistryAssignment: async () => ({ ...scope(), templateVersion: 2 }) }), reader)).rejects.toThrow("authority changed");
   });
   it("keeps the production adapter unavailable without immutable object-version reading", async () => {
     await expect(createUnavailableSupabasePrivateDocxReader({} as never).readExactObject(scope())).rejects.toThrow("immutable private-object reader is unavailable");
