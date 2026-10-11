@@ -16,8 +16,8 @@ decision_concurrency = (Path(__file__).resolve().parent / "bom_candidate_decisio
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
-    "four additive tables have grants": sql.count("GRANT SELECT ON public.component_candidate") == 4,
-    "all new tables have RLS": sql.count("ENABLE ROW LEVEL SECURITY") == 4,
+    "all additive tables have grants": sql.count("GRANT SELECT ON public.component_candidate") == 6,
+    "all new tables have RLS": sql.count("ENABLE ROW LEVEL SECURITY") == 6,
     "function has no execute grant": "GRANT EXECUTE ON FUNCTION public.submit_component_candidate" not in sql,
     "direct inventory paths absent": all(token not in sql for token in ("saveComponentWithStock", "inventory_lots", "stock_history", "component_substitutes", "component_projects")),
     "manual BOM rows are never written": "INSERT INTO public.project_bom_items" not in sql and "UPDATE public.project_bom_items" not in sql and "DELETE FROM public.project_bom_items" not in sql,
