@@ -30,6 +30,8 @@ describe("structured lifecycle DOCX renderer", () => {
       expect(content).toContain("LOCAL WORKING DOCX");
       expect(content).toContain("OPPORTUNITY-2026-0013");
       expect(content).toContain("MASTER-2026-0001 rev 1");
+      expect(content).toContain(`${template.template.templateKey} v${template.template.version}`);
+      expect(content).toContain("UNVERIFIED — local browser schema");
     }
   });
 
@@ -66,5 +68,25 @@ describe("structured lifecycle DOCX renderer", () => {
     expect(first).toContain("NOT APPROVED, ISSUED, OR RELEASED");
     expect(first).toContain("Same note");
     expect(second).toContain("Same note");
+  });
+
+  it("uses landscape width and repeating headers for the full BOM and DFMEA row mappings", async () => {
+    const bomRows = serializeLocalTableRows([{ id: "bom-1", itemNumber: "1", mpn: "ABC", manufacturer: "Ångström", description: "<safe>", package: "QFN", quantity: "0", leadTime: "TBC", unitCost: "0", currency: "SEK", aecqEvidence: "TBC" }]);
+    const dfmeaRows = serializeLocalTableRows([{ id: "dfmea-1", function: "Power", failureMode: "Open", effect: "Loss", cause: "TBC", preventionControl: "Review", detectionControl: "Test", severity: "9", occurrence: "0", detection: "1", owner: "Owner", action: "TBC" }]);
+    for (const [kind, payload, escaped] of [
+      ["BOM_COST_TRACKER", { BOM_COST_ROWS: bomRows }, "&lt;safe&gt;"],
+      ["DFMEA", { DFMEA_ROWS: dfmeaRows }, "Power"],
+    ] as const) {
+      const { content: xml } = await documentXml((await renderStructuredLifecycleDocx(kind, source, payload)).bytes);
+      expect(xml).toBeDefined();
+      const content = xml ?? "";
+      expect(content).toContain("w:orient=\"landscape\"");
+      expect(content).toContain("w:tblHeader");
+      expect(content).toContain(escaped);
+      expect(content).toContain("w:tblW w:type=\"dxa\" w:w=\"14414\"");
+      const wideTableWidths = [...content.matchAll(/<w:tblW w:type="dxa" w:w="14414"\/>[\s\S]*?<\/w:tbl>/g)];
+      expect(wideTableWidths).toHaveLength(1);
+      expect(wideTableWidths[0]?.[0].match(/<w:gridCol/g)?.length).toBe(kind === "BOM_COST_TRACKER" ? 10 : 12);
+    }
   });
 });

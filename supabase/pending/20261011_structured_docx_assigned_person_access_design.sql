@@ -5,14 +5,20 @@
 -- policy, grant, or data change is approved by this design.
 --
 -- Required future invariants:
--- 1. Materialization stores immutable source/template/schema/payload pins and
---    `application/vnd.openxmlformats-officedocument.wordprocessingml.document`.
--- 2. The Drive object is a server-rendered .docx with an exact checksum.
--- 3. Access resolves the caller to an active employee and requires equality
---    with document_control_registers.owner_employee_id or reviewer_employee_id,
---    or a separately approved document-control authority.
--- 4. Department membership alone never authorizes read, download, save, or
---    revision access.
--- 5. Request-key replay compares actor, assignment, source/template/schema,
---    canonical payload, storage identity, checksum, and expected revision.
--- 6. Existing HTML Sales materializations are unchanged and remain independent.
+-- 1. `structured_lifecycle_docx_private_locations` must bind exactly one active
+--    department/kind/source scope to a locked, non-trashed drive_nodes folder,
+--    private bucket and prefix. The browser never supplies this location.
+-- 2. The materialization/revision/receipt/audit graph stores immutable source,
+--    template key/version, server schema key/hash, canonical payload, owner,
+--    reviewer, Drive/register pins, DOCX MIME, byte count, SHA-256, and request key.
+-- 3. A protected resolver maps auth.uid() to active employees.user_id and grants
+--    the action only to the pinned owner/reviewer or an independently approved
+--    document-control authority; unassigned department membership is insufficient.
+-- 4. Every read, save, history, download, upload-receipt, and commit rechecks
+--    active assignment and exact location. Revocation or reassignment before
+--    commit denies the action without a new revision or object reference.
+-- 5. The Drive object is a server-rendered .docx at a request-key path. Its exact
+--    checksum and bytes are verified before immutable registration/commit.
+-- 6. Request-key replay compares actor, assignment, source/template/schema,
+--    canonical payload, location, storage identity, checksum, and expected revision.
+-- 7. Existing HTML Sales materializations, APIs, and data are unchanged and independent.

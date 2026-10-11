@@ -2,6 +2,7 @@ import {
   BorderStyle,
   Document,
   Packer,
+  PageOrientation,
   Paragraph,
   Table,
   TableCell,
@@ -9,14 +10,7 @@ import {
   TextRun,
   WidthType,
 } from "docx";
-import {
-  parseLocalTableRows,
-  structuredLifecycleTemplatePreviews,
-  tableRowsForOutput,
-  type LocalTableKey,
-  type StructuredLifecycleTemplateKind,
-  type StructuredTemplateSource,
-} from "./lifecycle-structured-template-previews";
+import { structuredLifecycleTemplatePreviews, tableRowsForOutput, type LocalTableKey, type StructuredLifecycleTemplateKind, type StructuredTemplateSource } from "./lifecycle-structured-template-previews";
 import { validateStructuredSalesLocalPayload } from "./structured-sales-local-payload";
 import { validateSpecializedLocalPreviewPayload } from "./lifecycle-structured-template-previews";
 
@@ -26,6 +20,9 @@ export type StructuredLifecycleDocx = {
   bytes: Uint8Array;
   provenance: {
     documentKind: StructuredLifecycleTemplateKind;
+    templateKey: string;
+    templateVersion: number;
+    schemaStatus: "UNVERIFIED_LOCAL_SCHEMA";
     opportunityNumber: string;
     specificationNumber: string;
     specificationVersion: number;
@@ -45,7 +42,9 @@ const tableColumns: Partial<Record<LocalTableKey, readonly string[]>> = {
 
 const tableBorder = { style: BorderStyle.SINGLE, size: 1, color: "808080" };
 const cellBorders = { top: tableBorder, bottom: tableBorder, left: tableBorder, right: tableBorder };
-const pageWidth = 9026;
+const portraitPageWidth = 9026;
+const landscapePageWidth = 14414;
+const wideTableKeys = new Set<LocalTableKey>(["BOM_COST_ROWS", "DFMEA_ROWS"]);
 
 function displayed(value: string | null | undefined) {
   return value === undefined || value === null || value === "" ? "TBC" : value;
@@ -75,14 +74,14 @@ function cell(value: string, width: number, bold = false) {
   });
 }
 
-function gridTable(headers: readonly string[], rows: readonly string[][]) {
+function gridTable(headers: readonly string[], rows: readonly string[][], pageWidth = portraitPageWidth) {
   const width = Math.max(1, Math.floor(pageWidth / headers.length));
   const widths = headers.map((_header, index) => index === headers.length - 1 ? pageWidth - width * index : width);
   return new Table({
     width: { size: pageWidth, type: WidthType.DXA },
     columnWidths: widths,
     rows: [
-      new TableRow({ children: headers.map((header, index) => cell(header, widths[index] ?? width, true)) }),
+      new TableRow({ tableHeader: true, cantSplit: true, children: headers.map((header, index) => cell(header, widths[index] ?? width, true)) }),
       ...(rows.length
         ? rows.map((row) => new TableRow({ children: headers.map((_header, index) => cell(row[index] ?? "TBC", widths[index] ?? width)) }))
         : [new TableRow({ children: headers.map((_header, index) => cell("TBC", widths[index] ?? width)) })]),
@@ -116,6 +115,8 @@ export async function renderStructuredLifecycleDocx(
         ["Customer", source.customerName],
         ["Master Specification", `${source.specificationNumber} rev ${source.versionNumber}`],
         ["Master Specification revision ID", source.versionId],
+        ["Template identity", `${template.template.templateKey} v${template.template.version}`],
+        ["Editable schema identity", "UNVERIFIED — local browser schema; no immutable server schema pin is available"],
       ]
     : [["Source status", "UNVERIFIED — source unavailable"]];
 
@@ -136,7 +137,11 @@ export async function renderStructuredLifecycleDocx(
     children.push(new Paragraph({ children: [new TextRun({ text: field.label, bold: true })] }));
     if (field.kind === "table") {
       const key = field.key as LocalTableKey;
-      children.push(gridTable(tableColumns[key] ?? [field.label], tableRowsForOutput(key, payload[field.key])));
+      children.push(gridTable(
+        tableColumns[key] ?? [field.label],
+        tableRowsForOutput(key, payload[field.key]),
+        wideTableKeys.has(key) ? landscapePageWidth : portraitPageWidth,
+      ));
     } else {
       children.push(plainTextParagraph(displayed(payload[field.key])));
     }
@@ -149,7 +154,12 @@ export async function renderStructuredLifecycleDocx(
     title: `${template.label} local working document`,
     description: "Editable source-pinned working DOCX; not approved, issued, or released.",
     sections: [{
-      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1440, bottom: 1134, left: 1440 } } },
+      properties: {
+        page: {
+          size: { width: 11906, height: 16838, orientation: PageOrientation.LANDSCAPE },
+          margin: { top: 1134, right: 1440, bottom: 1134, left: 1440 },
+        },
+      },
       children,
     }],
   });
@@ -157,6 +167,14 @@ export async function renderStructuredLifecycleDocx(
     fileName: fileName(kind, source),
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     bytes: new Uint8Array(await Packer.toBuffer(document)),
-    provenance: source ? { documentKind: kind, opportunityNumber: source.opportunityNumber, specificationNumber: source.specificationNumber, specificationVersion: source.versionNumber } : null,
+    provenance: source ? {
+      documentKind: kind,
+      templateKey: template.template.templateKey,
+      templateVersion: template.template.version,
+      schemaStatus: "UNVERIFIED_LOCAL_SCHEMA",
+      opportunityNumber: source.opportunityNumber,
+      specificationNumber: source.specificationNumber,
+      specificationVersion: source.versionNumber,
+    } : null,
   };
 }

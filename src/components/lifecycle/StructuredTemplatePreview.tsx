@@ -260,6 +260,7 @@ export function StructuredTemplatePreview({
   const [persistedEdits, setPersistedEdits] = useState<Partial<Record<StructuredSalesPreviewKind, Record<string, string>>>>({});
   const [saving, setSaving] = useState(false);
   const [exportingDocx, setExportingDocx] = useState(false);
+  const [docxExportFeedback, setDocxExportFeedback] = useState<{ state: "idle" | "success" | "error"; message?: string }>({ state: "idle" });
   const [downloadingRevisionId, setDownloadingRevisionId] = useState<string | null>(null);
   const [downloadFeedback, setDownloadFeedback] = useState<DownloadFeedback>({ state: "idle" });
   const hydratedRevisionRef = useRef<Record<string, string>>({});
@@ -599,6 +600,7 @@ export function StructuredTemplatePreview({
   const exportLocalDocx = async () => {
     if (exportingDocx) return;
     setExportingDocx(true);
+    setDocxExportFeedback({ state: "idle" });
     try {
       const payload = localEditsForStructuredPreview(kind, effectiveEdits);
       const renderedDocx = await renderStructuredLifecycleDocx(kind, source.data ?? null, payload);
@@ -613,9 +615,12 @@ export function StructuredTemplatePreview({
       download.click();
       download.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      setDocxExportFeedback({ state: "success", message: `Editable ${renderedDocx.fileName} was prepared and the browser download was started. It was not saved to Drive.` });
       toast.success("Editable DOCX download started. It remains a local working document.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "The editable DOCX could not be prepared.");
+      const message = error instanceof Error ? error.message : "The editable DOCX could not be prepared.";
+      setDocxExportFeedback({ state: "error", message });
+      toast.error(message);
     } finally {
       setExportingDocx(false);
     }
@@ -822,6 +827,12 @@ export function StructuredTemplatePreview({
         )}
         {downloadFeedback.state === "error" && (
           <p role="alert" className="mt-3 border border-destructive/40 p-3 text-sm text-destructive">Private download unavailable: {downloadFeedback.message}</p>
+        )}
+        {docxExportFeedback.state === "success" && (
+          <p role="status" className="mt-3 border border-primary/30 bg-primary/5 p-3 text-sm">{docxExportFeedback.message}</p>
+        )}
+        {docxExportFeedback.state === "error" && (
+          <p role="alert" className="mt-3 border border-destructive/40 p-3 text-sm text-destructive">Local DOCX export unavailable: {docxExportFeedback.message}</p>
         )}
         {historyCapability.available && !structuredHistory.isLoading && !structuredHistory.isError && (
           <section className="mt-3 border p-3" aria-label="Saved structured Sales draft history">
