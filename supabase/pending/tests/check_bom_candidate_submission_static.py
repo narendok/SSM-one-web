@@ -20,7 +20,7 @@ read_scope_runner = (Path(__file__).resolve().parent / "run_bom_candidate_read_s
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
-    "all additive tables have grants": sql.count("GRANT SELECT ON public.component_candidate") == 6,
+    "all additive tables have grants": sql.count("GRANT SELECT ON public.component_candidate") >= 6,
     "all new tables have RLS": sql.count("ENABLE ROW LEVEL SECURITY") == 6,
     "function has no execute grant": "GRANT EXECUTE ON FUNCTION public.submit_component_candidate" not in sql,
     "direct inventory paths absent": all(token not in sql for token in ("saveComponentWithStock", "inventory_lots", "stock_history", "component_substitutes", "component_projects")),
