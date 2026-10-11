@@ -45,15 +45,17 @@ CREATE TEMP TABLE project_b_revision AS SELECT id AS revision_id FROM public.com
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 SELECT * FROM public.decide_component_candidate((SELECT candidate_id FROM approved_candidate), (SELECT revision_id FROM approved_revision), 'APPROVE', 'Approved Hardware handoff', '40000000-0000-4000-8000-000000000053') \g /dev/null
 DELETE FROM public.project_team_members WHERE id = '40000000-0000-4000-8000-000000000044';
+CREATE TEMP TABLE local_read_scope_ids AS
+SELECT (SELECT candidate_id FROM approved_candidate) AS approved_candidate_id;
 COMMIT;
 
 -- Local-only selective joined-row policies model caller-RLS suppression without changing pending production policies.
 ALTER TABLE public.component_candidate_payload_revisions FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.component_candidate_decisions FORCE ROW LEVEL SECURITY;
 CREATE POLICY local_read_scope_hide_pinned_revision ON public.component_candidate_payload_revisions AS RESTRICTIVE FOR SELECT TO authenticated
-  USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000002'::uuid AND candidate_id = '40000000-0000-4000-8000-0000000000a2'::uuid));
+  USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000002'::uuid AND candidate_id = (SELECT approved_candidate_id FROM local_read_scope_ids)));
 CREATE POLICY local_read_scope_hide_approved_decision ON public.component_candidate_decisions AS RESTRICTIVE FOR SELECT TO authenticated
-  USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000003'::uuid AND candidate_id = '40000000-0000-4000-8000-0000000000a2'::uuid));
+  USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000003'::uuid AND candidate_id = (SELECT approved_candidate_id FROM local_read_scope_ids)));
 
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', false);
@@ -62,11 +64,11 @@ DO $$ BEGIN
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.component_candidate_hardware_read) <> 2 OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read WHERE candidate_id = '40000000-0000-4000-8000-0000000000a2'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_payload_revisions WHERE candidate_id = '40000000-0000-4000-8000-0000000000a2'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) THEN RAISE EXCEPTION 'Hardware reader scope exposed hidden revision, cross-project, or fallback candidate data'; END IF;
+  IF (SELECT count(*) FROM public.component_candidate_hardware_read) <> 1 OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read WHERE candidate_id = (SELECT approved_candidate_id FROM local_read_scope_ids)) OR EXISTS (SELECT 1 FROM public.component_candidate_payload_revisions WHERE candidate_id = (SELECT approved_candidate_id FROM local_read_scope_ids)) OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) THEN RAISE EXCEPTION 'Hardware reader scope exposed hidden revision, cross-project, or fallback candidate data'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) OR EXISTS (SELECT 1 FROM public.component_candidate_decisions WHERE candidate_id = '40000000-0000-4000-8000-0000000000a2'::uuid) THEN RAISE EXCEPTION 'Purchase handoff fell back when its approving decision was caller-RLS hidden'; END IF;
+  IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) OR EXISTS (SELECT 1 FROM public.component_candidate_decisions WHERE candidate_id = (SELECT approved_candidate_id FROM local_read_scope_ids)) THEN RAISE EXCEPTION 'Purchase handoff fell back when its approving decision was caller-RLS hidden'; END IF;
 END $$;
 RESET ROLE;
 DROP POLICY local_read_scope_hide_pinned_revision ON public.component_candidate_payload_revisions;
@@ -74,7 +76,7 @@ DROP POLICY local_read_scope_hide_approved_decision ON public.component_candidat
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.component_candidate_hardware_read) <> 2 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE candidate_id = '40000000-0000-4000-8000-0000000000a2'::uuid) <> 1 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) <> 0 THEN RAISE EXCEPTION 'Hardware history cardinality, exact revision, or cross-project scope failed'; END IF;
+  IF (SELECT count(*) FROM public.component_candidate_hardware_read) <> 2 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE candidate_id = (SELECT approved_candidate_id FROM local_read_scope_ids)) <> 1 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) <> 0 THEN RAISE EXCEPTION 'Hardware history cardinality, exact revision, or cross-project scope failed'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DO $$ BEGIN
