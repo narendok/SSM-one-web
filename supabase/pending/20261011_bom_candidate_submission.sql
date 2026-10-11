@@ -208,6 +208,7 @@ BEGIN
   -- concurrent membership revocation must commit before the post-wait check.
   -- Candidate/revision locking happens in the decision function after it has
   -- passed this authority boundary and found no replay receipt.
+  ;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate decision requires an active Hardware reviewer with engineering.approve, an exact immutable revision, and no self-review';
   END IF;
