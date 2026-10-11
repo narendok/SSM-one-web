@@ -7,6 +7,7 @@ sql = (pending / "20261011_project_deviation_submission.sql").read_text()
 fixture = (Path(__file__).resolve().parent / "project_deviation_submission_local_fixture.sql").read_text()
 acceptance = (Path(__file__).resolve().parent / "project_deviation_submission_local_acceptance.sql").read_text()
 runner = (Path(__file__).resolve().parent / "run_project_deviation_submission_local_acceptance.sh").read_text()
+concurrency_runner = (Path(__file__).resolve().parent / "run_project_deviation_submission_local_concurrency_acceptance.sh").read_text()
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
@@ -26,6 +27,7 @@ checks = {
     "local fixture only": "LOCAL DISPOSABLE FIXTURE ONLY" in fixture,
     "acceptance covers replay denials validity evidence and rollback": all(token in acceptance for token in ("Exact replay", "Changed replay", "Cross project source", "Missing validity or part scope", "Inverted validity", "Cross project evidence", "Unauthorized actor", "Receipt failure did not roll back", "ROLLBACK;")),
     "runner is explicitly disposable": "LOCAL_DEVIATION_SUBMISSION_DISPOSABLE" in runner and "/tmp/project_deviation_submission_local_" in runner,
+    "concurrency acceptance is explicitly disposable and lock-observed": all(token in concurrency_runner for token in ("LOCAL_DEVIATION_SUBMISSION_DISPOSABLE", "pg_locks", "IDENTICAL_REPLAY", "CONFLICTING_PAYLOAD", "REVOKED_NEW", "REVOKED_REPLAY", "SOURCE_STATUS_CHANGED", "SOURCE_REVISION_CHANGED", "EVIDENCE_STATUS_CHANGED", "EVIDENCE_REVISION_CHANGED")),
 }
 
 failed = [name for name, passed in checks.items() if not passed]
