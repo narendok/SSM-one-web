@@ -65,11 +65,11 @@ export function SharedProductLifecycle({
     linkedBoms ? `${linkedBoms} revision-linked BOM${linkedBoms === 1 ? "" : "s"}` : "BOM source not linked",
   ];
 
-  const gateStatusCounts = snapshot?.gates.reduce<Record<string, number>>((counts, gate: any) => {
+  const gateStatusCounts = (snapshot?.gates ?? []).reduce((counts: Record<string, number>, gate: any) => {
     const status = String(gate.status ?? "unrecorded").replaceAll("_", " ");
     counts[status] = (counts[status] ?? 0) + 1;
     return counts;
-  }, {});
+  }, {} as Record<string, number>);
 
   return <div className="space-y-5">
     <Card className="border-primary/20 p-5">
