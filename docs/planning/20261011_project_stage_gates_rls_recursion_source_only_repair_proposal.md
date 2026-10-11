@@ -23,8 +23,8 @@ The original policy source is `drizzle/migrations/0010_phase5_project_foundation
 
 | File | Purpose | SHA-256 |
 | --- | --- | --- |
-| `supabase/pending/20261011_project_stage_gates_rls_recursion_repair.sql` | helper plus replacement of exactly two SELECT policies | recalculated after source-only identity/semantic repair |
-| `supabase/pending/20261011_project_stage_gates_rls_recursion_manual_install_review.sql` | review-only, transaction-scoped manual-install artifact; rolls back by design | review-only companion |
+| `supabase/pending/20261011_project_stage_gates_rls_recursion_repair.sql` | helper plus replacement of exactly two SELECT policies | `e3b62eafd370d07679b70060f7df51e7391ea90ee831eab870da20607f3f00c2` |
+| `supabase/pending/20261011_project_stage_gates_rls_recursion_manual_install_review.sql` | review-only, transaction-scoped manual-install artifact; rolls back by design | `7ece39690dc76f919152a52eac8e5f9c95b86bcbfe0ddacc27596a293675af32` |
 | `supabase/pending/tests/project_stage_gates_rls_recursion_local_fixture.sql` | disposable schema and original-policy reproduction | local test fixture |
 | `supabase/pending/tests/project_stage_gates_rls_recursion_local_acceptance.sql` | caller-scope and privilege assertions | local acceptance |
 | `supabase/pending/tests/run_project_stage_gates_rls_recursion_local_acceptance.sh` | isolated PostgreSQL runner and cleanup | local runner |
