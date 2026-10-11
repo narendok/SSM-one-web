@@ -130,7 +130,7 @@ def main() -> None:
     require(materialization, "Sales document location target is outside its locked root", "locked location ancestry")
     require(materialization, "REVOKE ALL ON FUNCTION public.commit_sales_opportunity_structured_draft_materialization", "default-revoked materializer")
     forbid(materialization, "GRANT EXECUTE ON FUNCTION public.commit_sales_opportunity_structured_draft_materialization", "pre-granted materializer")
-    forbid(materialization, "CREATE POLICY "Sales structured drafts insert", "storage policy in source-only schema contract")
+    forbid(materialization, 'CREATE POLICY "Sales structured drafts insert', "storage policy in source-only schema contract")
     require(activation, "ACTION-TIME APPROVAL REQUIRED", "separate activation boundary")
     require(activation, "Sales structured drafts insert their recorded private prefix", "narrow policy approval package")
     require(activation, "GRANT EXECUTE ON FUNCTION public.commit_sales_opportunity_structured_draft_materialization", "activation-only execute grant")
