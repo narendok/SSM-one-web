@@ -40,9 +40,12 @@ const project = {
   project_drive_node_id: "root-123", completion_notes: null, archived_at: null, created_at: "2026-10-09T00:00:00Z", updated_at: "2026-10-09T00:00:00Z",
 };
 
-function renderLifecycle(callbacks = { onOpenDelivery: vi.fn(), onOpenFiles: vi.fn(), onOpenTasks: vi.fn() }) {
+function renderLifecycle(
+  callbacks = { onOpenDelivery: vi.fn(), onOpenFiles: vi.fn(), onOpenTasks: vi.fn() },
+  lifecycleProject = project,
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const root = createRootRoute({ component: () => <SharedProductLifecycle project={project} {...callbacks} /> });
+  const root = createRootRoute({ component: () => <SharedProductLifecycle project={lifecycleProject} {...callbacks} /> });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   return render(<QueryClientProvider client={queryClient}><RouterProvider router={router} /></QueryClientProvider>);
 }
@@ -61,7 +64,7 @@ describe("SharedProductLifecycle governed reads", () => {
     readGates.mockResolvedValue({ data: null, error: { message: "infinite recursion detected in policy", code: "42P17" } });
     readStages.mockResolvedValue({ data: [], error: null });
 
-    renderLifecycle();
+    renderLifecycle(undefined, { ...project, requirement_baseline_id: "baseline-123" });
 
     expect((await screen.findByText(/Gate records could not be loaded/)).parentElement?.textContent).toContain("infinite recursion detected in policy");
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
