@@ -6,16 +6,18 @@
 -- alter a legacy HTML record. Apply only after the reviewed HTML draft/location
 -- contracts and a separate assigned-person authorization source are accepted.
 --
--- The current deployed schema exposes department membership but no exact
--- document-responsibility relation. Therefore the explicit assignment relation
--- below is mandatory: department membership, sales.manage, Drive access, project
--- access, and platform-owner status do not themselves authorize DOCX operations.
+-- The current deployed schema exposes department membership but no accepted
+-- configurable responsibility/template registry or privileged object-byte reader.
+-- Therefore this file deliberately has no assignment-management entrypoint and
+-- no caller-facing save/read/download grant. A separate accepted responsibility
+-- source must create/revoke assignments, and a separately privileged verifier
+-- must supply immutable object facts before these functions can be activated.
 
 CREATE TABLE public.sales_opportunity_structured_docx_assignments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id) ON DELETE RESTRICT,
   customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
-  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW','PRS')),
+  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW')),
   department_id uuid NOT NULL REFERENCES public.departments(id) ON DELETE RESTRICT,
   responsible_employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE RESTRICT,
   status text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','REVOKED')),
@@ -42,7 +44,7 @@ CREATE TABLE public.sales_opportunity_structured_docx_requests (
   customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
   master_specification_id uuid NOT NULL REFERENCES public.master_specifications(id) ON DELETE RESTRICT,
   master_specification_version_id uuid NOT NULL REFERENCES public.master_specification_versions(id) ON DELETE RESTRICT,
-  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW','PRS')),
+  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW')),
   editable_schema_key text NOT NULL,
   editable_schema_hash text NOT NULL CHECK (editable_schema_hash ~ '^[a-f0-9]{64}$'),
   source_fingerprint text NOT NULL CHECK (source_fingerprint ~ '^[a-f0-9]{64}$'),
@@ -64,6 +66,9 @@ CREATE TABLE public.sales_opportunity_structured_docx_storage_attempts (
   storage_path text NOT NULL,
   sha256_checksum text NOT NULL CHECK (sha256_checksum ~ '^[a-f0-9]{64}$'),
   size_bytes bigint NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 10485760),
+  object_version text NOT NULL,
+  ooxml_verified_at timestamptz NOT NULL,
+  verified_by_service text NOT NULL,
   staged_by uuid NOT NULL,
   staged_at timestamptz NOT NULL DEFAULT now(),
   consumed_at timestamptz NULL,
@@ -86,7 +91,7 @@ CREATE TABLE public.sales_opportunity_structured_docx_materializations (
   customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
   master_specification_id uuid NOT NULL REFERENCES public.master_specifications(id) ON DELETE RESTRICT,
   master_specification_version_id uuid NOT NULL REFERENCES public.master_specification_versions(id) ON DELETE RESTRICT,
-  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW','PRS')),
+  document_kind text NOT NULL CHECK (document_kind IN ('SOR','CONTRACT_REVIEW')),
   template_key text NOT NULL,
   template_version integer NOT NULL,
   template_schema_hash text NOT NULL CHECK (template_schema_hash ~ '^[a-f0-9]{64}$'),
@@ -160,6 +165,33 @@ $$;
 CREATE TRIGGER sales_structured_docx_storage_attempts_guard BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_storage_attempts FOR EACH ROW EXECUTE FUNCTION public.guard_sales_structured_docx_storage_attempt();
 CREATE TRIGGER sales_structured_docx_materializations_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_materializations FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
 CREATE TRIGGER sales_structured_docx_audits_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_audit_events FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
+
+-- This receipt is the only supported bridge from a separately authenticated
+-- trusted object verifier. Browser-controlled SHA/size values are intentionally
+-- not accepted by the materialization path. The verifier must read immutable
+-- object bytes, calculate SHA-256/size, reject non-ZIP/OOXML/HTML payloads, and
+-- bind a storage object version or immutable generation before calling this RPC.
+CREATE OR REPLACE FUNCTION public.record_sales_structured_docx_object_verification(
+  p_request_key uuid, p_storage_bucket text, p_storage_path text, p_object_version text,
+  p_sha256_checksum text, p_size_bytes bigint, p_ooxml_content_types boolean,
+  p_ooxml_word_document boolean, p_html_detected boolean, p_verifier_service text
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_existing public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE;
+BEGIN
+  IF current_setting('request.jwt.claim.sub', true) IS NOT NULL THEN RAISE EXCEPTION 'Only the trusted DOCX object verifier may record object facts'; END IF;
+  IF p_object_version IS NULL OR btrim(p_object_version) = '' OR p_sha256_checksum !~ '^[a-f0-9]{64}$' OR p_size_bytes IS NULL OR p_size_bytes <= 0 OR p_size_bytes > 10485760 OR NOT p_ooxml_content_types OR NOT p_ooxml_word_document OR p_html_detected OR btrim(coalesce(p_verifier_service,'')) = '' THEN RAISE EXCEPTION 'Trusted verifier rejected DOCX bytes'; END IF;
+  SELECT * INTO v_request FROM public.sales_opportunity_structured_docx_requests AS verified_request WHERE verified_request.request_key = p_request_key FOR UPDATE;
+  IF NOT FOUND OR p_storage_bucket <> 'project-drive' OR p_storage_path <> (SELECT private_storage_prefix || p_request_key::text || '-draft.docx' FROM public.sales_opportunity_document_locations WHERE id = v_request.location_id) THEN RAISE EXCEPTION 'Trusted DOCX verification does not match the exact request location'; END IF;
+  SELECT * INTO v_existing FROM public.sales_opportunity_structured_docx_storage_attempts AS existing_attempt WHERE existing_attempt.request_key = p_request_key AND existing_attempt.location_id = v_request.location_id FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing.storage_bucket = p_storage_bucket AND v_existing.storage_path = p_storage_path AND v_existing.object_version = p_object_version AND v_existing.sha256_checksum = p_sha256_checksum AND v_existing.size_bytes = p_size_bytes THEN RETURN v_existing.id; END IF;
+    RAISE EXCEPTION 'Trusted DOCX object verification conflicts with immutable receipt';
+  END IF;
+  INSERT INTO public.sales_opportunity_structured_docx_storage_attempts(request_key,location_id,storage_bucket,storage_path,sha256_checksum,size_bytes,object_version,ooxml_verified_at,verified_by_service,staged_by)
+  VALUES(p_request_key,v_request.location_id,p_storage_bucket,p_storage_path,p_sha256_checksum,p_size_bytes,p_object_version,now(),p_verifier_service,v_request.requested_by) RETURNING id INTO v_existing.id;
+  RETURN v_existing.id;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.resolve_sales_structured_docx_assignment(
   p_opportunity_id uuid, p_customer_id uuid, p_document_kind text, p_assignment_id uuid
