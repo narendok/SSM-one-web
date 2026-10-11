@@ -1065,7 +1065,13 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
-    const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
+    let folderLink: HTMLElement | undefined;
+    await waitFor(async () => {
+      folderLink = (await screen.findAllByRole("link", { name: "Open Sales folder" })).find(
+        (link) => link.getAttribute("aria-disabled") === "true",
+      );
+      expect(folderLink).toBeTruthy();
+    });
     if (!folderLink) throw new Error("The unavailable Sales folder state was not rendered.");
     expect(folderLink.getAttribute("aria-disabled")).toBe("true");
     expect(folderLink.getAttribute("href")).toBeNull();
