@@ -141,10 +141,10 @@ BEGIN
   );
   SELECT * INTO v_receipt FROM public.sales_opportunity_structured_draft_requests
   WHERE request_key = p_request_key FOR UPDATE;
-  SELECT * INTO v_revision FROM public.sales_opportunity_structured_draft_revisions
-  WHERE id = v_saved.revision_id FOR UPDATE;
-  SELECT * INTO v_existing_link FROM public.sales_opportunity_structured_draft_revision_locations
-  WHERE revision_id = v_saved.revision_id FOR UPDATE;
+  SELECT * INTO v_revision FROM public.sales_opportunity_structured_draft_revisions AS draft_revision
+  WHERE draft_revision.id = v_saved.revision_id FOR UPDATE;
+  SELECT * INTO v_existing_link FROM public.sales_opportunity_structured_draft_revision_locations AS revision_location
+  WHERE revision_location.revision_id = v_saved.revision_id FOR UPDATE;
   IF FOUND AND v_existing_link.private_location_id <> p_private_location_id THEN
     RAISE EXCEPTION 'Request key conflicts with a different private Sales location';
   END IF;
@@ -153,8 +153,8 @@ BEGIN
       revision_id, private_location_id, payload_sha256_checksum, created_by
     ) VALUES (v_saved.revision_id, p_private_location_id, v_revision.payload_hash, v_actor_id);
   END IF;
-  SELECT * INTO v_audit FROM public.sales_opportunity_structured_draft_audit_events
-  WHERE request_key = p_request_key FOR UPDATE;
+  SELECT * INTO v_audit FROM public.sales_opportunity_structured_draft_audit_events AS audit_event
+  WHERE audit_event.request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_audit.actor_user_id <> v_actor_id OR v_audit.revision_id <> v_saved.revision_id
       OR v_audit.private_location_id <> p_private_location_id
