@@ -64,6 +64,44 @@ CREATE INDEX component_candidate_submissions_project_idx
 CREATE INDEX component_candidate_submission_audit_candidate_idx
   ON public.component_candidate_submission_audit_events(candidate_id, created_at);
 
+-- Pending source-only authorization prerequisite. This declaration does not
+-- seed the permission, map it to any role, or activate it in a managed system.
+-- The decision function fails closed unless this exact key is already assigned
+-- through the established permission helper and active Hardware membership.
+INSERT INTO public.permissions(key, module_key, label, description)
+VALUES ('engineering.approve', 'engineering', 'Approve engineering decisions', 'Pending candidate Hardware decision authority.')
+ON CONFLICT (key) DO NOTHING;
+
+CREATE TABLE public.component_candidate_decisions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  candidate_id uuid NOT NULL REFERENCES public.component_candidate_submissions(id) ON DELETE RESTRICT,
+  candidate_revision_id uuid NOT NULL REFERENCES public.component_candidate_payload_revisions(id) ON DELETE RESTRICT,
+  decision text NOT NULL CHECK (decision IN ('APPROVED_PENDING_PURCHASE', 'REJECTED')),
+  decision_note text NOT NULL CHECK (char_length(btrim(decision_note)) BETWEEN 1 AND 500),
+  decided_by uuid NOT NULL,
+  decided_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (candidate_id, candidate_revision_id)
+);
+GRANT SELECT ON public.component_candidate_decisions TO service_role;
+ALTER TABLE public.component_candidate_decisions ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.component_candidate_decision_request_receipts (
+  request_key uuid PRIMARY KEY,
+  requested_by uuid NOT NULL,
+  action text NOT NULL CHECK (action IN ('APPROVE', 'REJECT')),
+  payload_hash text NOT NULL CHECK (btrim(payload_hash) <> ''),
+  candidate_id uuid NOT NULL REFERENCES public.component_candidate_submissions(id) ON DELETE RESTRICT,
+  candidate_revision_id uuid NOT NULL REFERENCES public.component_candidate_payload_revisions(id) ON DELETE RESTRICT,
+  decision_id uuid NOT NULL REFERENCES public.component_candidate_decisions(id) ON DELETE RESTRICT,
+  result jsonb NOT NULL CHECK (jsonb_typeof(result) = 'object'),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT SELECT ON public.component_candidate_decision_request_receipts TO service_role;
+ALTER TABLE public.component_candidate_decision_request_receipts ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX component_candidate_decisions_candidate_idx
+  ON public.component_candidate_decisions(candidate_id, decided_at);
+
 CREATE OR REPLACE FUNCTION public.component_candidate_submission_canonical_payload(p_payload jsonb)
 RETURNS jsonb LANGUAGE plpgsql IMMUTABLE SET search_path = public AS $$
 DECLARE
@@ -136,6 +174,45 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.component_candidate_decision_canonical_payload(
+  p_candidate_id uuid, p_expected_revision_id uuid, p_decision text, p_decision_note text
+) RETURNS jsonb LANGUAGE plpgsql IMMUTABLE SET search_path = public AS $$
+DECLARE v_decision text := upper(btrim(coalesce(p_decision, ''))); v_note text := regexp_replace(btrim(coalesce(p_decision_note, '')), '\s+', ' ', 'g');
+BEGIN
+  IF p_candidate_id IS NULL OR p_expected_revision_id IS NULL THEN RAISE EXCEPTION 'Candidate and immutable revision are required'; END IF;
+  IF v_decision NOT IN ('APPROVE', 'REJECT') THEN RAISE EXCEPTION 'Decision must be APPROVE or REJECT'; END IF;
+  IF char_length(v_note) NOT BETWEEN 1 AND 500 THEN RAISE EXCEPTION 'Decision note must be between 1 and 500 characters'; END IF;
+  RETURN jsonb_build_object('candidateId', p_candidate_id, 'expectedRevisionId', p_expected_revision_id, 'decision', v_decision, 'decisionNote', v_note);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.component_candidate_decision_scope(
+  p_actor uuid, p_candidate_id uuid, p_expected_revision_id uuid
+) RETURNS TABLE(candidate_id uuid, candidate_revision_id uuid, submitted_by uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF p_actor IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
+  IF NOT COALESCE(public.has_permission(p_actor, 'engineering.approve'), false) THEN
+    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
+  END IF;
+  SELECT candidate.id, revision.id, candidate.submitted_by
+  INTO candidate_id, candidate_revision_id, submitted_by
+  FROM public.component_candidate_submissions candidate
+  JOIN public.component_candidate_payload_revisions revision ON revision.id = p_expected_revision_id AND revision.candidate_id = candidate.id AND revision.revision_number = 1
+  JOIN public.employees employee ON employee.user_id = p_actor AND employee.employment_status = 'ACTIVE'
+  JOIN public.employee_departments membership ON membership.employee_id = employee.id
+  JOIN public.departments hardware ON hardware.id = membership.department_id AND hardware.code = 'HARDWARE' AND hardware.is_active
+  WHERE candidate.id = p_candidate_id
+    AND candidate.status = 'SUBMITTED'
+    AND candidate.submitted_by <> p_actor
+  FOR UPDATE OF candidate, revision, employee, membership, hardware;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Candidate decision requires an active Hardware reviewer with engineering.approve, a submitted exact immutable revision, and no self-review';
+  END IF;
+  RETURN NEXT;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.submit_component_candidate(
   p_project_id uuid, p_project_bom_id uuid, p_payload jsonb, p_request_key uuid
 ) RETURNS TABLE(candidate_id uuid, payload_revision_id uuid, replayed boolean)
@@ -177,5 +254,48 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.decide_component_candidate(
+  p_candidate_id uuid, p_expected_revision_id uuid, p_decision text, p_decision_note text, p_request_key uuid
+) RETURNS TABLE(decision_id uuid, candidate_id uuid, replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  v_actor uuid := auth.uid(); v_payload jsonb; v_payload_hash text; v_scope record;
+  v_prior public.component_candidate_decision_request_receipts%ROWTYPE; v_decision public.component_candidate_decisions%ROWTYPE;
+  v_target_status text; v_event_type text;
+BEGIN
+  IF v_actor IS NULL OR p_request_key IS NULL THEN RAISE EXCEPTION 'Authenticated actor and request key are required'; END IF;
+  v_payload := public.component_candidate_decision_canonical_payload(p_candidate_id, p_expected_revision_id, p_decision, p_decision_note);
+  v_payload_hash := md5(v_payload::text);
+  SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
+  SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
+  IF FOUND THEN
+    SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+    IF v_prior.requested_by = v_actor AND v_prior.payload_hash = v_payload_hash AND v_prior.action = v_payload ->> 'decision' THEN
+      RETURN QUERY SELECT v_prior.decision_id, v_prior.candidate_id, true;
+      RETURN;
+    END IF;
+    RAISE EXCEPTION 'Decision request key conflicts with a different actor or canonical payload';
+  END IF;
+  SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  v_target_status := CASE v_payload ->> 'decision' WHEN 'APPROVE' THEN 'APPROVED_PENDING_PURCHASE' ELSE 'REJECTED' END;
+  v_event_type := CASE v_payload ->> 'decision' WHEN 'APPROVE' THEN 'APPROVED_PENDING_PURCHASE' ELSE 'REJECTED' END;
+  UPDATE public.component_candidate_submissions SET status = v_target_status WHERE id = v_scope.candidate_id AND status = 'SUBMITTED';
+  IF NOT FOUND THEN RAISE EXCEPTION 'Candidate is no longer submitted'; END IF;
+  INSERT INTO public.component_candidate_decisions(candidate_id, candidate_revision_id, decision, decision_note, decided_by)
+  VALUES (v_scope.candidate_id, v_scope.candidate_revision_id, v_target_status, v_payload ->> 'decisionNote', v_actor) RETURNING * INTO v_decision;
+  INSERT INTO public.component_candidate_submission_audit_events(candidate_id, candidate_revision_number, event_type, actor_user_id, event_data)
+  VALUES (v_scope.candidate_id, 1, v_event_type, v_actor, jsonb_build_object('candidate_id', v_scope.candidate_id, 'candidate_revision_id', v_scope.candidate_revision_id, 'decision_id', v_decision.id, 'decision_note', v_payload ->> 'decisionNote'));
+  INSERT INTO public.component_candidate_decision_request_receipts(request_key, requested_by, action, payload_hash, candidate_id, candidate_revision_id, decision_id, result)
+  VALUES (p_request_key, v_actor, v_payload ->> 'decision', v_payload_hash, v_scope.candidate_id, v_scope.candidate_revision_id, v_decision.id, jsonb_build_object('decision_id', v_decision.id, 'candidate_id', v_scope.candidate_id));
+  RETURN QUERY SELECT v_decision.id, v_scope.candidate_id, false;
+END;
+$$;
+
 REVOKE ALL ON FUNCTION public.component_candidate_submission_scope(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.submit_component_candidate(uuid, uuid, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.component_candidate_decision_canonical_payload(uuid, uuid, text, text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.component_candidate_decision_scope(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.decide_component_candidate(uuid, uuid, text, text, uuid) FROM PUBLIC, anon, authenticated, service_role;
