@@ -334,7 +334,7 @@ function ProjectDetailPage() {
           <ProjectOperationalTab projectId={projectId} kind="changes" />
         </TabsContent>
         <TabsContent value="engineering" className="pt-4">
-          <ProjectOperationalTab projectId={projectId} kind="registers" />
+          <ProjectOperationalTab projectId={projectId} kind="registers" onOpenFiles={() => setActiveTab("files")} />
         </TabsContent>
 
         <TabsContent value="bom" className="pt-4">

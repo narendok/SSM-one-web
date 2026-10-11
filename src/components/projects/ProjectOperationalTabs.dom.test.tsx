@@ -17,9 +17,9 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-function renderOperationalInputs(kind: "design" | "research" = "design") {
+function renderOperationalInputs(kind: "design" | "research" | "registers" = "design", onOpenFiles?: () => void) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return { queryClient, ...render(<QueryClientProvider client={queryClient}><ProjectOperationalTab projectId="project-123" kind={kind} /></QueryClientProvider>) };
+  return { queryClient, ...render(<QueryClientProvider client={queryClient}><ProjectOperationalTab projectId="project-123" kind={kind} onOpenFiles={onOpenFiles} /></QueryClientProvider>) };
 }
 
 afterEach(() => {
@@ -87,6 +87,22 @@ describe("ProjectOperationalTab design-input reads", () => {
     expect(screen.queryByText("Loading visible records…")).toBeNull();
     expect(screen.queryByText("0 recorded")).toBeNull();
     expect(screen.queryByText("No research or proof-of-concept records yet.")).toBeNull();
+  });
+
+  it("shows engineering revision and status as recorded facts with a current-project Files action", async () => {
+    const openFiles = vi.fn();
+    const user = userEvent.setup();
+    order.mockResolvedValueOnce({ data: [{
+      id: "register-1", reference_code: "DVP-001", register_type: "DVP_R", title: "Thermal validation plan", status: "IN_REVIEW", revision: "B", drive_node_id: "drive-1", updated_at: "2026-10-11T00:00:00.000Z",
+    }], error: null });
+
+    renderOperationalInputs("registers", openFiles);
+
+    expect(await screen.findByText("Recorded revision B")).toBeTruthy();
+    expect(screen.getByText("Recorded status: IN_REVIEW")).toBeTruthy();
+    expect(screen.getByText("Updated 2026-10-11")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Open project files" }));
+    expect(openFiles).toHaveBeenCalledOnce();
   });
 });
 
