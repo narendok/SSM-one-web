@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, ClipboardList, ExternalLink, FileSpreadsheet, FolderOpen, GitPullRequest, Pencil, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -46,6 +46,7 @@ function ProjectDetailPage() {
   const { role } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -100,7 +101,7 @@ function ProjectDetailPage() {
           {role === "admin" && <Button variant="outline" size="sm" className="ml-auto shrink-0" onClick={() => setEditing(true)}><Pencil className="size-4" /> Edit project</Button>}
       </div>
 
-      <Tabs defaultValue="overview">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
@@ -128,7 +129,7 @@ function ProjectDetailPage() {
             <Card className="p-4">
               <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-medium">Delivery progress</p><p className="mt-1 text-sm text-muted-foreground">Based on the project tasks currently visible to you.</p></div><span className="text-2xl font-semibold">{taskProgress}%</span></div>
               <Progress className="mt-4" value={taskProgress} />
-              <div className="mt-4 flex flex-wrap gap-2"><ProjectAreaLink value="delivery" label="Delivery controls" icon={GitPullRequest} /><ProjectAreaLink value="engineering" label="Engineering records" icon={Settings2} /><ProjectAreaLink value="bom" label="BOMs" icon={FileSpreadsheet} /><ProjectAreaLink value="files" label="Files" icon={FolderOpen} /><ProjectAreaLink value="tasks" label="Tasks" icon={ClipboardList} /></div>
+              <div className="mt-4 flex flex-wrap gap-2"><ProjectAreaLink onOpen={setActiveTab} value="delivery" label="Delivery controls" icon={GitPullRequest} /><ProjectAreaLink onOpen={setActiveTab} value="engineering" label="Engineering records" icon={Settings2} /><ProjectAreaLink onOpen={setActiveTab} value="bom" label="BOMs" icon={FileSpreadsheet} /><ProjectAreaLink onOpen={setActiveTab} value="files" label="Files" icon={FolderOpen} /><ProjectAreaLink onOpen={setActiveTab} value="tasks" label="Tasks" icon={ClipboardList} /></div>
             </Card>
             <Card className="p-4"><p className="text-sm font-medium">Current focus</p><p className="mt-2 text-sm text-muted-foreground">{openTaskCount ? `${openTaskCount} open task${openTaskCount === 1 ? "" : "s"} needs attention in this project.` : "No open project tasks are visible."}</p><div className="mt-4 flex flex-wrap gap-2"><Badge variant="outline">{project.status}</Badge><Badge variant="secondary">{project.health_status}</Badge></div></Card>
           </section>
@@ -212,6 +213,6 @@ function SnapshotCard({ icon: Icon, label, value, detail }: { icon: typeof Clipb
   return <Card className="p-4"><div className="flex items-center gap-2 text-muted-foreground"><Icon className="size-4 text-primary" /><span className="text-sm">{label}</span></div><p className="mt-3 break-words text-lg font-semibold capitalize">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></Card>;
 }
 
-function ProjectAreaLink({ value, label, icon: Icon }: { value: string; label: string; icon: typeof ClipboardList }) {
-  return <Button variant="outline" size="sm" onClick={() => document.querySelector<HTMLButtonElement>(`[data-state]`)} asChild={false} disabled><Icon className="size-4" />{label}</Button>;
+function ProjectAreaLink({ value, label, icon: Icon, onOpen }: { value: string; label: string; icon: typeof ClipboardList; onOpen: (value: string) => void }) {
+  return <Button variant="outline" size="sm" onClick={() => onOpen(value)}><Icon className="size-4" />{label}</Button>;
 }
