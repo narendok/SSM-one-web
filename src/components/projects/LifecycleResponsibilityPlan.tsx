@@ -12,6 +12,7 @@ import {
   type CompanyStageRead,
   type LifecycleDepartmentCode,
 } from "@/lib/connected-lifecycle-responsibility-plan";
+import { lifecycleResponsibilityOverrideContract } from "@/lib/lifecycle-responsibility-overrides.contract";
 import { supabase } from "@/integrations/supabase/client";
 
 const sb = supabase as any;
@@ -57,7 +58,7 @@ export function LifecycleResponsibilityPlan({ compact = false }: { compact?: boo
         <div className="flex items-center gap-2"><Settings2 className="size-4 text-primary" /><h3 className="font-semibold">Connected lifecycle responsibility plan</h3></div>
         <p className="mt-1 text-sm text-muted-foreground">Default planning responsibilities are mapped to the existing company stage vocabulary. They never approve, release, assign, or overwrite recorded project work.</p>
       </div>
-      <Badge variant="secondary">PLANNING DEFAULTS</Badge>
+      <Badge variant="secondary">LOCAL PLANNING ONLY</Badge>
     </div>
     {stages.isPending || departments.isPending ? <p className="mt-4 text-sm text-muted-foreground">Loading visible stage and department settings…</p>
       : stages.isError || departments.isError ? <div role="alert" className="mt-4 flex flex-wrap items-center gap-2 border border-destructive/40 p-3 text-sm text-destructive">
@@ -78,7 +79,7 @@ export function LifecycleResponsibilityPlan({ compact = false }: { compact?: boo
                   <Badge variant="outline">{mappedStages.length} visible stage{mappedStages.length === 1 ? "" : "s"}</Badge>
                 </div>
                 <div className="mt-3 grid gap-3 text-sm lg:grid-cols-3">
-                  <div><p className="text-xs text-muted-foreground">Planning lead</p><select aria-label={`${responsibility.title} planning lead`} className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" value={lead} onChange={(event) => setLocalLeadOverrides((current) => ({ ...current, [responsibility.key]: event.target.value as LifecycleDepartmentCode }))}>{Object.keys(departmentCodes).map((code) => <option key={code} value={code}>{departmentName(code as LifecycleDepartmentCode, departmentsByCode)}</option>)}</select></div>
+                  <div><p className="text-xs text-muted-foreground">Local planning lead</p><select aria-label={`${responsibility.title} local planning lead`} className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" value={lead} onChange={(event) => setLocalLeadOverrides((current) => ({ ...current, [responsibility.key]: event.target.value as LifecycleDepartmentCode }))}>{Object.keys(departmentCodes).map((code) => <option key={code} value={code}>{departmentName(code as LifecycleDepartmentCode, departmentsByCode)}</option>)}</select></div>
                   <div><p className="text-xs text-muted-foreground">PM coordination</p><p className="mt-1">{responsibility.coordinatingDepartment ? departmentName(responsibility.coordinatingDepartment, departmentsByCode) : "Not set"}</p></div>
                   <div><p className="text-xs text-muted-foreground">Participating</p><p className="mt-1">{responsibility.participatingDepartments.map((code) => departmentName(code, departmentsByCode)).join(" · ") || "None"}</p></div>
                 </div>
@@ -86,6 +87,6 @@ export function LifecycleResponsibilityPlan({ compact = false }: { compact?: boo
               </section>;
             })}
           </div>}
-    <div className="mt-4 flex items-start gap-2 border-t pt-4 text-xs text-muted-foreground"><AlertCircle className="mt-0.5 size-3.5 shrink-0" /><p>{settingsStatus.message} Changes to the planning-lead selectors above are local to this screen and do not change template stages, project assignments, history, tasks, handoffs, or notifications.</p></div>
+    <div className="mt-4 flex items-start gap-2 border-t pt-4 text-xs text-muted-foreground"><AlertCircle className="mt-0.5 size-3.5 shrink-0" /><p>{settingsStatus.message} {lifecycleResponsibilityOverrideContract.title} stay inactive; changes above are local to this screen and do not change template stages, project assignments, history, tasks, handoffs, or notifications.</p></div>
   </Card>;
 }
