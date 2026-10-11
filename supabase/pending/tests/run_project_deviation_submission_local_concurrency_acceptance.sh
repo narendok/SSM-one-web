@@ -30,9 +30,7 @@ assert_eq() { [[ "$1" == "$2" ]] || { echo "ASSERT_FAIL $3 expected=$2 actual=$1
 reset_authority_and_pins() { q "UPDATE public.employees SET employment_status = 'ACTIVE' WHERE id = '50000000-0000-4000-8000-000000000014'; UPDATE public.project_team_members SET employee_id = '50000000-0000-4000-8000-000000000014' WHERE id = '50000000-0000-4000-8000-000000000018'; UPDATE public.document_control_registers SET document_status = 'APPROVED', controlled_version = CASE id WHEN '50000000-0000-4000-8000-000000000026' THEN 3 ELSE 2 END;"; }
 run_worker() { local label=$1 req=$2 body=$3; local pidfile="$work_dir/$label.pid"; psql "${psql_args[@]}" -v pidfile="$pidfile" -v request_key="$req" -v payload="$body" -v evidence="$evidence" -v project="$project" -v source_register="$source_register" -v source_revision="$source_revision" >"$work_dir/$label.out" 2>"$work_dir/$label.err" <<'SQL' &
 \set ON_ERROR_STOP on
-\o :pidfile
-SELECT pg_backend_pid();
-\o
+\copy (SELECT pg_backend_pid()) TO :'pidfile'
 SELECT set_config('request.jwt.claim.sub', '50000000-0000-4000-8000-000000000001', false);
 SELECT deviation_submission_id, deviation_revision_id, replayed FROM public.submit_project_deviation(:'project'::uuid, :'source_register'::uuid, :'source_revision'::uuid, :'payload'::jsonb, :'evidence'::jsonb, :'request_key'::uuid);
 SQL
