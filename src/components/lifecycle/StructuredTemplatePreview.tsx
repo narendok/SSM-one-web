@@ -48,6 +48,10 @@ import {
   recordLocalBomComponentSelection,
   type LocalBomComponentSelection,
 } from "@/lib/local-bom-component-adapter";
+import {
+  structuredSalesDraftSaveBoundaryMessage,
+  structuredSalesDraftSaveCapability,
+} from "@/lib/structured-sales-draft-capability";
 
 export type StructuredTemplatePreviewSourcePin = {
   opportunityNumber: string;
@@ -263,6 +267,10 @@ export function StructuredTemplatePreview({
     [kind, source.data, userEdits],
   );
   const salesGate = structuredSalesDocumentGate(kind, source.data ?? null);
+  const saveCapability = structuredSalesDraftSaveCapability(
+    isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
+  );
+  const saveBoundaryMessage = structuredSalesDraftSaveBoundaryMessage(saveCapability);
   const sourceState = !actorId
     ? "UNVERIFIED — signed-in identity unavailable"
     : source.isPending
@@ -409,10 +417,10 @@ export function StructuredTemplatePreview({
         </Tabs>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <p className="text-xs text-muted-foreground">
-            Saving, export/release, and controlled document generation remain unavailable until the
-            accepted backend contract is installed and independently verified.
+            {saveBoundaryMessage} Export, issuance, release, and controlled document generation
+            remain unavailable.
           </p>
-          <Button disabled>
+          <Button disabled aria-label="Save unavailable until backend capability is verified" title={saveBoundaryMessage}>
             <Save className="size-4" /> Save unavailable
           </Button>
         </div>
