@@ -880,7 +880,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
 
   it("keeps local preview text when the real proposal dialog returns from documents, while Close still prompts", async () => {
     previewSource.mockResolvedValue(source);
-    vi.mocked(supabase.from).mockImplementation((table) => {
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === "master_specification_versions") {
         return {
           select: () => ({
@@ -962,7 +962,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
   });
 
   it("opens the exact discovered Sales folder only after binding it to the pinned active source", async () => {
-    vi.mocked(supabase.from).mockImplementation((table) => {
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === "master_specification_versions") {
         return {
           select: () => ({
