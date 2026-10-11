@@ -45,6 +45,7 @@ export function ProjectOperationalTab({ projectId, kind }: { projectId: string; 
   const [open, setOpen] = useState(false);
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: [config.queryKey, projectId],
+    retry: false,
     queryFn: async () => {
       const { data, error } = await sb.from(config.table).select("*").eq("project_id", projectId).order("created_at", { ascending: false });
       if (error) throw error;
