@@ -12,7 +12,7 @@ CREATE TABLE public.customer_requirements(id uuid PRIMARY KEY,requirement_number
 CREATE TABLE public.customer_requirement_revisions(id uuid PRIMARY KEY,requirement_id uuid NOT NULL REFERENCES public.customer_requirements(id),revision_number integer NOT NULL,status text NOT NULL);
 CREATE TABLE public.requirement_feasibility_reviews(requirement_id uuid NOT NULL);
 CREATE TABLE public.sales_commercial_records(requirement_id uuid NOT NULL);
-CREATE TABLE public.requirement_baselines(requirement_id uuid NOT NULL);
+CREATE TABLE public.requirement_baselines(id uuid PRIMARY KEY DEFAULT extensions.gen_random_uuid(),requirement_id uuid NOT NULL);
 CREATE TABLE public.requirement_change_requests(requirement_id uuid NOT NULL);
 CREATE TABLE public.project_design_inputs(source_requirement_id uuid,source_revision_id uuid);
 CREATE TABLE public.customer_portal_shares(entity_id uuid NOT NULL);
