@@ -361,7 +361,6 @@ function ProjectDetailPage() {
           <StructuredTemplatePreview
             projectId={projectId}
             project={{ id: project.id, name: project.name, code: project.code }}
-            catalogScope="project-documents"
           />
         </TabsContent>
 

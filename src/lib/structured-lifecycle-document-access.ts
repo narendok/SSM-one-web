@@ -1,6 +1,6 @@
 import type { StructuredLifecycleTemplateKind } from "@/lib/lifecycle-structured-template-previews";
 
-export type StructuredDocumentCatalogScope = "sales-proposal" | "project-documents";
+export type StructuredDocumentCatalogScope = "all" | "sales-proposal" | "project-documents";
 export type StructuredDocumentDepartment = "SAL" | "RND" | "PROD" | "FIN" | "HR";
 
 export type StructuredDocumentCategory = {
@@ -33,6 +33,7 @@ export function isStructuredDocumentInCatalog(
   scope: StructuredDocumentCatalogScope,
   departmentCode: string | null | undefined,
 ) {
+  if (scope === "all") return true;
   if (scope === "sales-proposal") return ["SOR", "NDA", "COMMERCIAL_QUOTATION", "CONTRACT_REVIEW"].includes(kind);
   const category = structuredDocumentCategory(kind);
   return Boolean(category && departmentCode && category.departmentScopes.includes(departmentCode as StructuredDocumentDepartment));

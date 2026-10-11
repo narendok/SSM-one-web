@@ -233,7 +233,7 @@ export function StructuredTemplatePreview({
   onDirtyChange,
   localEdits,
   onLocalEditsChange,
-  catalogScope = "sales-proposal",
+  catalogScope = "all",
 }: {
   sourcePin?: StructuredTemplatePreviewSourcePin;
   actorId?: string | null;
