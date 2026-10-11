@@ -14,6 +14,16 @@ This is an export only: it has no private Drive upload, document-register write,
 
 `document_control_registers` already has `owner_employee_id`, `reviewer_employee_id`, and `approver_employee_id`, each referencing `employees`. These fields are the only verified responsible-person anchors found for controlled documents. Department membership and `sales.manage` are insufficient on their own for DOCX read, write, or revision access.
 
+## Clarified project and category boundary
+
+The committed project workspace and its existing project Drive hierarchy are the only document entry point and file authority for lifecycle DOCX records. One Drive node, revision, and document-control register must be reused across the project stage, category, history, and download views; the contract must not create parallel folders or duplicated file authorities.
+
+Project-team membership and project-overview visibility are distinct from category access. The protected resolver must bind every action to `(project_id, document_kind, department_id, active responsible assignment, private location)` and must reject a deep link when any element is absent or no longer current. Existing `document_control_registers.owner_employee_id` and `reviewer_employee_id` are verified responsibility anchors; any additional interdisciplinary responsibility must be explicit, scoped, and independently audited.
+
+Initial catalog routing is only a discovery default, not a grant: Sales may discover SOR, NDA, commercial quotation and scoped contract-review coordination; Hardware & R&D may discover PRS, BOM, DFMEA and scoped DVP&R/contract review; Production may discover the control plan, PDI and scoped DVP&R; Finance may discover invoice; HR may discover annual skill matrix only in approved corporate scope. Sales access, platform-admin status, or project overview access must not expose technical categories in the normal project document browser. The resolver must separately preserve any existing audited administration semantics rather than treating them as an implied bypass.
+
+`OPPORTUNITY-2026-0013 / MASTER-2026-0001 rev 1` is proposed-only with no committed project. It cannot receive a project Drive binding, category access, or materialization until a real project transition exists; no fixture or automatic conversion is permitted.
+
 ## Additive contract proposal — not applied
 
 1. Add a `structured_lifecycle_docx_materializations` identity, a matching immutable revision/receipt/audit graph, and a protected private-location binding. Every record references one closed kind, immutable source pin, template key/version, server-owned schema key/hash, assigned owner employee, optional reviewer employee, one non-trashed locked department Drive folder, one Drive node/revision, and one document-control register.

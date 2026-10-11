@@ -599,6 +599,7 @@ export function ProposalDetail({
               <StructuredTemplatePreview
                 sourcePin={sourcePin}
                 actorId={actorId}
+                catalogScope="sales-proposal"
                 localEdits={localPreviewEdits}
                 onLocalEditsChange={setLocalPreviewEdits}
                 onDirtyChange={setPreviewDirty}

@@ -62,6 +62,7 @@ import {
   validateStructuredSalesLocalPayload,
 } from "@/lib/structured-sales-local-payload";
 import { renderStructuredLifecycleDocx } from "@/lib/structured-lifecycle-docx-renderer";
+import { isStructuredDocumentInCatalog, type StructuredDocumentCatalogScope } from "@/lib/structured-lifecycle-document-access";
 
 export type StructuredTemplatePreviewSourcePin = {
   opportunityNumber: string;
@@ -232,11 +233,13 @@ export function StructuredTemplatePreview({
   onDirtyChange,
   localEdits,
   onLocalEditsChange,
+  catalogScope = "all",
 }: {
   sourcePin?: StructuredTemplatePreviewSourcePin;
   actorId?: string | null;
   projectId?: string;
   project?: { id: string; name: string; code: string | null };
+  catalogScope?: StructuredDocumentCatalogScope;
   onDirtyChange?: (dirty: boolean) => void;
   localEdits?: Record<string, string>;
   onLocalEditsChange?: (edits: Record<string, string>) => void;
@@ -697,13 +700,13 @@ export function StructuredTemplatePreview({
           className="mt-4"
         >
           <TabsList className="h-auto flex-wrap justify-start">
-            {structuredLifecycleTemplatePreviews.map((item) => (
+             {structuredLifecycleTemplatePreviews.filter((item) => isStructuredDocumentInCatalog(item.kind, catalogScope, "SAL")).map((item) => (
               <TabsTrigger key={item.kind} value={item.kind}>
                 {item.label}
               </TabsTrigger>
             ))}
           </TabsList>
-          {structuredLifecycleTemplatePreviews.map((item) => (
+          {structuredLifecycleTemplatePreviews.filter((item) => isStructuredDocumentInCatalog(item.kind, catalogScope, "SAL")).map((item) => (
             <TabsContent key={item.kind} value={item.kind} className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground">{item.description}</p>
               {item.kind === "BOM_COST_TRACKER" && (
