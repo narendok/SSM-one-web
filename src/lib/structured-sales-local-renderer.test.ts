@@ -28,6 +28,9 @@ describe("structured Sales local draft HTML renderer", () => {
 
     expect(first).toBe(second);
     expect(first).toContain("Verified preview source");
+    expect(first).toContain("Automotive requirement traceability");
+    expect(first).toContain("Source traceability — exact pinned preview context");
+    expect(first).toContain("CAN &lt;telemetry&gt;");
     expect(first).toContain("Local working notes");
     expect(first).toContain("  Keep this exact\nmanual text.  ");
     expect(first).toContain("Tracker &lt;source&gt;");
@@ -61,6 +64,18 @@ describe("structured Sales local draft HTML renderer", () => {
     expect(html).toContain("Approval status: NOT APPROVED / TBC.");
     expect(html).toContain("Local decision note");
     expect(html).toContain("Proceed");
+  });
+
+  it("renders source-pinned automotive traceability for each specialized Sales document without inventing an outcome", () => {
+    for (const kind of ["SOR", "CONTRACT_REVIEW", "PRS"] as const) {
+      const html = renderStructuredSalesLocalDraftHtml(kind, source, {});
+      expect(html).toContain("Automotive requirement traceability");
+      expect(html).toContain("OPPORTUNITY-2026-0013");
+      expect(html).toContain("MASTER-2026-0001 rev 1");
+      expect(html).toContain("TBC remains unresolved");
+      expect(html).not.toContain("ISSUED");
+      expect(html).not.toContain("APPROVED</p>");
+    }
   });
 
   it("marks an unavailable source as unverified while preserving exact local edits", () => {

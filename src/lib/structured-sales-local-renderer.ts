@@ -81,6 +81,34 @@ const titles: Record<StructuredSalesLocalDocumentKind, string> = {
   PRS: "Product Requirements Specification",
 };
 
+const traceabilityRows: Record<StructuredSalesLocalDocumentKind, readonly [string, string][]> = {
+  SOR: [
+    ["Source pin", "PROJECT_CODE"],
+    ["Master Specification", "MASTER_SPECIFICATION"],
+    ["Requirement context", "REQUIREMENT_SUMMARY"],
+    ["Interfaces", "INTERFACES"],
+    ["Connectivity / GNSS", "CONNECTIVITY_AND_GNSS"],
+    ["Requested volume", "VOLUMES"],
+  ],
+  CONTRACT_REVIEW: [
+    ["Source pin", "PROJECT_CODE"],
+    ["Customer", "CUSTOMER_NAME"],
+    ["Master Specification", "MASTER_SPECIFICATION"],
+    ["Source record", "SOURCE_DOCUMENT"],
+    ["Engineering workstreams", "WORKSTREAMS"],
+    ["Requested volume", "VOLUMES"],
+  ],
+  PRS: [
+    ["Source pin", "PROJECT_CODE"],
+    ["Master Specification", "MASTER_SPECIFICATION"],
+    ["Power / units", "POWER_AND_UNITS"],
+    ["Interfaces", "INTERFACES"],
+    ["Connectivity / GNSS", "CONNECTIVITY_AND_GNSS"],
+    ["Environment / IP", "ENVIRONMENT_AND_IP"],
+    ["Requested standards", "REQUESTED_STANDARDS"],
+  ],
+};
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
 }
@@ -99,6 +127,13 @@ function definitionList(entries: readonly [string, string][], valueFor: (key: st
   return `<dl>${entries.map(([key, label]) => `<div><dt>${escapeHtml(label)}</dt><dd><pre>${escapeHtml(valueFor(key))}</pre></dd></div>`).join("")}</dl>`;
 }
 
+function traceabilityTable(kind: StructuredSalesLocalDocumentKind, source: StructuredSalesLocalRendererSource | null): string {
+  const rows = traceabilityRows[kind]
+    .map(([label, key]) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(sourceValue(source, key))}</td></tr>`)
+    .join("");
+  return `<table><caption>Source traceability — exact pinned preview context</caption><thead><tr><th>Trace</th><th>Pinned source value</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
 /** Renders only validated local edits and existing verified-preview source fields into fixed, inert HTML. */
 export function renderStructuredSalesLocalDraftHtml(kind: unknown, source: StructuredSalesLocalRendererSource | null, input: unknown): string {
   const validated = validateStructuredSalesLocalPayload(kind, input);
@@ -115,5 +150,5 @@ export function renderStructuredSalesLocalDraftHtml(kind: unknown, source: Struc
     ? "Prepared locally from the verified preview source. This output is source preparation only and does not persist, save, issue, or download a document."
     : "No verified source loaded. This output is source preparation only and does not persist, save, issue, or download a document.";
 
-  return `<article data-document-kind="${kind}"><header><h1>${titles[kind]}</h1><p>LOCAL PREVIEW ONLY — NOT A CONTROLLED DOCUMENT</p></header><section><h2>${sourceHeading}</h2>${definitionList(sourceLabels[kind], (key) => sourceValue(source, key))}</section><section><h2>Local working notes</h2><p>${authorityNotice}</p>${definitionList(fieldLabels[kind], (key) => localValue(validated.payload, key))}</section><footer><p>${footer}</p></footer></article>`;
+  return `<article data-document-kind="${kind}"><header><h1>${titles[kind]}</h1><p>LOCAL PREVIEW ONLY — NOT A CONTROLLED DOCUMENT</p></header><section><h2>${sourceHeading}</h2>${definitionList(sourceLabels[kind], (key) => sourceValue(source, key))}</section><section><h2>Automotive requirement traceability</h2><p>Values below are copied from the exact pinned source for review context. TBC remains unresolved and is not a requirement, verification result, compliance claim, or acceptance.</p>${traceabilityTable(kind, source)}</section><section><h2>Local working notes</h2><p>${authorityNotice}</p>${definitionList(fieldLabels[kind], (key) => localValue(validated.payload, key))}</section><footer><p>${footer}</p></footer></article>`;
 }
