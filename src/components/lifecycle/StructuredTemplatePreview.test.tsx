@@ -126,9 +126,8 @@ describe("local structured preview draft safety", () => {
       state: "VERIFIED",
       message: "Persisted unissued revision 1 is based on OPPORTUNITY-2026-0013 · MASTER-2026-0001 rev 1. No approval, issuance, or release is recorded.",
     });
-    expect(structuredSalesDocumentGate("SOR", source, 1, true).message).toContain(
-      "Local notes remain unsaved",
-    );
+    const dirtyGate = structuredSalesDocumentGate("SOR", source, 1, true);
+    expect(dirtyGate?.message).toContain("Local notes remain unsaved");
   });
 
   it("keeps XSS text inert in a sandboxed SOR preview", () => {
