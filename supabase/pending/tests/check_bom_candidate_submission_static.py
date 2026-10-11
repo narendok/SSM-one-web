@@ -10,6 +10,8 @@ runner = (Path(__file__).resolve().parent / "run_bom_candidate_submission_local_
 concurrency = (Path(__file__).resolve().parent / "bom_candidate_submission_local_concurrency_assertions.sql").read_text()
 revocation_runner = (Path(__file__).resolve().parent / "run_bom_candidate_submission_local_revocation_wait.sh").read_text()
 revocation_worker = (Path(__file__).resolve().parent / "bom_candidate_submission_local_revocation_wait_worker.sql").read_text()
+decision_revocation_runner = (Path(__file__).resolve().parent / "run_bom_candidate_decision_local_revocation_wait.sh").read_text()
+decision_revocation_worker = (Path(__file__).resolve().parent / "bom_candidate_decision_local_revocation_wait_worker.sql").read_text()
 decision_acceptance = (Path(__file__).resolve().parent / "bom_candidate_decision_local_acceptance.sql").read_text()
 decision_runner = (Path(__file__).resolve().parent / "run_bom_candidate_decision_local_acceptance.sh").read_text()
 decision_concurrency = (Path(__file__).resolve().parent / "bom_candidate_decision_local_concurrency_assertions.sql").read_text()
@@ -38,12 +40,15 @@ checks = {
     "runner is explicitly disposable": "LOCAL_BOM_CANDIDATE_DISPOSABLE" in runner and "/tmp/bom_candidate_submission_local_" in runner,
     "fixture is local only": "LOCAL DISPOSABLE FIXTURE ONLY" in fixture,
     "decision permission remains pending only": "VALUES ('engineering.approve'" in sql and "GRANT EXECUTE ON FUNCTION public.decide_component_candidate" not in sql,
-    "decision source locks and reauthorizes": all(token in sql for token in ("component-candidate-decision:", "component-candidate-decision-request:", "candidate.submitted_by <> p_actor")) and sql.count("component_candidate_decision_scope(v_actor") >= 4,
-    "decision replay precedes terminal status enforcement": sql.index("FROM public.component_candidate_decision_request_receipts") < sql.index("IF v_scope.candidate_status <> 'SUBMITTED'") < sql.index("UPDATE public.component_candidate_submissions SET status = v_target_status"),
+    "decision source locks and reauthorizes": all(token in sql for token in ("component-candidate-decision:", "component-candidate-decision-request:", "candidate.submitted_by <> p_actor")) and sql.count("component_candidate_decision_scope(v_actor") >= 5,
+    "decision replay precedes terminal status enforcement": sql.index("PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:'") < sql.index("FROM public.component_candidate_decision_request_receipts") < sql.index("IF v_scope.candidate_status <> 'SUBMITTED'") < sql.index("UPDATE public.component_candidate_submissions SET status = v_target_status"),
     "candidate statuses and audit events are only implemented states": "status IN ('SUBMITTED', 'APPROVED_PENDING_PURCHASE', 'REJECTED')" in sql and "event_type IN ('SUBMITTED', 'APPROVED_PENDING_PURCHASE', 'REJECTED')" in sql and "PROMOTED" not in sql,
     "decision acceptance covers authority replay denials and rollback": all(token in decision_acceptance for token in ("Authorized approve", "Authorized reject", "Missing permission", "Wrong department", "Inactive employee", "Self review", "Wrong revision", "Terminal candidate status", "Exact decision replay after state transition", "Decision payload mismatch", "Decision actor mismatch", "Decision receipt failure did not roll back")),
     "decision concurrency asserts one winner": "BOM_CANDIDATE_DECISION_CONCURRENCY_PASS=true" in decision_concurrency,
     "decision runner is explicitly disposable": "LOCAL_BOM_CANDIDATE_DISPOSABLE" in decision_runner and "/tmp/bom_candidate_decision_local_" in decision_runner,
+    "decision revocation wait uses exact production decision lock": all(token in decision_revocation_runner for token in ("component-candidate-decision-request:", "hashtextextended", "pg_locks", "pg_stat_activity", "waiting-on-exact-decision-lock")),
+    "decision revocation wait covers new decision and terminal receipt replay": all(token in decision_revocation_runner for token in ("new_decision_graph_unchanged=true", "replay_history_unchanged=true", "300000000091", "300000000093")),
+    "decision revocation worker has no production instrumentation": "candidate_test_wait" not in decision_revocation_worker and "decide_component_candidate" in decision_revocation_worker,
 }
 failed = [name for name, passed in checks.items() if not passed]
 if failed:
