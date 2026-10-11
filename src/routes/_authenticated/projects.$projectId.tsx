@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ClipboardList, ExternalLink, FileSpreadsheet, FolderOpen, GitPullRequest, Pencil, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,8 @@ import { StructuredTemplatePreview } from "@/components/lifecycle/StructuredTemp
 import type { Project } from "@/lib/projects";
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchTasks, OPEN_TASK_STATUSES } from "@/lib/tasks";
+import { Progress } from "@/components/ui/progress";
 
 const sb = supabase as any;
 
@@ -65,8 +67,17 @@ function ProjectDetailPage() {
     },
   });
 
+  const { data: projectTasks = [] } = useQuery({
+    queryKey: ["project_workspace_tasks", projectId],
+    queryFn: () => fetchTasks({ projectId }),
+  });
+
   if (isLoading) return <p className="text-muted-foreground">Loading…</p>;
   if (!project) return <Card className="p-8 text-center text-muted-foreground">Project not found.</Card>;
+
+  const openTaskCount = projectTasks.filter((task) => OPEN_TASK_STATUSES.includes(task.status)).length;
+  const completedTaskCount = projectTasks.filter((task) => task.status === "done").length;
+  const taskProgress = projectTasks.length ? Math.round((completedTaskCount / projectTasks.length) * 100) : 0;
 
   return (
     <div className="space-y-4">
@@ -105,7 +116,23 @@ function ProjectDetailPage() {
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="pt-4">
+        <TabsContent value="overview" className="pt-4 space-y-5">
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <SnapshotCard icon={GitPullRequest} label="Project stage" value={project.project_stage.replaceAll("_", " ")} detail={`Health: ${project.health_status}`} />
+            <SnapshotCard icon={ClipboardList} label="Open work" value={String(openTaskCount)} detail={projectTasks.length ? `${completedTaskCount} of ${projectTasks.length} tasks complete` : "No visible project tasks"} />
+            <SnapshotCard icon={Settings2} label="Tagged components" value={String(componentCount)} detail="Current project association" />
+            <SnapshotCard icon={CheckCircle2} label="Project status" value={project.status.replaceAll("_", " ")} detail={project.target_sop_date ? `Target SOP: ${project.target_sop_date}` : "No target SOP recorded"} />
+          </section>
+
+          <section className="grid gap-3 xl:grid-cols-[1.25fr_0.75fr]">
+            <Card className="p-4">
+              <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-medium">Delivery progress</p><p className="mt-1 text-sm text-muted-foreground">Based on the project tasks currently visible to you.</p></div><span className="text-2xl font-semibold">{taskProgress}%</span></div>
+              <Progress className="mt-4" value={taskProgress} />
+              <div className="mt-4 flex flex-wrap gap-2"><ProjectAreaLink value="delivery" label="Delivery controls" icon={GitPullRequest} /><ProjectAreaLink value="engineering" label="Engineering records" icon={Settings2} /><ProjectAreaLink value="bom" label="BOMs" icon={FileSpreadsheet} /><ProjectAreaLink value="files" label="Files" icon={FolderOpen} /><ProjectAreaLink value="tasks" label="Tasks" icon={ClipboardList} /></div>
+            </Card>
+            <Card className="p-4"><p className="text-sm font-medium">Current focus</p><p className="mt-2 text-sm text-muted-foreground">{openTaskCount ? `${openTaskCount} open task${openTaskCount === 1 ? "" : "s"} needs attention in this project.` : "No open project tasks are visible."}</p><div className="mt-4 flex flex-wrap gap-2"><Badge variant="outline">{project.status}</Badge><Badge variant="secondary">{project.health_status}</Badge></div></Card>
+          </section>
+
           <div className="grid gap-3 lg:grid-cols-3">
           <Card className="p-4 space-y-2 text-sm lg:col-span-2">
             <Row label="Code" value={project.code} />
@@ -132,7 +159,7 @@ function ProjectDetailPage() {
               )}
             </div>
           </Card>
-          <Card className="p-4 space-y-3"><div><p className="text-sm font-medium">Delivery snapshot</p><p className="text-sm text-muted-foreground">Use the Delivery and Engineering tabs to control gates, issues, changes and release records.</p></div><div className="flex flex-wrap gap-2"><Badge variant="outline">{project.status}</Badge><Badge variant="secondary">{project.health_status}</Badge></div></Card>
+          <Card className="p-4 space-y-3"><div><p className="text-sm font-medium">Delivery record</p><p className="text-sm text-muted-foreground">Use the Delivery and Engineering areas to review gates, issues, changes, and release records.</p></div><div className="flex flex-wrap gap-2"><Badge variant="outline">{project.status}</Badge><Badge variant="secondary">{project.health_status}</Badge></div></Card>
           </div>
         </TabsContent>
 
@@ -179,4 +206,12 @@ function Row({ label, value }: { label: string; value: string }) {
       <span>{value}</span>
     </div>
   );
+}
+
+function SnapshotCard({ icon: Icon, label, value, detail }: { icon: typeof ClipboardList; label: string; value: string; detail: string }) {
+  return <Card className="p-4"><div className="flex items-center gap-2 text-muted-foreground"><Icon className="size-4 text-primary" /><span className="text-sm">{label}</span></div><p className="mt-3 break-words text-lg font-semibold capitalize">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></Card>;
+}
+
+function ProjectAreaLink({ value, label, icon: Icon }: { value: string; label: string; icon: typeof ClipboardList }) {
+  return <Button variant="outline" size="sm" onClick={() => document.querySelector<HTMLButtonElement>(`[data-state]`)} asChild={false} disabled><Icon className="size-4" />{label}</Button>;
 }
