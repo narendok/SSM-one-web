@@ -32,8 +32,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM storage.objects WHERE name = 'projects/retained-engineering-file.html') THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL PM lost non-Sales read'; END IF;
   IF EXISTS (SELECT 1 FROM storage.objects WHERE name LIKE 'sales/opportunity/%') THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL PM retained Sales-prefix read'; END IF;
   BEGIN INSERT INTO storage.objects(bucket_id,name) VALUES ('project-drive','sales/opportunity/00000000-0000-4000-8000-000000000201/pm.html'); RAISE EXCEPTION 'LOCAL_POLICY_FAIL PM Sales-prefix insert allowed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
-  UPDATE storage.objects SET name='sales/opportunity/00000000-0000-4000-8000-000000000201/changed.html' WHERE name='projects/retained-engineering-file.html';
-  IF FOUND THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL PM moved file into Sales prefix'; END IF;
+  BEGIN
+    UPDATE storage.objects SET name='sales/opportunity/00000000-0000-4000-8000-000000000201/changed.html' WHERE name='projects/retained-engineering-file.html';
+    IF FOUND THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL PM moved file into Sales prefix'; END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   DELETE FROM storage.objects WHERE name='sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html';
   IF FOUND THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL PM Sales-prefix delete allowed'; END IF;
 END $pm$;
@@ -50,8 +52,10 @@ DO $sales$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM storage.objects WHERE name='sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html') THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL Sales actor cannot read own materialization'; END IF;
   BEGIN INSERT INTO storage.objects(bucket_id,name) VALUES ('project-drive','sales/opportunity/00000000-0000-4000-8000-000000000202/00000000-0000-4000-8000-000000000720-draft.html'); RAISE EXCEPTION 'LOCAL_POLICY_FAIL Sales cross-opportunity insert allowed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
-  UPDATE storage.objects SET name='projects/moved.html' WHERE name='sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html';
-  IF FOUND THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL Sales update allowed'; END IF;
+  BEGIN
+    UPDATE storage.objects SET name='projects/moved.html' WHERE name='sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html';
+    IF FOUND THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL Sales update allowed'; END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   DELETE FROM storage.objects WHERE name='sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html';
   IF FOUND THEN RAISE EXCEPTION 'LOCAL_POLICY_FAIL Sales delete allowed'; END IF;
 END $sales$;
