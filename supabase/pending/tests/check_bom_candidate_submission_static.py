@@ -46,7 +46,7 @@ checks = {
     "decision acceptance covers authority replay denials and rollback": all(token in decision_acceptance for token in ("Authorized approve", "Authorized reject", "Missing permission", "Wrong department", "Inactive employee", "Self review", "Wrong revision", "Terminal candidate status", "Exact decision replay after state transition", "Decision payload mismatch", "Decision actor mismatch", "Decision receipt failure did not roll back")),
     "decision concurrency asserts one winner": "BOM_CANDIDATE_DECISION_CONCURRENCY_PASS=true" in decision_concurrency,
     "decision runner is explicitly disposable": "LOCAL_BOM_CANDIDATE_DISPOSABLE" in decision_runner and "/tmp/bom_candidate_decision_local_" in decision_runner,
-    "decision revocation wait uses exact production decision lock": all(token in decision_revocation_runner for token in ("component-candidate-decision:", "hashtextextended", "pg_locks", "pg_stat_activity", "waiting-on-exact-decision-lock")),
+    "decision revocation wait uses exact production decision lock": all(token in decision_revocation_runner for token in ("component-candidate-decision-request:", "hashtextextended", "pg_locks", "pg_stat_activity", "waiting-on-exact-decision-lock")),
     "decision revocation wait covers new decision and terminal receipt replay": all(token in decision_revocation_runner for token in ("new_decision_graph_unchanged=true", "replay_history_unchanged=true", "300000000091", "300000000093")),
     "decision revocation worker has no production instrumentation": "candidate_test_wait" not in decision_revocation_worker and "decide_component_candidate" in decision_revocation_worker,
 }

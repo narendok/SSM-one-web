@@ -266,7 +266,7 @@ BEGIN
   v_payload := public.component_candidate_decision_canonical_payload(p_candidate_id, p_expected_revision_id, p_decision, p_decision_note);
   v_payload_hash := md5(v_payload::text);
   SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
-  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
   SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
   SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
@@ -276,7 +276,7 @@ BEGIN
     END IF;
     RAISE EXCEPTION 'Decision request key conflicts with a different actor or canonical payload';
   END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
   SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
   IF v_scope.candidate_status <> 'SUBMITTED' THEN RAISE EXCEPTION 'Candidate is no longer submitted'; END IF;
   v_target_status := CASE v_payload ->> 'decision' WHEN 'APPROVE' THEN 'APPROVED_PENDING_PURCHASE' ELSE 'REJECTED' END;

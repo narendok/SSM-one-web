@@ -52,15 +52,15 @@ create_candidate() {
 }
 revision_for() { run_psql -Atqc "SELECT id FROM public.component_candidate_payload_revisions WHERE candidate_id = '$1'::uuid"; }
 waiter_name='bom_candidate_decision_revocation_waiter'
-wait_for_exact_decision_lock() {
-  local candidate_id="$1"
+wait_for_exact_lock() {
+  local lock_prefix="$1" lock_value="$2"
   for _ in $(seq 1 100); do
     local observed
-    observed="$(run_psql -Atqc "WITH key AS (SELECT hashtextextended('component-candidate-decision:' || '$candidate_id', 0) AS value), waiter AS (SELECT pid FROM pg_stat_activity WHERE application_name = '$waiter_name' AND query LIKE '%decide_component_candidate%' ORDER BY query_start DESC LIMIT 1) SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_stat_activity activity JOIN waiter ON waiter.pid = activity.pid JOIN pg_locks lock ON lock.pid = activity.pid CROSS JOIN key WHERE activity.wait_event_type = 'Lock' AND lock.locktype = 'advisory' AND NOT lock.granted AND lock.classid::bigint = ((key.value >> 32) & 4294967295) AND lock.objid::bigint = (key.value & 4294967295)) THEN 'waiting-on-exact-decision-lock' ELSE '' END")"
+    observed="$(run_psql -Atqc "WITH key AS (SELECT hashtextextended('$lock_prefix' || '$lock_value', 0) AS value), waiter AS (SELECT pid FROM pg_stat_activity WHERE application_name = '$waiter_name' AND query LIKE '%decide_component_candidate%' ORDER BY query_start DESC LIMIT 1) SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_stat_activity activity JOIN waiter ON waiter.pid = activity.pid JOIN pg_locks lock ON lock.pid = activity.pid CROSS JOIN key WHERE activity.wait_event_type = 'Lock' AND lock.locktype = 'advisory' AND NOT lock.granted AND lock.classid::bigint = ((key.value >> 32) & 4294967295) AND lock.objid::bigint = (key.value & 4294967295)) THEN 'waiting-on-exact-decision-lock' ELSE '' END")"
     [[ "$observed" == 'waiting-on-exact-decision-lock' ]] && return 0
     sleep 0.02
   done
-  echo "LOCAL_CASE_FAIL waiter did not wait on exact decision advisory lock for $candidate_id" >&2
+  echo "LOCAL_CASE_FAIL waiter did not wait on exact decision advisory lock for $lock_prefix$lock_value" >&2
   return 1
 }
 graph_counts() { run_psql -Atqc "SELECT (SELECT status FROM public.component_candidate_submissions WHERE id = '$1'::uuid) || '/' || (SELECT count(*) FROM public.component_candidate_decisions WHERE candidate_id = '$1'::uuid)::text || '/' || (SELECT count(*) FROM public.component_candidate_submission_audit_events WHERE candidate_id = '$1'::uuid)::text || '/' || (SELECT count(*) FROM public.component_candidate_decision_request_receipts WHERE candidate_id = '$1'::uuid)::text"; }
@@ -68,13 +68,13 @@ run_case() {
   local label="$1" candidate_id="$2" revision_id="$3" request_key="$4" decision="$5" note="$6" revoke_sql="$7" before="$8"
   psql "${psql_args[@]}" <<SQL >"$log_dir/$label-locker.out" 2>"$log_dir/$label-locker.err" & locker_pid=$!
 BEGIN;
-SELECT pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || '$candidate_id', 0));
+SELECT pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || '$request_key', 0));
 SELECT pg_sleep(0.25);
 COMMIT;
 SQL
   sleep 0.02
   psql "${psql_args[@]}" --set=candidate_id="$candidate_id" --set=revision_id="$revision_id" --set=decision="$decision" --set=decision_note="$note" --set=request_key="$request_key" -f "$root/supabase/pending/tests/bom_candidate_decision_local_revocation_wait_worker.sql" >"$log_dir/$label-waiter.out" 2>"$log_dir/$label-waiter.err" & waiter_pid=$!
-  wait_for_exact_decision_lock "$candidate_id"
+  wait_for_exact_lock 'component-candidate-decision-request:' "$request_key"
   run_psql -c "$revoke_sql" >/dev/null
   wait "$locker_pid"
   waiter_status=0; wait "$waiter_pid" || waiter_status=$?
