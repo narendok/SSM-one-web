@@ -55,6 +55,16 @@ DO $$ BEGIN
   BEGIN PERFORM * FROM public.submit_component_candidate('00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000017', '{"categoryId":"cat-1","name":"Actor denied","partNumber":"R-4"}'::jsonb, '00000000-0000-4000-8000-000000000093'); RAISE EXCEPTION 'Unauthorized actor was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate submission requires%' THEN RAISE; END IF; END;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
+UPDATE public.employees SET employment_status = 'INACTIVE' WHERE id = '00000000-0000-4000-8000-000000000015';
+DO $$ BEGIN
+  BEGIN PERFORM * FROM public.submit_component_candidate('00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000017', '{"categoryId":"cat-1","name":"Inactive employee","partNumber":"R-employee"}'::jsonb, '00000000-0000-4000-8000-000000000095'); RAISE EXCEPTION 'Inactive employee was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate submission requires%' THEN RAISE; END IF; END;
+END $$;
+UPDATE public.employees SET employment_status = 'ACTIVE' WHERE id = '00000000-0000-4000-8000-000000000015';
+DELETE FROM public.project_team_members WHERE id = '00000000-0000-4000-8000-000000000019';
+DO $$ BEGIN
+  BEGIN PERFORM * FROM public.submit_component_candidate('00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000017', '{"categoryId":"cat-1","name":"Revoked team","partNumber":"R-team"}'::jsonb, '00000000-0000-4000-8000-000000000096'); RAISE EXCEPTION 'Revoked team membership was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate submission requires%' THEN RAISE; END IF; END;
+END $$;
+INSERT INTO public.project_team_members VALUES ('00000000-0000-4000-8000-000000000019', '00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000015');
 INSERT INTO public.candidate_test_failpoints VALUES ('component_candidate_submission_request_receipts', true);
 DO $$ DECLARE before_headers integer; before_revisions integer; before_audits integer; before_receipts integer; BEGIN
   SELECT count(*) INTO before_headers FROM public.component_candidate_submissions;
