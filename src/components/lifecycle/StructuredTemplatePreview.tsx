@@ -254,14 +254,14 @@ export function StructuredTemplatePreview({
       Number.isInteger(source.data.currentVersionNumber) &&
       (source.data.currentVersionNumber ?? 0) > source.data.versionNumber,
   );
+  const capabilitySourceId = source.data
+    ? `${source.data.opportunityId}:${source.data.customerId}:${source.data.specificationId}:${source.data.versionId}`
+    : null;
   const capabilityDiscovery = useQuery({
     queryKey: [
       "structured-sales-draft-capability",
       actorId ?? "signed-out",
-      source.data?.opportunityId,
-      source.data?.customerId,
-      source.data?.specificationId,
-      source.data?.versionId,
+      capabilitySourceId,
     ],
     queryFn: () =>
       source.data
@@ -274,11 +274,11 @@ export function StructuredTemplatePreview({
             },
           })
         : Promise.resolve(null),
-    enabled: Boolean(actorId && source.data),
+    enabled: Boolean(actorId && capabilitySourceId),
     retry: false,
   });
   const structuredHistory = useQuery({
-    queryKey: ["structured-sales-draft-history", actorId ?? "signed-out", source.data?.opportunityId, source.data?.versionId, kind],
+    queryKey: ["structured-sales-draft-history", actorId ?? "signed-out", capabilitySourceId, kind],
     queryFn: async (): Promise<StructuredSalesDraftHistoryItem[]> => {
       if (!source.data || !isStructuredSalesPreviewKind(kind)) return [];
       const { data: drafts, error: draftsError } = await supabase
@@ -327,7 +327,7 @@ export function StructuredTemplatePreview({
         }];
       });
     },
-    enabled: Boolean(actorId && source.data && isStructuredSalesPreviewKind(kind)),
+    enabled: Boolean(actorId && capabilitySourceId && isStructuredSalesPreviewKind(kind)),
     retry: false,
   });
   const updateLocalEdit = (field: string, value: string) => {
@@ -462,7 +462,7 @@ export function StructuredTemplatePreview({
         delete next[kind];
         return next;
       });
-      await queryClient.invalidateQueries({ queryKey: ["structured-sales-draft-history", actorId ?? "signed-out", source.data.opportunityId, source.data.versionId, kind] });
+      await queryClient.invalidateQueries({ queryKey: ["structured-sales-draft-history", actorId ?? "signed-out", capabilitySourceId, kind] });
       toast.success(receipt.replayed ? "Saved draft replayed." : "Draft saved as an unissued revision.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "The draft could not be saved.");
