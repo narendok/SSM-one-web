@@ -52,6 +52,17 @@ create_candidate() {
 }
 revision_for() { run_psql -Atqc "SELECT id FROM public.component_candidate_payload_revisions WHERE candidate_id = '$1'::uuid"; }
 waiter_name='bom_candidate_decision_revocation_waiter'
+wait_for_locker_lock() {
+  local lock_prefix="$1" lock_value="$2"
+  for _ in $(seq 1 100); do
+    local observed
+    observed="$(run_psql -Atqc "WITH key AS (SELECT hashtextextended('$lock_prefix' || '$lock_value', 0) AS value) SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_locks lock CROSS JOIN key WHERE lock.locktype = 'advisory' AND lock.granted AND lock.classid::bigint = ((key.value >> 32) & 4294967295) AND lock.objid::bigint = (key.value & 4294967295)) THEN 'locker-holds-exact-decision-lock' ELSE '' END")"
+    [[ "$observed" == 'locker-holds-exact-decision-lock' ]] && return 0
+    sleep 0.02
+  done
+  echo "LOCAL_CASE_FAIL locker did not hold exact decision advisory lock for $lock_prefix$lock_value" >&2
+  return 1
+}
 wait_for_exact_lock() {
   local lock_prefix="$1" lock_value="$2"
   for _ in $(seq 1 100); do
@@ -72,7 +83,7 @@ SELECT pg_advisory_xact_lock(hashtextextended('$lock_prefix' || '$lock_value', 0
 SELECT pg_sleep(0.25);
 COMMIT;
 SQL
-  sleep 0.02
+  wait_for_locker_lock "$lock_prefix" "$lock_value"
   psql "${psql_args[@]}" --set=candidate_id="$candidate_id" --set=revision_id="$revision_id" --set=decision="$decision" --set=decision_note="$note" --set=request_key="$request_key" -f "$root/supabase/pending/tests/bom_candidate_decision_local_revocation_wait_worker.sql" >"$log_dir/$label-waiter.out" 2>"$log_dir/$label-waiter.err" & waiter_pid=$!
   wait_for_exact_lock "$lock_prefix" "$lock_value"
   run_psql -c "$revoke_sql" >/dev/null
@@ -93,6 +104,6 @@ run_psql -c "INSERT INTO public.access_role_permissions(role_id, permission_id) 
 replay_candidate="$(create_candidate 'REVOKED-DECISION-REPLAY' '30000000-0000-4000-8000-000000000092')"; replay_revision="$(revision_for "$replay_candidate")"
 run_psql -Atqc "SELECT set_config('request.jwt.claim.sub', '30000000-0000-4000-8000-000000000002', false); SELECT * FROM public.decide_component_candidate('$replay_candidate'::uuid, '$replay_revision'::uuid, 'APPROVE', 'Authorized receipt before revocation', '30000000-0000-4000-8000-000000000093');" >/dev/null
 replay_before="$(graph_counts "$replay_candidate")"
-run_case 'replay' "$replay_candidate" "$replay_revision" '30000000-0000-4000-8000-000000000093' 'APPROVE' 'Authorized receipt before revocation' 'component-candidate-decision:' "$replay_candidate" "DELETE FROM public.employee_departments WHERE employee_id = '30000000-0000-4000-8000-000000000025';" "$replay_before"
+run_case 'replay' "$replay_candidate" "$replay_revision" '30000000-0000-4000-8000-000000000093' 'APPROVE' 'Authorized receipt before revocation' 'component-candidate-decision-request:' '30000000-0000-4000-8000-000000000093' "DELETE FROM public.employee_departments WHERE employee_id = '30000000-0000-4000-8000-000000000025';" "$replay_before"
 [[ "$(graph_counts "$replay_candidate")" == 'APPROVED_PENDING_PURCHASE/1/2/1' ]] || { echo 'LOCAL_CASE_FAIL revoked replay mutated terminal receipt history' >&2; exit 1; }
 printf 'BOM_CANDIDATE_DECISION_LOCAL_REVOCATION_WAIT_PASS exact_decision_lock_verified=true new_decision_result_returned=false new_decision_graph_unchanged=true replay_result_returned=false replay_history_unchanged=true authority_revoked_before_unlock=true\n'

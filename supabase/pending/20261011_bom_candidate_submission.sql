@@ -192,9 +192,6 @@ CREATE OR REPLACE FUNCTION public.component_candidate_decision_scope(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   IF p_actor IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
-  IF NOT COALESCE(public.has_permission(p_actor, 'engineering.approve'), false) THEN
-    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
-  END IF;
   -- Force a fresh VOLATILE SQL boundary for post-advisory-wait authority
   -- reads; this prevents the SQL planner from reusing a STABLE helper result.
   PERFORM public.component_candidate_decision_authority_fresh(p_actor);
@@ -281,23 +278,11 @@ BEGIN
   IF v_actor IS NULL OR p_request_key IS NULL THEN RAISE EXCEPTION 'Authenticated actor and request key are required'; END IF;
   v_payload := public.component_candidate_decision_canonical_payload(p_candidate_id, p_expected_revision_id, p_decision, p_decision_note);
   v_payload_hash := md5(v_payload::text);
-  SELECT scope.* INTO v_scope
-  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
-  END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
-  -- This is the fresh post-wait authority boundary. Scope only locks the
-  -- candidate/revision, so concurrent authority revocation can commit while
-  -- this transaction waits and is visible to this READ COMMITTED statement.
-  SELECT scope.* INTO v_scope
-  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
-  END IF;
   SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
+    -- Replays authorize only after the request serialization wait, so a
+    -- committed revocation cannot be bypassed by an old terminal receipt.
     SELECT scope.* INTO v_scope
     FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
     IF NOT FOUND THEN
@@ -309,8 +294,15 @@ BEGIN
     END IF;
     RAISE EXCEPTION 'Decision request key conflicts with a different actor or canonical payload';
   END IF;
+  -- New decisions authorize only after the request serialization wait.
+  SELECT scope.* INTO v_scope
+  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
+  END IF;
   -- Lock the state transition only after the post-wait authority/replay path.
-  -- Re-scope after the candidate lock before evaluating the initial state.
+  -- The request lock serializes idempotent calls; the candidate lock serializes
+  -- competing request keys before the initial-state transition.
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
   SELECT scope.* INTO v_scope
   FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
@@ -336,4 +328,5 @@ REVOKE ALL ON FUNCTION public.component_candidate_submission_scope(uuid, uuid, u
 REVOKE ALL ON FUNCTION public.submit_component_candidate(uuid, uuid, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.component_candidate_decision_canonical_payload(uuid, uuid, text, text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.component_candidate_decision_scope(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.component_candidate_decision_authority_fresh(uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.decide_component_candidate(uuid, uuid, text, text, uuid) FROM PUBLIC, anon, authenticated, service_role;
