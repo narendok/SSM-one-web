@@ -21,9 +21,9 @@ describe("private DOCX server bridge", () => {
     const reader: PrivateDocxObjectReader = { readExactObject: async () => { throw new Error("must not read"); } };
     await expect(verifyAndReceiptStructuredDocxObject(input, ids.actorId, authorization({ resolveCurrentRegistryAssignment: async () => ({ ...scope(), actorId: "00000000-0000-0000-0000-000000000099" }) }), reader)).rejects.toThrow("authority changed");
   });
-  it("rejects a cross-department registry scope before reading private bytes", async () => {
+  it("rejects malformed registry department scope before reading private bytes", async () => {
     const reader: PrivateDocxObjectReader = { readExactObject: async () => { throw new Error("must not read"); } };
-    await expect(verifyAndReceiptStructuredDocxObject(input, ids.actorId, authorization({ resolveCurrentRegistryAssignment: async () => ({ ...scope(), departmentId: "00000000-0000-0000-0000-000000000099" }) }), reader)).rejects.toThrow("authority changed");
+    await expect(verifyAndReceiptStructuredDocxObject(input, ids.actorId, authorization({ resolveCurrentRegistryAssignment: async () => ({ ...scope(), departmentId: "not-a-department" }) }), reader)).rejects.toThrow("authority changed");
   });
   it("rejects object replacement and does not issue a receipt", async () => {
     const bytes = await realDocx(); let issued = false; const reader: PrivateDocxObjectReader = { readExactObject: async () => ({ bucket: "project-drive", path: scope().storagePath, objectVersion: "version-replaced", mimeType: null, bytes }) };
