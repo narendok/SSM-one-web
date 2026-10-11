@@ -48,6 +48,24 @@ def main() -> None:
     require(ACCEPTANCE, "Expected raw Master Specification version source mismatch to fail", "version source-mismatch acceptance")
     require(ACCEPTANCE, "Expected immutable revision update to fail", "append-only acceptance")
     forbid(ACCEPTANCE, "Metadata proposal must not create an activity audit", "unsupported no-audit assertion")
+    audit_sql = (PENDING_ROOT / "20261011_sales_opportunity_structured_draft_audit_location.sql").read_text()
+    audit_runtime = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_audit_location_local_acceptance.sql"
+    audit_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_audit_location_local_acceptance.sh"
+    audited_signature = "public.save_sales_opportunity_structured_draft_revision_at_private_location(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid, uuid)"
+    require(audit_sql, "sales_opportunity_structured_draft_audit_events", "immutable audit ledger")
+    require(audit_sql, "sales_opportunity_structured_draft_revision_locations", "revision-to-private-location binding")
+    require(audit_sql, "storage_state text NOT NULL DEFAULT 'NOT_MATERIALIZED'", "no-fake-blob storage boundary")
+    require(audit_sql, "The requested private Sales location is unavailable", "private-location scope denial")
+    require(audit_sql, "Request key conflicts with a different private Sales location", "location-bound replay denial")
+    require(audit_sql, "rolls back the\n  -- underlying revision and receipt", "transaction-coupled rollback boundary")
+    require(audit_sql, "sales_opportunity_structured_draft_audit_events_immutable", "append-only audit trigger")
+    require(audit_sql, f"REVOKE ALL ON FUNCTION {audited_signature} FROM PUBLIC, anon, authenticated, service_role;", "default-revoked audited save transport")
+    forbid(audit_sql, f"GRANT EXECUTE ON FUNCTION {audited_signature}", "pre-granted audited save transport")
+    forbid(audit_sql, "INSERT INTO storage.objects", "fake storage-object write")
+    require(audit_runtime.read_text(), "STRUCTURED_DRAFT_AUDIT_LOCATION_LOCAL_ACCEPTANCE_PASS", "audit/location local acceptance marker")
+    require(audit_runtime.read_text(), "audit mutation accepted", "audit immutability acceptance")
+    require(audit_runtime.read_text(), "denied location changed receipt graph", "location denial rollback acceptance")
+    require(audit_runner.read_text(), "AUDIT_LOCATION_EXECUTION_COMPLETE=true", "audit/location disposable runner")
     fixture = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_fixture.sql"
     runtime = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_metadata_local_installed_acceptance.sql"
     runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_metadata_local_acceptance.sh"
