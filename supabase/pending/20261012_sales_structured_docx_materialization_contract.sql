@@ -123,7 +123,25 @@ BEGIN RAISE EXCEPTION 'Structured Sales DOCX history is append-only'; END;
 $$;
 CREATE TRIGGER sales_structured_docx_assignments_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_assignments FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
 CREATE TRIGGER sales_structured_docx_requests_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_requests FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
-CREATE TRIGGER sales_structured_docx_storage_attempts_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_storage_attempts FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
+CREATE OR REPLACE FUNCTION public.guard_sales_structured_docx_storage_attempt()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN
+  IF TG_OP = 'DELETE'
+    OR NEW.request_key IS DISTINCT FROM OLD.request_key
+    OR NEW.location_id IS DISTINCT FROM OLD.location_id
+    OR NEW.staged_by IS DISTINCT FROM OLD.staged_by
+    OR NEW.storage_bucket IS DISTINCT FROM OLD.storage_bucket
+    OR NEW.storage_path IS DISTINCT FROM OLD.storage_path
+    OR NEW.sha256_checksum IS DISTINCT FROM OLD.sha256_checksum
+    OR NEW.size_bytes IS DISTINCT FROM OLD.size_bytes
+    OR (OLD.consumed_at IS NOT NULL AND NEW.consumed_at IS DISTINCT FROM OLD.consumed_at)
+  THEN
+    RAISE EXCEPTION 'Structured Sales DOCX storage receipt is immutable after staging';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER sales_structured_docx_storage_attempts_guard BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_storage_attempts FOR EACH ROW EXECUTE FUNCTION public.guard_sales_structured_docx_storage_attempt();
 CREATE TRIGGER sales_structured_docx_materializations_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_materializations FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
 CREATE TRIGGER sales_structured_docx_audits_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_audit_events FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
 
@@ -233,6 +251,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.reject_sales_structured_docx_history_mutation() FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_storage_attempt() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.register_sales_structured_docx_storage_attempt(uuid,uuid,uuid,uuid,text,text,text,bigint) FROM PUBLIC, anon, service_role;
