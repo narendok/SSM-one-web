@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -35,6 +35,9 @@ import { Progress } from "@/components/ui/progress";
 const sb = supabase as any;
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Project workspace — PartsBench" },
@@ -56,10 +59,17 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId")({
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
+  const { tab } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
   const { role } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(tab ?? "overview");
+
+  const openProjectTab = (value: string) => {
+    setActiveTab(value);
+    void navigate({ search: { tab: value }, replace: true });
+  };
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -139,7 +149,7 @@ function ProjectDetailPage() {
         )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={openProjectTab}>
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
@@ -220,31 +230,31 @@ function ProjectDetailPage() {
               />
               <div className="mt-4 flex flex-wrap gap-2">
                 <ProjectAreaLink
-                  onOpen={setActiveTab}
+                  onOpen={openProjectTab}
                   value="delivery"
                   label="Delivery controls"
                   icon={GitPullRequest}
                 />
                 <ProjectAreaLink
-                  onOpen={setActiveTab}
+                  onOpen={openProjectTab}
                   value="engineering"
                   label="Engineering records"
                   icon={Settings2}
                 />
                 <ProjectAreaLink
-                  onOpen={setActiveTab}
+                  onOpen={openProjectTab}
                   value="bom"
                   label="BOMs"
                   icon={FileSpreadsheet}
                 />
                 <ProjectAreaLink
-                  onOpen={setActiveTab}
+                  onOpen={openProjectTab}
                   value="files"
                   label="Files"
                   icon={FolderOpen}
                 />
                 <ProjectAreaLink
-                  onOpen={setActiveTab}
+                  onOpen={openProjectTab}
                   value="tasks"
                   label="Tasks"
                   icon={ClipboardList}
@@ -314,9 +324,9 @@ function ProjectDetailPage() {
         <TabsContent value="lifecycle" className="pt-4">
           <SharedProductLifecycle
             project={project}
-            onOpenDelivery={() => setActiveTab("delivery")}
-            onOpenFiles={() => setActiveTab("files")}
-            onOpenTasks={() => setActiveTab("tasks")}
+            onOpenDelivery={() => openProjectTab("delivery")}
+            onOpenFiles={() => openProjectTab("files")}
+            onOpenTasks={() => openProjectTab("tasks")}
           />
         </TabsContent>
 
@@ -334,7 +344,7 @@ function ProjectDetailPage() {
           <ProjectOperationalTab projectId={projectId} kind="changes" />
         </TabsContent>
         <TabsContent value="engineering" className="pt-4">
-          <ProjectOperationalTab projectId={projectId} kind="registers" onOpenFiles={() => setActiveTab("files")} />
+          <ProjectOperationalTab projectId={projectId} kind="registers" onOpenFiles={() => openProjectTab("files")} />
         </TabsContent>
 
         <TabsContent value="bom" className="pt-4">
