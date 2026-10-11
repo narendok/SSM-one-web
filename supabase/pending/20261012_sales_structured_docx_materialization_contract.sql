@@ -245,7 +245,7 @@ RETURNS TABLE(materialization_id uuid, request_key uuid, structured_draft_revisi
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_scope record;
 BEGIN
-  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,(SELECT document_kind FROM public.sales_opportunity_structured_docx_assignments WHERE id=p_assignment_id),p_assignment_id);
+  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,(SELECT assignment_row.document_kind FROM public.sales_opportunity_structured_docx_assignments AS assignment_row WHERE assignment_row.id=p_assignment_id),p_assignment_id);
   RETURN QUERY SELECT m.id,m.request_key,m.structured_draft_revision_id,m.document_kind,m.template_key,m.template_version,m.template_schema_hash,m.storage_bucket,m.storage_path,m.docx_sha256_checksum,m.size_bytes,m.drive_node_id,m.drive_revision_id,m.document_control_register_id,m.created_at FROM public.sales_opportunity_structured_docx_materializations m WHERE m.opportunity_id=p_opportunity_id AND m.customer_id=p_customer_id AND m.assignment_id=v_scope.assignment_id ORDER BY m.created_at DESC;
 END;
 $$;
