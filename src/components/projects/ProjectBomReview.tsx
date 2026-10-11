@@ -5,30 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { procurementReviewContractState, reviewableBomRows, type ProposedBomPart } from "@/lib/project-bom-procurement-review";
 import type { Project } from "@/lib/projects";
 import { fetchProjectBoms, type ProjectBomSummary } from "@/lib/project-bom.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 type CatalogPart = { id: string; name: string; part_number: string; manufacturer: string | null };
-type ReviewRow = {
+type ReviewRow = ProposedBomPart & {
   id: string;
-  reference: string;
-  quantity: string;
-  manualNote: string;
-  kind: "existing" | "new";
-  componentId: string;
-  mpn: string;
-  manufacturer: string;
-  description: string;
 };
 
 export const projectBomReviewContractState = {
-  protectedRequestReviewContract: false,
-  submitDisabledReason: "The protected BOM request and review contract is not available. This local draft cannot submit or change BOM, inventory, procurement, purchase order, or release records.",
+  protectedRequestReviewContract: procurementReviewContractState.deployed,
+  submitDisabledReason: procurementReviewContractState.submitDisabledReason,
 } as const;
 
 function newReviewRow(): ReviewRow {
-  return { id: crypto.randomUUID(), reference: "", quantity: "", manualNote: "", kind: "existing", componentId: "", mpn: "", manufacturer: "", description: "" };
+  const id = crypto.randomUUID();
+  return { id, lineId: id, reference: "", quantity: "", manualNote: "", kind: "existing", componentId: "", mpn: "", manufacturer: "", description: "" };
 }
 
 function formatBomPin(bom: ProjectBomSummary | undefined) {
@@ -49,6 +43,7 @@ export function ProjectBomReview({ project }: { project: Project }) {
     },
   });
   const pinnedBom = bomsQuery.data?.[0];
+  const completeRows = reviewableBomRows(rows);
   const filteredCatalog = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return catalogQuery.data ?? [];
@@ -80,7 +75,7 @@ export function ProjectBomReview({ project }: { project: Project }) {
     </Card>
 
     <Card className="border-warning/40 p-4">
-      <div className="flex gap-3"><ShieldAlert className="mt-0.5 size-5 text-warning" aria-hidden="true" /><div><p className="font-medium">Review contract not available</p><p className="mt-1 text-sm text-muted-foreground">{projectBomReviewContractState.submitDisabledReason}</p><p className="mt-2 text-xs text-muted-foreground">Hardware selection and Procurement availability, cost, sourcing, lead-time, and alternate analysis require scoped assignment and a protected review contract. Unknown stock and cost remain TBC.</p></div></div>
+      <div className="flex gap-3"><ShieldAlert className="mt-0.5 size-5 text-warning" aria-hidden="true" /><div><p className="font-medium">Procurement review contract awaiting activation</p><p className="mt-1 text-sm text-muted-foreground">{projectBomReviewContractState.submitDisabledReason}</p><p className="mt-2 text-xs text-muted-foreground">The planned review records MPN, availability, cost, sourcing, lead time, and alternates. A reviewer can allow a handoff for Hardware selection or deny it; neither action approves a part, releases a BOM, orders material, or changes stock. Unknown values remain TBC.</p></div></div>
     </Card>
 
     <Card className="p-4">
@@ -97,7 +92,7 @@ export function ProjectBomReview({ project }: { project: Project }) {
         </section>)}
       </div>
       <label className="mt-4 block text-sm">Review context<Textarea placeholder="Manual design rationale or procurement questions; retained only in this local draft." /></label>
-      <div className="mt-4 flex flex-wrap items-center gap-3"><Button type="button" disabled>Submit for scoped review</Button><span className="flex items-center gap-1 text-sm text-muted-foreground"><AlertTriangle className="size-4" /> Disabled until an accepted request/review contract exists.</span></div>
+       <div className="mt-4 flex flex-wrap items-center gap-3"><Button type="button" disabled>Submit for Procurement review</Button><span className="flex items-center gap-1 text-sm text-muted-foreground"><AlertTriangle className="size-4" /> {completeRows.length} complete tentative row{completeRows.length === 1 ? "" : "s"}; submission remains unavailable until the protected contract is deployed and accepted.</span></div>
     </Card>
   </div>;
 }
