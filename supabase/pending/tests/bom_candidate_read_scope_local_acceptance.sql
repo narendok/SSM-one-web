@@ -53,7 +53,7 @@ ALTER TABLE public.component_candidate_decisions FORCE ROW LEVEL SECURITY;
 CREATE POLICY local_read_scope_hide_pinned_revision ON public.component_candidate_payload_revisions AS RESTRICTIVE FOR SELECT TO authenticated
   USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000002'::uuid AND candidate_id = '40000000-0000-4000-8000-000000000052'::uuid));
 CREATE POLICY local_read_scope_hide_approved_decision ON public.component_candidate_decisions AS RESTRICTIVE FOR SELECT TO authenticated
-  USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000003'::uuid AND candidate_id = '40000000-0000-4000-8000-000000000052'::uuid));
+  USING (NOT (auth.uid() = '40000000-0000-4000-8000-000000000003'::uuid AND candidate_id = (SELECT candidate_id FROM approved_candidate)));
 
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', false);
@@ -66,7 +66,7 @@ DO $$ BEGIN
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) OR EXISTS (SELECT 1 FROM public.component_candidate_decisions WHERE candidate_id = '40000000-0000-4000-8000-000000000052'::uuid) THEN RAISE EXCEPTION 'Purchase handoff fell back when its approving decision was caller-RLS hidden'; END IF;
+  IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) OR EXISTS (SELECT 1 FROM public.component_candidate_decisions WHERE candidate_id = (SELECT candidate_id FROM approved_candidate)) THEN RAISE EXCEPTION 'Purchase handoff fell back when its approving decision was caller-RLS hidden'; END IF;
 END $$;
 RESET ROLE;
 DROP POLICY local_read_scope_hide_pinned_revision ON public.component_candidate_payload_revisions;
@@ -74,7 +74,7 @@ DROP POLICY local_read_scope_hide_approved_decision ON public.component_candidat
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.component_candidate_hardware_read) <> 2 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE candidate_id = '40000000-0000-4000-8000-000000000052'::uuid) <> 1 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) <> 0 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE candidate_revision_id = '40000000-0000-4000-8000-000000000052'::uuid) <> 0 THEN RAISE EXCEPTION 'Hardware history cardinality, exact revision, or cross-project scope failed'; END IF;
+  IF (SELECT count(*) FROM public.component_candidate_hardware_read) <> 2 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE candidate_id = (SELECT candidate_id FROM approved_candidate)) <> 1 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) <> 0 OR (SELECT count(*) FROM public.component_candidate_hardware_read WHERE candidate_revision_id = (SELECT revision_id FROM approved_revision)) <> 1 THEN RAISE EXCEPTION 'Hardware history cardinality, exact revision, or cross-project scope failed'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DO $$ BEGIN
