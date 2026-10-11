@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { structuredSalesDraftSaveBoundaryMessage, structuredSalesDraftSaveCapability } from "./structured-sales-draft-capability";
+import { structuredSalesDraftHistoryBoundaryMessage, structuredSalesDraftHistoryCapability, structuredSalesDraftSaveBoundaryMessage, structuredSalesDraftSaveCapability } from "./structured-sales-draft-capability";
 
 describe("structured Sales draft Save capability", () => {
   it("fails closed before source verification", () => {
@@ -13,4 +13,10 @@ describe("structured Sales draft Save capability", () => {
     expect(capability).toEqual({ available: false, reason: "UNDEPLOYED" });
     expect(structuredSalesDraftSaveBoundaryMessage(capability)).toContain("immutable audit");
   });
+});
+
+it("keeps history and private download fail-closed until materialization is deployed", () => {
+  const history = structuredSalesDraftHistoryCapability(true);
+  expect(history).toEqual({ available: false, reason: "UNDEPLOYED" });
+  expect(structuredSalesDraftHistoryBoundaryMessage(history)).toContain("private download");
 });
