@@ -1032,6 +1032,9 @@ export function FormattedPreview({
   const value = (field: string) =>
     userEdits[editKey(item.kind, field)] ?? userEdits[field] ?? "TBC";
   const sourceValue = (field: string) => source?.sourceFields[field] ?? "TBC";
+  const specializedTraceability = !isStructuredSalesPreviewKind(item.kind)
+    ? renderSpecializedLocalTraceabilityHtml(item.kind, source)
+    : null;
   const contextRows =
     item.kind === "NDA"
       ? [
@@ -1368,6 +1371,36 @@ export function FormattedPreview({
           rows={localRows}
           state="Unsaved local edit"
         />
+      ) : null}
+      {specializedTraceability ? (
+        <section className="border p-3">
+          <p className="text-sm font-medium">Source traceability</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Exact pinned preview context. TBC is unresolved and is not a qualification, result, cost,
+            approval, or customer acceptance.
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="p-2">Trace</th>
+                  <th className="p-2">Pinned source value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {item.sourceFields.map((field) => (
+                  <tr key={field} className="border-b last:border-0">
+                    <th scope="row" className="p-2 font-medium">{field}</th>
+                    <td className="p-2 whitespace-pre-wrap">{sourceValue(field)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            LOCAL PREVIEW ONLY — NOT ISSUED OR CONTROLLED. Local fields remain unsaved.
+          </p>
+        </section>
       ) : null}
       <details className="border p-3">
         <summary className="cursor-pointer text-sm font-medium">Controlled text rendering</summary>

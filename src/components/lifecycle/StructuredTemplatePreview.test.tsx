@@ -75,6 +75,19 @@ describe("formatted structured template preview", () => {
     expect(invoicePreview).toContain("24.78");
     expect(renderToStaticMarkup(<FormattedPreview item={skillItem} source={source} userEdits={{}} error={null} controlledText="HR SCOPE REQUIRED" />)).toContain("No employee data was read.");
   });
+
+  it("shows pinned source traceability and the unissued boundary in every specialized formatted preview", () => {
+    for (const kind of ["DFMEA", "MANUFACTURING_CONTROL_PLAN", "DVPR", "COMMERCIAL_QUOTATION"] as const) {
+      const item = structuredLifecycleTemplatePreviews.find((candidate) => candidate.kind === kind);
+      if (!item) throw new Error(`Expected ${kind} preview definition.`);
+      const markup = renderToStaticMarkup(<FormattedPreview item={item} source={source} userEdits={{}} error={null} controlledText="TBC" />);
+      expect(markup).toContain("Source traceability");
+      expect(markup).toContain("OPPORTUNITY-2026-0013");
+      expect(markup).toContain("MASTER-2026-0001 rev 1");
+      expect(markup).toContain("TBC is unresolved");
+      expect(markup).toContain("LOCAL PREVIEW ONLY — NOT ISSUED OR CONTROLLED");
+    }
+  });
 });
 
 describe("local structured preview draft safety", () => {
