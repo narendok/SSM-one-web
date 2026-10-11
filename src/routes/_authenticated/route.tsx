@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { SsmOneSidebar } from "@/components/shell/SsmOneSidebar";
@@ -36,14 +36,42 @@ function WorkspaceLoading() {
   return <main className="flex min-h-screen items-center justify-center p-6"><section className="max-w-md space-y-3 text-center"><h1 className="text-xl font-semibold">Workspace is taking longer than expected</h1><p className="text-sm text-muted-foreground">The workspace did not finish loading. Your access has not been changed.</p><Button onClick={() => void navigate({ to: "/sales", replace: true })}>Try again</Button></section></main>;
 }
 
+function WorkspaceBootWatchdog() {
+  const [timedOut, setTimedOut] = useState(false);
+  const navigate = useNavigate();
+  const status = useRouterState({ select: (state) => state.status });
+
+  useEffect(() => {
+    if (status !== "pending") {
+      setTimedOut(false);
+      return;
+    }
+    const timeout = window.setTimeout(() => setTimedOut(true), 10_000);
+    return () => window.clearTimeout(timeout);
+  }, [status]);
+
+  if (!timedOut) return null;
+  return (
+    <main className="flex min-h-screen items-center justify-center p-6">
+      <section className="max-w-md space-y-3 text-center">
+        <h1 className="text-xl font-semibold">Workspace is taking longer than expected</h1>
+        <p className="text-sm text-muted-foreground">The workspace did not finish loading. Your access has not been changed.</p>
+        <Button onClick={() => void navigate({ to: "/sales", replace: true })}>Try again</Button>
+      </section>
+    </main>
+  );
+}
+
 function AppLayout() {
   const { user, role, displayName, employeeStatus, signOut } = useAuth();
   const navigate = useNavigate();
   const suspended = employeeStatus === "SUSPENDED" || employeeStatus === "EXITED";
   useEffect(() => { if (suspended) { void signOut().finally(() => navigate({ to: "/auth", search: { next: undefined } })); } }, [navigate, signOut, suspended]);
   if (suspended) return <main className="flex min-h-screen items-center justify-center p-6"><section className="max-w-md text-center"><h1 className="text-xl font-semibold">Access unavailable</h1><p className="mt-2 text-sm text-muted-foreground">Your workspace access is not active. Please contact your system administrator.</p></section></main>;
+  if (suspended) return <main className="flex min-h-screen items-center justify-center p-6"><section className="max-w-md text-center"><h1 className="text-xl font-semibold">Access unavailable</h1><p className="mt-2 text-sm text-muted-foreground">Your workspace access is not active. Please contact your system administrator.</p></section></main>;
   return (
     <SidebarProvider>
+      <WorkspaceBootWatchdog />
       <div className="min-h-screen flex w-full bg-background">
          <SsmOneSidebar />
         <SidebarInset className="flex-1 flex flex-col">
