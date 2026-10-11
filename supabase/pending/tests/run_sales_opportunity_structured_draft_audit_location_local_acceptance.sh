@@ -28,6 +28,6 @@ run_psql -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_met
 run_psql -f "$root/supabase/pending/20261009_sales_opportunity_structured_draft_metadata.sql"
 run_psql -f "$root/supabase/pending/20261011_sales_opportunity_structured_draft_audit_location.sql"
 # Fixture-only transport; both pending functions remain revoked by default.
-run_psql -c "GRANT EXECUTE ON FUNCTION public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid) TO authenticated; GRANT EXECUTE ON FUNCTION public.save_sales_opportunity_structured_draft_revision_at_private_location(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid, uuid) TO authenticated;"
+run_psql -c "GRANT EXECUTE ON FUNCTION public.save_sales_opportunity_structured_draft_revision(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid) TO authenticated; GRANT EXECUTE ON FUNCTION public.save_sales_opportunity_structured_draft_at_location(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid, uuid) TO authenticated;"
 run_psql -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_audit_location_local_acceptance.sql"
 printf 'AUDIT_LOCATION_EXECUTION_COMPLETE=true\n'

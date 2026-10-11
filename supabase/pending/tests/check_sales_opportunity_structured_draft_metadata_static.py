@@ -51,7 +51,7 @@ def main() -> None:
     audit_sql = (PENDING_ROOT / "20261011_sales_opportunity_structured_draft_audit_location.sql").read_text()
     audit_runtime = Path(__file__).resolve().parent / "sales_opportunity_structured_draft_audit_location_local_acceptance.sql"
     audit_runner = Path(__file__).resolve().parent / "run_sales_opportunity_structured_draft_audit_location_local_acceptance.sh"
-    audited_signature = "public.save_sales_opportunity_structured_draft_revision_at_private_location(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid, uuid)"
+    audited_signature = "public.save_sales_opportunity_structured_draft_at_location(uuid, uuid, uuid, uuid, text, integer, jsonb, uuid, uuid)"
     require(audit_sql, "sales_opportunity_structured_draft_audit_events", "immutable audit ledger")
     require(audit_sql, "sales_opportunity_structured_draft_revision_locations", "revision-to-private-location binding")
     require(audit_sql, "storage_state text NOT NULL DEFAULT 'NOT_MATERIALIZED'", "no-fake-blob storage boundary")

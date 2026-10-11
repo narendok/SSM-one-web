@@ -17,7 +17,7 @@ INSERT INTO public.sales_opportunity_structured_draft_private_locations (
 );
 
 CREATE TEMP TABLE audit_location_first AS
-SELECT * FROM public.save_sales_opportunity_structured_draft_revision_at_private_location(
+SELECT * FROM public.save_sales_opportunity_structured_draft_at_location(
   '00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000101',
   '00000000-0000-4000-8000-000000000301', '00000000-0000-4000-8000-000000000401',
   'SOR', 0, '{"SCOPE_STATEMENT":"Audited scope","ACCEPTANCE_CRITERIA":"Audited acceptance"}'::jsonb,
@@ -36,7 +36,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.sales_opportunity_structured_draft_revision_locations WHERE revision_id = v_revision_id AND storage_state <> 'NOT_MATERIALIZED') THEN
     RAISE EXCEPTION 'LOCAL_AUDIT_LOCATION_FAIL fake storage materialization';
   END IF;
-  PERFORM public.save_sales_opportunity_structured_draft_revision_at_private_location(
+  PERFORM public.save_sales_opportunity_structured_draft_at_location(
     '00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000101',
     '00000000-0000-4000-8000-000000000301', '00000000-0000-4000-8000-000000000401',
     'SOR', 0, '{"ACCEPTANCE_CRITERIA":"Audited acceptance","SCOPE_STATEMENT":"Audited scope"}'::jsonb,
@@ -48,7 +48,7 @@ BEGIN
   SELECT count(*), (SELECT count(*) FROM public.sales_opportunity_structured_draft_requests), (SELECT count(*) FROM public.sales_opportunity_structured_draft_audit_events)
     INTO v_before_revisions, v_before_receipts, v_before_audits FROM public.sales_opportunity_structured_draft_revisions;
   BEGIN
-    PERFORM public.save_sales_opportunity_structured_draft_revision_at_private_location(
+    PERFORM public.save_sales_opportunity_structured_draft_at_location(
       '00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000101',
       '00000000-0000-4000-8000-000000000301', '00000000-0000-4000-8000-000000000401',
       'SOR', 1, '{"SCOPE_STATEMENT":"Rejected scope"}'::jsonb,
