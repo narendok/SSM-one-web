@@ -44,7 +44,8 @@ RESET ROLE;
 INSERT INTO public.sales_opportunity_structured_draft_materializations(id,request_key,structured_draft_revision_id,location_id,drive_node_id,drive_revision_id,document_control_register_id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,document_kind,source_fingerprint,rendered_sha256_checksum,storage_bucket,storage_path,size_bytes,requested_by)
 SELECT '00000000-0000-4000-8000-000000000901', revision_request.request_key, revision_request.revision_id, '00000000-0000-4000-8000-000000000710', '00000000-0000-4000-8000-000000000801', '00000000-0000-4000-8000-000000000802', '00000000-0000-4000-8000-000000000803', revision_request.opportunity_id, revision_request.customer_id, draft.master_specification_id, draft.master_specification_version_id, draft.document_kind, revision_request.source_fingerprint, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'project-drive', 'sales/opportunity/00000000-0000-4000-8000-000000000201/00000000-0000-4000-8000-000000000720-draft.html', 42, '00000000-0000-4000-8000-000000000001'
 FROM public.sales_opportunity_structured_draft_requests revision_request
-JOIN public.sales_opportunity_structured_drafts draft ON draft.id = revision_request.draft_id
+JOIN public.sales_opportunity_structured_draft_revisions revision ON revision.id = revision_request.revision_id
+JOIN public.sales_opportunity_structured_drafts draft ON draft.id = revision.draft_id
 WHERE revision_request.request_key='00000000-0000-4000-8000-000000000720';
 SET ROLE authenticated;
 SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
