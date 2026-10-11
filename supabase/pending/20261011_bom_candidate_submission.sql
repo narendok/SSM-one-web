@@ -195,6 +195,9 @@ BEGIN
   IF NOT COALESCE(public.has_permission(p_actor, 'engineering.approve'), false) THEN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
+  -- Force a fresh VOLATILE SQL boundary for post-advisory-wait authority
+  -- reads; this prevents the SQL planner from reusing a STABLE helper result.
+  PERFORM public.component_candidate_decision_authority_fresh(p_actor);
   SELECT candidate.id, revision.id, candidate.submitted_by, candidate.status
   INTO candidate_id, candidate_revision_id, submitted_by, candidate_status
   FROM public.component_candidate_submissions candidate
@@ -213,6 +216,15 @@ BEGIN
     RAISE EXCEPTION 'Candidate decision requires an active Hardware reviewer with engineering.approve, an exact immutable revision, and no self-review';
   END IF;
   RETURN NEXT;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.component_candidate_decision_authority_fresh(p_actor uuid)
+RETURNS void LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NOT COALESCE(public.has_permission(p_actor, 'engineering.approve'), false) THEN
+    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
+  END IF;
 END;
 $$;
 
