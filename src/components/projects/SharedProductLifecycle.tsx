@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ClipboardList, FileText, FolderOpen, GitPullRequest, PackageSearch, ShieldCheck } from "lucide-react";
+import { ArrowRight, ClipboardList, FileText, FolderOpen, GitPullRequest, PackageSearch, RefreshCw, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,14 @@ const phases = [
   { title: "Production readiness", detail: "Exact BOM source, lead-time planning, test/jig and calibration prerequisites.", state: "readiness" },
 ];
 
-export function SharedProductLifecycle({ project }: { project: Project }) {
-  const { data: snapshot } = useQuery({
+export function SharedProductLifecycle({
+  project,
+  onOpenDelivery,
+}: {
+  project: Project;
+  onOpenDelivery: () => void;
+}) {
+  const { data: snapshot, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["shared_product_lifecycle", project.id, project.requirement_baseline_id],
     queryFn: async () => {
       const [tasks, boms, inputs, research, gates, changes, process] = await Promise.all([
@@ -59,6 +65,12 @@ export function SharedProductLifecycle({ project }: { project: Project }) {
     linkedBoms ? `${linkedBoms} revision-linked BOM${linkedBoms === 1 ? "" : "s"}` : "BOM source not linked",
   ];
 
+  const gateStatusCounts = snapshot?.gates.reduce<Record<string, number>>((counts, gate: any) => {
+    const status = String(gate.status ?? "unrecorded").replaceAll("_", " ");
+    counts[status] = (counts[status] ?? 0) + 1;
+    return counts;
+  }, {});
+
   return <div className="space-y-5">
     <Card className="border-primary/20 p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -91,6 +103,48 @@ export function SharedProductLifecycle({ project }: { project: Project }) {
         <div className="mt-4 flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link to="/bom" search={{ projectId: project.id } as any}><FileText className="size-3.5" /> Review BOMs</Link></Button><Button asChild size="sm" variant="outline"><Link to="/drive" search={{ node: project.project_drive_node_id ?? undefined, department: project.department_id ?? undefined } as any}><FolderOpen className="size-3.5" /> Open project files</Link></Button></div>
       </Card>
     </div>
+
+    <Card className="p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium">Stage & gate record</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Project stage and gate statuses are shown as recorded. They do not confirm approval, release, or readiness.
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={onOpenDelivery}>
+          <GitPullRequest className="size-3.5" /> Review delivery gates
+        </Button>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-[0.8fr_1.2fr]">
+        <div className="border-l-2 border-primary/30 pl-3">
+          <p className="text-xs text-muted-foreground">Recorded project stage</p>
+          <p className="mt-1 font-medium capitalize">{project.project_stage.replaceAll("_", " ")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Project health: {project.health_status}</p>
+        </div>
+        <div className="border-l-2 border-muted pl-3">
+          <p className="text-xs text-muted-foreground">Accessible gate records</p>
+          {isLoading ? (
+            <p className="mt-1 text-sm text-muted-foreground">Loading accessible gate records…</p>
+          ) : isError ? (
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-destructive">
+              <span>Gate records could not be loaded{error instanceof Error ? `: ${error.message}` : "."}</span>
+              <Button size="sm" variant="outline" onClick={() => void refetch()}>
+                <RefreshCw className="size-3.5" /> Retry
+              </Button>
+            </div>
+          ) : !snapshot?.gates.length ? (
+            <p className="mt-1 text-sm text-muted-foreground">No gate records are currently accessible for this project.</p>
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {Object.entries(gateStatusCounts ?? {}).map(([status, count]) => (
+                <Badge key={status} variant="outline">{count} {status}</Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
 
     <Card className="p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-sm font-medium">Draft lifecycle automation plan</p><p className="mt-1 text-sm text-muted-foreground">Prepared from visible governed records only. Nothing is created, assigned, notified, approved, or shared from this panel.</p></div><Badge variant="secondary">DRAFT ONLY</Badge></div>
