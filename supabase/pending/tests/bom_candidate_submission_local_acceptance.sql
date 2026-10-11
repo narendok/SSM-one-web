@@ -28,4 +28,19 @@ DO $$ BEGIN
   UPDATE public.sales_project_handovers SET status = 'completed', project_id = '00000000-0000-4000-8000-000000000099' WHERE id = '00000000-0000-4000-8000-000000000020';
   BEGIN PERFORM * FROM public.submit_component_candidate('00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000017', '{"categoryId":"cat-1","name":"Denied","partNumber":"R-3"}'::jsonb, '00000000-0000-4000-8000-000000000092'); RAISE EXCEPTION 'Mismatched project handover was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate submission requires%' THEN RAISE; END IF; END;
 END $$;
+UPDATE public.sales_project_handovers SET project_id = '00000000-0000-4000-8000-000000000016' WHERE id = '00000000-0000-4000-8000-000000000020';
+UPDATE public.component_candidate_submission_request_receipts SET requested_by = '00000000-0000-4000-8000-000000000002' WHERE request_key = '00000000-0000-4000-8000-000000000090';
+DO $$ BEGIN
+  BEGIN PERFORM * FROM public.submit_component_candidate('00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000017', '{"categoryId":"cat-1","name":"Actor denied","partNumber":"R-4"}'::jsonb, '00000000-0000-4000-8000-000000000093'); RAISE EXCEPTION 'Unauthorized actor was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate submission requires%' THEN RAISE; END IF; END;
+END $$;
+UPDATE public.component_candidate_submission_request_receipts SET requested_by = '00000000-0000-4000-8000-000000000001' WHERE request_key = '00000000-0000-4000-8000-000000000090';
+INSERT INTO public.candidate_test_failpoints VALUES ('component_candidate_submission_request_receipts', true);
+DO $$ DECLARE before_headers integer; before_revisions integer; before_audits integer; before_receipts integer; BEGIN
+  SELECT count(*) INTO before_headers FROM public.component_candidate_submissions;
+  SELECT count(*) INTO before_revisions FROM public.component_candidate_payload_revisions;
+  SELECT count(*) INTO before_audits FROM public.component_candidate_submission_audit_events;
+  SELECT count(*) INTO before_receipts FROM public.component_candidate_submission_request_receipts;
+  BEGIN PERFORM * FROM public.submit_component_candidate('00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000017', '{"categoryId":"cat-1","name":"Rollback","partNumber":"R-5"}'::jsonb, '00000000-0000-4000-8000-000000000094'); RAISE EXCEPTION 'Rollback failpoint was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Injected candidate test failure%' THEN RAISE; END IF; END;
+  IF (SELECT count(*) FROM public.component_candidate_submissions) <> before_headers OR (SELECT count(*) FROM public.component_candidate_payload_revisions) <> before_revisions OR (SELECT count(*) FROM public.component_candidate_submission_audit_events) <> before_audits OR (SELECT count(*) FROM public.component_candidate_submission_request_receipts) <> before_receipts THEN RAISE EXCEPTION 'Receipt failure did not roll back every candidate record'; END IF;
+END $$;
 ROLLBACK;

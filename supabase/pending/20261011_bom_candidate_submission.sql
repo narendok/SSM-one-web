@@ -128,7 +128,7 @@ BEGIN
     AND baseline.status = 'project_initiated'
     AND baseline.approved_by IS NOT NULL
     AND baseline.approved_at IS NOT NULL
-  FOR UPDATE OF project, bom, baseline, handover, opportunity, customer, manager, team, hardware;
+  FOR UPDATE OF project, bom, baseline, handover, opportunity, customer, manager, team;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate submission requires a project-manager team member, an approved project-initiated baseline, a completed exact-project handover, exact customer/opportunity linkage, and an active HARDWARE department';
   END IF;

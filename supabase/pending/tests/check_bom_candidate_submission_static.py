@@ -7,6 +7,7 @@ sql = (pending / "20261011_bom_candidate_submission.sql").read_text()
 fixture = (Path(__file__).resolve().parent / "bom_candidate_submission_local_fixture.sql").read_text()
 acceptance = (Path(__file__).resolve().parent / "bom_candidate_submission_local_acceptance.sql").read_text()
 runner = (Path(__file__).resolve().parent / "run_bom_candidate_submission_local_acceptance.sh").read_text()
+concurrency = (Path(__file__).resolve().parent / "bom_candidate_submission_local_concurrency_assertions.sql").read_text()
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
@@ -23,7 +24,8 @@ checks = {
     "authorization repeats after waits": sql.count("component_candidate_submission_scope(v_actor") >= 3,
     "project and request are serialized": "component-candidate-project:" in sql and "component-candidate-request:" in sql,
     "canonical payload is immutable revision one": "revision_number integer NOT NULL CHECK (revision_number = 1)" in sql and "component_candidate_submission_canonical_payload" in sql,
-    "acceptance covers manual bom replay and denials": all(token in acceptance for token in ("Manual line remains untouched", "Exact replay", "Incomplete handover", "Mismatched project handover", "ROLLBACK;")),
+    "acceptance covers manual bom replay denials and rollback": all(token in acceptance for token in ("Manual line remains untouched", "Exact replay", "Incomplete handover", "Mismatched project handover", "Unauthorized actor", "Receipt failure did not roll back", "ROLLBACK;")),
+    "concurrency asserts one persisted result": "BOM_CANDIDATE_SUBMISSION_CONCURRENCY_PASS=true" in concurrency and "Concurrent exact replay wrote more than one header" in concurrency,
     "runner is explicitly disposable": "LOCAL_BOM_CANDIDATE_DISPOSABLE" in runner and "/tmp/bom_candidate_submission_local_" in runner,
     "fixture is local only": "LOCAL DISPOSABLE FIXTURE ONLY" in fixture,
 }

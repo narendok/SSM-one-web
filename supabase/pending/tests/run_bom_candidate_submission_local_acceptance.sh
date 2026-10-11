@@ -25,5 +25,12 @@ psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission
 psql "${psql_args[@]}" -f "$root/supabase/pending/20261011_bom_candidate_submission.sql"
 psql "${psql_args[@]}" -c "CREATE TRIGGER candidate_submission_fail_receipt BEFORE INSERT ON public.component_candidate_submission_request_receipts FOR EACH ROW EXECUTE FUNCTION public.candidate_test_failpoint();"
 psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_acceptance.sql"
+# Two independent sessions with the same request must serialize to one header,
+# one immutable payload revision, one audit event, and one receipt.
+psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_concurrency_setup.sql"
+psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_concurrency_worker.sql" -v worker=one >"$work_dir/worker-one.out" 2>&1 & worker_one=$!
+psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_concurrency_worker.sql" -v worker=two >"$work_dir/worker-two.out" 2>&1 & worker_two=$!
+wait "$worker_one"; wait "$worker_two"
+psql "${psql_args[@]}" -f "$root/supabase/pending/tests/bom_candidate_submission_local_concurrency_assertions.sql"
 python3 "$root/supabase/pending/tests/check_bom_candidate_submission_static.py"
 printf 'BOM_CANDIDATE_SUBMISSION_LOCAL_ACCEPTANCE_PASS=true\n'
