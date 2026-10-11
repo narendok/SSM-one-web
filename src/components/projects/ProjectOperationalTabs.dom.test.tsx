@@ -7,11 +7,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProjectOperationalTab, ProjectRequirementContext } from "./ProjectOperationalTabs";
 
 const order = vi.fn();
+const maybeSingle = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
-      select: () => ({ eq: () => ({ order }) }),
+      select: () => ({ eq: () => ({ eq: () => ({ maybeSingle }), order, maybeSingle }), order }),
     }),
   },
 }));
@@ -24,6 +25,7 @@ function renderDesignInputs() {
 afterEach(() => {
   cleanup();
   order.mockReset();
+  maybeSingle.mockReset();
 });
 
 describe("ProjectOperationalTab design-input reads", () => {
@@ -64,7 +66,7 @@ describe("ProjectOperationalTab design-input reads", () => {
 
 describe("ProjectRequirementContext", () => {
   it("keeps a missing linked baseline distinct from an absent project baseline", async () => {
-    order.mockResolvedValue({ data: null, error: null });
+    maybeSingle.mockResolvedValue({ data: null, error: null });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={queryClient}><ProjectRequirementContext projectId="project-123" baselineId="baseline-123" /></QueryClientProvider>);
 
