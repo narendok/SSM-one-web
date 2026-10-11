@@ -204,7 +204,11 @@ BEGIN
   JOIN public.departments hardware ON hardware.id = membership.department_id AND hardware.code = 'HARDWARE' AND hardware.is_active
   WHERE candidate.id = p_candidate_id
     AND candidate.submitted_by <> p_actor
-  FOR UPDATE OF candidate, revision, employee, membership, hardware;
+  -- Authorization reads must not lock the mutable authority graph before an
+  -- advisory wait. Otherwise a concurrent membership revocation blocks behind
+  -- this call's pre-wait read and cannot commit before the post-wait check.
+  -- The candidate and its immutable revision remain the only locked records.
+  FOR UPDATE OF candidate, revision;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate decision requires an active Hardware reviewer with engineering.approve, an exact immutable revision, and no self-review';
   END IF;
