@@ -121,7 +121,25 @@ CREATE OR REPLACE FUNCTION public.reject_sales_structured_docx_history_mutation(
 RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN RAISE EXCEPTION 'Structured Sales DOCX history is append-only'; END;
 $$;
-CREATE TRIGGER sales_structured_docx_assignments_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_assignments FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
+CREATE OR REPLACE FUNCTION public.guard_sales_structured_docx_assignment()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN
+  IF TG_OP = 'DELETE'
+    OR NEW.opportunity_id IS DISTINCT FROM OLD.opportunity_id
+    OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
+    OR NEW.department_id IS DISTINCT FROM OLD.department_id
+    OR NEW.document_kind IS DISTINCT FROM OLD.document_kind
+    OR NEW.responsible_employee_id IS DISTINCT FROM OLD.responsible_employee_id
+    OR NEW.location_id IS DISTINCT FROM OLD.location_id
+    OR (OLD.status <> 'ACTIVE' AND NEW.status IS DISTINCT FROM OLD.status)
+    OR (OLD.status = 'ACTIVE' AND (NEW.status <> 'REVOKED' OR NEW.revoked_by IS NULL OR NEW.revoked_at IS NULL))
+  THEN
+    RAISE EXCEPTION 'Structured Sales DOCX assignment can only be revoked once';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER sales_structured_docx_assignments_guard BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_assignments FOR EACH ROW EXECUTE FUNCTION public.guard_sales_structured_docx_assignment();
 CREATE TRIGGER sales_structured_docx_requests_immutable BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_requests FOR EACH ROW EXECUTE FUNCTION public.reject_sales_structured_docx_history_mutation();
 CREATE OR REPLACE FUNCTION public.guard_sales_structured_docx_storage_attempt()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
@@ -251,6 +269,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.reject_sales_structured_docx_history_mutation() FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_assignment() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_storage_attempt() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, service_role;
