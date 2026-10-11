@@ -9,6 +9,8 @@ import { SharedProductLifecycle } from "./SharedProductLifecycle";
 
 const readLifecycle = vi.fn();
 const readGates = vi.fn();
+const readBaseline = vi.fn();
+const readStages = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -16,7 +18,11 @@ vi.mock("@/integrations/supabase/client", () => ({
       select: () => ({
         eq: () => table === "project_stage_gates"
           ? readGates()
-          : ({ eq: () => ({ maybeSingle: readLifecycle }), order: () => readLifecycle() }),
+          : table === "requirement_baselines"
+            ? ({ maybeSingle: readBaseline })
+            : table === "company_process_stages"
+              ? ({ order: () => readStages() })
+              : ({ order: () => readLifecycle() }),
       }),
     }),
   },
@@ -45,16 +51,19 @@ afterEach(() => {
   cleanup();
   readLifecycle.mockReset();
   readGates.mockReset();
+  readBaseline.mockReset();
+  readStages.mockReset();
 });
 
 describe("SharedProductLifecycle governed reads", () => {
   it("settles the 42P17 gate read as unavailable while unaffected lifecycle records remain usable", async () => {
     readLifecycle.mockResolvedValue({ data: [], error: null });
     readGates.mockResolvedValue({ data: null, error: { message: "infinite recursion detected in policy", code: "42P17" } });
+    readStages.mockResolvedValue({ data: [], error: null });
 
     renderLifecycle();
 
-    expect((await screen.findByText(/Gate records could not be loaded/)).textContent).toContain("infinite recursion detected in policy");
+    expect((await screen.findByText(/Gate records could not be loaded/)).parentElement?.textContent).toContain("infinite recursion detected in policy");
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(await screen.findByText("Draft lifecycle automation plan")).toBeTruthy();
     expect(screen.queryByText("No gate records are currently accessible for this project.")).toBeNull();
@@ -64,10 +73,11 @@ describe("SharedProductLifecycle governed reads", () => {
     const user = userEvent.setup();
     readLifecycle.mockRejectedValueOnce(new Error("Process records unavailable")).mockResolvedValue({ data: [], error: null });
     readGates.mockResolvedValue({ data: [], error: null });
+    readStages.mockResolvedValue({ data: [], error: null });
 
     renderLifecycle();
 
-    expect((await screen.findByRole("alert")).textContent).toContain("Governed lifecycle records could not be loaded: Process records unavailable");
+    expect((await screen.findByText(/Governed lifecycle records could not be loaded/)).parentElement?.textContent).toContain("Governed lifecycle records could not be loaded: Process records unavailable");
     expect(screen.queryByText("Loading available governed records…")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(screen.getByText("Required source inputs")).toBeTruthy());
