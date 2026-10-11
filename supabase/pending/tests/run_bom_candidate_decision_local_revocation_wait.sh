@@ -6,7 +6,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 [[ "${LOCAL_BOM_CANDIDATE_DISPOSABLE:-}" == "yes" ]] || { echo "Set LOCAL_BOM_CANDIDATE_DISPOSABLE=yes to run a disposable fixture." >&2; exit 64; }
 work_dir="$(mktemp -d /tmp/bom_candidate_decision_revocation_wait_XXXXXX)"; data_dir="$work_dir/data"; socket_dir="$work_dir/socket"; log_dir="$work_dir/logs"; database="bom_candidate_decision_revocation_wait_local"; port=55461; server_pid=""
 mkdir -p "$socket_dir" "$log_dir"
-cleanup() { local status=$?; if [[ -n "$server_pid" ]] && kill -0 "$server_pid" 2>/dev/null; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi; rm -rf "$work_dir"; printf 'CLEANUP_VERIFIED candidate_decision_revocation_wait_fixture_removed=true\n'; exit "$status"; }
+cleanup() { local status=$?; if [[ -n "$server_pid" ]] && kill -0 "$server_pid" 2>/dev/null; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi; if [[ "$status" != '0' ]]; then cp -R "$log_dir" /tmp/bom-candidate-decision-revocation-failure-logs; printf 'LOCAL_FAILURE_LOGS_PRESERVED path=/tmp/bom-candidate-decision-revocation-failure-logs\n'; fi; rm -rf "$work_dir"; printf 'CLEANUP_VERIFIED candidate_decision_revocation_wait_fixture_removed=true\n'; exit "$status"; }
 trap cleanup EXIT
 [[ "$(id -u)" == "0" ]] || { echo "This disposable fixture requires sandbox root." >&2; exit 64; }
 chown -R 1000:1000 "$work_dir"
