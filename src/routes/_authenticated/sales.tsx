@@ -577,7 +577,7 @@ export function ProposalDetail({
       if (!location?.location_id || !location.storage_bucket || !location.storage_path_prefix) return null;
       const { data: binding, error: bindingError } = await (supabase as any)
         .from("sales_opportunity_document_locations")
-        .select("id,opportunity_id,customer_id,department_id,target_folder_node_id,private_storage_bucket,private_storage_prefix,status,location_purpose")
+        .select("id,opportunity_id,customer_id,department_id,target_folder_node_id,status,location_purpose")
         .eq("id", location.location_id)
         .eq("opportunity_id", detail.opportunity.id)
         .eq("customer_id", detail.specification.customer_id)
@@ -587,8 +587,6 @@ export function ProposalDetail({
       if (bindingError) throw bindingError;
       if (!binding) return null;
       if (
-        binding.private_storage_bucket !== location.storage_bucket ||
-        binding.private_storage_prefix !== location.storage_path_prefix ||
         !binding.department_id ||
         !binding.target_folder_node_id
       ) return null;
