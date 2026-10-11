@@ -879,24 +879,60 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
 
   it("keeps local preview text when the real proposal dialog returns from documents, while Close still prompts", async () => {
     previewSource.mockResolvedValue(source);
-    vi.mocked(supabase.from).mockReturnValue({
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            single: () =>
-              Promise.resolve({
-                data: {
-                  id: "version-id",
-                  version_number: 1,
-                  change_summary: "Initial intake",
-                  created_at: "2026-10-05T18:37:27.589Z",
-                  specification_data: proposalSpecificationData,
-                },
-                error: null,
+    vi.mocked(supabase.from).mockImplementation((table) => {
+      if (table === "master_specification_versions") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: {
+                      id: "version-id",
+                      version_number: 1,
+                      change_summary: "Initial intake",
+                      created_at: "2026-10-05T18:37:27.589Z",
+                      specification_data: proposalSpecificationData,
+                    },
+                    error: null,
+                  }),
               }),
+            }),
+          }),
+        } as never;
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    maybeSingle: () =>
+                      Promise.resolve({
+                        data: {
+                          id: "location-id",
+                          opportunity_id: "opportunity-id",
+                          customer_id: "customer-id",
+                          department_id: "sales-department-id",
+                          drive_root_node_id: "sales-root-id",
+                          target_folder_node_id: "sales-folder-id",
+                          status: "ACTIVE",
+                          location_purpose: "STRUCTURED_DRAFT",
+                        },
+                        error: null,
+                      }),
+                  }),
+                }),
+              }),
+            }),
           }),
         }),
-      }),
+      } as never;
+    });
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: [{ location_id: "location-id", storage_bucket: "private-sales", storage_path_prefix: "sales/" }],
+      error: null,
     } as never);
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
