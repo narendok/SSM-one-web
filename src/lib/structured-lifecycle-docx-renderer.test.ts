@@ -111,7 +111,29 @@ describe("structured lifecycle DOCX renderer", () => {
     await expect(verifyStructuredLifecycleDocxBytes(await modified.generateAsync({ type: "uint8array" }))).rejects.toThrow("missing editable Word document XML");
 
     const external = await JSZip.loadAsync(rendered.bytes);
-    external.file("word/_rels/document.xml.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="officeDocument" Target="https://untrusted.example/doc.xml" TargetMode="External"/></Relationships>');
+    external.file("customXml/_rels/item1.xml.rels", "<?xml version='1.0'?><Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'><Relationship Id='rId1' Type='urn:test' Target='https&#x3a;//untrusted.example/doc.xml' TargetMode='External'/></Relationships>");
     await expect(verifyStructuredLifecycleDocxBytes(await external.generateAsync({ type: "uint8array" }))).rejects.toThrow("external");
+  });
+
+  it("follows the root officeDocument relationship and accepts a valid minimal package without document rels", async () => {
+    const minimal = new JSZip();
+    minimal.file("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+    minimal.file("_rels/.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    minimal.file("word/document.xml", '<?xml version="1.0"?><x:document xmlns:x="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><x:body><x:p><x:r><x:t>Minimal</x:t></x:r></x:p></x:body></x:document>');
+    await expect(verifyStructuredLifecycleDocxBytes(await minimal.generateAsync({ type: "uint8array" }))).resolves.toMatchObject({ paragraphs: 1, tables: 0 });
+  });
+
+  it("rejects ZIP traversal, declared expansion, invalid overrides, and active Word content", async () => {
+    const traversal = new JSZip();
+    traversal.file("../word/document.xml", "x");
+    await expect(verifyStructuredLifecycleDocxBytes(await traversal.generateAsync({ type: "uint8array" }))).rejects.toThrow("unsafe original path");
+
+    const rendered = await renderStructuredLifecycleDocx("SOR", source, { SCOPE_STATEMENT: "resource limits" });
+    await expect(verifyStructuredLifecycleDocxBytes(rendered.bytes, { maxUncompressedBytes: 1 })).rejects.toThrow("uncompressed byte limit");
+    await expect(verifyStructuredLifecycleDocxBytes(rendered.bytes, { maxBytes: Number.NaN })).rejects.toThrow("positive safe integers");
+
+    const active = await JSZip.loadAsync(rendered.bytes);
+    active.file("word/document.xml", '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>x</w:t></w:r></w:p><w:altChunk/></w:body></w:document>');
+    await expect(verifyStructuredLifecycleDocxBytes(await active.generateAsync({ type: "uint8array" }))).rejects.toThrow("active Word content");
   });
 });
