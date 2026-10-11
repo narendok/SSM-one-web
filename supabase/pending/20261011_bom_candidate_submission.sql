@@ -13,7 +13,7 @@ CREATE TABLE public.component_candidate_submissions (
   opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id) ON DELETE RESTRICT,
   customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
   hardware_department_id uuid NOT NULL REFERENCES public.departments(id) ON DELETE RESTRICT,
-  status text NOT NULL DEFAULT 'SUBMITTED' CHECK (status = 'SUBMITTED'),
+  status text NOT NULL DEFAULT 'SUBMITTED' CHECK (status IN ('SUBMITTED', 'APPROVED_PENDING_PURCHASE', 'REJECTED')),
   submitted_by uuid NOT NULL,
   submitted_at timestamptz NOT NULL DEFAULT now()
 );
@@ -38,7 +38,7 @@ CREATE TABLE public.component_candidate_submission_audit_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   candidate_id uuid NOT NULL REFERENCES public.component_candidate_submissions(id) ON DELETE RESTRICT,
   candidate_revision_number integer NOT NULL CHECK (candidate_revision_number = 1),
-  event_type text NOT NULL CHECK (event_type = 'SUBMITTED'),
+  event_type text NOT NULL CHECK (event_type IN ('SUBMITTED', 'APPROVED_PENDING_PURCHASE', 'REJECTED')),
   actor_user_id uuid NOT NULL,
   event_data jsonb NOT NULL CHECK (jsonb_typeof(event_data) = 'object'),
   created_at timestamptz NOT NULL DEFAULT now()
@@ -188,26 +188,25 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.component_candidate_decision_scope(
   p_actor uuid, p_candidate_id uuid, p_expected_revision_id uuid
-) RETURNS TABLE(candidate_id uuid, candidate_revision_id uuid, submitted_by uuid)
+) RETURNS TABLE(candidate_id uuid, candidate_revision_id uuid, submitted_by uuid, candidate_status text)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   IF p_actor IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
   IF NOT COALESCE(public.has_permission(p_actor, 'engineering.approve'), false) THEN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
-  SELECT candidate.id, revision.id, candidate.submitted_by
-  INTO candidate_id, candidate_revision_id, submitted_by
+  SELECT candidate.id, revision.id, candidate.submitted_by, candidate.status
+  INTO candidate_id, candidate_revision_id, submitted_by, candidate_status
   FROM public.component_candidate_submissions candidate
   JOIN public.component_candidate_payload_revisions revision ON revision.id = p_expected_revision_id AND revision.candidate_id = candidate.id AND revision.revision_number = 1
   JOIN public.employees employee ON employee.user_id = p_actor AND employee.employment_status = 'ACTIVE'
   JOIN public.employee_departments membership ON membership.employee_id = employee.id
   JOIN public.departments hardware ON hardware.id = membership.department_id AND hardware.code = 'HARDWARE' AND hardware.is_active
   WHERE candidate.id = p_candidate_id
-    AND candidate.status = 'SUBMITTED'
     AND candidate.submitted_by <> p_actor
   FOR UPDATE OF candidate, revision, employee, membership, hardware;
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Candidate decision requires an active Hardware reviewer with engineering.approve, a submitted exact immutable revision, and no self-review';
+    RAISE EXCEPTION 'Candidate decision requires an active Hardware reviewer with engineering.approve, an exact immutable revision, and no self-review';
   END IF;
   RETURN NEXT;
 END;
@@ -280,6 +279,7 @@ BEGIN
     RAISE EXCEPTION 'Decision request key conflicts with a different actor or canonical payload';
   END IF;
   SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  IF v_scope.candidate_status <> 'SUBMITTED' THEN RAISE EXCEPTION 'Candidate is no longer submitted'; END IF;
   v_target_status := CASE v_payload ->> 'decision' WHEN 'APPROVE' THEN 'APPROVED_PENDING_PURCHASE' ELSE 'REJECTED' END;
   v_event_type := CASE v_payload ->> 'decision' WHEN 'APPROVE' THEN 'APPROVED_PENDING_PURCHASE' ELSE 'REJECTED' END;
   UPDATE public.component_candidate_submissions SET status = v_target_status WHERE id = v_scope.candidate_id AND status = 'SUBMITTED';

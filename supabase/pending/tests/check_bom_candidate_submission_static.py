@@ -16,8 +16,8 @@ decision_concurrency = (Path(__file__).resolve().parent / "bom_candidate_decisio
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
-    "four additive tables have grants": sql.count("GRANT SELECT ON public.component_candidate") == 4,
-    "all new tables have RLS": sql.count("ENABLE ROW LEVEL SECURITY") == 4,
+    "all additive tables have grants": sql.count("GRANT SELECT ON public.component_candidate") == 6,
+    "all new tables have RLS": sql.count("ENABLE ROW LEVEL SECURITY") == 6,
     "function has no execute grant": "GRANT EXECUTE ON FUNCTION public.submit_component_candidate" not in sql,
     "direct inventory paths absent": all(token not in sql for token in ("saveComponentWithStock", "inventory_lots", "stock_history", "component_substitutes", "component_projects")),
     "manual BOM rows are never written": "INSERT INTO public.project_bom_items" not in sql and "UPDATE public.project_bom_items" not in sql and "DELETE FROM public.project_bom_items" not in sql,
@@ -39,7 +39,8 @@ checks = {
     "fixture is local only": "LOCAL DISPOSABLE FIXTURE ONLY" in fixture,
     "decision permission remains pending only": "VALUES ('engineering.approve'" in sql and "GRANT EXECUTE ON FUNCTION public.decide_component_candidate" not in sql,
     "decision source locks and reauthorizes": all(token in sql for token in ("component-candidate-decision:", "component-candidate-decision-request:", "candidate.submitted_by <> p_actor")) and sql.count("component_candidate_decision_scope(v_actor") >= 4,
-    "decision replay precedes terminal status enforcement": sql.index("FROM public.component_candidate_decision_request_receipts") < sql.index("UPDATE public.component_candidate_submissions SET status = v_target_status"),
+    "decision replay precedes terminal status enforcement": sql.index("FROM public.component_candidate_decision_request_receipts") < sql.index("IF v_scope.candidate_status <> 'SUBMITTED'") < sql.index("UPDATE public.component_candidate_submissions SET status = v_target_status"),
+    "candidate statuses and audit events are only implemented states": "status IN ('SUBMITTED', 'APPROVED_PENDING_PURCHASE', 'REJECTED')" in sql and "event_type IN ('SUBMITTED', 'APPROVED_PENDING_PURCHASE', 'REJECTED')" in sql and "PROMOTED" not in sql,
     "decision acceptance covers authority replay denials and rollback": all(token in decision_acceptance for token in ("Authorized approve", "Authorized reject", "Missing permission", "Wrong department", "Inactive employee", "Self review", "Wrong revision", "Terminal candidate status", "Exact decision replay after state transition", "Decision payload mismatch", "Decision actor mismatch", "Decision receipt failure did not roll back")),
     "decision concurrency asserts one winner": "BOM_CANDIDATE_DECISION_CONCURRENCY_PASS=true" in decision_concurrency,
     "decision runner is explicitly disposable": "LOCAL_BOM_CANDIDATE_DISPOSABLE" in decision_runner and "/tmp/bom_candidate_decision_local_" in decision_runner,
