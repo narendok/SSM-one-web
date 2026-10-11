@@ -42,7 +42,7 @@ function attributes(tag: SaxesTag) {
 
 function parseXml(xml: string, path: string, onTag: (tag: SaxesTag, values: Record<string, string>) => void) {
   let error: Error | null = null;
-  const parser = new SaxesParser({ xmlns: false });
+  const parser = new SaxesParser({ xmlns: true });
   parser.on("doctype", () => { error = new Error("DTD is forbidden"); });
   parser.on("error", (parserError) => { error = parserError; parser.resume(); });
   parser.on("opentag", (tag) => { if (!error) onTag(tag as SaxesTag, attributes(tag as SaxesTag)); });
@@ -90,8 +90,8 @@ function entryMetadata(entry: JSZip.JSZipObject) {
 function relationships(xml: string, path: string) {
   const values: Relationship[] = [];
   parseXml(xml, path, (tag, attrs) => {
-    if (tag.name === "Relationships" && attrs.xmlns !== relationshipsNamespace) fail(`${path} has an invalid relationships namespace`);
-    if (tag.name === "Relationship") {
+    if (tag.local === "Relationships" && tag.uri !== relationshipsNamespace) fail(`${path} has an invalid relationships namespace`);
+    if (tag.local === "Relationship") {
       if (!attrs.Id || !attrs.Type || !attrs.Target) fail(`${path} has an incomplete relationship`);
       values.push({ type: attrs.Type, target: attrs.Target, targetMode: attrs.TargetMode ?? null });
     }
@@ -151,8 +151,8 @@ export async function verifyStructuredLifecycleDocxBytes(
   if (!contentTypes || !rootRelationships) fail("missing OOXML package metadata");
   let mainDocumentPath: string | null = null;
   parseXml(contentTypes, "[Content_Types].xml", (tag, attrs) => {
-    if (tag.name === "Types" && attrs.xmlns !== "http://schemas.openxmlformats.org/package/2006/content-types") fail("content types has an invalid namespace");
-    if (tag.name === "Override" && attrs.ContentType === wordDocumentContentType && attrs.PartName?.startsWith("/")) mainDocumentPath = normalizedPath(attrs.PartName.slice(1));
+    if (tag.local === "Types" && tag.uri !== "http://schemas.openxmlformats.org/package/2006/content-types") fail("content types has an invalid namespace");
+    if (tag.local === "Override" && attrs.ContentType === wordDocumentContentType && attrs.PartName?.startsWith("/")) mainDocumentPath = normalizedPath(attrs.PartName.slice(1));
   });
   if (!mainDocumentPath || !xmlParts.has(mainDocumentPath)) fail("missing Word document content type or main part");
 
@@ -170,9 +170,9 @@ export async function verifyStructuredLifecycleDocxBytes(
   let paragraphs = 0;
   let tables = 0;
   parseXml(documentXml, mainDocumentPath, (tag) => {
-    if (tag.name === "w:p" || tag.local === "p") paragraphs += 1;
-    if (tag.name === "w:tbl" || tag.local === "tbl") tables += 1;
-    if (["w:altChunk", "w:object", "w:control", "w:script"].includes(tag.name)) fail("active Word content is forbidden");
+    if (tag.local === "p") paragraphs += 1;
+    if (tag.local === "tbl") tables += 1;
+    if (["altChunk", "object", "control", "script"].includes(tag.local ?? "")) fail("active Word content is forbidden");
   });
   if (paragraphs === 0) fail("document has no editable paragraphs");
   return { sha256Checksum: await sha256(input), sizeBytes: input.byteLength, paragraphs, tables };
