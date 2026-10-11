@@ -55,6 +55,89 @@ Inventory promotion is not an approval note substitute. Any later promotion
 contract must preserve the preceding official-decision chain and may add its
 own official action entry only under separately reviewed authority.
 
+## Concrete authority-mapping review
+
+This is a source-only mapping artifact, not an acceptance of any action. The
+terms **verified** and **proposed** are deliberately distinct:
+
+- **Verified** identifies an existing source object or field found in this
+  repository. It does not establish that the object is deployed, caller-readable,
+  immutable, or sufficient for an official decision.
+- **Proposed** states the minimum binding a later protected transition must make
+  in one reviewed transaction. It is not an installed RPC, policy, grant, event,
+  receipt, schema, or permission.
+- **Absent** means this review found no exact source object or accepted contract
+  for the stated role; it must not be reconstructed from display text, generic
+  activity, a null department, or an unrelated historical row.
+
+### Verified source inventory and limits
+
+| Source | Verified identifiers/fields | What it proves | What it does **not** prove |
+| --- | --- | --- | --- |
+| Project | `projects.id`, `status`, `project_manager_employee_id`, `department_id`, `revision`, `opportunity_id`, `annual_volume` (generated client type: `src/integrations/supabase/types.ts:8455-8514`) | A project row has stable IDs and contextual manager, department, commercial-link, and revision fields. | There is no verified `committed_at`/committed-state contract, immutable decision revision, or manager-to-action authorization rule. `status = 'active'` appears only in the unreachable pending sketch and is not accepted here as the meaning of committed. |
+| BOM header | `project_boms.id`, `project_id`, `revision`, `source_drive_node_id`, `source_drive_revision_id`, `updated_at` (generated type: `src/integrations/supabase/types.ts:7345-`) | A BOM can be tied to one project and optionally to an exact Drive node/revision. | The current save path can update a header and replace all its item rows (`src/lib/project-bom.functions.ts:99-166`); header `revision` is not a verified immutable candidate revision. |
+| BOM item | `project_bom_items.id`, `bom_id`, `matched_component_id`, `match_status`, `created_at`, line and commercial fields (generated type: `src/integrations/supabase/types.ts:7314-7403`) | A stable item ID joins through its BOM to a project. | There is no candidate-submission state, candidate revision, handoff ID, reviewer ID, official-action event, or immutable per-item revision. A component match is not a candidate approval. |
+| Project membership | `project_team_members.project_id`, `employee_id`, `discipline`, `project_role`, `is_lead`; employee `user_id` and `employment_status = 'ACTIVE'` are used by the pending sketch (`supabase/pending/20261010_project_official_decision_log_contract.sql:287-325`) | Existing employee-backed membership can be checked against the exact project when a contract joins it correctly. | The table has no validity interval, action entitlement, self-review flag, or binding to a BOM item/candidate revision. An active employee elsewhere is not project membership. |
+| Permission helpers | `public.has_permission(uuid, text)` and `public.has_any_permission(uuid, text[])` are generated helpers (`src/integrations/supabase/types.ts:12479-12485`); existing role seed source includes `projects.view`/`projects.edit` and `engineering.edit` (`supabase/migrations/20260929030650_b96e7101-e314-4468-abe9-d23050b1636d.sql:130-148`) | Permission evaluation exists independently of browser state. | This review found no existing `engineering.approve` permission key, no Hardware-specific approval predicate, and no permission-to-project-BOM-action mapping. The user-required `engineering.approve` is therefore a **proposed prerequisite**, not a verified current capability. |
+| Department membership | `employee_departments` and active employee checks occur in other pending contracts (for example `supabase/pending/20261005_client_requirement_intake.sql:487-489`) | Department membership and active employment are existing concepts. | No existing candidate workflow binds a Hardware reviewer to the canonical Hardware department and an exact source action. Department naming/type alone cannot establish authority. |
+| Existing history | `activity_log` exists, but current lifecycle observation explicitly records no scoped authenticated read contract (`src/lib/lifecycle-deployment-observation.ts:117`) | Contextual audit rows may exist for unrelated workflows. | It is not an official-decision event, receipt, candidate-state record, or caller-RLS evidence feed for this contract. |
+
+### Action-to-authority matrix
+
+The matrix turns the agreed business rules into exact future bindings while
+keeping every unsupported link fail-closed. “Reader scope” describes a future
+security-invoker projection only; the existing projection remains `WHERE false`
+and is not enabled by this document.
+
+| Action | Immutable source identity and revision | Actor and division authority | Reader scope | Contributor/support evidence | Event / receipt | Unresolved executable gates |
+| --- | --- | --- | --- | --- | --- | --- |
+| **BOM candidate submission** | **Verified identity:** `project_bom_items.id` → `project_boms.id` → `projects.id`. **Absent revision:** no immutable candidate revision exists. **Proposed binding:** a new candidate record/revision must be server-created from the locked item and committed-project source; the official note pins that returned candidate revision, not mutable BOM-header text. | **Proposed:** resolve `projects.project_manager_employee_id` to the authenticated active employee; require a matching active `project_team_members` row for that same `projects.id`. Neither field alone suffices. | **Proposed:** caller may see the resulting entry only through the exact committed project access predicate accepted for this action; no broad project list or guessed item lookup. | **Proposed:** evidence may reference only a source owned by the same committed project and an active contributor whose permitted scope is resolved server-side. It cannot replace the manager’s note. | **Absent:** no candidate submission RPC/event/receipt exists. **Proposed:** one locked transition writes candidate revision, short official note, evidence rows if authorized, audit event, and actor-bound receipt atomically. | Committed-project definition; candidate schema/state/revision; manager employee-to-user resolution; active membership semantics; exact source page locator; source-action permission; contributor evidence source/scope; receipt/audit contract; caller-RLS read projection. |
+| **Hardware review: approve, reject, or explicit alternative** | **Proposed:** consume the immutable candidate revision emitted by the preceding submission, plus the locked project/BOM/item tuple. An alternative must be an explicit server-resolved candidate/component reference under the same project; `matched_component_id` is not sufficient evidence of approval. | **User-agreed proposed rule:** require `engineering.approve` **and** active Hardware department membership **and** active membership on the same project. Reject if the reviewer is the candidate submitter. The exact `engineering.approve` key and Hardware predicate are currently absent/unverified. | **Proposed:** same-project callers see the Hardware decision and only evidence whose parent and evidence scope independently pass the accepted predicate. Purchase readers receive only the approved-handoff projection below. | **Proposed:** Hardware contributors must resolve to active Hardware membership and a source-owned same-project evidence item; their identity is stored separately from the reviewer and cannot be supplied in request text. | **Absent:** no Hardware approval RPC, immutable decision event, or receipt exists. **Proposed:** lock candidate revision before receipt lookup, re-check membership/permission after locks, write decision/note/evidence/receipt/audit together. | Candidate approval state and lock; `engineering.approve` definition/grant; canonical Hardware department identity; no-self-review predicate; explicit-alternative ownership/revision rule; Hardware evidence model; action audit; approval-to-handoff transition. |
+| **Purchase post-Hardware handoff (read-only)** | **Proposed:** consume only the exact approved Hardware decision ID and its candidate revision; a candidate/BOM ID without that approved decision is insufficient. Cost material remains a separate commercial source/version and must never be promoted to a decision by the note. | **User-agreed proposed rule:** Purchase has no approval authority here. Its only future access is read-only after server verification of the approved Hardware handoff and same committed project. | **Proposed:** a narrow handoff view may disclose the approved decision and allowed non-commercial identifiers to authorized Purchase members; it must not make Purchase a general decision-log reader or expose hidden evidence/commercial values. | **Proposed:** Purchase may attach no official decision note or evidence unless a separately accepted cost-amendment action defines exact commercial provenance and scope. | **Absent:** no approved-handoff object, Purchase projection, receipt, or cost-amendment transition exists. | Hardware-approved status model; handoff identifier; Purchase department/membership predicate; field-level redaction; commercial source/version; whether a later cost amendment is an independent protected action. |
+| **Sales projected-volume/cost baseline context** | **Verified contextual fields:** `projects.opportunity_id` and `projects.annual_volume`. **Proposed:** if a future action needs commercial context, it pins an exact server-resolved baseline/version rather than a current project field. | No default Sales part approval. Existing `sales.*` permissions and project visibility do not authorize a BOM candidate or Hardware decision. | **Proposed:** baseline context is visible only where a reader is already entitled to the parent decision and the separately accepted commercial projection; no cross-project Sales lookup. | Sales material is contextual evidence only under a separately accepted source/version/scope rule; it cannot act as the official Hardware or project-manager note. | **Absent:** no verified baseline-to-decision event or receipt binding. | Exact immutable Sales baseline/version; caller-RLS commercial projection; redaction; commercial-to-project provenance; no-default-approval enforcement. |
+| **Rare explicit Sales exception** | **Proposed:** bind an exact immutable commercial source/version and the target committed-project decision/candidate revision. No exception may be inferred from projected volume, cost, ceiling, or a missing Hardware decision. | **Unresolved by agreement:** this is a separate exceptional action. No existing Sales permission, department membership, project membership, or exception approver predicate is accepted as authority here. | **Proposed:** visible only to callers entitled to both the parent project decision and the separately approved exception scope; all other callers receive no row. | **Proposed:** require a short exception reason and only separately scoped evidence. It cannot alter the ordinary Hardware decision or impersonate its actor. | **Absent:** no exception RPC, immutable event, receipt, or lifecycle state exists. | Exception owner/approver and separation-of-duties rule; commercial source/version; project linkage; expiry/revocation; reader redaction; replay/rollback/concurrency acceptance. |
+| **Central project Decision log (read-only)** | **Proposed:** read immutable official-decision IDs only after each parent action has resolved its own source revision. Historical actions retain their original source/revision even if a later BOM/header changes. | No action authority is inferred from reading. **Proposed:** a reader must satisfy the accepted committed-project read predicate for the exact project; generic membership or `projects.view` alone remains insufficient until proven. | One project-options **Decision log** option, project-scoped only: immutable historical order, linked amendments, and evidence only where both parent and evidence scope pass. No receipts/internal audit payloads, cross-project search, or general activity feed. | A hidden parent, hidden evidence scope, or hidden contributor causes the evidence to be absent; it may not reveal that an inaccessible record exists. | **Verified current state:** `public.project_official_decision_log` is explicitly `WHERE false` and receives no authenticated grant in the pending source (`supabase/pending/20261010_project_official_decision_log_contract.sql:75-99`). | Exact caller-RLS project predicate; action-specific parent/evidence scope evaluation; grant/RLS review; projection query; pagination/history ordering; managed non-admin acceptance. |
+
+### Required rejection cases for the future executable contract
+
+The following cases are mandatory negatives, not optional UI behavior. They
+must be demonstrated through authenticated transport and caller-RLS reads only
+after a separately approved implementation exists.
+
+| Rejected case | Required result |
+| --- | --- |
+| Cross-project item, candidate, decision, evidence, or handoff ID | Deny or return no row without leaking project, actor, commercial, evidence, or history existence. Never infer ownership from name, opportunity, component, or a null department. |
+| Cross-department review or contribution | Deny Hardware review/evidence unless the caller’s active Hardware membership and exact project membership both resolve at authorization time. Purchase is denied any review or approval path. |
+| Self-review | Deny Hardware approval/rejection/alternative when reviewer resolves to the candidate submitter, including an alias employee/user mapping; no receipt/result is returned and no row is written. |
+| Missing or stale source revision | Conflict before receipt replay or write; no official note, evidence, event, receipt, or source transition is appended. A mutable BOM header/item snapshot cannot be substituted for the missing candidate revision. |
+| Sales baseline used as part approval | Deny. Project volume/cost context and ordinary Sales permissions never create candidate, Hardware, or default Sales approval authority. |
+| Hidden parent decision or hidden evidence | Return no evidence and no parent-derived metadata to an unauthorized reader; direct evidence IDs cannot bypass parent scope. |
+| History mutation or forged actor/contributor/source locator | Deny direct update/delete and deny payload-supplied identities/locators that differ from server resolution. Corrections are linked amendments only, with prior notes and provenance unchanged. |
+| Receipt replay after revocation or with changed actor/payload | Re-authorize after target locks and before replay. Deny changed/revoked requests without returning a stored result or writing a second history graph. |
+
+### Remaining executable blockers
+
+1. Define the canonical committed-project state and its server-side predicate;
+   current source does not prove that `projects.status = 'active'` means
+   committed.
+2. Introduce a protected candidate workflow with an immutable candidate
+   identity/revision, submitter identity, state model, and exact source-page
+   locator. The current BOM save path replaces item rows and cannot supply it.
+3. Define and accept `engineering.approve`, the canonical Hardware department
+   predicate, exact active project membership semantics, and the no-self-review
+   check.
+4. Define the Hardware-approved handoff and its narrow Purchase read model;
+   no Purchase approval is in scope.
+5. Define source-owned contributor evidence, scopes, retention/redaction, and
+   provenance resolution. Existing task/PCB notes and `activity_log` cannot be
+   substituted.
+6. Define the rare Sales-exception authority, immutable commercial baseline,
+   expiry/revocation, and reader scope independently of normal Sales context.
+7. Only after the above, replace the pending deny-all projection/append gate in
+   one reviewed transaction and prove authorization-before-receipt, locks,
+   replay, rollback, self-review, cross-project/cross-department, hidden-parent
+   evidence, and non-admin caller-RLS behavior in isolated acceptance.
+
 ## Authorization, replay, and transaction requirements
 
 - Future protected transitions must authorize the caller against the exact
