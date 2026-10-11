@@ -32,6 +32,7 @@ INSERT INTO public.sales_project_handovers VALUES ('40000000-0000-4000-8000-0000
 -- A distinct project where the same Hardware and Purchase callers are not team members.
 INSERT INTO public.projects VALUES ('40000000-0000-4000-8000-000000000034', '40000000-0000-4000-8000-000000000010', '40000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000021');
 INSERT INTO public.project_boms VALUES ('40000000-0000-4000-8000-000000000035', '40000000-0000-4000-8000-000000000034');
+INSERT INTO public.project_team_members VALUES ('40000000-0000-4000-8000-000000000044', '40000000-0000-4000-8000-000000000034', '40000000-0000-4000-8000-000000000021');
 INSERT INTO public.sales_project_handovers VALUES ('40000000-0000-4000-8000-000000000036', '40000000-0000-4000-8000-000000000013', '40000000-0000-4000-8000-000000000034', 'completed');
 
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', false);
@@ -43,6 +44,7 @@ CREATE TEMP TABLE project_b_candidate AS SELECT candidate_id FROM public.submit_
 CREATE TEMP TABLE project_b_revision AS SELECT id AS revision_id FROM public.component_candidate_payload_revisions WHERE candidate_id = (SELECT candidate_id FROM project_b_candidate);
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 SELECT * FROM public.decide_component_candidate((SELECT candidate_id FROM approved_candidate), (SELECT revision_id FROM approved_revision), 'APPROVE', 'Approved Hardware handoff', '40000000-0000-4000-8000-000000000053') \g /dev/null
+DELETE FROM public.project_team_members WHERE id = '40000000-0000-4000-8000-000000000044';
 COMMIT;
 
 -- Local-only selective joined-row policies model caller-RLS suppression without changing pending production policies.
