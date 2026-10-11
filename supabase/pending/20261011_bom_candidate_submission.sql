@@ -266,13 +266,13 @@ BEGIN
   v_payload := public.component_candidate_decision_canonical_payload(p_candidate_id, p_expected_revision_id, p_decision, p_decision_note);
   v_payload_hash := md5(v_payload::text);
   SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
+  SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
   SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
   SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
-    PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
     SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
-    SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
     IF v_prior.requested_by = v_actor AND v_prior.payload_hash = v_payload_hash AND v_prior.action = v_payload ->> 'decision' THEN
       RETURN QUERY SELECT v_prior.decision_id, v_prior.candidate_id, true;
       RETURN;
