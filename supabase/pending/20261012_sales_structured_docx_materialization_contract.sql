@@ -155,6 +155,9 @@ BEGIN
     OR NEW.storage_path IS DISTINCT FROM OLD.storage_path
     OR NEW.sha256_checksum IS DISTINCT FROM OLD.sha256_checksum
     OR NEW.size_bytes IS DISTINCT FROM OLD.size_bytes
+    OR NEW.object_version IS DISTINCT FROM OLD.object_version
+    OR NEW.ooxml_verified_at IS DISTINCT FROM OLD.ooxml_verified_at
+    OR NEW.verified_by_service IS DISTINCT FROM OLD.verified_by_service
     OR (OLD.consumed_at IS NOT NULL AND NEW.consumed_at IS DISTINCT FROM OLD.consumed_at)
   THEN
     RAISE EXCEPTION 'Structured Sales DOCX storage receipt is immutable after staging';
