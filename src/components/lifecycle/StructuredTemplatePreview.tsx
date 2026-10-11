@@ -257,6 +257,7 @@ export function StructuredTemplatePreview({
   const capabilitySourceId = source.data
     ? `${source.data.opportunityId}:${source.data.customerId}:${source.data.specificationId}:${source.data.versionId}`
     : null;
+  const isSalesDraftKind = isStructuredSalesPreviewKind(kind);
   const capabilityDiscovery = useQuery({
     queryKey: [
       "structured-sales-draft-capability",
@@ -274,7 +275,7 @@ export function StructuredTemplatePreview({
         },
       });
     },
-    enabled: Boolean(actorId && capabilitySourceId && isStructuredSalesPreviewKind(kind)),
+    enabled: Boolean(actorId && capabilitySourceId && isSalesDraftKind),
     retry: false,
   });
   const structuredHistory = useQuery({
@@ -327,7 +328,7 @@ export function StructuredTemplatePreview({
         }];
       });
     },
-    enabled: Boolean(actorId && capabilitySourceId && isStructuredSalesPreviewKind(kind)),
+    enabled: Boolean(actorId && capabilitySourceId && isSalesDraftKind),
     retry: false,
   });
   const updateLocalEdit = (field: string, value: string) => {
