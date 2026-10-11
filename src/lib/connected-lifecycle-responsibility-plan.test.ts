@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   connectedLifecycleResponsibilityDefaults,
   lifecycleResponsibilitySettingsStatus,
+  lifecycleStageReadiness,
   preparationDefaultForStage,
   responsibilityDefaultForStage,
   stagePreparationSummary,
@@ -52,5 +53,27 @@ describe("connected lifecycle responsibility defaults", () => {
       { id: "2", stage_code: "HW_23", title: "23", sort_order: 23, requires_gated_handover: false },
       { id: "3", stage_code: "HW_30", title: "30", sort_order: 30, requires_gated_handover: false },
     ], "HW_23").matchingStages.map((stage) => stage.stage_code)).toEqual(["HW_22", "HW_23"]);
+  });
+
+  it("shows source prerequisites and unmapped-stage blockers without inferring release", () => {
+    const readiness = lifecycleStageReadiness([
+      { id: "23", stage_code: "HW_23", title: "Release readiness", sort_order: 23, requires_gated_handover: true },
+    ], "HW_23", true);
+
+    expect(readiness.responsibility?.leadDepartment).toBe("RND");
+    expect(readiness.prerequisites).toEqual([
+      "Pinned requirement baseline",
+      "Visible records from the preceding lifecycle workstream",
+      "Existing governed handover record",
+    ]);
+    expect(readiness.blockers).toEqual([]);
+
+    const unmapped = lifecycleStageReadiness([], "INITIATION", false);
+    expect(unmapped.responsibility).toBeNull();
+    expect(unmapped.blockers).toEqual([
+      "No requirement baseline is linked to this project.",
+      "Recorded project stage INITIATION is not an accessible active company lifecycle stage.",
+      "No default workstream is mapped to the recorded project stage.",
+    ]);
   });
 });
