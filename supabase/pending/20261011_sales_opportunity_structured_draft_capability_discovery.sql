@@ -41,16 +41,23 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  SELECT location.id, location.private_storage_bucket, location.private_storage_prefix
+  SELECT resolved.location_id, resolved.storage_bucket, resolved.storage_path_prefix
   FROM public.sales_opportunity_document_locations AS location
+  CROSS JOIN LATERAL public.resolve_sales_opportunity_structured_draft_location(
+    p_opportunity_id,
+    p_customer_id,
+    location.id
+  ) AS resolved
   WHERE location.opportunity_id = p_opportunity_id
     AND location.customer_id = p_customer_id
     AND location.location_purpose = 'STRUCTURED_DRAFT'
     AND location.status = 'ACTIVE'
-    AND public.can_access_sales_structured_draft_object(
-      location.private_storage_bucket,
-      location.private_storage_prefix,
-      'SELECT'
+    AND location.private_storage_bucket = resolved.storage_bucket
+    AND location.private_storage_prefix = resolved.storage_path_prefix
+    AND public.can_access_department_drive(
+      v_actor,
+      resolved.department_id,
+      NULL
     );
 END;
 $$;
