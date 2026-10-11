@@ -116,6 +116,29 @@ export function buildStructuredPreviewContent(
   }
 }
 
+export type StructuredSalesDocumentGate = {
+  state: "VERIFIED" | "SOURCE_UNAVAILABLE";
+  message: string;
+};
+
+export function structuredSalesDocumentGate(
+  kind: StructuredLifecycleTemplateKind,
+  source: StructuredTemplateSource | null,
+): StructuredSalesDocumentGate | null {
+  if (!isStructuredSalesPreviewKind(kind)) return null;
+  if (!source) {
+    return {
+      state: "SOURCE_UNAVAILABLE",
+      message:
+        "The exact opportunity and Master Specification revision could not be verified. This local preview cannot be used as a source-backed working draft.",
+    };
+  }
+  return {
+    state: "VERIFIED",
+    message: `Working from ${source.opportunityNumber} · ${source.specificationNumber} rev ${source.versionNumber}. Local notes remain unsaved and are not an approval, issued document, or release.`,
+  };
+}
+
 export function StructuredTemplatePreview({
   sourcePin = sampleSource,
   actorId,
@@ -238,6 +261,7 @@ export function StructuredTemplatePreview({
     () => buildStructuredPreviewContent(kind, source.data ?? null, userEdits),
     [kind, source.data, userEdits],
   );
+  const salesGate = structuredSalesDocumentGate(kind, source.data ?? null);
   const sourceState = !actorId
     ? "UNVERIFIED — signed-in identity unavailable"
     : source.isPending
@@ -346,13 +370,19 @@ export function StructuredTemplatePreview({
               <div className="grid gap-4 2xl:grid-cols-2">
                 <div className="min-w-0 space-y-4">
                   <SourceTable item={item} source={source.data ?? null} />
-                  <LocalEditor
-                    item={item}
-                    userEdits={userEdits}
-                    selectedComponentIds={selectedComponentIds}
-                    onChange={updateLocalEdit}
-                    onSelectLocalBomComponent={selectLocalBomComponent}
-                  />
+                  {salesGate?.state === "SOURCE_UNAVAILABLE" ? (
+                    <section role="alert" className="border border-destructive/40 p-4 text-sm text-destructive">
+                      {salesGate.message}
+                    </section>
+                  ) : (
+                    <LocalEditor
+                      item={item}
+                      userEdits={userEdits}
+                      selectedComponentIds={selectedComponentIds}
+                      onChange={updateLocalEdit}
+                      onSelectLocalBomComponent={selectLocalBomComponent}
+                    />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <FormattedPreview
@@ -362,6 +392,15 @@ export function StructuredTemplatePreview({
                     error={rendered.error}
                     controlledText={rendered.content}
                   />
+                  {salesGate && (
+                    <p
+                      data-testid="structured-sales-source-gate"
+                      role={salesGate.state === "SOURCE_UNAVAILABLE" ? "alert" : "status"}
+                      className="mt-3 border p-3 text-sm text-muted-foreground"
+                    >
+                      {salesGate.message}
+                    </p>
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -382,7 +421,7 @@ export function StructuredTemplatePreview({
 }
 function SourcePin({ source }: { source: StructuredTemplateSource }) {
   return (
-    <section className="border p-3">
+    <section data-testid="pinned-authorized-source" className="border p-3">
       <div className="flex items-center gap-2">
         <AlertCircle className="size-4 text-primary" />
         <p className="text-sm font-medium">Pinned authorized source</p>
