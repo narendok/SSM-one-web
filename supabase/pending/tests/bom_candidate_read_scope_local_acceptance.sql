@@ -57,7 +57,7 @@ CREATE POLICY local_read_scope_hide_approved_decision ON public.component_candid
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', false);
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.component_candidate_submitter_read) <> 2 OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) OR EXISTS (SELECT 1 FROM public.component_candidate_submitter_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) THEN RAISE EXCEPTION 'Submitter read scope exposed or hid candidates incorrectly'; END IF;
+  IF (SELECT count(*) FROM public.component_candidate_submitter_read) <> 2 OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) OR EXISTS (SELECT 1 FROM public.component_candidate_submitter_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid) THEN RAISE EXCEPTION 'Submitter read scope exposed or hid candidates incorrectly: submitter=% hardware=% purchase=% project_b_submitter=%', (SELECT count(*) FROM public.component_candidate_submitter_read), (SELECT count(*) FROM public.component_candidate_hardware_read), (SELECT count(*) FROM public.component_candidate_purchase_handoff_read), EXISTS (SELECT 1 FROM public.component_candidate_submitter_read WHERE project_id = '40000000-0000-4000-8000-000000000034'::uuid); END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 DO $$ BEGIN
