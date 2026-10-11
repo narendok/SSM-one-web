@@ -2,6 +2,12 @@
 -- pending project-Drive provisioner; no managed roles, RLS, or data are used.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- The reviewed proposal retains its managed grant statements. These fixture-only
+-- roles let PostgreSQL parse them; no role/RLS behavior is asserted here.
+CREATE ROLE anon NOLOGIN;
+CREATE ROLE authenticated NOLOGIN;
+CREATE ROLE service_role NOLOGIN;
+
 CREATE TABLE public.departments (
   id uuid PRIMARY KEY,
   code text NOT NULL,
