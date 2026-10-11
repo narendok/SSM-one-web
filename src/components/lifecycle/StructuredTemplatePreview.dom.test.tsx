@@ -1024,7 +1024,10 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       </QueryClientProvider>,
     );
 
-    const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
+    const folderLink = (await screen.findAllByRole("link", { name: "Open Sales folder" })).find(
+      (link) => link.getAttribute("href")?.includes("node=sales-folder-id"),
+    );
+    if (!folderLink) throw new Error("The discovered Sales folder entry was not rendered.");
     expect(folderLink.getAttribute("aria-disabled")).not.toBe("true");
     expect(folderLink.getAttribute("href")).toContain("node=sales-folder-id");
     expect(folderLink.getAttribute("href")).toContain("department=sales-department-id");
@@ -1064,7 +1067,10 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       </QueryClientProvider>,
     );
 
-    const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
+    const folderLink = (await screen.findAllByRole("link", { name: "Open Sales folder" })).find(
+      (link) => link.getAttribute("aria-disabled") === "true",
+    );
+    if (!folderLink) throw new Error("The unavailable Sales folder state was not rendered.");
     expect(folderLink.getAttribute("aria-disabled")).toBe("true");
     expect(folderLink.getAttribute("href")).toBeNull();
   });
