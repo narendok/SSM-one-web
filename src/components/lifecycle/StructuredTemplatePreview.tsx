@@ -376,10 +376,10 @@ export function StructuredTemplatePreview({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   const rendered = useMemo(
-    () => buildStructuredPreviewContent(kind, verifiedSource ?? null, userEdits),
-    [kind, verifiedSource, userEdits],
+    () => buildStructuredPreviewContent(kind, source.data ?? null, userEdits),
+    [kind, source.data, userEdits],
   );
-  const salesGate = structuredSalesDocumentGate(kind, verifiedSource ?? null);
+  const salesGate = structuredSalesDocumentGate(kind, source.data ?? null);
   const saveCapability = structuredSalesDraftSaveCapability(
     isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
     capabilityDiscovery.data,
