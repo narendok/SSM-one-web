@@ -63,7 +63,12 @@ vi.mock("@/lib/project-bom.functions", async (importOriginal) => {
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => options,
-  Link: ({ children }: { children: ReactNode }) => <a href="/bom">{children}</a>,
+  Link: ({ children, to, search }: { children: ReactNode; to?: string; search?: { node?: string; department?: string } }) => {
+    const parameters = new URLSearchParams();
+    if (search?.node) parameters.set("node", search.node);
+    if (search?.department) parameters.set("department", search.department);
+    return <a href={`${to ?? "/"}${parameters.size ? `?${parameters.toString()}` : ""}`}>{children}</a>;
+  },
 }));
 
 vi.mock("@tanstack/react-start", async () => {
@@ -961,7 +966,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(await screen.findByText("Discard unsaved local edits?")).toBeTruthy();
   });
 
-  it("does not reconstruct a Sales folder link from private storage discovery", async () => {
+  it("opens only the scoped Sales folder returned by caller-authorized discovery", async () => {
     vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === "master_specification_versions") {
         return {
@@ -1014,7 +1019,11 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
       } as never;
     });
     vi.mocked(supabase.rpc).mockResolvedValue({
-      data: [{ location_id: "location-id", storage_bucket: "private-sales", storage_path_prefix: "sales/" }],
+      data: [{
+        location_id: "location-id",
+        department_id: "sales-department-id",
+        target_folder_node_id: "sales-folder-id",
+      }],
       error: null,
     } as never);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -1026,9 +1035,10 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
 
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
     const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
-    if (!folderLink) throw new Error("The unavailable Sales folder control was not rendered.");
-    expect(folderLink.getAttribute("href")).toBe("/bom");
-    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
+    expect(folderLink.getAttribute("href")).toContain("/drive");
+    expect(folderLink.getAttribute("href")).toContain("node=sales-folder-id");
+    expect(folderLink.getAttribute("href")).toContain("department=sales-department-id");
+    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_folder", {
       p_opportunity_id: "opportunity-id",
       p_customer_id: "customer-id",
       p_master_specification_id: "specification-id",
@@ -1065,7 +1075,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
-    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
+    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_folder", {
       p_opportunity_id: "opportunity-id",
       p_customer_id: "customer-id",
       p_master_specification_id: "specification-id",

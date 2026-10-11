@@ -66,18 +66,28 @@ export const Route = createFileRoute("/_authenticated/sales")({
 type SalesDetail = { opportunity: SalesOpportunity; specification: MasterSpecificationSummary };
 type SalesDocumentLocationDiscovery = {
   location_id: string;
+  department_id: string;
+  target_folder_node_id: string;
 };
 
 function toSalesStructuredDocumentEntry(
   detail: SalesDetail,
   location: SalesDocumentLocationDiscovery | null | undefined,
 ): SalesStructuredDocumentEntry | null {
-  void detail;
-  void location;
-  // The discovery contract intentionally returns only private storage capability.
-  // It does not expose a navigable folder node/department pair, so folder navigation
-  // must stay unavailable rather than reconstructing that authority client-side.
-  return null;
+  if (!location?.location_id || !location.department_id || !location.target_folder_node_id) return null;
+  return {
+    opportunityId: detail.opportunity.id,
+    opportunityNumber: detail.opportunity.opportunity_number,
+    specificationNumber: detail.specification.specification_number,
+    versionNumber: detail.specification.current_version,
+    folderNodeId: location.target_folder_node_id,
+    departmentId: location.department_id,
+    // These assertions belong to the caller-authorized discovery RPC. The UI only
+    // consumes its narrow read result and never reconstructs Drive authority.
+    isActive: true,
+    folderIsLocked: true,
+    folderIsTrashed: false,
+  };
 }
 function SalesPage() {
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -550,7 +560,7 @@ export function ProposalDetail({
     queryFn: async () => {
       if (!detail || !specification.data?.id) throw new Error("The pinned Sales source is unavailable.");
       const { data, error } = await (supabase as any).rpc(
-        "discover_sales_opportunity_structured_draft_location",
+        "discover_sales_opportunity_structured_draft_folder",
         {
           p_opportunity_id: detail.opportunity.id,
           p_customer_id: detail.specification.customer_id,
@@ -559,10 +569,16 @@ export function ProposalDetail({
         },
       );
       if (error) throw error;
-      const location = (data as Array<{ location_id: string; storage_bucket: string; storage_path_prefix: string }> | null)?.[0];
-      if (!location?.location_id || !location.storage_bucket || !location.storage_path_prefix) return null;
+      const location = (data as Array<{
+        location_id: string;
+        department_id: string;
+        target_folder_node_id: string;
+      }> | null)?.[0];
+      if (!location?.location_id || !location.department_id || !location.target_folder_node_id) return null;
       return {
         location_id: location.location_id,
+        department_id: location.department_id,
+        target_folder_node_id: location.target_folder_node_id,
       } satisfies SalesDocumentLocationDiscovery;
     },
     enabled: Boolean(detail && specification.data?.id),
