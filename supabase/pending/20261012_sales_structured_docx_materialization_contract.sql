@@ -154,7 +154,7 @@ CREATE OR REPLACE FUNCTION public.request_sales_structured_docx_materialization(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_scope record; v_html_request public.sales_opportunity_structured_draft_requests%ROWTYPE; v_revision public.sales_opportunity_structured_draft_revisions%ROWTYPE; v_draft public.sales_opportunity_structured_drafts%ROWTYPE; v_existing public.sales_opportunity_structured_docx_requests%ROWTYPE;
 BEGIN
-  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id, p_customer_id, (SELECT document_kind FROM public.sales_opportunity_structured_draft_requests WHERE request_key = p_structured_draft_request_key), p_assignment_id);
+  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id, p_customer_id, (SELECT html_request.document_kind FROM public.sales_opportunity_structured_draft_requests AS html_request WHERE html_request.request_key = p_structured_draft_request_key), p_assignment_id);
   IF p_request_key IS NULL OR btrim(coalesce(p_template_key,'')) = '' OR p_template_version <= 0 OR p_template_schema_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Invalid DOCX request pins'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|', p_opportunity_id::text, p_request_key::text), 0));
   SELECT * INTO v_existing FROM public.sales_opportunity_structured_docx_requests WHERE request_key = p_request_key FOR UPDATE;
