@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderStructuredSalesLocalDraftHtml } from "./structured-sales-local-renderer";
+import { renderSpecializedLocalTraceabilityHtml, type SpecializedLocalPreviewKind } from "./lifecycle-structured-template-previews";
 
 const source = {
   sourceFields: {
@@ -89,5 +90,24 @@ describe("structured Sales local draft HTML renderer", () => {
     expect(html).toContain(manualScope);
     expect(html).toContain("<pre>TBC</pre>");
     expect(html).toContain("LOCAL PREVIEW ONLY — NOT A CONTROLLED DOCUMENT");
+  });
+
+  it("renders pinned traceability for every remaining template without asserting an outcome", () => {
+    const kinds: SpecializedLocalPreviewKind[] = ["NDA", "COMMERCIAL_QUOTATION", "BOM_COST_TRACKER", "DFMEA", "MANUFACTURING_CONTROL_PLAN", "DVPR", "PDI", "COMMERCIAL_TAX_INVOICE", "ANNUAL_SKILL_MATRIX"];
+    for (const kind of kinds) {
+      const html = renderSpecializedLocalTraceabilityHtml(kind, source);
+      expect(html).toContain("Source traceability");
+      expect(html).toContain("OPPORTUNITY-2026-0013");
+      expect(html).toContain("MASTER-2026-0001 rev 1");
+      expect(html).toContain("LOCAL PREVIEW ONLY — NOT ISSUED OR CONTROLLED");
+      expect(html).not.toContain("APPROVED");
+    }
+  });
+
+  it("marks specialized traceability as unavailable without losing the draft boundary", () => {
+    const html = renderSpecializedLocalTraceabilityHtml("DFMEA", null);
+    expect(html).toContain("source unavailable — values remain TBC");
+    expect(html).toContain("<td>TBC</td>");
+    expect(html).toContain("Local fields remain unsaved.");
   });
 });

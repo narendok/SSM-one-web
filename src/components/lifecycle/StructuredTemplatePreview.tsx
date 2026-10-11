@@ -22,6 +22,7 @@ import {
   parseLocalTableRows,
   quoteLineEstimate,
   renderStructuredLifecycleTemplatePreview,
+  renderSpecializedLocalTraceabilityHtml,
   serializeLocalTableRows,
   structuredLifecycleTemplatePreviews,
   tableRowsForOutput,
@@ -109,7 +110,7 @@ export function buildStructuredPreviewContent(
     }
     const content = isStructuredSalesPreviewKind(kind)
       ? renderStructuredSalesLocalDraftHtml(kind, source, edits)
-      : renderStructuredLifecycleTemplatePreview(kind, source, edits).content;
+      : `${renderStructuredLifecycleTemplatePreview(kind, source, edits).content}\n\n${renderSpecializedLocalTraceabilityHtml(kind, source)}`;
     return { content, error: null };
   } catch (error) {
     return { content: "", error: error instanceof Error ? error.message : "Preview unavailable." };
