@@ -132,10 +132,26 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.sales_sample_archive_assert_expected_facts(p_kind text, p_id uuid, p_snapshot jsonb)
 RETURNS void LANGUAGE plpgsql IMMUTABLE SET search_path = public, extensions AS $$
-DECLARE v_expected jsonb;
+DECLARE v_expected_revisions jsonb; v_expected_history jsonb;
 BEGIN
+  v_expected_history := CASE p_id
+    WHEN '104fb9e2-7f83-40f9-a295-64b37aa8c7ee'::uuid THEN '[{"id":"a8dfcdd9-213b-4bf7-996a-0c3709bf19d9","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'becebb23-e0f2-4264-a78f-fda04275cade'::uuid THEN '[{"id":"80c9a8c1-7915-450a-b169-2ca2e4c9d05c","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN '428d7d9e-25bf-4e98-94d5-416ea56155e3'::uuid THEN '[{"id":"49a39c8d-d666-499f-bbb4-43cbb6851907","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'dc101dd9-89a2-4dad-9903-3b2301a97d3b'::uuid THEN '[{"id":"2a6df3a8-c3c1-45b8-a67d-55ee9656be90","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'd79f58c1-bbee-4940-9e67-88f267f5449b'::uuid THEN '[{"id":"bf9b4664-86c5-43da-bf1b-7b5b910e0fb4","moduleKey":"sales","entityType":"sales_opportunity","action":"created","summary":"Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'aaabd18c-5885-45de-9e0e-da70d4ec491f'::uuid THEN '[{"id":"c2fe8735-07a9-47ec-8231-839eaa0a418b","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0003","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN '36cdc159-57c7-4568-a1b0-ec481f5d3d93'::uuid THEN '[{"id":"c58df5a6-27dd-4d58-b5f4-d2e729deb519","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0004","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN '6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c'::uuid THEN '[{"id":"c75f2fb0-75f2-469b-86a2-bc3ea7440bc7","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0005","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN '2db48440-5424-4e5e-bb5b-01f203a7662f'::uuid THEN '[{"id":"3f387569-4b44-49b6-8da3-0aa6f18fc281","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0006","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    WHEN 'e829dd82-381d-42ab-a808-62979e9156f4'::uuid THEN '[{"id":"7c47d3cb-3102-4b2e-9ffc-ea61044f7bbe","moduleKey":"sales","entityType":"customer_requirement","action":"created","summary":"Created requirement: CUSTOMER-2026-0007","actorUserId":"e96e4ec3-b3da-4437-aa5f-b5d0b4469d30"}]'::jsonb
+    ELSE NULL
+  END;
+  IF v_expected_history IS NULL OR (SELECT jsonb_agg(value - 'createdAt' ORDER BY value->>'id') FROM jsonb_array_elements(p_snapshot->'history') AS row(value)) IS DISTINCT FROM v_expected_history THEN
+    RAISE EXCEPTION 'Reviewed history facts changed';
+  END IF;
   IF p_kind = 'REQUIREMENT' THEN
-    v_expected := CASE p_id
+    v_expected_revisions := CASE p_id
       WHEN 'aaabd18c-5885-45de-9e0e-da70d4ec491f'::uuid THEN '[{"id":"dc0ccda7-b4ee-4d16-b4d5-a11a9ee8e7c6","revisionNumber":1,"status":"working"}]'::jsonb
       WHEN '36cdc159-57c7-4568-a1b0-ec481f5d3d93'::uuid THEN '[{"id":"23e2a05a-d8b3-421c-b760-e0273143d766","revisionNumber":1,"status":"working"}]'::jsonb
       WHEN '6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c'::uuid THEN '[{"id":"a3c747a3-cb61-43a6-805a-788848143680","revisionNumber":1,"status":"working"}]'::jsonb
@@ -143,13 +159,8 @@ BEGIN
       WHEN 'e829dd82-381d-42ab-a808-62979e9156f4'::uuid THEN '[{"id":"2a238167-050c-4e31-92a3-6d0ab0e611d9","revisionNumber":1,"status":"working"}]'::jsonb
       ELSE NULL
     END;
-    IF v_expected IS NULL OR p_snapshot->'requirementRevisions' IS DISTINCT FROM v_expected THEN
-      RAISE EXCEPTION 'Reviewed requirement revision facts changed';
-    END IF;
-    IF jsonb_array_length(p_snapshot->'history') <> 1 THEN RAISE EXCEPTION 'Reviewed requirement history facts changed'; END IF;
-    RETURN;
+    IF v_expected_revisions IS NULL OR p_snapshot->'requirementRevisions' IS DISTINCT FROM v_expected_revisions THEN RAISE EXCEPTION 'Reviewed requirement revision facts changed'; END IF;
   END IF;
-  IF jsonb_array_length(p_snapshot->'history') <> 1 THEN RAISE EXCEPTION 'Reviewed opportunity history facts changed'; END IF;
 END;
 $$;
 
