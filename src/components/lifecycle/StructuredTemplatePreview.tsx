@@ -254,7 +254,8 @@ export function StructuredTemplatePreview({
       Number.isInteger(source.data.currentVersionNumber) &&
       (source.data.currentVersionNumber ?? 0) > source.data.versionNumber,
   );
-  const capabilitySourceId = source.data
+  const verifiedSource = actorId ? source.data : undefined;
+  const capabilitySourceId = verifiedSource
     ? `${source.data.opportunityId}:${source.data.customerId}:${source.data.specificationId}:${source.data.versionId}`
     : null;
   const isSalesDraftKind = isStructuredSalesPreviewKind(kind);
@@ -265,13 +266,13 @@ export function StructuredTemplatePreview({
       capabilitySourceId,
     ],
     queryFn: () => {
-      if (!source.data) throw new Error("The pinned Sales source is unavailable.");
+      if (!verifiedSource) throw new Error("The pinned Sales source is unavailable.");
       return discoverCapability({
         data: {
-          opportunityId: source.data.opportunityId,
-          customerId: source.data.customerId,
-          masterSpecificationId: source.data.specificationId,
-          masterSpecificationVersionId: source.data.versionId,
+          opportunityId: verifiedSource.opportunityId,
+          customerId: verifiedSource.customerId,
+          masterSpecificationId: verifiedSource.specificationId,
+          masterSpecificationVersionId: verifiedSource.versionId,
         },
       });
     },
@@ -281,14 +282,14 @@ export function StructuredTemplatePreview({
   const structuredHistory = useQuery({
     queryKey: ["structured-sales-draft-history", actorId ?? "signed-out", capabilitySourceId, kind],
     queryFn: async (): Promise<StructuredSalesDraftHistoryItem[]> => {
-      if (!source.data || !isStructuredSalesPreviewKind(kind)) return [];
+      if (!verifiedSource || !isStructuredSalesPreviewKind(kind)) return [];
       const { data: drafts, error: draftsError } = await supabase
         .from("sales_opportunity_structured_drafts")
         .select("id")
-        .eq("opportunity_id", source.data.opportunityId)
-        .eq("customer_id", source.data.customerId)
-        .eq("master_specification_id", source.data.specificationId)
-        .eq("master_specification_version_id", source.data.versionId)
+        .eq("opportunity_id", verifiedSource.opportunityId)
+        .eq("customer_id", verifiedSource.customerId)
+        .eq("master_specification_id", verifiedSource.specificationId)
+        .eq("master_specification_version_id", verifiedSource.versionId)
         .eq("document_kind", kind);
       if (draftsError) throw new Error("Saved draft history could not be read.");
       const draftIds = (drafts ?? []).map((draft) => draft.id);
@@ -375,10 +376,10 @@ export function StructuredTemplatePreview({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   const rendered = useMemo(
-    () => buildStructuredPreviewContent(kind, source.data ?? null, userEdits),
-    [kind, source.data, userEdits],
+    () => buildStructuredPreviewContent(kind, verifiedSource ?? null, userEdits),
+    [kind, verifiedSource, userEdits],
   );
-  const salesGate = structuredSalesDocumentGate(kind, source.data ?? null);
+  const salesGate = structuredSalesDocumentGate(kind, verifiedSource ?? null);
   const saveCapability = structuredSalesDraftSaveCapability(
     isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
     capabilityDiscovery.data,
