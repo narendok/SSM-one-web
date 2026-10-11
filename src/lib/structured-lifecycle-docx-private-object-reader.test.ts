@@ -4,7 +4,7 @@ import { createPendingVersionedPrivateDocxReader } from "./structured-lifecycle-
 const input = { storageBucket: "project-drive" as const, storagePath: "private/one.docx", objectVersion: "v1" };
 function admin(result: { data: unknown; error: { message: string } | null }) {
   const chain = { is: async () => result };
-  const archived = { is: () => chain };
+  const archived = { is: () => ({ maybeSingle: async () => result }) };
   const version = { eq: () => archived };
   const name = { eq: () => version };
   return { from: () => ({ select: () => ({ eq: () => name }) }) } as never;
