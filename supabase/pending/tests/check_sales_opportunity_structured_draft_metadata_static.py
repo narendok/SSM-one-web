@@ -33,7 +33,7 @@ def main() -> None:
     require(SQL, "v_request.source_fingerprint = v_source_fingerprint", "source-hash-bound replay")
     require(SQL, "Structured Sales draft revision conflict", "stale revision denial")
     require(SQL, "sales_opportunity_structured_draft_revisions_immutable", "append-only revision trigger")
-    require(SQL, f"REVOKE ALL ON FUNCTION {protected_signature} FROM PUBLIC, anon, authenticated, service_role;", "default-revoked save transport")
+    require(SQL, f"REVOKE ALL ON FUNCTION {protected_signature} FROM PUBLIC, anon, service_role;", "default-revoked save transport")
     forbid(SQL, f"GRANT EXECUTE ON FUNCTION {protected_signature}", "pre-granted save transport")
     for forbidden in ("INSERT INTO public.drive", "INSERT INTO public.storage", "INSERT INTO public.controlled_document", "INSERT INTO public.document_register"):
         forbid(SQL, forbidden, forbidden)
@@ -59,7 +59,7 @@ def main() -> None:
     require(audit_sql, "Request key conflicts with a different private Sales location", "location-bound replay denial")
     require(audit_sql, "rolls back the\n  -- underlying revision and receipt", "transaction-coupled rollback boundary")
     require(audit_sql, "sales_opportunity_structured_draft_audit_events_immutable", "append-only audit trigger")
-    require(audit_sql, f"REVOKE ALL ON FUNCTION {audited_signature} FROM PUBLIC, anon, authenticated, service_role;", "default-revoked audited save transport")
+    require(audit_sql, f"REVOKE ALL ON FUNCTION {audited_signature} FROM PUBLIC, anon, service_role;", "default-revoked audited save transport")
     forbid(audit_sql, f"GRANT EXECUTE ON FUNCTION {audited_signature}", "pre-granted audited save transport")
     forbid(audit_sql, "INSERT INTO storage.objects", "fake storage-object write")
     require(audit_runtime.read_text(), "STRUCTURED_DRAFT_AUDIT_LOCATION_LOCAL_ACCEPTANCE_PASS", "audit/location local acceptance marker")
