@@ -29,11 +29,11 @@ DO $$ BEGIN
   BEGIN PERFORM * FROM public.submit_component_candidate('00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000017', '{"categoryId":"cat-1","name":"Denied","partNumber":"R-3"}'::jsonb, '00000000-0000-4000-8000-000000000092'); RAISE EXCEPTION 'Mismatched project handover was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate submission requires%' THEN RAISE; END IF; END;
 END $$;
 UPDATE public.sales_project_handovers SET project_id = '00000000-0000-4000-8000-000000000016' WHERE id = '00000000-0000-4000-8000-000000000020';
-UPDATE public.component_candidate_submission_request_receipts SET requested_by = '00000000-0000-4000-8000-000000000002' WHERE request_key = '00000000-0000-4000-8000-000000000090';
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', false);
 DO $$ BEGIN
   BEGIN PERFORM * FROM public.submit_component_candidate('00000000-0000-4000-8000-000000000016', '00000000-0000-4000-8000-000000000017', '{"categoryId":"cat-1","name":"Actor denied","partNumber":"R-4"}'::jsonb, '00000000-0000-4000-8000-000000000093'); RAISE EXCEPTION 'Unauthorized actor was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate submission requires%' THEN RAISE; END IF; END;
 END $$;
-UPDATE public.component_candidate_submission_request_receipts SET requested_by = '00000000-0000-4000-8000-000000000001' WHERE request_key = '00000000-0000-4000-8000-000000000090';
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 INSERT INTO public.candidate_test_failpoints VALUES ('component_candidate_submission_request_receipts', true);
 DO $$ DECLARE before_headers integer; before_revisions integer; before_audits integer; before_receipts integer; BEGIN
   SELECT count(*) INTO before_headers FROM public.component_candidate_submissions;
