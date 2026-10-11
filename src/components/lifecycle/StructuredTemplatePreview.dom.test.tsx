@@ -960,6 +960,114 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(await screen.findByText("Discard unsaved local edits?")).toBeTruthy();
   });
 
+  it("opens the exact discovered Sales folder only after binding it to the pinned active source", async () => {
+    vi.mocked(supabase.from).mockImplementation((table) => {
+      if (table === "master_specification_versions") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: {
+                      id: "version-id",
+                      version_number: 1,
+                      change_summary: "Initial intake",
+                      created_at: "2026-10-05T18:37:27.589Z",
+                      specification_data: proposalSpecificationData,
+                    },
+                    error: null,
+                  }),
+              }),
+            }),
+          }),
+        } as never;
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    maybeSingle: () =>
+                      Promise.resolve({
+                        data: {
+                          id: "location-id",
+                          opportunity_id: "opportunity-id",
+                          customer_id: "customer-id",
+                          department_id: "sales-department-id",
+                          drive_root_node_id: "sales-root-id",
+                          target_folder_node_id: "sales-folder-id",
+                          status: "ACTIVE",
+                          location_purpose: "STRUCTURED_DRAFT",
+                        },
+                        error: null,
+                      }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      } as never;
+    });
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: [{ location_id: "location-id", storage_bucket: "private-sales", storage_path_prefix: "sales/" }],
+      error: null,
+    } as never);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ProposalDetailDialogHarness />
+      </QueryClientProvider>,
+    );
+
+    const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
+    expect(folderLink).not.toHaveAttribute("aria-disabled", "true");
+    expect(folderLink).toHaveAttribute("href", expect.stringContaining("node=sales-folder-id"));
+    expect(folderLink).toHaveAttribute("href", expect.stringContaining("department=sales-department-id"));
+    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
+      p_opportunity_id: "opportunity-id",
+      p_customer_id: "customer-id",
+      p_master_specification_id: "specification-id",
+      p_master_specification_version_id: "version-id",
+    });
+  });
+
+  it("fails closed when discovery does not return an active binding for the exact Sales source", async () => {
+    vi.mocked(supabase.from).mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            single: () =>
+              Promise.resolve({
+                data: {
+                  id: "version-id",
+                  version_number: 1,
+                  change_summary: "Initial intake",
+                  created_at: "2026-10-05T18:37:27.589Z",
+                  specification_data: proposalSpecificationData,
+                },
+                error: null,
+              }),
+          }),
+        }),
+      }),
+    } as never);
+    vi.mocked(supabase.rpc).mockResolvedValue({ data: [], error: null } as never);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ProposalDetailDialogHarness />
+      </QueryClientProvider>,
+    );
+
+    const folderLink = await screen.findByRole("link", { name: "Open Sales folder" });
+    expect(folderLink).toHaveAttribute("aria-disabled", "true");
+    expect(folderLink).not.toHaveAttribute("href");
+  });
+
   it("exits clean previews by Escape and built-in Close without confirmation, and reopens without stale dirty state", async () => {
     previewSource.mockResolvedValue(source);
     const user = userEvent.setup();
