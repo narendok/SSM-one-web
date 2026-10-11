@@ -44,7 +44,7 @@ describe("DriveBrowser project reads", () => {
   it("settles a failed project-files read without showing an empty folder", async () => {
     renderBrowser(() => fetchChildren.mockRejectedValue(new Error("Read unavailable")));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Project files could not be loaded. Read unavailable");
+    expect((await screen.findByRole("alert")).textContent).toContain("Project files could not be loaded. Read unavailable");
     expect(screen.queryByText("No accessible items are stored in this folder.")).toBeNull();
   });
 
