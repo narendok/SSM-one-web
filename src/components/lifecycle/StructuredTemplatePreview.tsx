@@ -700,6 +700,7 @@ export function StructuredTemplatePreview({
                       selectedComponentIds={selectedComponentIds}
                       onChange={updateLocalEdit}
                       onSelectLocalBomComponent={selectLocalBomComponent}
+                      persistedRevisionNumber={item.kind === kind && persistedRevision?.payload && !dirty ? persistedRevision.revisionNumber : null}
                     />
                   )}
                 </div>
@@ -1054,12 +1055,14 @@ function LocalEditor({
   selectedComponentIds,
   onChange,
   onSelectLocalBomComponent,
+  persistedRevisionNumber,
 }: {
   item: (typeof structuredLifecycleTemplatePreviews)[number];
   userEdits: Record<string, string>;
   selectedComponentIds: LocalBomComponentSelection;
   onChange: (field: string, value: string) => void;
   onSelectLocalBomComponent: (rowId: string, candidate: LocalBomComponentCandidate) => void;
+  persistedRevisionNumber: number | null;
 }) {
   const groups = item.editableFields.reduce<Record<string, EditableField[]>>(
     (all, field) => ({ ...all, [field.group]: [...(all[field.group] ?? []), field] }),
@@ -1070,7 +1073,9 @@ function LocalEditor({
       <div className="flex items-center gap-2">
         <LockKeyhole className="size-4 text-muted-foreground" />
         <p className="text-xs font-medium text-muted-foreground">
-          Local review edits · unsaved · no approval is recorded
+          {persistedRevisionNumber
+            ? `Persisted unissued revision ${persistedRevisionNumber} · no approval is recorded`
+            : "Local review edits · unsaved · no approval is recorded"}
         </p>
       </div>
       {Object.entries(groups).map(([group, fields]) => (
@@ -1401,12 +1406,16 @@ export function FormattedPreview({
   userEdits,
   error,
   controlledText,
+  persistedRevisionNumber,
+  cleanPersisted,
 }: {
   item: (typeof structuredLifecycleTemplatePreviews)[number];
   source: StructuredTemplateSource | null;
   userEdits: Record<string, string>;
   error: string | null;
   controlledText: string;
+  persistedRevisionNumber: number | null;
+  cleanPersisted: boolean;
 }) {
   const value = (field: string) =>
     userEdits[editKey(item.kind, field)] ?? userEdits[field] ?? "TBC";
@@ -1495,8 +1504,9 @@ export function FormattedPreview({
         <div>
           <p className="text-sm font-medium">Formatted local preview</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Local unsaved draft — NOT APPROVED / TBC. It cannot create an approval, release, or
-            controlled record.
+            {cleanPersisted && persistedRevisionNumber
+              ? `Persisted unissued revision ${persistedRevisionNumber} — NOT APPROVED / TBC. It cannot create an approval, release, or controlled record.`
+              : "Local unsaved draft — NOT APPROVED / TBC. It cannot create an approval, release, or controlled record."}
           </p>
         </div>
         {error ? (
@@ -1505,7 +1515,7 @@ export function FormattedPreview({
           </p>
         ) : (
           <iframe
-            title={`${item.label} local unsaved preview`}
+            title={cleanPersisted && persistedRevisionNumber ? `${item.label} persisted unissued revision ${persistedRevisionNumber} preview` : `${item.label} local unsaved preview`}
             sandbox=""
             srcDoc={controlledText}
             className="h-[620px] w-full border bg-background"
