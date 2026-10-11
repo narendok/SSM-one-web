@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ProjectOperationalTab } from "./ProjectOperationalTabs";
+import { ProjectOperationalTab, ProjectRequirementContext } from "./ProjectOperationalTabs";
 
 const order = vi.fn();
 
@@ -59,5 +59,16 @@ describe("ProjectOperationalTab design-input reads", () => {
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Refresh unavailable"));
     expect(screen.getAllByText("Manual design note").length).toBeGreaterThan(0);
     expect(screen.getByText("1 recorded · refresh failed")).toBeTruthy();
+  });
+});
+
+describe("ProjectRequirementContext", () => {
+  it("keeps a missing linked baseline distinct from an absent project baseline", async () => {
+    order.mockResolvedValue({ data: null, error: null });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><ProjectRequirementContext projectId="project-123" baselineId="baseline-123" /></QueryClientProvider>);
+
+    expect(await screen.findByText("The linked requirement baseline is not currently accessible.")).toBeTruthy();
+    expect(screen.queryByText("No requirement baseline is linked to this project.")).toBeNull();
   });
 });

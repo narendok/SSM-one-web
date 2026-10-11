@@ -23,7 +23,7 @@ import { CadVault } from "@/components/drive/CadVault";
 import { ProjectBomsTab } from "@/components/projects/ProjectBomsTab";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { ProjectTeamTab } from "@/components/projects/ProjectTeamTab";
-import { ProjectOperationalTab } from "@/components/projects/ProjectOperationalTabs";
+import { ProjectOperationalTab, ProjectRequirementContext } from "@/components/projects/ProjectOperationalTabs";
 import { SharedProductLifecycle } from "@/components/projects/SharedProductLifecycle";
 import { StructuredTemplatePreview } from "@/components/lifecycle/StructuredTemplatePreview";
 import type { Project } from "@/lib/projects";
@@ -324,6 +324,7 @@ function ProjectDetailPage() {
           <ProjectTeamTab projectId={projectId} />
         </TabsContent>
         <TabsContent value="inputs" className="pt-4 space-y-8">
+          <ProjectRequirementContext projectId={projectId} baselineId={project.requirement_baseline_id} />
           <ProjectOperationalTab projectId={projectId} kind="design" />
           <ProjectOperationalTab projectId={projectId} kind="research" />
         </TabsContent>
