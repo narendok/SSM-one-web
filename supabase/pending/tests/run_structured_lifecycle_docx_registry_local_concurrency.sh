@@ -13,8 +13,10 @@ psql "${args[@]}" -f "$root/supabase/pending/20261012_structured_lifecycle_docx_
 psql "${args[@]}" -f "$root/supabase/pending/tests/structured_lifecycle_docx_registry_local_concurrency_setup.sql" >/dev/null
 psql "${args[@]}" -v request_key='00000000-0000-4000-8000-000000000130' -f "$root/supabase/pending/tests/structured_lifecycle_docx_registry_local_concurrency_worker.sql" >/tmp/registry-race-one.out 2>&1 & one=$!
 psql "${args[@]}" -v request_key='00000000-0000-4000-8000-000000000131' -f "$root/supabase/pending/tests/structured_lifecycle_docx_registry_local_concurrency_worker.sql" >/tmp/registry-race-two.out 2>&1 & two=$!
-wait "$one"; one_status=$? || true
-wait "$two"; two_status=$? || true
+set +e
+wait "$one"; one_status=$?
+wait "$two"; two_status=$?
+set -e
 if [[ $one_status -eq 0 && $two_status -eq 0 ]]; then echo 'Both concurrent conflicting assignments succeeded' >&2; exit 1; fi
 if [[ $one_status -ne 0 && $two_status -ne 0 ]]; then echo 'Both concurrent conflicting assignments failed' >&2; exit 1; fi
 psql "${args[@]}" -f "$root/supabase/pending/tests/structured_lifecycle_docx_registry_local_concurrency_assertions.sql"
