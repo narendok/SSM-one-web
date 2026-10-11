@@ -51,7 +51,7 @@ function ProjectsPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
-            <Link key={p.id} to="/projects/$projectId" params={{ projectId: p.id }}>
+            <Link key={p.id} to="/projects/$projectId" params={{ projectId: p.id }} search={{ tab: undefined }}>
               <Card className="p-4 h-full hover:border-primary/50 transition-colors">
                 <div className="flex items-center gap-2">
                   <span className="h-8 w-2 rounded-sm" style={{ background: p.color }} />
