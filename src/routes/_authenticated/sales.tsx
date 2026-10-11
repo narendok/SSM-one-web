@@ -64,21 +64,14 @@ export const Route = createFileRoute("/_authenticated/sales")({
 });
 
 type SalesDetail = { opportunity: SalesOpportunity; specification: MasterSpecificationSummary };
-type SalesDocumentLocationRow = {
-  id: string;
-  opportunity_id: string;
-  customer_id: string;
-  department_id: string;
-  drive_root_node_id: string;
-  target_folder_node_id: string;
-  status: string;
-  location_purpose: string;
-};
-
 type SalesDocumentLocationDiscovery = {
   location_id: string;
-  department_id: string;
-  target_folder_node_id: string;
+  opportunityId: string;
+  departmentId: string;
+  targetFolderNodeId: string;
+  isActive: boolean;
+  folderIsLocked: boolean;
+  folderIsTrashed: boolean;
 };
 
 function toSalesStructuredDocumentEntry(
