@@ -42,7 +42,7 @@ CREATE TABLE public.master_specification_versions (
   UNIQUE (specification_id, version_number)
 );
 CREATE TABLE public.drive_nodes (
-  id uuid PRIMARY KEY,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id uuid NULL,
   parent_id uuid NULL,
   name text NOT NULL,
