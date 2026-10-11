@@ -78,11 +78,11 @@ describe("SharedProductLifecycle governed reads", () => {
     readGates.mockResolvedValue({ data: [], error: null });
     readStages.mockResolvedValue({ data: [], error: null });
 
-    renderLifecycle(undefined, { ...project, requirement_baseline_id: "baseline-123" });
+    renderLifecycle();
 
     expect((await screen.findByText(/Governed lifecycle records could not be loaded/)).parentElement?.textContent).toContain("Governed lifecycle records could not be loaded: Process records unavailable");
     expect(screen.queryByText("Loading available governed records…")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(screen.getAllByRole("button", { name: "Retry" }).at(-1) as HTMLButtonElement);
     await waitFor(() => expect(screen.getByText("Required source inputs")).toBeTruthy());
   });
 
@@ -116,7 +116,7 @@ describe("SharedProductLifecycle governed reads", () => {
       error: null,
     });
 
-    renderLifecycle();
+    renderLifecycle(undefined, { ...project, requirement_baseline_id: "baseline-123" });
 
     expect(await screen.findByText(/Requirement revision 2 is newer than this pinned baseline revision 1/)).toBeTruthy();
     expect(screen.getByText(/no acceptance is implied/)).toBeTruthy();
