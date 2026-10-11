@@ -21,7 +21,7 @@ vi.mock("./TaskDrawer", () => ({
 
 const tasks = [{
   id: "task-1", title: "Project route task", description: null, project_id: "project-123", department: "hardware", department_id: null,
-  priority: "medium", status: "todo", assignee_id: "member-1", due_date: null, estimated_hours: null, logged_hours: null,
+  priority: "medium", status: "todo", assignee_id: "member-1", due_date: "2026-10-18", estimated_hours: null, logged_hours: null,
   ppap_element: null, drive_node_id: null, pcb_task_id: null, purchase_request_id: null, qms_capa_id: null, customer_complaint_id: null,
   sort_order: 1, created_by: null, created_at: "2026-10-09T00:00:00Z", updated_at: "2026-10-09T00:00:00Z",
   assignee: { id: "member-1", name: "Ada", email: "ada@example.test", department: "hardware", department_id: null },
@@ -50,7 +50,7 @@ describe("TaskBoard route ownership", () => {
   it("opens and closes a project task without changing the embedded project route", async () => {
     const user = userEvent.setup();
     const { router } = renderBoard("/projects/project-123", true);
-    await user.click(await screen.findByText("Project route task"));
+    await user.click((await screen.findAllByText("Project route task"))[1]);
     expect(router.state.location.pathname).toBe("/projects/project-123");
     expect(router.state.location.search).toEqual({});
     await user.click(screen.getByRole("button", { name: "Close task" }));
@@ -70,6 +70,24 @@ describe("TaskBoard route ownership", () => {
 });
 
 describe("TaskBoard task reads", () => {
+  it("summarizes only visible project task statuses, assignees, and due dates", async () => {
+    renderBoard("/projects/project-123", true);
+
+    expect((await screen.findAllByText("Visible project tasks")).length).toBeGreaterThan(0);
+    expect(screen.getByText("1 task currently visible to you.")).toBeTruthy();
+    expect(screen.getByText("To do: 1")).toBeTruthy();
+    expect(screen.getByText("In progress: 0")).toBeTruthy();
+    expect(screen.getAllByText("Ada").length).toBeGreaterThan(0);
+    expect(screen.getByText("Due 2026-10-18")).toBeTruthy();
+  });
+
+  it("keeps an accessible project empty state distinct from a failed task read", async () => {
+    renderBoard("/projects/project-123", true, () => fetchTasks.mockResolvedValue([]));
+
+    expect(await screen.findByText("No project tasks are currently visible to you.")).toBeTruthy();
+    expect(screen.queryByText("Project task summary unavailable")).toBeNull();
+  });
+
   it("shows an initial read failure without an empty task count or empty-state message, then retries successfully", async () => {
     const user = userEvent.setup();
     renderBoard("/tasks", false, () => {
@@ -85,6 +103,14 @@ describe("TaskBoard task reads", () => {
     expect((await screen.findByText("Project route task")).textContent).toBe("Project route task");
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText("1 task")).toBeTruthy();
+  });
+
+  it("shows a project summary failure without presenting an empty project state", async () => {
+    renderBoard("/projects/project-123", true, () => fetchTasks.mockRejectedValue(new Error("Read unavailable")));
+
+    expect(await screen.findByText("Project task summary unavailable")).toBeTruthy();
+    expect(screen.getByText("Visible project tasks could not be loaded. Read unavailable")).toBeTruthy();
+    expect(screen.queryByText("No project tasks are currently visible to you.")).toBeNull();
   });
 
   it("keeps cached tasks visible when a refresh fails", async () => {

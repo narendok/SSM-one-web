@@ -62,6 +62,22 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
     return m;
   }, [filtered]);
 
+  const projectTaskSummary = useMemo(() => {
+    const statusCounts = TASK_STATUSES.map((status) => ({
+      ...status,
+      count: tasks.filter((task) => task.status === status.value).length,
+    }));
+    const datedTasks = tasks
+      .filter((task) => task.due_date)
+      .sort((left, right) => (left.due_date ?? "").localeCompare(right.due_date ?? ""));
+
+    return {
+      statusCounts,
+      unassignedCount: tasks.filter((task) => !task.assignee).length,
+      datedTasks: datedTasks.slice(0, 3),
+    };
+  }, [tasks]);
+
   function refresh() {
     qc.invalidateQueries({ queryKey: ["project_tasks"] });
     qc.invalidateQueries({ queryKey: ["open_task_count"] });
@@ -134,6 +150,17 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
         {activeAssigneeId && !assigneeId && !projectId && <Button variant="ghost" size="sm" onClick={() => void navigate({ to: "/tasks", search: { assignee: undefined, task: activeTaskId } })}>Clear assignee</Button>}
         <Button className="ml-auto" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New task</Button>
       </div>
+
+      {projectId && (
+        <ProjectTaskSummary
+          isLoading={isLoading}
+          initialReadFailed={initialReadFailed}
+          readError={readError}
+          tasks={tasks}
+          summary={projectTaskSummary}
+          onRetry={() => void refetch()}
+        />
+      )}
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading tasks…</p>}
       {isError && (
@@ -247,5 +274,79 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
         onEdit={(t) => { setSelectedTask(undefined); setEditing(t); }}
       />
     </div>
+  );
+}
+
+function ProjectTaskSummary({
+  isLoading,
+  initialReadFailed,
+  readError,
+  tasks,
+  summary,
+  onRetry,
+}: {
+  isLoading: boolean;
+  initialReadFailed: boolean;
+  readError: string;
+  tasks: ProjectTask[];
+  summary: {
+    statusCounts: Array<(typeof TASK_STATUSES)[number] & { count: number }>;
+    unassignedCount: number;
+    datedTasks: ProjectTask[];
+  };
+  onRetry: () => void;
+}) {
+  if (isLoading) {
+    return <Card className="p-4 text-sm text-muted-foreground">Loading visible project tasks…</Card>;
+  }
+
+  if (initialReadFailed) {
+    return (
+      <Card className="p-4">
+        <p className="text-sm font-medium">Project task summary unavailable</p>
+        <p className="mt-1 text-sm text-muted-foreground">Visible project tasks could not be loaded. {readError}</p>
+        <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>Retry</Button>
+      </Card>
+    );
+  }
+
+  if (!tasks.length) {
+    return (
+      <Card className="p-4">
+        <p className="text-sm font-medium">Visible project tasks</p>
+        <p className="mt-1 text-sm text-muted-foreground">No project tasks are currently visible to you.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">Visible project tasks</p>
+          <p className="mt-1 text-sm text-muted-foreground">{tasks.length} task{tasks.length === 1 ? "" : "s"} currently visible to you.</p>
+        </div>
+        <span className="text-sm text-muted-foreground">{summary.unassignedCount} unassigned</span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {summary.statusCounts.map((status) => (
+          <Badge key={status.value} variant="outline">{status.label}: {status.count}</Badge>
+        ))}
+      </div>
+      <div className="mt-4 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">Upcoming due dates</p>
+        {summary.datedTasks.length ? (
+          summary.datedTasks.map((task) => (
+            <div key={task.id} className="grid gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-3">
+              <span className="min-w-0 truncate font-medium">{task.title}</span>
+              <span className="text-muted-foreground">{task.assignee?.name ?? "Unassigned"}</span>
+              <span className="text-muted-foreground">Due {task.due_date}</span>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">No due dates are recorded for visible project tasks.</p>
+        )}
+      </div>
+    </Card>
   );
 }
