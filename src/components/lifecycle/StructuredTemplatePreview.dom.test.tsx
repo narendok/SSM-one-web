@@ -5,7 +5,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState, type ReactNode } from "react";
-import { StructuredTemplatePreview } from "./StructuredTemplatePreview";
+import {
+  downloadVerifiedStructuredSalesDraft,
+  persistedStructuredSalesDraftFields,
+  StructuredTemplatePreview,
+} from "./StructuredTemplatePreview";
 import { StructuredPreviewExitDialog } from "./StructuredPreviewExitBoundary";
 import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-template-previews";
 import { MASTER_SPECIFICATION_TBC } from "@/lib/master-specification";
@@ -45,7 +49,7 @@ vi.mock("@/lib/structured-sales-draft.functions", () => ({
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: vi.fn() },
+  supabase: { from: vi.fn(), storage: { from: vi.fn() } },
 }));
 
 vi.mock("@/lib/project-bom.functions", async (importOriginal) => {
@@ -245,11 +249,54 @@ afterEach(() => {
   previewSource.mockReset();
   discoverStructuredSalesDraftCapabilityMock.mockReset().mockResolvedValue(null);
   vi.mocked(supabase.from).mockReset();
+  vi.mocked(supabase.storage.from).mockReset();
   fetchProjectBomsMock.mockReset().mockResolvedValue([]);
   fetchProjectBomItemsMock.mockReset().mockResolvedValue(null);
 });
 
 describe("StructuredTemplatePreview mounted local interactions", () => {
+  it("hydrates only an exact kind-bound persisted payload and rejects malformed or cross-kind content", () => {
+    expect(
+      persistedStructuredSalesDraftFields("SOR", {
+        kind: "SOR",
+        fields: { SCOPE_STATEMENT: "Saved, unissued scope" },
+      }),
+    ).toEqual({ SCOPE_STATEMENT: "Saved, unissued scope" });
+    expect(persistedStructuredSalesDraftFields("SOR", { kind: "PRS", fields: { POWER_REQUIREMENT: "12V" } })).toBeNull();
+    expect(persistedStructuredSalesDraftFields("SOR", { kind: "SOR", fields: { UNKNOWN: "No" } })).toBeNull();
+  });
+
+  it("downloads a verified blob only when it arrives before the timeout and matches the stored checksum", async () => {
+    const contents = "verified draft";
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(contents));
+    const checksum = Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, "0")).join("");
+    await expect(
+      downloadVerifiedStructuredSalesDraft(
+        () => Promise.resolve({ data: new Blob([contents]), error: null }),
+        checksum,
+      ),
+    ).resolves.toBeInstanceOf(Blob);
+    await expect(
+      downloadVerifiedStructuredSalesDraft(
+        () => Promise.resolve({ data: new Blob(["tampered"]), error: null }),
+        checksum,
+      ),
+    ).rejects.toThrow("did not match its verified checksum");
+    await expect(
+      downloadVerifiedStructuredSalesDraft(
+        () => Promise.resolve({ data: null, error: { message: "denied" } }),
+        checksum,
+      ),
+    ).rejects.toThrow("denied");
+    await expect(
+      downloadVerifiedStructuredSalesDraft(
+        () => new Promise(() => undefined),
+        checksum,
+        1,
+      ),
+    ).rejects.toThrow("timed out");
+  });
+
   it("isolates authorized source and local edits when the mounted actor changes or signs out", async () => {
     previewSource.mockResolvedValue(source);
     const user = userEvent.setup();
