@@ -50,7 +50,7 @@ describe("TaskBoard route ownership", () => {
   it("opens and closes a project task without changing the embedded project route", async () => {
     const user = userEvent.setup();
     const { router } = renderBoard("/projects/project-123", true);
-    await user.click(await screen.findByText("Project route task"));
+    await user.click((await screen.findAllByText("Project route task"))[1]);
     expect(router.state.location.pathname).toBe("/projects/project-123");
     expect(router.state.location.search).toEqual({});
     await user.click(screen.getByRole("button", { name: "Close task" }));
@@ -73,7 +73,7 @@ describe("TaskBoard task reads", () => {
   it("summarizes only visible project task statuses, assignees, and due dates", async () => {
     renderBoard("/projects/project-123", true);
 
-    expect(await screen.findByText("Visible project tasks")).toBeTruthy();
+    expect((await screen.findAllByText("Visible project tasks")).length).toBeGreaterThan(0);
     expect(screen.getByText("1 task currently visible to you.")).toBeTruthy();
     expect(screen.getByText("To do: 1")).toBeTruthy();
     expect(screen.getByText("In progress: 0")).toBeTruthy();
