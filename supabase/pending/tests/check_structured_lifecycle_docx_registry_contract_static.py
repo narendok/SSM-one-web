@@ -36,6 +36,10 @@ for primitive in (
 for kind in ("'SOR'", "'NDA'", "'PRS'", "'BOM'", "'DFMEA'", "'ANNUAL_SKILL_MATRIX'"):
     need(kind, kind)
 
+need("assert_structured_lifecycle_docx_registry_manager", "caller-authenticated registry manager")
+for required in ("Active project-team membership", "Scoped department document-management authority", "pg_advisory_xact_lock", "Registry request key conflicts", "Assigned responsible and reviewer employees must be active department members"):
+    need(required, required)
+
 for signature in (
     "public.resolve_structured_lifecycle_docx_registry_scope(uuid,text,uuid,uuid,text,integer,text,text)",
     "public.assign_structured_lifecycle_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid)",
