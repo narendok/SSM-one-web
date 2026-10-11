@@ -24,6 +24,7 @@ The original policy source is `drizzle/migrations/0010_phase5_project_foundation
 | File | Purpose | SHA-256 |
 | --- | --- | --- |
 | `supabase/pending/20261011_project_stage_gates_rls_recursion_repair.sql` | helper plus replacement of exactly two SELECT policies | `570301ab3f90a9c7bf360d3883721e30e6102b643af0c01acfd6b580125d3588` |
+| `supabase/pending/20261011_project_stage_gates_rls_recursion_manual_install_review.sql` | review-only, transaction-scoped manual-install artifact; rolls back by design | review-only companion |
 | `supabase/pending/tests/project_stage_gates_rls_recursion_local_fixture.sql` | disposable schema and original-policy reproduction | local test fixture |
 | `supabase/pending/tests/project_stage_gates_rls_recursion_local_acceptance.sql` | caller-scope and privilege assertions | local acceptance |
 | `supabase/pending/tests/run_project_stage_gates_rls_recursion_local_acceptance.sh` | isolated PostgreSQL runner and cleanup | local runner |
@@ -37,6 +38,19 @@ The original policy source is `drizzle/migrations/0010_phase5_project_foundation
    - `public.project_stage_gates` / `Project team view stage gates`: preserve `admin` and `projects.view` branches verbatim; replace only the membership `EXISTS` with the helper.
 
 No `FOR ALL` policy, write predicate, table grant, `anon` grant, role, company predicate, department predicate, or frontend access path is changed. The live policy has no company or department condition; this package deliberately does not add one.
+
+### Helper owner, caller identity, and ACL boundary
+
+- The function is `SECURITY DEFINER`, `STABLE`, and explicitly sets `search_path = public`; the migration executor remains its owner. No `ALTER FUNCTION ... OWNER` is included or permitted in this package.
+- The caller identity is never trusted from a function argument in a policy. Both replacement policies pass the database-authenticated `auth.uid()` as `_actor_id`; the helper compares it against `employees.user_id` for an active employee in the requested row's project.
+- PostgreSQL defaults new functions to `PUBLIC EXECUTE`. The package explicitly revokes `PUBLIC` and `anon`, then grants `authenticated` only because policy evaluation invokes the helper in that role. The helper returns only a boolean and has no mutation path.
+- Direct authenticated execution can determine a boolean membership fact for supplied UUIDs. That is the narrow unavoidable policy-evaluation capability and must be accepted separately; the helper cannot be used in the RLS expression without authenticated `EXECUTE`.
+
+### Installer limitation and manual review artifact
+
+Read-only tool-capability inspection confirms the supported migration runner validates and prepends the entire managed 17-migration Drizzle history; it offers no targeted or skip-history mode and would encounter the existing `0000_add_ssm_one_enterprise_foundation` collision. It must not be used for this repair.
+
+`supabase/pending/20261011_project_stage_gates_rls_recursion_manual_install_review.sql` is a review artifact only. It captures pre-flight policy definitions, contains the exact payload, displays post-flight policy/function state, and ends in `ROLLBACK`; it neither invokes the runner nor changes `drizzle.__drizzle_migrations`. It is not a supported installation route and must not be executed until a separate action-time installation method is approved.
 
 ## Current-versus-proposed access comparison
 
@@ -80,6 +94,29 @@ A future installation review must capture the then-current exact policy definiti
 1. drop the two replacement SELECT policies;
 2. recreate the recorded prior definitions exactly;
 3. revoke `authenticated` helper execution, then drop `has_project_team_membership(uuid, uuid)` only after no dependent policy remains.
+
+### Exact rollback SQL
+
+```sql
+DROP POLICY "Project members view their project team" ON public.project_team_members;
+CREATE POLICY "Project members view their project team" ON public.project_team_members FOR SELECT TO authenticated USING (
+  public.has_role(auth.uid(), 'admin') OR public.has_permission(auth.uid(), 'projects.manage') OR EXISTS (
+    SELECT 1 FROM public.employees viewer WHERE viewer.user_id = auth.uid() AND viewer.id = project_team_members.employee_id
+  ) OR EXISTS (
+    SELECT 1 FROM public.project_team_members membership JOIN public.employees member_employee ON member_employee.id = membership.employee_id
+    WHERE membership.project_id = project_team_members.project_id AND member_employee.user_id = auth.uid()
+  )
+);
+DROP POLICY "Project team view stage gates" ON public.project_stage_gates;
+CREATE POLICY "Project team view stage gates" ON public.project_stage_gates FOR SELECT TO authenticated USING (
+  public.has_role(auth.uid(), 'admin') OR public.has_permission(auth.uid(), 'projects.view') OR EXISTS (
+    SELECT 1 FROM public.project_team_members membership JOIN public.employees member_employee ON member_employee.id = membership.employee_id
+    WHERE membership.project_id = project_stage_gates.project_id AND member_employee.user_id = auth.uid()
+  )
+);
+REVOKE EXECUTE ON FUNCTION public.has_project_team_membership(uuid, uuid) FROM authenticated;
+DROP FUNCTION public.has_project_team_membership(uuid, uuid);
+```
 
 Do not roll back by disabling RLS, granting `projects.view`, adding a broad role, or using elevated client reads.
 

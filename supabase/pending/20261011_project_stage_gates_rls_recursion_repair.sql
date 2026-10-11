@@ -1,6 +1,8 @@
 -- REVIEW-ONLY / UNAPPLIED. Minimal repair for project_stage_gates /
 -- project_team_members SELECT-policy recursion. No table, data, grant, or role change.
 
+-- The function owner is the migration executor (normally postgres). It must remain an
+-- application-owner role; do not ALTER FUNCTION ... OWNER TO a login/application role.
 CREATE OR REPLACE FUNCTION public.has_project_team_membership(
   _actor_id uuid,
   _project_id uuid
@@ -22,6 +24,8 @@ AS $$
   )
 $$;
 
+-- SQL functions grant EXECUTE to PUBLIC by default. Keep direct invocation non-public;
+-- authenticated execution is required because the two SELECT policies invoke this helper.
 REVOKE ALL ON FUNCTION public.has_project_team_membership(uuid, uuid)
   FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.has_project_team_membership(uuid, uuid)
