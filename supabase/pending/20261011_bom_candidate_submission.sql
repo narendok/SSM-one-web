@@ -192,9 +192,6 @@ CREATE OR REPLACE FUNCTION public.component_candidate_decision_scope(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   IF p_actor IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
-  IF NOT COALESCE(public.has_permission(p_actor, 'engineering.approve'), false) THEN
-    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
-  END IF;
   -- Force a fresh VOLATILE SQL boundary for post-advisory-wait authority
   -- reads; this prevents the SQL planner from reusing a STABLE helper result.
   PERFORM public.component_candidate_decision_authority_fresh(p_actor);
@@ -336,4 +333,5 @@ REVOKE ALL ON FUNCTION public.component_candidate_submission_scope(uuid, uuid, u
 REVOKE ALL ON FUNCTION public.submit_component_candidate(uuid, uuid, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.component_candidate_decision_canonical_payload(uuid, uuid, text, text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.component_candidate_decision_scope(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.component_candidate_decision_authority_fresh(uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.decide_component_candidate(uuid, uuid, text, text, uuid) FROM PUBLIC, anon, authenticated, service_role;
