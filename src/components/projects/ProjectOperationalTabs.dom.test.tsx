@@ -17,9 +17,9 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-function renderDesignInputs() {
+function renderOperationalInputs(kind: "design" | "research" = "design") {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return { queryClient, ...render(<QueryClientProvider client={queryClient}><ProjectOperationalTab projectId="project-123" kind="design" /></QueryClientProvider>) };
+  return { queryClient, ...render(<QueryClientProvider client={queryClient}><ProjectOperationalTab projectId="project-123" kind={kind} /></QueryClientProvider>) };
 }
 
 afterEach(() => {
@@ -33,7 +33,7 @@ describe("ProjectOperationalTab design-input reads", () => {
     let resolveRead: (value: { data: unknown[]; error: null }) => void = () => undefined;
     order.mockImplementationOnce(() => new Promise((resolve) => { resolveRead = resolve; }));
 
-    renderDesignInputs();
+    renderOperationalInputs();
 
     expect(screen.getAllByText("Loading visible records…")).toHaveLength(2);
     expect(screen.queryByText("0 recorded")).toBeNull();
@@ -48,7 +48,7 @@ describe("ProjectOperationalTab design-input reads", () => {
       id: "input-1", input_code: "DI-001", category: "CUSTOMER", description: "Approved customer dimension", status: "OPEN",
     }], error: null });
 
-    renderDesignInputs();
+    renderOperationalInputs();
 
     expect((await screen.findByRole("alert")).textContent).toContain("These records could not be loaded. Read unavailable");
     expect(screen.getByText("Records unavailable")).toBeTruthy();
@@ -67,13 +67,26 @@ describe("ProjectOperationalTab design-input reads", () => {
       id: "input-1", input_code: "DI-001", category: "CUSTOMER", description: "Manual design note", status: "OPEN",
     }], error: null }).mockRejectedValueOnce(new Error("Refresh unavailable"));
 
-    const { queryClient } = renderDesignInputs();
+    const { queryClient } = renderOperationalInputs();
     expect((await screen.findAllByText("Manual design note")).length).toBeGreaterThan(0);
 
     await queryClient.invalidateQueries({ queryKey: ["project_design_inputs", "project-123"] });
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Refresh unavailable"));
     expect(screen.getAllByText("Manual design note").length).toBeGreaterThan(0);
     expect(screen.getByText("1 recorded · refresh failed")).toBeTruthy();
+  });
+
+  it("settles a rejected research read into an unavailable state with Retry", async () => {
+    order.mockRejectedValueOnce({ message: "infinite recursion detected in policy" });
+
+    renderOperationalInputs("research");
+
+    expect((await screen.findByRole("alert")).textContent).toContain("These records could not be loaded. infinite recursion detected in policy");
+    expect(screen.getByText("Records unavailable")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    expect(screen.queryByText("Loading visible records…")).toBeNull();
+    expect(screen.queryByText("0 recorded")).toBeNull();
+    expect(screen.queryByText("No research or proof-of-concept records yet.")).toBeNull();
   });
 });
 
