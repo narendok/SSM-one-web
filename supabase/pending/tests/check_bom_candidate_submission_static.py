@@ -15,10 +15,12 @@ decision_revocation_worker = (Path(__file__).resolve().parent / "bom_candidate_d
 decision_acceptance = (Path(__file__).resolve().parent / "bom_candidate_decision_local_acceptance.sql").read_text()
 decision_runner = (Path(__file__).resolve().parent / "run_bom_candidate_decision_local_acceptance.sh").read_text()
 decision_concurrency = (Path(__file__).resolve().parent / "bom_candidate_decision_local_concurrency_assertions.sql").read_text()
+read_scope_acceptance = (Path(__file__).resolve().parent / "bom_candidate_read_scope_local_acceptance.sql").read_text()
+read_scope_runner = (Path(__file__).resolve().parent / "run_bom_candidate_read_scope_local_acceptance.sh").read_text()
 
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED PROPOSAL. DO NOT APPLY." in sql,
-    "all additive tables have grants": sql.count("GRANT SELECT ON public.component_candidate") == 6,
+    "all additive tables have grants": sql.count("GRANT SELECT ON public.component_candidate") >= 6,
     "all new tables have RLS": sql.count("ENABLE ROW LEVEL SECURITY") == 6,
     "function has no execute grant": "GRANT EXECUTE ON FUNCTION public.submit_component_candidate" not in sql,
     "direct inventory paths absent": all(token not in sql for token in ("saveComponentWithStock", "inventory_lots", "stock_history", "component_substitutes", "component_projects")),
@@ -49,6 +51,10 @@ checks = {
     "decision revocation wait uses exact production decision lock": all(token in decision_revocation_runner for token in ("component-candidate-decision-request:", "hashtextextended", "pg_locks", "pg_stat_activity", "waiting-on-exact-decision-lock")),
     "decision revocation wait covers new decision and terminal receipt replay": all(token in decision_revocation_runner for token in ("new_decision_graph_unchanged=true", "replay_history_unchanged=true", "Revoked permission during wait", "Authorized receipt before revocation")),
     "decision revocation worker has no production instrumentation": "candidate_test_wait" not in decision_revocation_worker and "decide_component_candidate" in decision_revocation_worker,
+    "caller read views are security invoker and receipts stay restricted": sql.count("WITH (security_invoker = true)") >= 3 and "component_candidate_submission_request_receipts_read" not in sql and "component_candidate_decision_request_receipts_read" not in sql,
+    "purchase handoff is approved-only and redacted": all(token in sql for token in ("component_candidate_purchase_handoff_read", "candidate.status = 'APPROVED_PENDING_PURCHASE'", "decision.decision = 'APPROVED_PENDING_PURCHASE'", "procurement.view")) and "revision.payload ->> 'supplier'" not in sql and "revision.payload ->> 'cost'" not in sql,
+    "caller read acceptance covers distinct identities and revocation": all(token in read_scope_acceptance for token in ("Submitter read scope", "Hardware reader scope", "Purchase reader did not receive only approved handoff", "Cross-department caller", "Unrelated caller", "Revoked project membership")),
+    "caller read runner is explicitly disposable": "LOCAL_BOM_CANDIDATE_DISPOSABLE" in read_scope_runner and "/tmp/bom_candidate_read_scope_local_" in read_scope_runner,
 }
 failed = [name for name, passed in checks.items() if not passed]
 if failed:

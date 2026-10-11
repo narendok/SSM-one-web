@@ -10,6 +10,7 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
 END $$;
+GRANT USAGE ON SCHEMA public TO authenticated;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 CREATE TABLE public.customers (id uuid PRIMARY KEY);
 CREATE TABLE public.sales_opportunities (id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id));
@@ -32,3 +33,4 @@ CREATE FUNCTION public.candidate_test_failpoint() RETURNS trigger LANGUAGE plpgs
 CREATE FUNCTION public.has_permission(p_actor uuid, p_permission text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_access_roles membership ON membership.employee_id = employee.id JOIN public.access_role_permissions role_permission ON role_permission.role_id = membership.role_id JOIN public.permissions permission ON permission.id = role_permission.permission_id WHERE employee.user_id = p_actor AND employee.employment_status = 'ACTIVE' AND permission.key = p_permission)
 $$;
+GRANT SELECT ON public.employees, public.employee_departments, public.departments, public.project_team_members, public.access_roles, public.employee_access_roles, public.access_role_permissions, public.permissions TO authenticated;

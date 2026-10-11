@@ -19,6 +19,8 @@ CREATE TABLE public.component_candidate_submissions (
 );
 GRANT SELECT ON public.component_candidate_submissions TO service_role;
 ALTER TABLE public.component_candidate_submissions ENABLE ROW LEVEL SECURITY;
+-- Pending caller projections below grant SELECT only at installation time;
+-- no INSERT, UPDATE, or DELETE capability is declared for authenticated.
 
 CREATE TABLE public.component_candidate_payload_revisions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -330,3 +332,105 @@ REVOKE ALL ON FUNCTION public.component_candidate_decision_canonical_payload(uui
 REVOKE ALL ON FUNCTION public.component_candidate_decision_scope(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.component_candidate_decision_authority_fresh(uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.decide_component_candidate(uuid, uuid, text, text, uuid) FROM PUBLIC, anon, authenticated, service_role;
+
+-- Pending caller-RLS projections only. These views expose no receipts, audit
+-- payloads, actor IDs, or direct base-table access. They inherit the invoking
+-- caller's RLS checks and remain ungranted until a separately approved install.
+CREATE OR REPLACE VIEW public.component_candidate_submitter_read
+WITH (security_invoker = true) AS
+SELECT candidate.id AS candidate_id, candidate.project_id, candidate.project_bom_id,
+  candidate.status, candidate.submitted_at, revision.id AS candidate_revision_id,
+  revision.revision_number, revision.payload, revision.created_at AS revision_created_at,
+  decision.id AS decision_id, decision.decision, decision.decision_note, decision.decided_at
+FROM public.component_candidate_submissions candidate
+JOIN public.component_candidate_payload_revisions revision ON revision.candidate_id = candidate.id
+LEFT JOIN public.component_candidate_decisions decision ON decision.candidate_id = candidate.id
+WHERE candidate.submitted_by = auth.uid()
+  AND EXISTS (
+    SELECT 1 FROM public.employees employee
+    JOIN public.project_team_members team ON team.employee_id = employee.id AND team.project_id = candidate.project_id
+    WHERE employee.user_id = auth.uid() AND employee.employment_status = 'ACTIVE'
+  );
+
+CREATE OR REPLACE VIEW public.component_candidate_hardware_read
+WITH (security_invoker = true) AS
+SELECT candidate.id AS candidate_id, candidate.project_id, candidate.project_bom_id,
+  candidate.status, candidate.submitted_at, revision.id AS candidate_revision_id,
+  revision.revision_number, revision.payload, revision.created_at AS revision_created_at,
+  decision.id AS decision_id, decision.decision, decision.decision_note, decision.decided_at
+FROM public.component_candidate_submissions candidate
+JOIN public.component_candidate_payload_revisions revision ON revision.candidate_id = candidate.id
+LEFT JOIN public.component_candidate_decisions decision ON decision.candidate_id = candidate.id
+WHERE public.has_permission(auth.uid(), 'engineering.approve')
+  AND EXISTS (
+    SELECT 1 FROM public.employees employee
+    JOIN public.employee_departments membership ON membership.employee_id = employee.id
+    JOIN public.departments hardware ON hardware.id = membership.department_id
+    JOIN public.project_team_members team ON team.employee_id = employee.id AND team.project_id = candidate.project_id
+    WHERE employee.user_id = auth.uid() AND employee.employment_status = 'ACTIVE'
+      AND hardware.id = candidate.hardware_department_id AND hardware.code = 'HARDWARE' AND hardware.is_active
+  );
+
+CREATE OR REPLACE VIEW public.component_candidate_purchase_handoff_read
+WITH (security_invoker = true) AS
+SELECT candidate.id AS candidate_id, candidate.project_id, candidate.project_bom_id,
+  revision.id AS candidate_revision_id, revision.revision_number,
+  revision.payload ->> 'categoryId' AS category_id, revision.payload ->> 'name' AS name,
+  revision.payload ->> 'partNumber' AS part_number, revision.payload ->> 'manufacturer' AS manufacturer,
+  revision.payload ->> 'footprint' AS footprint, revision.payload ->> 'bomCompatibility' AS bom_compatibility,
+  revision.payload ->> 'voltageRating' AS voltage_rating, revision.payload ->> 'currentRating' AS current_rating,
+  revision.payload ->> 'temperatureRating' AS temperature_rating,
+  decision.id AS hardware_decision_id, decision.decision_note AS hardware_decision_note, decision.decided_at AS hardware_decided_at
+FROM public.component_candidate_submissions candidate
+JOIN public.component_candidate_payload_revisions revision ON revision.candidate_id = candidate.id AND revision.revision_number = 1
+JOIN public.component_candidate_decisions decision ON decision.candidate_id = candidate.id
+  AND decision.candidate_revision_id = revision.id AND decision.decision = 'APPROVED_PENDING_PURCHASE'
+WHERE candidate.status = 'APPROVED_PENDING_PURCHASE'
+  AND public.has_permission(auth.uid(), 'procurement.view')
+  AND EXISTS (
+    SELECT 1 FROM public.employees employee
+    JOIN public.employee_departments membership ON membership.employee_id = employee.id
+    JOIN public.departments purchase ON purchase.id = membership.department_id
+    JOIN public.project_team_members team ON team.employee_id = employee.id AND team.project_id = candidate.project_id
+    WHERE employee.user_id = auth.uid() AND employee.employment_status = 'ACTIVE'
+      AND purchase.code = 'PURCHASE' AND purchase.is_active
+  );
+
+CREATE POLICY component_candidate_submissions_read_projection_scope
+  ON public.component_candidate_submissions FOR SELECT TO authenticated
+  USING (
+    (submitted_by = auth.uid() AND EXISTS (
+      SELECT 1 FROM public.employees employee
+      JOIN public.project_team_members team ON team.employee_id = employee.id AND team.project_id = component_candidate_submissions.project_id
+      WHERE employee.user_id = auth.uid() AND employee.employment_status = 'ACTIVE'
+    ))
+    OR EXISTS (
+      SELECT 1 FROM public.employees employee
+      JOIN public.employee_departments membership ON membership.employee_id = employee.id
+      JOIN public.departments hardware ON hardware.id = membership.department_id
+      JOIN public.project_team_members team ON team.employee_id = employee.id AND team.project_id = component_candidate_submissions.project_id
+      WHERE employee.user_id = auth.uid() AND employee.employment_status = 'ACTIVE'
+        AND public.has_permission(auth.uid(), 'engineering.approve')
+        AND hardware.id = component_candidate_submissions.hardware_department_id AND hardware.code = 'HARDWARE' AND hardware.is_active
+    )
+    OR (status = 'APPROVED_PENDING_PURCHASE' AND EXISTS (
+      SELECT 1 FROM public.employees employee
+      JOIN public.employee_departments membership ON membership.employee_id = employee.id
+      JOIN public.departments purchase ON purchase.id = membership.department_id
+      JOIN public.project_team_members team ON team.employee_id = employee.id AND team.project_id = component_candidate_submissions.project_id
+      WHERE employee.user_id = auth.uid() AND employee.employment_status = 'ACTIVE'
+        AND public.has_permission(auth.uid(), 'procurement.view')
+        AND purchase.code = 'PURCHASE' AND purchase.is_active
+    ))
+  );
+
+CREATE POLICY component_candidate_payload_revisions_read_projection_scope
+  ON public.component_candidate_payload_revisions FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.component_candidate_submissions candidate WHERE candidate.id = component_candidate_payload_revisions.candidate_id));
+
+CREATE POLICY component_candidate_decisions_read_projection_scope
+  ON public.component_candidate_decisions FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.component_candidate_submissions candidate WHERE candidate.id = component_candidate_decisions.candidate_id));
+
+GRANT SELECT ON public.component_candidate_submissions, public.component_candidate_payload_revisions, public.component_candidate_decisions TO authenticated;
+GRANT SELECT ON public.component_candidate_submitter_read, public.component_candidate_hardware_read, public.component_candidate_purchase_handoff_read TO authenticated;
