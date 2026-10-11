@@ -75,7 +75,7 @@ DO $$ BEGIN
   BEGIN PERFORM * FROM public.decide_component_candidate((SELECT candidate_id FROM denied), (SELECT revision_id FROM denied_revision), 'APPROVE', 'Self review', '10000000-0000-4000-8000-000000000098'); RAISE EXCEPTION 'Self review was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate decision requires%' THEN RAISE; END IF; END;
   PERFORM set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000002', true);
   BEGIN PERFORM * FROM public.decide_component_candidate((SELECT candidate_id FROM denied), '10000000-0000-4000-8000-000000000099', 'APPROVE', 'Wrong revision', '10000000-0000-4000-8000-000000000099'); RAISE EXCEPTION 'Wrong revision was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate decision requires%' THEN RAISE; END IF; END;
-  BEGIN PERFORM * FROM public.decide_component_candidate((SELECT candidate_id FROM approved), (SELECT revision_id FROM approved_revision), 'APPROVE', 'Terminal status', '10000000-0000-4000-8000-000000000100'); RAISE EXCEPTION 'Terminal candidate status was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate decision requires%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.decide_component_candidate((SELECT candidate_id FROM approved), (SELECT revision_id FROM approved_revision), 'APPROVE', 'Terminal status', '10000000-0000-4000-8000-000000000100'); RAISE EXCEPTION 'Terminal candidate status was accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Candidate is no longer submitted%' THEN RAISE; END IF; END;
 END $$;
 
 CREATE TEMP TABLE rollback_candidate AS SELECT pg_temp.submit_local_candidate('ROLLBACK-LOCAL', '10000000-0000-4000-8000-000000000101') AS candidate_id;
