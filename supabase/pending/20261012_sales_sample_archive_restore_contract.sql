@@ -192,10 +192,10 @@ BEGIN
     IF v_receipt.actor_user_id=v_actor AND v_receipt.action='RESTORE' AND v_receipt.payload_hash=v_hash THEN RETURN QUERY SELECT v_receipt.id,true; RETURN; END IF;
     RAISE EXCEPTION 'Restore request key conflicts';
   END IF;
-  IF (SELECT count(*) FROM public.sales_sample_archive_manifest_items WHERE manifest_id=p_archive_manifest_id) <> 10 THEN RAISE EXCEPTION 'Archive manifest does not contain the exact reviewed root set'; END IF;
+  IF (SELECT count(*) FROM public.sales_sample_archive_manifest_items AS check_items WHERE check_items.manifest_id=p_archive_manifest_id) <> 10 THEN RAISE EXCEPTION 'Archive manifest does not contain the exact reviewed root set'; END IF;
   PERFORM public.sales_sample_archive_canonical_roots((
     SELECT jsonb_agg(jsonb_build_object('kind', root_kind, 'id', root_id, 'displayNumber', display_number) ORDER BY root_kind, display_number, root_id)
-    FROM public.sales_sample_archive_manifest_items WHERE manifest_id=p_archive_manifest_id
+    FROM public.sales_sample_archive_manifest_items AS canonical_items WHERE canonical_items.manifest_id=p_archive_manifest_id
   ));
   INSERT INTO public.sales_sample_archive_manifests(action,request_key,actor_user_id,reason,payload_hash,prior_manifest_id,result) VALUES('RESTORE',p_request_key,v_actor,btrim(p_reason),v_hash,p_archive_manifest_id,'{}') RETURNING id INTO v_manifest;
   FOR v_item IN
@@ -216,8 +216,8 @@ BEGIN
     IF v_snapshot IS DISTINCT FROM v_item.dependency_snapshot THEN RAISE EXCEPTION 'Restore is blocked by dependency drift'; END IF;
     INSERT INTO public.sales_sample_archive_manifest_items(manifest_id,root_kind,root_id,display_number,prior_state,dependency_snapshot) VALUES(v_manifest,v_item.root_kind,v_item.root_id,v_item.display_number,v_item.prior_state,v_snapshot);
   END LOOP;
-  UPDATE public.sales_opportunities SET archived_at=NULL,archived_by=NULL,archive_manifest_id=NULL WHERE id IN (SELECT root_id FROM public.sales_sample_archive_manifest_items WHERE manifest_id=p_archive_manifest_id AND root_kind='OPPORTUNITY') AND archive_manifest_id=p_archive_manifest_id;
-  UPDATE public.customer_requirements SET archived_at=NULL,archived_by=NULL,archive_manifest_id=NULL WHERE id IN (SELECT root_id FROM public.sales_sample_archive_manifest_items WHERE manifest_id=p_archive_manifest_id AND root_kind='REQUIREMENT') AND archive_manifest_id=p_archive_manifest_id;
+  UPDATE public.sales_opportunities SET archived_at=NULL,archived_by=NULL,archive_manifest_id=NULL WHERE id IN (SELECT restore_items.root_id FROM public.sales_sample_archive_manifest_items AS restore_items WHERE restore_items.manifest_id=p_archive_manifest_id AND restore_items.root_kind='OPPORTUNITY') AND archive_manifest_id=p_archive_manifest_id;
+  UPDATE public.customer_requirements SET archived_at=NULL,archived_by=NULL,archive_manifest_id=NULL WHERE id IN (SELECT restore_items.root_id FROM public.sales_sample_archive_manifest_items AS restore_items WHERE restore_items.manifest_id=p_archive_manifest_id AND restore_items.root_kind='REQUIREMENT') AND archive_manifest_id=p_archive_manifest_id;
   UPDATE public.sales_sample_archive_manifests SET result=jsonb_build_object('rootCount',10,'action','RESTORE') WHERE id=v_manifest;
   INSERT INTO public.sales_sample_archive_audit_events(manifest_id,actor_user_id,action,event_data) VALUES(v_manifest,v_actor,'RESTORED',jsonb_build_object('archiveManifestId',p_archive_manifest_id,'requestKey',p_request_key));
   RETURN QUERY SELECT v_manifest,false;
