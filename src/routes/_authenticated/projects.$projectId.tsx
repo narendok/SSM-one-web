@@ -25,7 +25,7 @@ import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { ProjectTeamTab } from "@/components/projects/ProjectTeamTab";
 import { ProjectOperationalTab, ProjectRequirementContext } from "@/components/projects/ProjectOperationalTabs";
 import { SharedProductLifecycle } from "@/components/projects/SharedProductLifecycle";
-import { StructuredTemplatePreview } from "@/components/lifecycle/StructuredTemplatePreview";
+import { ProjectBomReview } from "@/components/projects/ProjectBomReview";
 import { ProjectStructuredDocuments } from "@/components/projects/ProjectStructuredDocuments";
 import type { Project } from "@/lib/projects";
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
@@ -358,10 +358,7 @@ function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="bom-review" className="pt-4">
-          <StructuredTemplatePreview
-            projectId={projectId}
-            project={{ id: project.id, name: project.name, code: project.code }}
-          />
+          <ProjectBomReview project={project} />
         </TabsContent>
 
         <TabsContent value="files" className="pt-4">
