@@ -64,10 +64,10 @@ describe("SharedProductLifecycle governed reads", () => {
     readGates.mockResolvedValue({ data: null, error: { message: "infinite recursion detected in policy", code: "42P17" } });
     readStages.mockResolvedValue({ data: [], error: null });
 
-    renderLifecycle(undefined, { ...project, requirement_baseline_id: "baseline-123" });
+    renderLifecycle();
 
     expect((await screen.findByText(/Gate records could not be loaded/)).parentElement?.textContent).toContain("infinite recursion detected in policy");
-    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Retry" }).length).toBeGreaterThan(0);
     expect(await screen.findByText("Draft lifecycle automation plan")).toBeTruthy();
     expect(screen.queryByText("No gate records are currently accessible for this project.")).toBeNull();
   });
@@ -78,7 +78,7 @@ describe("SharedProductLifecycle governed reads", () => {
     readGates.mockResolvedValue({ data: [], error: null });
     readStages.mockResolvedValue({ data: [], error: null });
 
-    renderLifecycle();
+    renderLifecycle(undefined, { ...project, requirement_baseline_id: "baseline-123" });
 
     expect((await screen.findByText(/Governed lifecycle records could not be loaded/)).parentElement?.textContent).toContain("Governed lifecycle records could not be loaded: Process records unavailable");
     expect(screen.queryByText("Loading available governed records…")).toBeNull();
