@@ -98,7 +98,7 @@ SQL
   waiter_status=0; wait "$waiter_pid" || waiter_status=$?
   grep -Fq 'LOCAL_WORKER_PREWAIT auth_uid=30000000-0000-4000-8000-000000000002 has_permission=true active_hardware_membership=true scope_rows=1' "$log_dir/$label-waiter.out" || { cat "$log_dir/$label-waiter.out" "$log_dir/$label-waiter.err" >&2; echo "LOCAL_CASE_FAIL $label worker prewait authorization did not hold" >&2; exit 1; }
   [[ "$waiter_status" == '3' ]] || { cat "$log_dir/$label-waiter.err" >&2; exit 1; }
-  grep -Fq 'ERROR:  Candidate decision requires active Hardware membership and engineering.approve authority' "$log_dir/$label-waiter.err" || { cat "$log_dir/$label-waiter.err" >&2; exit 1; }
+  grep -Eq 'ERROR:  Candidate decision requires (active Hardware membership and engineering\.approve authority|an active Hardware reviewer with engineering\.approve, an exact immutable revision, and no self-review)' "$log_dir/$label-waiter.err" || { cat "$log_dir/$label-waiter.err" >&2; echo "LOCAL_CASE_FAIL $label did not deny revoked authority" >&2; exit 1; }
   [[ "$(grep -Ec '^[0-9a-f-]{36}\|[0-9a-f-]{36}\|(t|f)$' "$log_dir/$label-waiter.out" || true)" == '0' ]] || { cat "$log_dir/$label-waiter.out" >&2; echo "LOCAL_CASE_FAIL $label returned a decision result after revocation" >&2; exit 1; }
   local after; after="$(graph_counts "$candidate_id")"
   [[ "$after" == "$before" ]] || { echo "LOCAL_CASE_FAIL $label changed candidate decision graph before=$before after=$after" >&2; exit 1; }
