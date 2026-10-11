@@ -13171,6 +13171,19 @@ export type Database = {
         Args: { _notes?: string; _package_id: string; _status: string }
         Returns: undefined
       }
+      discover_sales_opportunity_structured_draft_location: {
+        Args: {
+          p_customer_id: string
+          p_master_specification_id: string
+          p_master_specification_version_id: string
+          p_opportunity_id: string
+        }
+        Returns: {
+          location_id: string
+          storage_bucket: string
+          storage_path_prefix: string
+        }[]
+      }
       disposition_phase7_ncr: {
         Args: { _ncr_id: string; _notes?: string; _status: string }
         Returns: undefined
