@@ -21,10 +21,11 @@ SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000004
 DO $$ BEGIN
   IF (SELECT count(*) FROM public.project_stage_gates) <> 2 OR (SELECT count(*) FROM public.project_team_members) <> 4 THEN RAISE EXCEPTION 'admin access changed'; END IF;
 END $$;
--- Direct employee self-row access is preserved exactly; the helper is tested separately for active membership only.
+-- Original membership semantics include inactive project members; they retain peer-team and gate reads.
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000005', false);
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.project_team_members) <> 1 THEN RAISE EXCEPTION 'inactive self-row access changed'; END IF;
+  IF (SELECT count(*) FROM public.project_team_members) <> 3 THEN RAISE EXCEPTION 'inactive member peer-team scope changed'; END IF;
+  IF (SELECT count(*) FROM public.project_stage_gates) <> 1 OR EXISTS (SELECT 1 FROM public.project_stage_gates WHERE gate_code = 'GATE-B') THEN RAISE EXCEPTION 'inactive member gate scope changed'; END IF;
 END $$;
 RESET ROLE;
 -- anon has no table SELECT or helper EXECUTE privileges.
@@ -34,11 +35,17 @@ DO $$ BEGIN
   BEGIN PERFORM public.has_project_team_membership('40000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001'); RAISE EXCEPTION 'anon unexpectedly executed helper'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 RESET ROLE;
--- Authenticated EXECUTE is required for RLS policy evaluation. The function has no mutation path and returns only a boolean membership fact.
+-- Authenticated EXECUTE is required for RLS policy evaluation, but the helper cannot
+-- interrogate another actor's membership or run without a caller identity.
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000002', false);
 DO $$ BEGIN
   IF public.has_project_team_membership('40000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000001') THEN RAISE EXCEPTION 'helper returned a false membership fact'; END IF;
+  IF public.has_project_team_membership('40000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001') THEN RAISE EXCEPTION 'helper accepted an arbitrary actor UUID'; END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub', '', false);
+DO $$ BEGIN
+  IF public.has_project_team_membership('40000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001') THEN RAISE EXCEPTION 'helper accepted a missing caller identity'; END IF;
 END $$;
 RESET ROLE;
 SELECT 'PROJECT_STAGE_GATES_RLS_LOCAL_ACCEPTANCE_PASS' AS result;

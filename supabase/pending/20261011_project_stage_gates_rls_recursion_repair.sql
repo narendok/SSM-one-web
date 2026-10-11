@@ -1,8 +1,8 @@
 -- REVIEW-ONLY / UNAPPLIED. Minimal repair for project_stage_gates /
 -- project_team_members SELECT-policy recursion. No table, data, grant, or role change.
 
--- The function owner is the migration executor (normally postgres). It must remain an
--- application-owner role; do not ALTER FUNCTION ... OWNER TO a login/application role.
+-- The managed helper precedent is owned by postgres, which has BYPASSRLS. This function
+-- therefore has to constrain its own caller identity; do not ALTER FUNCTION ... OWNER.
 CREATE OR REPLACE FUNCTION public.has_project_team_membership(
   _actor_id uuid,
   _project_id uuid
@@ -18,9 +18,10 @@ AS $$
     FROM public.project_team_members membership
     JOIN public.employees member_employee
       ON member_employee.id = membership.employee_id
-    WHERE membership.project_id = _project_id
+    WHERE auth.uid() IS NOT NULL
+      AND _actor_id = auth.uid()
+      AND membership.project_id = _project_id
       AND member_employee.user_id = _actor_id
-      AND member_employee.employment_status = 'ACTIVE'
   )
 $$;
 

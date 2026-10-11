@@ -23,7 +23,7 @@ The original policy source is `drizzle/migrations/0010_phase5_project_foundation
 
 | File | Purpose | SHA-256 |
 | --- | --- | --- |
-| `supabase/pending/20261011_project_stage_gates_rls_recursion_repair.sql` | helper plus replacement of exactly two SELECT policies | `570301ab3f90a9c7bf360d3883721e30e6102b643af0c01acfd6b580125d3588` |
+| `supabase/pending/20261011_project_stage_gates_rls_recursion_repair.sql` | helper plus replacement of exactly two SELECT policies | recalculated after source-only identity/semantic repair |
 | `supabase/pending/20261011_project_stage_gates_rls_recursion_manual_install_review.sql` | review-only, transaction-scoped manual-install artifact; rolls back by design | review-only companion |
 | `supabase/pending/tests/project_stage_gates_rls_recursion_local_fixture.sql` | disposable schema and original-policy reproduction | local test fixture |
 | `supabase/pending/tests/project_stage_gates_rls_recursion_local_acceptance.sql` | caller-scope and privilege assertions | local acceptance |
@@ -31,7 +31,7 @@ The original policy source is `drizzle/migrations/0010_phase5_project_foundation
 
 ### Smallest SQL diff
 
-1. Create `public.has_project_team_membership(actor_id uuid, project_id uuid) RETURNS boolean`, `STABLE SECURITY DEFINER`, `search_path = public`. It reads only matching `project_team_members` + active `employees` membership.
+1. Create `public.has_project_team_membership(actor_id uuid, project_id uuid) RETURNS boolean`, `STABLE SECURITY DEFINER`, `search_path = public`. It returns false unless `auth.uid()` is non-null and exactly equals `actor_id`, then reads only matching fully qualified `public.project_team_members` and `public.employees` membership. It deliberately has **no** employment-status condition, matching the verified original predicates.
 2. Revoke its default `PUBLIC` and `anon` execution; grant `authenticated` execution. PostgreSQL needs caller execute privilege to evaluate a policy expression, so an authenticated grant is required. The helper has no write path and returns only a boolean membership fact.
 3. Drop and recreate exactly these two existing **SELECT** policies with their original names:
    - `public.project_team_members` / `Project members view their project team`: preserve `admin`, `projects.manage`, and direct own-employee-row branches verbatim; replace only the recursive peer-membership `EXISTS` with the helper.
@@ -41,10 +41,10 @@ No `FOR ALL` policy, write predicate, table grant, `anon` grant, role, company p
 
 ### Helper owner, caller identity, and ACL boundary
 
-- The function is `SECURITY DEFINER`, `STABLE`, and explicitly sets `search_path = public`; the migration executor remains its owner. No `ALTER FUNCTION ... OWNER` is included or permitted in this package.
-- The caller identity is never trusted from a function argument in a policy. Both replacement policies pass the database-authenticated `auth.uid()` as `_actor_id`; the helper compares it against `employees.user_id` for an active employee in the requested row's project.
+- The function is `SECURITY DEFINER`, `STABLE`, and explicitly sets `search_path = public`; no `ALTER FUNCTION ... OWNER` is included or permitted in this package. Read-only catalog inspection confirms the established helpers are owned by `postgres`, whose role has `BYPASSRLS`; the new helper would use the same boundary.
+- The caller identity is guarded inside the helper, not only at policy call sites: `auth.uid() IS NOT NULL AND _actor_id = auth.uid()`. Both replacement policies pass database-authenticated `auth.uid()` as `_actor_id`; direct authenticated execution with another actor UUID returns false.
 - PostgreSQL defaults new functions to `PUBLIC EXECUTE`. The package explicitly revokes `PUBLIC` and `anon`, then grants `authenticated` only because policy evaluation invokes the helper in that role. The helper returns only a boolean and has no mutation path.
-- Direct authenticated execution can determine a boolean membership fact for supplied UUIDs. That is the narrow unavoidable policy-evaluation capability and must be accepted separately; the helper cannot be used in the RLS expression without authenticated `EXECUTE`.
+- Direct authenticated execution can only determine the current caller's own boolean membership fact; arbitrary actor UUIDs and a missing `auth.uid()` return false. Authenticated `EXECUTE` remains necessary for RLS evaluation.
 
 ### Installer limitation and manual review artifact
 
@@ -58,7 +58,7 @@ Read-only tool-capability inspection confirms the supported migration runner val
 | --- | --- | --- |
 | Admin | all team and stage-gate rows | unchanged |
 | `projects.view` | all stage-gate rows; not team rows without `projects.manage` or membership | unchanged |
-| Active employee in same project | peer team rows and that project’s stage-gate rows | unchanged, without recursion |
+| Any project employee in same project, including inactive | peer team rows and that project’s stage-gate rows | unchanged, without recursion |
 | Unrelated employee/nonmember | no rows via membership branch | unchanged |
 | Employee's own team row | direct own-row path | unchanged |
 | Anon | no table select and no helper execution | unchanged |
@@ -81,9 +81,9 @@ The fixture reproduces the old recursive SELECT policies before applying the rev
 2. unrelated-company nonmember: sees neither gates nor team rows;
 3. `projects.view`: sees both gate rows but no team rows, preserving the distinct live predicates;
 4. admin: sees all gate and team rows;
-5. inactive employee: direct own team-row behavior remains distinct and unchanged;
+5. inactive project member: peer team rows and that project’s gate remain visible, matching the original predicate exactly;
 6. anon: denied table SELECT and helper execution;
-7. authenticated: helper returns false for a false membership fact.
+7. authenticated: helper returns false for a false membership fact, an arbitrary other-actor UUID, and a missing caller identity.
 
 This is local evidence only. Managed caller acceptance still requires testing the exact deployed role/membership data after a separately approved installation. The helper's direct authenticated execution cannot be denied while used in an RLS policy; the reviewed boundary is its narrow boolean-only result, `PUBLIC`/anon denial, and no write capability.
 
