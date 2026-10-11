@@ -265,7 +265,7 @@ BEGIN
   IF v_actor IS NULL OR p_request_key IS NULL THEN RAISE EXCEPTION 'Authenticated actor and request key are required'; END IF;
   v_payload := public.component_candidate_decision_canonical_payload(p_candidate_id, p_expected_revision_id, p_decision, p_decision_note);
   v_payload_hash := md5(v_payload::text);
-  PERFORM 1
+  SELECT * INTO v_scope
   FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
