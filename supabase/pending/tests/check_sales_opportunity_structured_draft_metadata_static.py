@@ -68,6 +68,7 @@ def main() -> None:
     require(runner.read_text(), "Refusing a non-private local structured-draft acceptance target.", "local-only runner refusal")
     require(conflict_setup.read_text(), "LOCAL DISPOSABLE TWO-WORKER CONFLICT-RACE FIXTURE ONLY", "conflict-race fixture boundary")
     require(conflict_worker.read_text(), "Captures expected SQLSTATE without returning a receipt on denial", "conflict worker receipt denial capture")
+    require(conflict_worker.read_text(), "worker actor context mismatch", "conflict worker actor-context assertion")
     require(conflict_assertions.read_text(), "Request key conflicts with a different immutable source, schema, caller, revision, or payload", "conflict receipt assertion")
     require(conflict_assertions.read_text(), "v_drafts <> 1 OR v_revisions <> 1 OR v_requests <> 1", "conflict no-extra-write assertion")
     require(conflict_runner.read_text(), "CONTRACT_CONTENTION_OBSERVED case=%s", "conflict contract lock observation")

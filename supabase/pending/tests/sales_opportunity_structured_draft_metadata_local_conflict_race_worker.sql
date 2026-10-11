@@ -3,6 +3,7 @@
 
 SELECT set_config('request.jwt.claim.sub', :'actor_id', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
+SELECT set_config('structured_draft.test_actor_id', :'actor_id', false);
 SELECT set_config('structured_draft.test_payload', :'payload', false);
 SELECT set_config('structured_draft.test_case_name', :'case_name', false);
 SELECT set_config('structured_draft.test_worker_label', :'worker_label', false);
@@ -10,8 +11,12 @@ SELECT set_config('structured_draft.test_worker_label', :'worker_label', false);
 DO $worker$
 DECLARE
   v_draft_id uuid; v_revision_id uuid; v_revision_number integer; v_replayed boolean;
-  v_state text; v_message text;
+  v_state text; v_message text; v_observed_actor uuid; v_expected_actor uuid := current_setting('structured_draft.test_actor_id')::uuid;
 BEGIN
+  v_observed_actor := auth.uid();
+  IF v_observed_actor IS DISTINCT FROM v_expected_actor THEN
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL worker actor context mismatch: expected %, observed %', v_expected_actor, v_observed_actor;
+  END IF;
   BEGIN
     SELECT draft_id, revision_id, revision_number, replayed
     INTO v_draft_id, v_revision_id, v_revision_number, v_replayed
