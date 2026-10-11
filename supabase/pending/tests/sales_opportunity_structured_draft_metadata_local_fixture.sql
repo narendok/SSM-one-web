@@ -41,6 +41,18 @@ CREATE TABLE public.master_specification_versions (
   version_number integer NOT NULL, specification_data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (specification_id, version_number)
 );
+CREATE TABLE public.drive_nodes (
+  id uuid PRIMARY KEY,
+  project_id uuid NULL,
+  parent_id uuid NULL,
+  name text NOT NULL,
+  node_type text NOT NULL,
+  storage_bucket text NULL,
+  storage_path text NULL,
+  is_locked boolean NOT NULL DEFAULT false,
+  is_trashed boolean NOT NULL DEFAULT false,
+  department_id uuid NULL
+);
 INSERT INTO public.customers (id, name) VALUES
   ('00000000-0000-4000-8000-000000000101', 'Local Customer A'),
   ('00000000-0000-4000-8000-000000000102', 'Local Customer B');
@@ -53,6 +65,9 @@ INSERT INTO public.master_specifications (id, opportunity_id, customer_id) VALUE
 INSERT INTO public.master_specification_versions (id, specification_id, version_number, specification_data, created_at) VALUES
   ('00000000-0000-4000-8000-000000000401', '00000000-0000-4000-8000-000000000301', 1, '{"source":"A"}'::jsonb, '2026-10-10T00:00:00Z'),
   ('00000000-0000-4000-8000-000000000402', '00000000-0000-4000-8000-000000000302', 1, '{"source":"B"}'::jsonb, '2026-10-10T00:00:00Z');
+INSERT INTO public.drive_nodes (id, name, node_type, is_locked, is_trashed) VALUES
+  ('00000000-0000-4000-8000-000000000601', 'Sales private structured drafts', 'folder', true, false),
+  ('00000000-0000-4000-8000-000000000602', 'Untrusted folder', 'folder', false, false);
 INSERT INTO public.sales_structured_draft_test_permissions (user_id, sales_manage) VALUES
   ('00000000-0000-4000-8000-000000000001', true),
   ('00000000-0000-4000-8000-000000000002', true),
