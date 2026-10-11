@@ -267,14 +267,27 @@ BEGIN
   v_payload_hash := md5(v_payload::text);
   SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
-  SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  PERFORM 1
+  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
+  END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
-  SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  PERFORM 1
+  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
+  END IF;
   SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
-    SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+    PERFORM 1
+    FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
+    END IF;
     SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
-    SELECT * INTO v_scope FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+    PERFORM 1
+    FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
     IF NOT FOUND THEN
       RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
     END IF;
