@@ -45,7 +45,7 @@ SELECT public.deviation_test_hold_project_lock(:'project'::uuid, :'token');
 COMMIT;
 SQL
 holder_pid=$!; echo "$holder_pid"; }
-assert_waiting_exact_lock() { local pid=$1; local actual; actual="$(q "SELECT count(*) FROM pg_locks WHERE pid = $pid AND locktype = 'advisory' AND NOT granted AND classid = ((hashtextextended('project-deviation-project:' || '$project', 0) >> 32) & 4294967295)::oid AND objid = (hashtextextended('project-deviation-project:' || '$project', 0) & 4294967295)::oid")"; assert_eq "$actual" 1 "same worker prewait exact project advisory lock"; }
+assert_waiting_exact_lock() { local pid=$1; local actual; actual="$(q "SELECT count(*) FROM pg_locks WHERE pid = $pid AND locktype = 'advisory' AND NOT granted AND classid = ((hashtextextended('project-deviation-project:' || '$project', 0) >> 32) & 4294967295)::bigint AND objid = (hashtextextended('project-deviation-project:' || '$project', 0) & 4294967295)::bigint")"; assert_eq "$actual" 1 "same worker prewait exact project advisory lock"; }
 release_lock() { local token=$1 holder=$2; q "UPDATE public.deviation_test_sync SET released = true WHERE token = '$token'"; wait "$holder"; }
 counts() { q "SELECT count(*) || ':' || (SELECT count(*) FROM public.project_deviation_submission_revisions) || ':' || (SELECT count(*) FROM public.project_deviation_submission_evidence) || ':' || (SELECT count(*) FROM public.project_deviation_submission_audit_events) || ':' || (SELECT count(*) FROM public.project_deviation_submission_request_receipts) FROM public.project_deviation_submissions"; }
 reset_authority_and_pins
