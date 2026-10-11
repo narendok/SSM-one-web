@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { buildStructuredPreviewContent, FormattedPreview, localEditsForStructuredPreview, requestStructuredPreviewExit, shouldWarnBeforeClosingStructuredPreview } from "./StructuredTemplatePreview";
+import { buildStructuredPreviewContent, FormattedPreview, localEditsForStructuredPreview, requestStructuredPreviewExit, shouldWarnBeforeClosingStructuredPreview, structuredSalesDocumentGate } from "./StructuredTemplatePreview";
 import { mapMasterSpecificationSource, serializeLocalTableRows, structuredLifecycleTemplatePreviews } from "@/lib/lifecycle-structured-template-previews";
 
 const source = mapMasterSpecificationSource({ opportunityId: "opportunity-id", opportunityNumber: "OPPORTUNITY-2026-0013", opportunityName: "Tracker", customerId: "customer-id", customerName: "SAMPLE ONLY", specificationId: "specification-id", specificationNumber: "MASTER-2026-0001", versionId: "version-id", versionNumber: 1, changeSummary: "Initial intake", savedAt: "2026-10-05T18:37:27.589Z", project: null, specificationData: {} });
@@ -92,6 +92,20 @@ describe("local structured preview draft safety", () => {
     expect(content.content).toContain("  Manual scope\nkept exactly.  ");
     expect(markup).toContain('sandbox=""');
     expect(markup).toContain("Local unsaved draft — NOT APPROVED / TBC.");
+  });
+
+  it("permits SOR, Contract Review, and PRS local editing only behind an exact verified Sales source pin", () => {
+    for (const kind of ["SOR", "CONTRACT_REVIEW", "PRS"] as const) {
+      expect(structuredSalesDocumentGate(kind, source)).toEqual({
+        state: "VERIFIED",
+        message: expect.stringContaining("OPPORTUNITY-2026-0013 · MASTER-2026-0001 rev 1"),
+      });
+      expect(structuredSalesDocumentGate(kind, null)).toEqual({
+        state: "SOURCE_UNAVAILABLE",
+        message: expect.stringContaining("could not be verified"),
+      });
+    }
+    expect(structuredSalesDocumentGate("NDA", null)).toBeNull();
   });
 
   it("keeps XSS text inert in a sandboxed SOR preview", () => {
