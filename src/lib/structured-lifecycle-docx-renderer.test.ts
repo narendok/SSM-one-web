@@ -108,7 +108,7 @@ describe("structured lifecycle DOCX renderer", () => {
 
     const modified = await JSZip.loadAsync(rendered.bytes);
     modified.file("word/document.xml", "<!doctype html><html><body>replaced</body></html>");
-    await expect(verifyStructuredLifecycleDocxBytes(await modified.generateAsync({ type: "uint8array" }))).rejects.toThrow("missing editable Word document XML");
+    await expect(verifyStructuredLifecycleDocxBytes(await modified.generateAsync({ type: "uint8array" }))).rejects.toThrow("not safe XML");
 
     const external = await JSZip.loadAsync(rendered.bytes);
     external.file("customXml/_rels/item1.xml.rels", "<?xml version='1.0'?><Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'><Relationship Id='rId1' Type='urn:test' Target='https&#x3a;//untrusted.example/doc.xml' TargetMode='External'/></Relationships>");
