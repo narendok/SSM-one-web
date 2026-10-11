@@ -137,8 +137,8 @@ export function SharedProductLifecycle({
             <p className="mt-1 text-sm text-muted-foreground">No gate records are currently accessible for this project.</p>
           ) : (
             <div className="mt-2 flex flex-wrap gap-2">
-              {Object.entries(gateStatusCounts).map(([status, count]) => (
-                <Badge key={status} variant="outline">{count} {status}</Badge>
+              {(Object.entries(gateStatusCounts) as Array<[string, number]>).map(([status, count]) => (
+                <Badge key={status} variant="outline">{String(count)} {status}</Badge>
               ))}
             </div>
           )}
