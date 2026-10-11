@@ -42,3 +42,19 @@ export function isStructuredDocumentInCatalog(
 export function documentAccessBoundaryMessage() {
   return "Project overview access does not grant document access. This catalog stays unavailable until the assigned-person document access contract is accepted.";
 }
+
+export type SalesStructuredDocumentEntry = {
+  opportunityId: string;
+  opportunityNumber: string;
+  specificationNumber: string;
+  versionNumber: number;
+  folderNodeId: string;
+  departmentId: string;
+  isActive: boolean;
+  folderIsLocked: boolean;
+  folderIsTrashed: boolean;
+};
+
+export function canOpenDirectSalesStructuredDocuments(entry: SalesStructuredDocumentEntry | null) {
+  return Boolean(entry && entry.isActive && entry.folderIsLocked && !entry.folderIsTrashed);
+}

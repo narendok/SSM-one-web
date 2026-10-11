@@ -8,6 +8,7 @@ import {
   Eye,
   FileCheck2,
   FileText,
+  FolderOpen,
   GanttChartSquare,
   Handshake,
   Plus,
@@ -46,6 +47,7 @@ import { getSalesNextStepGuidance } from "@/lib/sales-next-step";
 import { useAuth } from "@/hooks/useAuth";
 import { salesOverviewQueryOptions } from "@/lib/sales-overview-query";
 import { SalesOpportunityPipeline } from "@/components/sales/SalesOpportunityPipeline";
+import { canOpenDirectSalesStructuredDocuments, type SalesStructuredDocumentEntry } from "@/lib/structured-lifecycle-document-access";
 
 export const Route = createFileRoute("/_authenticated/sales")({
   head: () => ({
@@ -62,6 +64,32 @@ export const Route = createFileRoute("/_authenticated/sales")({
 });
 
 type SalesDetail = { opportunity: SalesOpportunity; specification: MasterSpecificationSummary };
+type SalesDocumentLocationRow = {
+  opportunity_id: string;
+  department_id: string;
+  target_folder_node_id: string;
+  status: string;
+  location_purpose: string;
+  folder: { id: string; is_locked: boolean; is_trashed: boolean } | null;
+};
+
+function toSalesStructuredDocumentEntry(
+  detail: SalesDetail,
+  location: SalesDocumentLocationRow | null | undefined,
+): SalesStructuredDocumentEntry | null {
+  if (!location || location.opportunity_id !== detail.opportunity.id || location.location_purpose !== "STRUCTURED_DRAFT") return null;
+  return {
+    opportunityId: detail.opportunity.id,
+    opportunityNumber: detail.opportunity.opportunity_number,
+    specificationNumber: detail.specification.specification_number,
+    versionNumber: detail.specification.current_version,
+    folderNodeId: location.target_folder_node_id,
+    departmentId: location.department_id,
+    isActive: location.status === "ACTIVE",
+    folderIsLocked: Boolean(location.folder?.is_locked),
+    folderIsTrashed: Boolean(location.folder?.is_trashed),
+  };
+}
 function SalesPage() {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [dialog, setDialog] = useState<
@@ -523,6 +551,22 @@ export function ProposalDetail({
     },
     enabled: Boolean(detail),
   });
+  const documentLocation = useQuery({
+    queryKey: ["sales-structured-document-location", detail?.opportunity.id],
+    queryFn: async () => {
+      if (!detail) throw new Error("No Sales opportunity was selected.");
+      const { data, error } = await (supabase as any)
+        .from("sales_opportunity_document_locations")
+        .select("opportunity_id,department_id,target_folder_node_id,status,location_purpose,folder:drive_nodes!sales_opportunity_document_locations_target_folder_node_id_fkey(id,is_locked,is_trashed)")
+        .eq("opportunity_id", detail.opportunity.id)
+        .eq("location_purpose", "STRUCTURED_DRAFT")
+        .maybeSingle();
+      if (error) throw error;
+      return data as SalesDocumentLocationRow | null;
+    },
+    enabled: Boolean(detail),
+    retry: false,
+  });
   const draft = draftFromSpecificationData(specification.data?.specification_data);
   const linkedRequirements = requirements.filter(
     (item) =>
@@ -557,6 +601,8 @@ export function ProposalDetail({
         versionNumber: detail.specification.current_version,
       }
     : undefined;
+  const directDocumentEntry = detail ? toSalesStructuredDocumentEntry(detail, documentLocation.data) : null;
+  const canOpenDocuments = canOpenDirectSalesStructuredDocuments(directDocumentEntry);
   return (
     <StructuredPreviewExitDialog
       open={Boolean(detail)}
@@ -633,7 +679,7 @@ export function ProposalDetail({
                         </p>
                       </div>
                       <Button size="sm" onClick={() => setDocumentsOpen(true)}>
-                        <Eye className="size-4" /> Preview documents
+                        <Eye className="size-4" /> Open Sales documents
                       </Button>
                     </div>
                     <p className="mt-1 text-muted-foreground">
@@ -660,6 +706,29 @@ export function ProposalDetail({
                       This is a read-only source snapshot. It does not create a project, baseline,
                       client access, or conversion.
                     </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" asChild disabled={!canOpenDocuments}>
+                        <Link
+                          to="/drive"
+                          search={{
+                            node: canOpenDocuments ? directDocumentEntry?.folderNodeId : undefined,
+                            department: canOpenDocuments ? directDocumentEntry?.departmentId : undefined,
+                          }}
+                        >
+                          <FolderOpen className="size-4" /> Open Sales folder
+                        </Link>
+                      </Button>
+                    </div>
+                    {documentLocation.isError && (
+                      <p className="mt-2 text-xs text-destructive">
+                        The pinned Sales folder could not be verified. Direct folder access remains unavailable.
+                      </p>
+                    )}
+                    {!documentLocation.isLoading && !documentLocation.isError && !canOpenDocuments && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        No active locked Sales folder is available for this exact source. No folder or project was created.
+                      </p>
+                    )}
                   </section>
                   <section className="grid gap-3 sm:grid-cols-2">
                     <ReadField label="Proposed name" value={draft.proposedName} />
