@@ -21,7 +21,10 @@ vi.mock("@/lib/tasks", async () => {
   return { ...actual, fetchCanonicalDepartments: vi.fn().mockResolvedValue([]) };
 });
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ role: "employee" }) }));
-vi.mock("@tanstack/react-start", () => ({ useServerFn: () => vi.fn() }));
+vi.mock("@tanstack/react-start", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-start")>("@tanstack/react-start");
+  return { ...actual, useServerFn: () => vi.fn() };
+});
 vi.mock("./FilePreviewDialog", () => ({ FilePreviewDialog: () => null }));
 vi.mock("./RevisionsDialog", () => ({ RevisionsDialog: () => null }));
 vi.mock("./ShareNodeDialog", () => ({ ShareNodeDialog: () => null }));
