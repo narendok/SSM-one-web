@@ -66,32 +66,18 @@ export const Route = createFileRoute("/_authenticated/sales")({
 type SalesDetail = { opportunity: SalesOpportunity; specification: MasterSpecificationSummary };
 type SalesDocumentLocationDiscovery = {
   location_id: string;
-  opportunityId: string;
-  departmentId: string;
-  targetFolderNodeId: string;
-  storageBucket: string;
-  storagePathPrefix: string;
-  isActive: boolean;
-  folderIsLocked: boolean;
-  folderIsTrashed: boolean;
 };
 
 function toSalesStructuredDocumentEntry(
   detail: SalesDetail,
   location: SalesDocumentLocationDiscovery | null | undefined,
 ): SalesStructuredDocumentEntry | null {
-  if (!location || location.opportunityId !== detail.opportunity.id) return null;
-  return {
-    opportunityId: detail.opportunity.id,
-    opportunityNumber: detail.opportunity.opportunity_number,
-    specificationNumber: detail.specification.specification_number,
-    versionNumber: detail.specification.current_version,
-    folderNodeId: location.targetFolderNodeId,
-    departmentId: location.departmentId,
-    isActive: location.isActive,
-    folderIsLocked: location.folderIsLocked,
-    folderIsTrashed: location.folderIsTrashed,
-  };
+  void detail;
+  void location;
+  // The discovery contract intentionally returns only private storage capability.
+  // It does not expose a navigable folder node/department pair, so folder navigation
+  // must stay unavailable rather than reconstructing that authority client-side.
+  return null;
 }
 function SalesPage() {
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -577,14 +563,6 @@ export function ProposalDetail({
       if (!location?.location_id || !location.storage_bucket || !location.storage_path_prefix) return null;
       return {
         location_id: location.location_id,
-        opportunityId: detail.opportunity.id,
-        departmentId: "",
-        targetFolderNodeId: "",
-        storageBucket: location.storage_bucket,
-        storagePathPrefix: location.storage_path_prefix,
-        isActive: true,
-        folderIsLocked: false,
-        folderIsTrashed: true,
       } satisfies SalesDocumentLocationDiscovery;
     },
     enabled: Boolean(detail && specification.data?.id),
