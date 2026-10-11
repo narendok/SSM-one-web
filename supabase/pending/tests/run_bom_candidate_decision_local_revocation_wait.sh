@@ -65,16 +65,16 @@ wait_for_exact_lock() {
 }
 graph_counts() { run_psql -Atqc "SELECT (SELECT status FROM public.component_candidate_submissions WHERE id = '$1'::uuid) || '/' || (SELECT count(*) FROM public.component_candidate_decisions WHERE candidate_id = '$1'::uuid)::text || '/' || (SELECT count(*) FROM public.component_candidate_submission_audit_events WHERE candidate_id = '$1'::uuid)::text || '/' || (SELECT count(*) FROM public.component_candidate_decision_request_receipts WHERE candidate_id = '$1'::uuid)::text"; }
 run_case() {
-  local label="$1" candidate_id="$2" revision_id="$3" request_key="$4" decision="$5" note="$6" revoke_sql="$7" before="$8"
+  local label="$1" candidate_id="$2" revision_id="$3" request_key="$4" decision="$5" note="$6" lock_prefix="$7" lock_value="$8" revoke_sql="$9" before="${10}"
   psql "${psql_args[@]}" <<SQL >"$log_dir/$label-locker.out" 2>"$log_dir/$label-locker.err" & locker_pid=$!
 BEGIN;
-SELECT pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || '$request_key', 0));
+SELECT pg_advisory_xact_lock(hashtextextended('$lock_prefix' || '$lock_value', 0));
 SELECT pg_sleep(0.25);
 COMMIT;
 SQL
   sleep 0.02
   psql "${psql_args[@]}" --set=candidate_id="$candidate_id" --set=revision_id="$revision_id" --set=decision="$decision" --set=decision_note="$note" --set=request_key="$request_key" -f "$root/supabase/pending/tests/bom_candidate_decision_local_revocation_wait_worker.sql" >"$log_dir/$label-waiter.out" 2>"$log_dir/$label-waiter.err" & waiter_pid=$!
-  wait_for_exact_lock 'component-candidate-decision-request:' "$request_key"
+  wait_for_exact_lock "$lock_prefix" "$lock_value"
   run_psql -c "$revoke_sql" >/dev/null
   wait "$locker_pid"
   waiter_status=0; wait "$waiter_pid" || waiter_status=$?
@@ -86,13 +86,13 @@ SQL
 }
 
 new_candidate="$(create_candidate 'REVOKED-DECISION-NEW' '30000000-0000-4000-8000-000000000090')"; new_revision="$(revision_for "$new_candidate")"; new_before="$(graph_counts "$new_candidate")"
-run_case 'new' "$new_candidate" "$new_revision" '30000000-0000-4000-8000-000000000091' 'APPROVE' 'Revoked permission during wait' "DELETE FROM public.access_role_permissions WHERE role_id = '30000000-0000-4000-8000-000000000028';" "$new_before"
+run_case 'new' "$new_candidate" "$new_revision" '30000000-0000-4000-8000-000000000091' 'APPROVE' 'Revoked permission during wait' 'component-candidate-decision-request:' '30000000-0000-4000-8000-000000000091' "DELETE FROM public.access_role_permissions WHERE role_id = '30000000-0000-4000-8000-000000000028';" "$new_before"
 [[ "$(graph_counts "$new_candidate")" == 'SUBMITTED/0/1/0' ]] || { echo 'LOCAL_CASE_FAIL revoked new decision graph was not unchanged' >&2; exit 1; }
 run_psql -c "INSERT INTO public.access_role_permissions(role_id, permission_id) SELECT '30000000-0000-4000-8000-000000000028', id FROM public.permissions WHERE key = 'engineering.approve';" >/dev/null
 
 replay_candidate="$(create_candidate 'REVOKED-DECISION-REPLAY' '30000000-0000-4000-8000-000000000092')"; replay_revision="$(revision_for "$replay_candidate")"
 run_psql -Atqc "SELECT set_config('request.jwt.claim.sub', '30000000-0000-4000-8000-000000000002', false); SELECT * FROM public.decide_component_candidate('$replay_candidate'::uuid, '$replay_revision'::uuid, 'APPROVE', 'Authorized receipt before revocation', '30000000-0000-4000-8000-000000000093');" >/dev/null
 replay_before="$(graph_counts "$replay_candidate")"
-run_case 'replay' "$replay_candidate" "$replay_revision" '30000000-0000-4000-8000-000000000093' 'APPROVE' 'Authorized receipt before revocation' "DELETE FROM public.employee_departments WHERE employee_id = '30000000-0000-4000-8000-000000000025';" "$replay_before"
+run_case 'replay' "$replay_candidate" "$replay_revision" '30000000-0000-4000-8000-000000000093' 'APPROVE' 'Authorized receipt before revocation' 'component-candidate-decision:' "$replay_candidate" "DELETE FROM public.employee_departments WHERE employee_id = '30000000-0000-4000-8000-000000000025';" "$replay_before"
 [[ "$(graph_counts "$replay_candidate")" == 'APPROVED_PENDING_PURCHASE/1/2/1' ]] || { echo 'LOCAL_CASE_FAIL revoked replay mutated terminal receipt history' >&2; exit 1; }
 printf 'BOM_CANDIDATE_DECISION_LOCAL_REVOCATION_WAIT_PASS exact_decision_lock_verified=true new_decision_result_returned=false new_decision_graph_unchanged=true replay_result_returned=false replay_history_unchanged=true authority_revoked_before_unlock=true\n'
