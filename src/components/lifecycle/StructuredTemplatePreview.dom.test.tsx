@@ -255,15 +255,27 @@ afterEach(() => {
 });
 
 describe("StructuredTemplatePreview mounted local interactions", () => {
-  it("hydrates only an exact kind-bound persisted payload and rejects malformed or cross-kind content", () => {
+  it("hydrates the flat persisted server payload only for its already kind-bound draft provenance", () => {
     expect(
       persistedStructuredSalesDraftFields("SOR", {
-        kind: "SOR",
-        fields: { SCOPE_STATEMENT: "Saved, unissued scope" },
+        OEM_REQUIREMENT_ROWS: "TBC",
+        SCOPE_STATEMENT: "TBC",
+        ACCEPTANCE_CRITERIA: "TBC",
+        CAN_TELEMETRY_NOTES: "TBC",
+        PILOT_ROLLOUT_NOTES: "TBC",
+        COMMERCIAL_SLA_WARRANTY_DELIVERY: "TBC",
       }),
-    ).toEqual({ SCOPE_STATEMENT: "Saved, unissued scope" });
-    expect(persistedStructuredSalesDraftFields("SOR", { kind: "PRS", fields: { POWER_REQUIREMENT: "12V" } })).toBeNull();
-    expect(persistedStructuredSalesDraftFields("SOR", { kind: "SOR", fields: { UNKNOWN: "No" } })).toBeNull();
+    ).toEqual({
+      OEM_REQUIREMENT_ROWS: "TBC",
+      SCOPE_STATEMENT: "TBC",
+      ACCEPTANCE_CRITERIA: "TBC",
+      CAN_TELEMETRY_NOTES: "TBC",
+      PILOT_ROLLOUT_NOTES: "TBC",
+      COMMERCIAL_SLA_WARRANTY_DELIVERY: "TBC",
+    });
+    expect(persistedStructuredSalesDraftFields("SOR", { POWER_REQUIREMENT: "12V" })).toBeNull();
+    expect(persistedStructuredSalesDraftFields("SOR", { PROJECT_CODE: "derived" })).toBeNull();
+    expect(persistedStructuredSalesDraftFields("SOR", { SCOPE_STATEMENT: 42 })).toBeNull();
   });
 
   it("downloads a verified blob only when it arrives before the timeout and matches the stored checksum", async () => {
