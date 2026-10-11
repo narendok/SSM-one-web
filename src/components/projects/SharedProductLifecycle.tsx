@@ -22,9 +22,13 @@ const phases = [
 export function SharedProductLifecycle({
   project,
   onOpenDelivery,
+  onOpenFiles,
+  onOpenTasks,
 }: {
   project: Project;
   onOpenDelivery: () => void;
+  onOpenFiles: () => void;
+  onOpenTasks: () => void;
 }) {
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["shared_product_lifecycle", project.id, project.requirement_baseline_id],
@@ -111,13 +115,13 @@ export function SharedProductLifecycle({
           <Metric label="Design inputs" value={snapshot?.inputs.length ?? 0} detail="Shared PRS analysis inputs" />
           <Metric label="Open changes" value={snapshot?.changes.filter((change: any) => !["closed", "implemented"].includes(String(change.status).toLowerCase())).length ?? 0} detail="Controlled change notes" />
         </div>
-        <div className="mt-4 flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link to="/tasks" search={{ assignee: undefined, task: undefined }}><ClipboardList className="size-3.5" /> Open task queue</Link></Button><Button asChild size="sm" variant="outline"><Link to="/sales"><GitPullRequest className="size-3.5" /> Requirement & handover</Link></Button></div>
+        <div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={onOpenTasks}><ClipboardList className="size-3.5" /> Open project tasks</Button><Button asChild size="sm" variant="outline"><Link to="/sales"><GitPullRequest className="size-3.5" /> Requirement & handover</Link></Button></div>
       </Card>
       <Card className="p-5">
         <div className="flex items-center gap-2"><PackageSearch className="size-4 text-primary" /><h3 className="font-semibold">Source-controlled delivery inputs</h3></div>
         <p className="mt-3 text-sm text-muted-foreground">Procurement and production planning must use exact revision-linked sources. Missing links remain visible rather than being inferred.</p>
         <div className="mt-4 flex flex-wrap gap-2"><Badge variant="outline">{snapshot?.boms.length ?? 0} saved BOMs</Badge><Badge variant="outline">{linkedBoms} revision-linked</Badge><Badge variant="outline">{snapshot?.process.length ?? 0} process records</Badge></div>
-        <div className="mt-4 flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link to="/bom" search={{ projectId: project.id } as any}><FileText className="size-3.5" /> Review BOMs</Link></Button><Button asChild size="sm" variant="outline"><Link to="/drive" search={{ node: project.project_drive_node_id ?? undefined, department: project.department_id ?? undefined } as any}><FolderOpen className="size-3.5" /> Open project files</Link></Button></div>
+        <div className="mt-4 flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link to="/bom" search={{ projectId: project.id } as any}><FileText className="size-3.5" /> Review BOMs</Link></Button><Button size="sm" variant="outline" onClick={onOpenFiles}><FolderOpen className="size-3.5" /> Open project files</Button></div>
       </Card>
     </div>
 

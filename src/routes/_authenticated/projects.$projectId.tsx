@@ -312,7 +312,12 @@ function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="lifecycle" className="pt-4">
-          <SharedProductLifecycle project={project} onOpenDelivery={() => setActiveTab("delivery")} />
+          <SharedProductLifecycle
+            project={project}
+            onOpenDelivery={() => setActiveTab("delivery")}
+            onOpenFiles={() => setActiveTab("files")}
+            onOpenTasks={() => setActiveTab("tasks")}
+          />
         </TabsContent>
 
         <TabsContent value="team" className="pt-4">
