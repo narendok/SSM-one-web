@@ -16,7 +16,13 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
       const execute = () => table === "project_stage_gates" ? readGates() : table === "requirement_baselines" ? readBaseline() : table === "company_process_stages" ? readStages() : readLifecycle();
-      const query = { select: () => query, eq: () => query, order: execute, maybeSingle: execute };
+      const query = {
+        select: () => query,
+        eq: () => query,
+        order: () => query,
+        maybeSingle: () => query,
+        then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => execute().then(resolve, reject),
+      };
       return query;
     },
   },
@@ -52,7 +58,7 @@ afterEach(() => {
 describe("SharedProductLifecycle governed reads", () => {
   it("settles the 42P17 gate read as unavailable while unaffected lifecycle records remain usable", async () => {
     readLifecycle.mockResolvedValue({ data: [], error: null });
-    readGates.mockRejectedValue({ message: "infinite recursion detected in policy", code: "42P17" });
+    readGates.mockResolvedValue({ data: null, error: { message: "infinite recursion detected in policy", code: "42P17" } });
     readStages.mockResolvedValue({ data: [], error: null });
 
     renderLifecycle();
@@ -65,7 +71,7 @@ describe("SharedProductLifecycle governed reads", () => {
 
   it("settles governed automation failures instead of leaving its panel loading", async () => {
     const user = userEvent.setup();
-    readLifecycle.mockRejectedValueOnce(new Error("Process records unavailable")).mockResolvedValue({ data: [], error: null });
+    readLifecycle.mockResolvedValueOnce({ data: null, error: new Error("Process records unavailable") }).mockResolvedValue({ data: [], error: null });
     readGates.mockResolvedValue({ data: [], error: null });
     readStages.mockResolvedValue({ data: [], error: null });
 
