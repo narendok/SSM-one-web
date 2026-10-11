@@ -24,12 +24,3 @@ CREATE TABLE public.project_team_members (id uuid PRIMARY KEY, project_id uuid N
 CREATE TABLE public.sales_project_handovers (id uuid PRIMARY KEY, baseline_id uuid NOT NULL REFERENCES public.requirement_baselines(id), project_id uuid, status text NOT NULL);
 CREATE TABLE public.candidate_test_failpoints (name text PRIMARY KEY, enabled boolean NOT NULL DEFAULT false);
 CREATE FUNCTION public.candidate_test_failpoint() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF EXISTS (SELECT 1 FROM public.candidate_test_failpoints WHERE name = TG_TABLE_NAME AND enabled) THEN RAISE EXCEPTION 'Injected candidate test failure'; END IF; RETURN NEW; END $$;
-CREATE TABLE public.candidate_test_wait_controls (name text PRIMARY KEY, reached boolean NOT NULL DEFAULT false, release boolean NOT NULL DEFAULT false);
-CREATE OR REPLACE FUNCTION public.candidate_test_waitpoint(p_name text) RETURNS void LANGUAGE plpgsql AS $$
-BEGIN
-  UPDATE public.candidate_test_wait_controls SET reached = true WHERE name = p_name;
-  WHILE EXISTS (SELECT 1 FROM public.candidate_test_wait_controls WHERE name = p_name AND NOT release) LOOP
-    PERFORM pg_sleep(0.02);
-  END LOOP;
-END;
-$$;

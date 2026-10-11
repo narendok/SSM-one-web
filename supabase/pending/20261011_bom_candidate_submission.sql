@@ -152,10 +152,6 @@ BEGIN
   v_payload_hash := md5(jsonb_build_object('projectId', p_project_id, 'projectBomId', p_project_bom_id, 'payload', v_payload)::text);
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-project:' || p_project_id::text, 0));
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-request:' || p_request_key::text, 0));
-  -- Local acceptance may install this private helper; production schemas do not.
-  IF to_regprocedure('public.candidate_test_waitpoint(text)') IS NOT NULL THEN
-    PERFORM public.candidate_test_waitpoint('component_candidate_submission_after_request_lock');
-  END IF;
   SELECT * INTO v_scope FROM public.component_candidate_submission_scope(v_actor, p_project_id, p_project_bom_id);
   SELECT * INTO v_prior FROM public.component_candidate_submission_request_receipts WHERE request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
