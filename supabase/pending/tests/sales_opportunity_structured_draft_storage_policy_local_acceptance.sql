@@ -25,6 +25,15 @@ RESET ROLE;
 
 \ir ../20261011_sales_opportunity_structured_draft_materialization_activation.sql
 
+-- The materialization acceptance rolls back its fixture; seed the minimum
+-- immutable receipt graph needed to exercise the Sales SELECT policy here.
+INSERT INTO public.sales_opportunity_structured_drafts(id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,document_kind,created_by)
+VALUES ('00000000-0000-4000-8000-000000000722','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000401','SOR','00000000-0000-4000-8000-000000000001');
+INSERT INTO public.sales_opportunity_structured_draft_revisions(id,draft_id,revision_number,payload,created_by)
+VALUES ('00000000-0000-4000-8000-000000000721','00000000-0000-4000-8000-000000000722',1,'{}','00000000-0000-4000-8000-000000000001');
+INSERT INTO public.sales_opportunity_structured_draft_requests(request_key,draft_id,revision_id,opportunity_id,customer_id,source_fingerprint,requested_by)
+VALUES ('00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000722','00000000-0000-4000-8000-000000000721','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','00000000-0000-4000-8000-000000000001');
+
 SET ROLE authenticated;
 SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000003';
 DO $pm$
