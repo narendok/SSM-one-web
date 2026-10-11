@@ -195,6 +195,9 @@ BEGIN
   IF NOT COALESCE(public.has_permission(p_actor, 'engineering.approve'), false) THEN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
+  -- Force a fresh VOLATILE SQL boundary for post-advisory-wait authority
+  -- reads; this prevents the SQL planner from reusing a STABLE helper result.
+  PERFORM public.component_candidate_decision_authority_fresh(p_actor);
   SELECT candidate.id, revision.id, candidate.submitted_by, candidate.status
   INTO candidate_id, candidate_revision_id, submitted_by, candidate_status
   FROM public.component_candidate_submissions candidate
@@ -204,11 +207,24 @@ BEGIN
   JOIN public.departments hardware ON hardware.id = membership.department_id AND hardware.code = 'HARDWARE' AND hardware.is_active
   WHERE candidate.id = p_candidate_id
     AND candidate.submitted_by <> p_actor
-  FOR UPDATE OF candidate, revision, employee, membership, hardware;
+  -- Do not lock the mutable authority graph before an advisory wait: a
+  -- concurrent membership revocation must commit before the post-wait check.
+  -- Candidate/revision locking happens in the decision function after it has
+  -- passed this authority boundary and found no replay receipt.
+  ;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate decision requires an active Hardware reviewer with engineering.approve, an exact immutable revision, and no self-review';
   END IF;
   RETURN NEXT;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.component_candidate_decision_authority_fresh(p_actor uuid)
+RETURNS void LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NOT COALESCE(public.has_permission(p_actor, 'engineering.approve'), false) THEN
+    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
+  END IF;
 END;
 $$;
 
@@ -271,12 +287,10 @@ BEGIN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
-  SELECT scope.* INTO v_scope
-  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
-  END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
+  -- This is the fresh post-wait authority boundary. Scope only locks the
+  -- candidate/revision, so concurrent authority revocation can commit while
+  -- this transaction waits and is visible to this READ COMMITTED statement.
   SELECT scope.* INTO v_scope
   FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
   IF NOT FOUND THEN
@@ -289,18 +303,14 @@ BEGIN
     IF NOT FOUND THEN
       RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
     END IF;
-    SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
-    SELECT scope.* INTO v_scope
-    FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
-    END IF;
     IF v_prior.requested_by = v_actor AND v_prior.payload_hash = v_payload_hash AND v_prior.action = v_payload ->> 'decision' THEN
       RETURN QUERY SELECT v_prior.decision_id, v_prior.candidate_id, true;
       RETURN;
     END IF;
     RAISE EXCEPTION 'Decision request key conflicts with a different actor or canonical payload';
   END IF;
+  -- Lock the state transition only after the post-wait authority/replay path.
+  -- Re-scope after the candidate lock before evaluating the initial state.
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
   SELECT scope.* INTO v_scope
   FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
