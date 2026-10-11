@@ -10798,6 +10798,736 @@ export type Database = {
           },
         ]
       }
+      sales_opportunity_document_locations: {
+        Row: {
+          authorized_at: string
+          authorized_by: string
+          created_at: string
+          created_by: string
+          customer_id: string
+          department_id: string
+          drive_root_node_id: string
+          id: string
+          location_purpose: string
+          opportunity_id: string
+          private_storage_bucket: string
+          private_storage_prefix: string
+          retired_at: string | null
+          retired_by: string | null
+          status: string
+          target_folder_node_id: string
+        }
+        Insert: {
+          authorized_at: string
+          authorized_by: string
+          created_at?: string
+          created_by: string
+          customer_id: string
+          department_id: string
+          drive_root_node_id: string
+          id?: string
+          location_purpose: string
+          opportunity_id: string
+          private_storage_bucket: string
+          private_storage_prefix: string
+          retired_at?: string | null
+          retired_by?: string | null
+          status?: string
+          target_folder_node_id: string
+        }
+        Update: {
+          authorized_at?: string
+          authorized_by?: string
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          department_id?: string
+          drive_root_node_id?: string
+          id?: string
+          location_purpose?: string
+          opportunity_id?: string
+          private_storage_bucket?: string
+          private_storage_prefix?: string
+          retired_at?: string | null
+          retired_by?: string | null
+          status?: string
+          target_folder_node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_document_locations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_document_locations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_document_locations_drive_root_node_id_fkey"
+            columns: ["drive_root_node_id"]
+            isOneToOne: false
+            referencedRelation: "drive_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_document_locations_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_document_locations_target_folder_node_id_fkey"
+            columns: ["target_folder_node_id"]
+            isOneToOne: false
+            referencedRelation: "drive_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_opportunity_structured_draft_audit_events: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          draft_id: string
+          id: string
+          payload_sha256_checksum: string
+          private_location_id: string
+          request_key: string
+          revision_id: string
+          source_fingerprint: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          draft_id: string
+          id?: string
+          payload_sha256_checksum: string
+          private_location_id: string
+          request_key: string
+          revision_id: string
+          source_fingerprint: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          draft_id?: string
+          id?: string
+          payload_sha256_checksum?: string
+          private_location_id?: string
+          request_key?: string
+          revision_id?: string
+          source_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_aud_private_location_id_fkey"
+            columns: ["private_location_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_structured_draft_private_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_audit_event_request_key_fkey"
+            columns: ["request_key"]
+            isOneToOne: true
+            referencedRelation: "sales_opportunity_structured_draft_requests"
+            referencedColumns: ["request_key"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_audit_event_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: true
+            referencedRelation: "sales_opportunity_structured_draft_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_audit_events_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_structured_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_opportunity_structured_draft_materialization_audits: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          materialization_id: string
+          rendered_sha256_checksum: string
+          request_key: string
+          source_fingerprint: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          materialization_id: string
+          rendered_sha256_checksum: string
+          request_key: string
+          source_fingerprint: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          materialization_id?: string
+          rendered_sha256_checksum?: string
+          request_key?: string
+          source_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_mate_materialization_id_fkey"
+            columns: ["materialization_id"]
+            isOneToOne: true
+            referencedRelation: "sales_opportunity_structured_draft_materializations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_materializ_request_key_fkey1"
+            columns: ["request_key"]
+            isOneToOne: true
+            referencedRelation: "sales_opportunity_structured_draft_requests"
+            referencedColumns: ["request_key"]
+          },
+        ]
+      }
+      sales_opportunity_structured_draft_materializations: {
+        Row: {
+          created_at: string
+          customer_id: string
+          document_control_register_id: string
+          document_kind: string
+          drive_node_id: string
+          drive_revision_id: string
+          id: string
+          location_id: string
+          master_specification_id: string
+          master_specification_version_id: string
+          mime_type: string
+          opportunity_id: string
+          rendered_sha256_checksum: string
+          request_key: string
+          requested_by: string
+          size_bytes: number
+          source_fingerprint: string
+          storage_bucket: string
+          storage_path: string
+          structured_draft_revision_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          document_control_register_id: string
+          document_kind: string
+          drive_node_id: string
+          drive_revision_id: string
+          id?: string
+          location_id: string
+          master_specification_id: string
+          master_specification_version_id: string
+          mime_type: string
+          opportunity_id: string
+          rendered_sha256_checksum: string
+          request_key: string
+          requested_by: string
+          size_bytes: number
+          source_fingerprint: string
+          storage_bucket: string
+          storage_path: string
+          structured_draft_revision_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          document_control_register_id?: string
+          document_kind?: string
+          drive_node_id?: string
+          drive_revision_id?: string
+          id?: string
+          location_id?: string
+          master_specification_id?: string
+          master_specification_version_id?: string
+          mime_type?: string
+          opportunity_id?: string
+          rendered_sha256_checksum?: string
+          request_key?: string
+          requested_by?: string
+          size_bytes?: number
+          source_fingerprint?: string
+          storage_bucket?: string
+          storage_path?: string
+          structured_draft_revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured__document_control_register_id_fkey"
+            columns: ["document_control_register_id"]
+            isOneToOne: true
+            referencedRelation: "controlled_document_audit_gaps"
+            referencedColumns: ["register_id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured__document_control_register_id_fkey"
+            columns: ["document_control_register_id"]
+            isOneToOne: true
+            referencedRelation: "document_control_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured__structured_draft_revision_id_fkey"
+            columns: ["structured_draft_revision_id"]
+            isOneToOne: true
+            referencedRelation: "sales_opportunity_structured_draft_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draf_master_specification_id_fkey2"
+            columns: ["master_specification_id"]
+            isOneToOne: false
+            referencedRelation: "master_specifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_mater_drive_revision_id_fkey"
+            columns: ["drive_revision_id"]
+            isOneToOne: true
+            referencedRelation: "drive_node_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_material_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_materiali_drive_node_id_fkey"
+            columns: ["drive_node_id"]
+            isOneToOne: true
+            referencedRelation: "drive_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_materializa_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_materializa_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_document_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_materializa_request_key_fkey"
+            columns: ["request_key"]
+            isOneToOne: true
+            referencedRelation: "sales_opportunity_structured_draft_requests"
+            referencedColumns: ["request_key"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_master_specification_version_fkey2"
+            columns: ["master_specification_version_id"]
+            isOneToOne: false
+            referencedRelation: "master_specification_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_opportunity_structured_draft_private_locations: {
+        Row: {
+          created_at: string
+          created_by: string
+          drive_folder_node_id: string
+          id: string
+          is_active: boolean
+          private_storage_bucket: string
+          private_storage_prefix: string
+          verified_by: string
+          verified_private_at: string
+          visibility_scope: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          drive_folder_node_id: string
+          id?: string
+          is_active?: boolean
+          private_storage_bucket: string
+          private_storage_prefix: string
+          verified_by: string
+          verified_private_at: string
+          visibility_scope?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          drive_folder_node_id?: string
+          id?: string
+          is_active?: boolean
+          private_storage_bucket?: string
+          private_storage_prefix?: string
+          verified_by?: string
+          verified_private_at?: string
+          visibility_scope?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_pr_drive_folder_node_id_fkey"
+            columns: ["drive_folder_node_id"]
+            isOneToOne: true
+            referencedRelation: "drive_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_opportunity_structured_draft_requests: {
+        Row: {
+          created_at: string
+          customer_id: string
+          document_kind: string
+          draft_id: string
+          editable_schema_hash: string
+          editable_schema_key: string
+          expected_revision_number: number
+          master_specification_id: string
+          master_specification_version_id: string
+          master_specification_version_number: number
+          operation: string
+          opportunity_id: string
+          payload_hash: string
+          request_key: string
+          requested_by: string
+          revision_id: string
+          source_fingerprint: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          document_kind: string
+          draft_id: string
+          editable_schema_hash: string
+          editable_schema_key: string
+          expected_revision_number: number
+          master_specification_id: string
+          master_specification_version_id: string
+          master_specification_version_number: number
+          operation: string
+          opportunity_id: string
+          payload_hash: string
+          request_key: string
+          requested_by: string
+          revision_id: string
+          source_fingerprint: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          document_kind?: string
+          draft_id?: string
+          editable_schema_hash?: string
+          editable_schema_key?: string
+          expected_revision_number?: number
+          master_specification_id?: string
+          master_specification_version_id?: string
+          master_specification_version_number?: number
+          operation?: string
+          opportunity_id?: string
+          payload_hash?: string
+          request_key?: string
+          requested_by?: string
+          revision_id?: string
+          source_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured_draf_master_specification_id_fkey1"
+            columns: ["master_specification_id"]
+            isOneToOne: false
+            referencedRelation: "master_specifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_requests_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_structured_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_requests_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_requests_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_structured_draft_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_master_specification_version_fkey1"
+            columns: ["master_specification_version_id"]
+            isOneToOne: false
+            referencedRelation: "master_specification_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_opportunity_structured_draft_revision_locations: {
+        Row: {
+          created_at: string
+          created_by: string
+          payload_sha256_checksum: string
+          private_location_id: string
+          revision_id: string
+          storage_object_path: string | null
+          storage_state: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          payload_sha256_checksum: string
+          private_location_id: string
+          revision_id: string
+          storage_object_path?: string | null
+          storage_state?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          payload_sha256_checksum?: string
+          private_location_id?: string
+          revision_id?: string
+          storage_object_path?: string | null
+          storage_state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_rev_private_location_id_fkey"
+            columns: ["private_location_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_structured_draft_private_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_revision_lo_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: true
+            referencedRelation: "sales_opportunity_structured_draft_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_opportunity_structured_draft_revisions: {
+        Row: {
+          canonical_payload: Json
+          created_at: string
+          created_by: string
+          draft_id: string
+          id: string
+          parent_revision_id: string | null
+          payload_hash: string
+          revision_number: number
+          source_fingerprint: string
+        }
+        Insert: {
+          canonical_payload: Json
+          created_at?: string
+          created_by: string
+          draft_id: string
+          id?: string
+          parent_revision_id?: string | null
+          payload_hash: string
+          revision_number: number
+          source_fingerprint: string
+        }
+        Update: {
+          canonical_payload?: Json
+          created_at?: string
+          created_by?: string
+          draft_id?: string
+          id?: string
+          parent_revision_id?: string | null
+          payload_hash?: string
+          revision_number?: number
+          source_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_revi_parent_revision_id_fkey"
+            columns: ["parent_revision_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_structured_draft_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_revisions_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_structured_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_opportunity_structured_draft_storage_attempts: {
+        Row: {
+          consumed_at: string | null
+          id: string
+          location_id: string
+          request_key: string
+          sha256_checksum: string
+          size_bytes: number
+          staged_at: string
+          staged_by: string
+          storage_bucket: string
+          storage_path: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          id?: string
+          location_id: string
+          request_key: string
+          sha256_checksum: string
+          size_bytes: number
+          staged_at?: string
+          staged_by: string
+          storage_bucket: string
+          storage_path: string
+        }
+        Update: {
+          consumed_at?: string | null
+          id?: string
+          location_id?: string
+          request_key?: string
+          sha256_checksum?: string
+          size_bytes?: number
+          staged_at?: string
+          staged_by?: string
+          storage_bucket?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_storage_att_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_document_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_storage_att_request_key_fkey"
+            columns: ["request_key"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunity_structured_draft_requests"
+            referencedColumns: ["request_key"]
+          },
+        ]
+      }
+      sales_opportunity_structured_drafts: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          document_kind: string
+          editable_schema_hash: string
+          editable_schema_key: string
+          id: string
+          master_specification_id: string
+          master_specification_version_id: string
+          master_specification_version_number: number
+          opportunity_id: string
+          source_fingerprint: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          document_kind: string
+          editable_schema_hash: string
+          editable_schema_key: string
+          id?: string
+          master_specification_id: string
+          master_specification_version_id: string
+          master_specification_version_number: number
+          opportunity_id: string
+          source_fingerprint: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          document_kind?: string
+          editable_schema_hash?: string
+          editable_schema_key?: string
+          id?: string
+          master_specification_id?: string
+          master_specification_version_id?: string
+          master_specification_version_number?: number
+          opportunity_id?: string
+          source_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_opportunity_structured__master_specification_version_fkey"
+            columns: ["master_specification_version_id"]
+            isOneToOne: false
+            referencedRelation: "master_specification_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_draft_master_specification_id_fkey"
+            columns: ["master_specification_id"]
+            isOneToOne: false
+            referencedRelation: "master_specifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_drafts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_opportunity_structured_drafts_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_project_handovers: {
         Row: {
           baseline_id: string
@@ -12260,6 +12990,21 @@ export type Database = {
         Args: { _department_id: string; _project_id: string; _user_id: string }
         Returns: boolean
       }
+      can_access_sales_structured_draft_object: {
+        Args: { p_bucket: string; p_operation: string; p_path: string }
+        Returns: boolean
+      }
+      can_discard_sales_opportunity_structured_draft_object: {
+        Args: {
+          p_customer_id: string
+          p_location_id: string
+          p_opportunity_id: string
+          p_request_key: string
+          p_storage_bucket: string
+          p_storage_path: string
+        }
+        Returns: boolean
+      }
       can_inward: { Args: { _uid: string }; Returns: boolean }
       can_manage_leave: { Args: { _uid: string }; Returns: boolean }
       can_manage_onboarding: { Args: { _uid: string }; Returns: boolean }
@@ -12269,6 +13014,26 @@ export type Database = {
       clone_department_process_template: {
         Args: { p_template_id: string }
         Returns: string
+      }
+      commit_sales_opportunity_structured_draft_materialization: {
+        Args: {
+          p_customer_id: string
+          p_file_name: string
+          p_location_id: string
+          p_opportunity_id: string
+          p_request_key: string
+          p_sha256_checksum: string
+          p_size_bytes: number
+          p_storage_bucket: string
+          p_storage_path: string
+        }
+        Returns: {
+          document_control_register_id: string
+          drive_node_id: string
+          drive_revision_id: string
+          materialization_id: string
+          replayed: boolean
+        }[]
       }
       complete_automation_lease: {
         Args: { _error?: string; _job_key: string; _pause?: boolean }
@@ -12697,9 +13462,36 @@ export type Database = {
         }
         Returns: Json
       }
+      register_sales_opportunity_structured_draft_storage_attempt: {
+        Args: {
+          p_customer_id: string
+          p_location_id: string
+          p_opportunity_id: string
+          p_request_key: string
+          p_sha256_checksum: string
+          p_size_bytes: number
+          p_storage_bucket: string
+          p_storage_path: string
+        }
+        Returns: string
+      }
       resolve_document_control_revision: {
         Args: { p_node_id: string; p_revision_number: number }
         Returns: string
+      }
+      resolve_sales_opportunity_structured_draft_location: {
+        Args: {
+          p_customer_id: string
+          p_location_id: string
+          p_opportunity_id: string
+        }
+        Returns: {
+          department_id: string
+          location_id: string
+          storage_bucket: string
+          storage_path_prefix: string
+          target_folder_node_id: string
+        }[]
       }
       retire_department_process_template: {
         Args: { p_template_id: string }
@@ -12713,6 +13505,28 @@ export type Database = {
           _record_type: string
         }
         Returns: undefined
+      }
+      sales_opportunity_structured_draft_canonical_payload: {
+        Args: { p_document_kind: string; p_payload: Json }
+        Returns: Json
+      }
+      sales_opportunity_structured_draft_schema_hash: {
+        Args: { p_document_kind: string }
+        Returns: string
+      }
+      sales_opportunity_structured_draft_source_fingerprint: {
+        Args: {
+          p_customer_id: string
+          p_document_kind: string
+          p_editable_schema_hash: string
+          p_master_specification_id: string
+          p_master_specification_version_id: string
+          p_master_specification_version_number: number
+          p_opportunity_id: string
+          p_source_created_at: string
+          p_specification_data: Json
+        }
+        Returns: string
       }
       save_master_specification_version: {
         Args: {
@@ -12729,6 +13543,43 @@ export type Database = {
           specification_number: string
           version_id: string
           version_number: number
+        }[]
+      }
+      save_sales_opportunity_structured_draft_at_location: {
+        Args: {
+          p_customer_id: string
+          p_document_kind: string
+          p_expected_revision_number: number
+          p_master_specification_id: string
+          p_master_specification_version_id: string
+          p_opportunity_id: string
+          p_payload: Json
+          p_private_location_id: string
+          p_request_key: string
+        }
+        Returns: {
+          draft_id: string
+          replayed: boolean
+          revision_id: string
+          revision_number: number
+        }[]
+      }
+      save_sales_opportunity_structured_draft_revision: {
+        Args: {
+          p_customer_id: string
+          p_document_kind: string
+          p_expected_revision_number: number
+          p_master_specification_id: string
+          p_master_specification_version_id: string
+          p_opportunity_id: string
+          p_payload: Json
+          p_request_key: string
+        }
+        Returns: {
+          draft_id: string
+          replayed: boolean
+          revision_id: string
+          revision_number: number
         }[]
       }
       seed_mobile_stage5_test_data: { Args: never; Returns: Json }

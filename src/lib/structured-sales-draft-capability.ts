@@ -1,24 +1,32 @@
 export type StructuredSalesDraftSaveCapability =
   | { available: false; reason: "UNDEPLOYED" | "SOURCE_UNVERIFIED" | "LOCATION_UNVERIFIED" }
-  | { available: true; functionName: "save_sales_opportunity_structured_draft_at_location"; materializer: "commit_sales_opportunity_structured_draft_materialization" };
+  | { available: true; functionName: "save_sales_opportunity_structured_draft_at_location"; materializer: "commit_sales_opportunity_structured_draft_materialization"; locationId: string; storageBucket: string; storagePathPrefix: string };
 
 export type StructuredSalesDraftHistoryCapability =
   | { available: false; reason: "UNDEPLOYED" | "SOURCE_UNVERIFIED" }
-  | { available: true };
+  | { available: true; locationId: string };
+
+export type StructuredSalesDraftLocation = {
+  locationId: string;
+  storageBucket: string;
+  storagePathPrefix: string;
+};
 
 /**
  * Browser state is never evidence that protected functions, a recorded private
  * location, or narrow bucket policy are deployed. The server capability probe is
  * deliberately not introduced until the reviewed SQL package is installed.
  */
-export function structuredSalesDraftSaveCapability(sourceVerified: boolean): StructuredSalesDraftSaveCapability {
+export function structuredSalesDraftSaveCapability(sourceVerified: boolean, location?: StructuredSalesDraftLocation | null): StructuredSalesDraftSaveCapability {
   if (!sourceVerified) return { available: false, reason: "SOURCE_UNVERIFIED" };
-  return { available: false, reason: "UNDEPLOYED" };
+  if (!location) return { available: false, reason: "LOCATION_UNVERIFIED" };
+  return { available: true, functionName: "save_sales_opportunity_structured_draft_at_location", materializer: "commit_sales_opportunity_structured_draft_materialization", ...location };
 }
 
-export function structuredSalesDraftHistoryCapability(sourceVerified: boolean): StructuredSalesDraftHistoryCapability {
+export function structuredSalesDraftHistoryCapability(sourceVerified: boolean, location?: StructuredSalesDraftLocation | null): StructuredSalesDraftHistoryCapability {
   if (!sourceVerified) return { available: false, reason: "SOURCE_UNVERIFIED" };
-  return { available: false, reason: "UNDEPLOYED" };
+  if (!location) return { available: false, reason: "UNDEPLOYED" };
+  return { available: true, locationId: location.locationId };
 }
 
 export function structuredSalesDraftSaveBoundaryMessage(capability: StructuredSalesDraftSaveCapability): string {
