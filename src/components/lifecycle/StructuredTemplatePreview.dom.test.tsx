@@ -1033,7 +1033,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(folderLink.getAttribute("href")).toContain("/drive");
     expect(folderLink.getAttribute("href")).toContain("node=sales-folder-id");
     expect(folderLink.getAttribute("href")).toContain("department=sales-department-id");
-    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
+    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_folder", {
       p_opportunity_id: "opportunity-id",
       p_customer_id: "customer-id",
       p_master_specification_id: "specification-id",
@@ -1070,7 +1070,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalled());
-    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_location", {
+    expect(supabase.rpc).toHaveBeenCalledWith("discover_sales_opportunity_structured_draft_folder", {
       p_opportunity_id: "opportunity-id",
       p_customer_id: "customer-id",
       p_master_specification_id: "specification-id",

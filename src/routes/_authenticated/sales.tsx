@@ -560,7 +560,7 @@ export function ProposalDetail({
     queryFn: async () => {
       if (!detail || !specification.data?.id) throw new Error("The pinned Sales source is unavailable.");
       const { data, error } = await (supabase as any).rpc(
-        "discover_sales_opportunity_structured_draft_location",
+        "discover_sales_opportunity_structured_draft_folder",
         {
           p_opportunity_id: detail.opportunity.id,
           p_customer_id: detail.specification.customer_id,

@@ -139,7 +139,6 @@ BEGIN
   SELECT * INTO v_employee FROM public.employees WHERE id = v_assignment.responsible_employee_id AND user_id = v_actor AND employment_status = 'ACTIVE' FOR UPDATE;
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.employee_departments ed WHERE ed.employee_id = v_employee.id AND ed.department_id = v_assignment.department_id) THEN RAISE EXCEPTION 'The current actor is not the assigned active responsible person'; END IF;
   IF NOT public.can_access_department_drive(v_actor, v_assignment.department_id, NULL) THEN RAISE EXCEPTION 'The assigned person cannot access the configured department Drive'; END IF;
-  SELECT * INTO v_location FROM public.resolve_sales_opportunity_structured_draft_location(p_opportunity_id, p_customer_id, p_assignment_id) LIMIT 0;
   -- The location resolver requires the actual location ID; obtain exactly one matching active location only after locking the assignment.
   SELECT * INTO v_location FROM public.sales_opportunity_document_locations WHERE opportunity_id = p_opportunity_id AND customer_id = p_customer_id AND department_id = v_assignment.department_id AND location_purpose = 'STRUCTURED_DRAFT' AND status = 'ACTIVE' FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'No active private Sales location matches the current assignment'; END IF;
