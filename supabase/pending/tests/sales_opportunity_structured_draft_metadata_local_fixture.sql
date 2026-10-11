@@ -6,8 +6,10 @@
 BEGIN;
 DROP SCHEMA IF EXISTS auth CASCADE;
 DROP SCHEMA IF EXISTS public CASCADE;
+DROP SCHEMA IF EXISTS storage CASCADE;
 CREATE SCHEMA public;
 CREATE SCHEMA auth;
+CREATE SCHEMA storage;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 DO $roles$
 BEGIN
@@ -92,7 +94,6 @@ CREATE TABLE public.drive_node_revisions (id uuid PRIMARY KEY DEFAULT gen_random
 CREATE TABLE public.document_control_registers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), drive_node_id uuid NOT NULL UNIQUE REFERENCES public.drive_nodes(id), department_id uuid NOT NULL REFERENCES public.departments(id), document_number text NOT NULL UNIQUE, title text NOT NULL, document_status text NOT NULL DEFAULT 'DRAFT', controlled_version integer NOT NULL DEFAULT 1, approval_note text NULL, created_by uuid NOT NULL);
 CREATE FUNCTION public.can_access_department_drive(p_user uuid, p_department uuid, p_project uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
 CREATE FUNCTION public.next_business_number(p_kind text, p_prefix text, p_context text) RETURNS text LANGUAGE sql AS $$ SELECT upper(p_prefix) || '-LOCAL-' || substr(md5(coalesce(p_context,'') || p_kind), 1, 8) $$;
-CREATE SCHEMA storage;
 CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, PRIMARY KEY(bucket_id,name));
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
