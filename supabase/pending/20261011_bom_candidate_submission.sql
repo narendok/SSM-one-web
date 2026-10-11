@@ -38,7 +38,7 @@ CREATE TABLE public.component_candidate_submission_audit_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   candidate_id uuid NOT NULL REFERENCES public.component_candidate_submissions(id) ON DELETE RESTRICT,
   candidate_revision_number integer NOT NULL CHECK (candidate_revision_number = 1),
-  event_type text NOT NULL CHECK (event_type = 'SUBMITTED'),
+  event_type text NOT NULL CHECK (event_type IN ('SUBMITTED', 'APPROVED_PENDING_PURCHASE', 'REJECTED')),
   actor_user_id uuid NOT NULL,
   event_data jsonb NOT NULL CHECK (jsonb_typeof(event_data) = 'object'),
   created_at timestamptz NOT NULL DEFAULT now()
