@@ -11,42 +11,46 @@ BEGIN;
 
 CREATE TEMP TABLE phase_c_context (
   actor_id uuid NOT NULL,
-  location_id uuid NOT NULL,
+  private_location_id uuid NOT NULL,
   request_key uuid NOT NULL,
   replay_request_key uuid NOT NULL
 ) ON COMMIT DROP;
 
--- The authenticated caller transport must replace only the two location/request UUID values below
+-- The authenticated caller transport must replace only the private-location UUID below
 -- before submitting this whole transaction. Do not supply or SET an actor UUID: it is derived from auth.uid().
-INSERT INTO phase_c_context(actor_id, location_id, request_key, replay_request_key)
+INSERT INTO phase_c_context(actor_id, private_location_id, request_key, replay_request_key)
 SELECT auth.uid(),
        '00000000-0000-0000-0000-000000000000'::uuid,
        gen_random_uuid(),
        gen_random_uuid();
 
 DO $preflight$
-DECLARE v_actor uuid; v_location uuid;
+DECLARE v_actor uuid; v_private_location uuid;
 BEGIN
-  SELECT actor_id, location_id INTO v_actor, v_location FROM phase_c_context;
+  SELECT actor_id, private_location_id INTO v_actor, v_private_location FROM phase_c_context;
   IF v_actor IS NULL THEN
     RAISE EXCEPTION 'PHASE_C_NOT_GENUINE_CALLER_CONTEXT: auth.uid() is null; SQL-editor role or claim simulation is not acceptance';
   END IF;
   IF NOT public.has_permission(v_actor, 'sales.manage') THEN
     RAISE EXCEPTION 'PHASE_C_ACTOR_NOT_AUTHORIZED: authenticated caller lacks sales.manage';
   END IF;
-  IF v_location = '00000000-0000-0000-0000-000000000000'::uuid THEN
-    RAISE EXCEPTION 'PHASE_C_LOCATION_REQUIRED: use the separately approved ACTIVE location id';
+  IF v_private_location = '00000000-0000-0000-0000-000000000000'::uuid THEN
+    RAISE EXCEPTION 'PHASE_C_LOCATION_REQUIRED: use the separately approved verified private-location id';
   END IF;
   IF NOT EXISTS (
-    SELECT 1 FROM public.sales_opportunity_document_locations AS l
-    WHERE l.id = v_location
-      AND l.status = 'ACTIVE'
-      AND l.opportunity_id = 'a6c62c81-1cc2-4804-b1c5-c004c6730b52'::uuid
-      AND l.customer_id = '03e06115-a7d4-4965-9e92-9c37462f5ddc'::uuid
+    SELECT 1
+    FROM public.sales_opportunity_structured_draft_private_locations AS l
+    JOIN public.drive_nodes AS folder ON folder.id = l.drive_folder_node_id
+    WHERE l.id = v_private_location
+      AND l.is_active
+      AND l.visibility_scope = 'PRIVATE'
+      AND l.verified_private_at IS NOT NULL
       AND l.private_storage_bucket = 'project-drive'
       AND l.private_storage_prefix = 'sales/opportunity/a6c62c81-1cc2-4804-b1c5-c004c6730b52/'
+      AND folder.is_locked AND NOT folder.is_trashed
+      AND folder.project_id IS NULL AND folder.storage_bucket IS NULL AND folder.storage_path IS NULL
   ) THEN
-    RAISE EXCEPTION 'PHASE_C_LOCATION_INVALID: active exact Sales location binding is absent';
+    RAISE EXCEPTION 'PHASE_C_LOCATION_INVALID: verified exact Sales private location is absent';
   END IF;
 END;
 $preflight$;
@@ -66,7 +70,7 @@ SELECT * FROM public.save_sales_opportunity_structured_draft_at_location(
   '7a3aba95-61f6-495a-a280-f37a3be77670'::uuid,
   '4914fba5-43a0-4486-b62f-d775a9bb16b9'::uuid,
   'SOR', 0, '{"SCOPE_STATEMENT":"Phase C rollback-only authenticated acceptance"}'::jsonb,
-  (SELECT request_key FROM phase_c_context), (SELECT location_id FROM phase_c_context)
+  (SELECT request_key FROM phase_c_context), (SELECT private_location_id FROM phase_c_context)
 );
 
 CREATE TEMP TABLE phase_c_exact_replay AS
@@ -76,7 +80,7 @@ SELECT * FROM public.save_sales_opportunity_structured_draft_at_location(
   '7a3aba95-61f6-495a-a280-f37a3be77670'::uuid,
   '4914fba5-43a0-4486-b62f-d775a9bb16b9'::uuid,
   'SOR', 0, '{"SCOPE_STATEMENT":"Phase C rollback-only authenticated acceptance"}'::jsonb,
-  (SELECT request_key FROM phase_c_context), (SELECT location_id FROM phase_c_context)
+  (SELECT request_key FROM phase_c_context), (SELECT private_location_id FROM phase_c_context)
 );
 
 DO $assert$
