@@ -6,5 +6,6 @@
 - Keep lifecycle document discovery bound to the committed project and its category; project overview access, Sales access, and normal administrator status must not bypass the accepted assigned-person resolver.
 - Direct Sales document navigation may reuse only an existing active, locked, non-trashed Sales location bound to the exact opportunity/source; it must never fabricate a project, folder, or document authority.
 - Direct Sales folder navigation must obtain the exact source-bound location through the caller-authorized discovery contract; a client-side Drive join is not proof of an active, locked, non-trashed location.
+- Private DOCX materialization must resolve the current active assigned employee, department membership, and exact source-bound location before request, storage receipt, commit, history, or readback; this prevents Sales or department membership from becoming document authority.
 - Sample cleanup remains review-only until a supported root-level archive/restore workflow can retain dependencies and replay audit evidence; Drive trash alone is not such a workflow.
 - Sales sample archival must use an exact-root, server-side metadata contract with locked dependency snapshots and append-only replay/audit receipts; ordinary list reads must filter archived roots server-side, never only in the client.
