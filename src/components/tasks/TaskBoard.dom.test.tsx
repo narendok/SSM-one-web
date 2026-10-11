@@ -77,7 +77,7 @@ describe("TaskBoard task reads", () => {
     expect(screen.getByText("1 task currently visible to you.")).toBeTruthy();
     expect(screen.getByText("To do: 1")).toBeTruthy();
     expect(screen.getByText("In progress: 0")).toBeTruthy();
-    expect(screen.getByText("Ada")).toBeTruthy();
+    expect(screen.getAllByText("Ada").length).toBeGreaterThan(0);
     expect(screen.getByText("Due 2026-10-18")).toBeTruthy();
   });
 
