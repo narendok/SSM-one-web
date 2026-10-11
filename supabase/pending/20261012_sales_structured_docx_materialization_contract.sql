@@ -220,9 +220,12 @@ CREATE OR REPLACE FUNCTION public.request_sales_structured_docx_materialization(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_scope record; v_html_request public.sales_opportunity_structured_draft_requests%ROWTYPE; v_revision public.sales_opportunity_structured_draft_revisions%ROWTYPE; v_draft public.sales_opportunity_structured_drafts%ROWTYPE; v_existing public.sales_opportunity_structured_docx_requests%ROWTYPE;
 BEGIN
-  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id, p_customer_id, (SELECT html_request.document_kind FROM public.sales_opportunity_structured_draft_requests AS html_request WHERE html_request.request_key = p_structured_draft_request_key), p_assignment_id);
+  -- All caller flows acquire the request/source lock before assignment/location.
   IF p_request_key IS NULL OR btrim(coalesce(p_template_key,'')) = '' OR p_template_version <= 0 OR p_template_schema_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Invalid DOCX request pins'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|', p_opportunity_id::text, p_request_key::text), 0));
+  SELECT * INTO v_html_request FROM public.sales_opportunity_structured_draft_requests AS structured_request WHERE structured_request.request_key = p_structured_draft_request_key AND structured_request.requested_by = v_actor AND structured_request.opportunity_id = p_opportunity_id AND structured_request.customer_id = p_customer_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Pinned structured Sales revision is not owned by this actor and source'; END IF;
+  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id, p_customer_id, v_html_request.document_kind, p_assignment_id);
   SELECT * INTO v_existing FROM public.sales_opportunity_structured_docx_requests AS existing_request WHERE existing_request.request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_existing.requested_by = v_actor AND v_existing.assignment_id = p_assignment_id AND v_existing.structured_draft_request_key = p_structured_draft_request_key AND v_existing.template_key = p_template_key AND v_existing.template_version = p_template_version AND v_existing.template_schema_hash = p_template_schema_hash THEN
@@ -230,11 +233,12 @@ BEGIN
     END IF;
     RAISE EXCEPTION 'DOCX request key conflicts with a different actor, source, assignment, or template pin';
   END IF;
-  SELECT * INTO v_html_request FROM public.sales_opportunity_structured_draft_requests AS structured_request WHERE structured_request.request_key = p_structured_draft_request_key AND structured_request.requested_by = v_actor AND structured_request.opportunity_id = p_opportunity_id AND structured_request.customer_id = p_customer_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Pinned structured Sales revision is not owned by this actor and source'; END IF;
   SELECT * INTO v_revision FROM public.sales_opportunity_structured_draft_revisions WHERE id = v_html_request.revision_id FOR UPDATE;
   SELECT * INTO v_draft FROM public.sales_opportunity_structured_drafts WHERE id = v_html_request.draft_id FOR UPDATE;
-  IF NOT FOUND OR v_revision.source_fingerprint <> v_html_request.source_fingerprint OR v_draft.master_specification_version_id <> v_html_request.master_specification_version_id THEN RAISE EXCEPTION 'Pinned structured Sales revision changed'; END IF;
+  IF NOT FOUND OR v_revision.source_fingerprint <> v_html_request.source_fingerprint OR v_draft.master_specification_version_id <> v_html_request.master_specification_version_id OR NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_html_request.master_specification_id AND current_specification.current_version_id = v_html_request.master_specification_version_id) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
+  -- No authoritative template registry exists yet. The caller pin remains
+  -- stored only for later verifier comparison; activation must add a template
+  -- registry lookup here instead of trusting this input.
   INSERT INTO public.sales_opportunity_structured_docx_requests(request_key,requested_by,assignment_id,structured_draft_request_key,structured_draft_revision_id,location_id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,document_kind,editable_schema_key,editable_schema_hash,source_fingerprint,payload_hash,template_key,template_version,template_schema_hash)
   VALUES(p_request_key,v_actor,p_assignment_id,p_structured_draft_request_key,v_revision.id,v_scope.location_id,p_opportunity_id,p_customer_id,v_html_request.master_specification_id,v_html_request.master_specification_version_id,v_html_request.document_kind,v_html_request.editable_schema_key,v_html_request.editable_schema_hash,v_revision.source_fingerprint,v_revision.payload_hash,p_template_key,p_template_version,p_template_schema_hash);
   RETURN QUERY SELECT p_request_key, v_scope.storage_bucket, v_scope.storage_path_prefix || p_request_key::text || '-draft.docx', false;
