@@ -123,10 +123,10 @@ export function persistedStructuredSalesDraftFields(
   kind: StructuredSalesPreviewKind,
   payload: unknown,
 ): Record<string, string> | null {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
-  const candidate = payload as { kind?: unknown; fields?: unknown };
-  if (candidate.kind !== kind) return null;
-  const validated = validateStructuredSalesLocalPayload(kind, candidate.fields);
+  // The persisted revision is already bound to exact source and document_kind
+  // by the filtered draft query. The server canonicalizer stores only its flat
+  // editable-field object, not the browser's { kind, fields } save envelope.
+  const validated = validateStructuredSalesLocalPayload(kind, payload);
   return validated.ok ? { ...validated.payload } : null;
 }
 
