@@ -13,6 +13,12 @@ import { lifecycleStageReadiness, type CompanyStageRead } from "@/lib/connected-
 
 const sb = supabase as any;
 
+function readErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") return error.message;
+  return null;
+}
+
 const phases = [
   { title: "Shared requirement", detail: "Customer requirement, current revision, and cross-functional feasibility.", state: "requirements" },
   { title: "Freeze & confirmation", detail: "Customer-authorized baseline and controlled change context.", state: "baseline" },
@@ -41,18 +47,18 @@ export function SharedProductLifecycle({
 }) {
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["shared_product_lifecycle", project.id, project.requirement_baseline_id],
+    retry: false,
     queryFn: async () => {
-      const [tasks, boms, inputs, research, gates, changes, process] = await Promise.all([
+      const [tasks, boms, inputs, research, changes, process] = await Promise.all([
         sb.from("project_tasks").select("id,status,assignee_id,department_id").eq("project_id", project.id),
         sb.from("project_boms").select("id,revision,source_drive_node_id,source_drive_revision_id").eq("project_id", project.id),
         sb.from("project_design_inputs").select("id,status").eq("project_id", project.id),
         sb.from("project_research_records").select("id,decision_status").eq("project_id", project.id),
-        sb.from("project_stage_gates").select("id,status").eq("project_id", project.id),
         sb.from("project_change_requests").select("id,status").eq("project_id", project.id),
         sb.from("project_process_stage_records").select("id,status").eq("project_id", project.id),
       ]);
-      for (const result of [tasks, boms, inputs, research, gates, changes, process]) if (result.error) throw result.error;
-      return { tasks: tasks.data ?? [], boms: boms.data ?? [], inputs: inputs.data ?? [], research: research.data ?? [], gates: gates.data ?? [], changes: changes.data ?? [], process: process.data ?? [] };
+      for (const result of [tasks, boms, inputs, research, changes, process]) if (result.error) throw result.error;
+      return { tasks: tasks.data ?? [], boms: boms.data ?? [], inputs: inputs.data ?? [], research: research.data ?? [], changes: changes.data ?? [], process: process.data ?? [] };
     },
   });
   const {
@@ -63,6 +69,7 @@ export function SharedProductLifecycle({
     refetch: refetchGates,
   } = useQuery({
     queryKey: ["shared_product_lifecycle_gates", project.id],
+    retry: false,
     queryFn: async () => {
       const { data, error } = await sb
         .from("project_stage_gates")
@@ -118,7 +125,7 @@ export function SharedProductLifecycle({
     hasBaseline ? "linked" : "missing",
     hasBaseline ? "frozen source linked" : "customer confirmation required",
     snapshot?.research.length ? `${snapshot.research.length} record${snapshot.research.length === 1 ? "" : "s"}` : "not started",
-    snapshot?.gates.length ? `${snapshot.gates.length} gate${snapshot.gates.length === 1 ? "" : "s"}` : "not started",
+    areGatesLoading ? "loading recorded gates" : hasGateError ? "gate records unavailable" : gates.length ? `${gates.length} gate${gates.length === 1 ? "" : "s"}` : "not started",
     linkedBoms ? `${linkedBoms} revision-linked BOM${linkedBoms === 1 ? "" : "s"}` : "BOM source not linked",
   ];
 
@@ -188,7 +195,7 @@ export function SharedProductLifecycle({
             <p className="mt-1 text-sm text-muted-foreground">Loading accessible gate records…</p>
           ) : hasGateError ? (
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-destructive">
-              <span>Gate records could not be loaded{gateError instanceof Error ? `: ${gateError.message}` : "."}</span>
+              <span>Gate records could not be loaded{readErrorMessage(gateError) ? `: ${readErrorMessage(gateError)}` : "."}</span>
               <Button size="sm" variant="outline" onClick={() => void refetchGates()}>
                 <RefreshCw className="size-3.5" /> Retry
               </Button>
@@ -225,7 +232,9 @@ export function SharedProductLifecycle({
 
     <Card className="p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-sm font-medium">Draft lifecycle automation plan</p><p className="mt-1 text-sm text-muted-foreground">Prepared from visible governed records only. Nothing is created, assigned, notified, approved, or shared from this panel.</p></div><Badge variant="secondary">DRAFT ONLY</Badge></div>
-      {draftPlan ? <div className="mt-4 grid gap-4 lg:grid-cols-[0.8fr_1.2fr]"><div><p className="text-xs font-medium text-muted-foreground">Required source inputs</p><div className="mt-2 flex flex-wrap gap-2">{draftPlan.requiredInputs.map((input) => <Badge key={input.name} variant={input.status === "MISSING" ? "secondary" : "outline"} title={input.provenance}>{input.name}{input.status === "MISSING" ? " · missing" : " · linked"}</Badge>)}</div></div><div className="space-y-2">{draftPlan.proposedActions.map((action) => <div key={action.key} className="border-l-2 border-muted pl-3"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{action.title}</p><Badge variant="outline">{action.state}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{action.reason}</p></div>)}<div className="mt-4 border-t pt-4"><div className="flex items-center gap-2"><ShieldCheck className="size-3.5 text-muted-foreground" /><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Governance status</p></div><div className="mt-2 flex flex-wrap gap-x-6 gap-y-2"><div><p className="text-[10px] text-muted-foreground">Template autofill</p><p className="text-xs font-medium">{draftPlan.autofillState}</p></div><div className="flex-1"><p className="text-[10px] text-muted-foreground">Not created</p><p className="text-xs text-muted-foreground">{draftPlan.unavailableGovernedOutputs.join(" · ")}</p><p className="mt-1 text-xs text-muted-foreground italic">{draftPlan.governanceNotice}</p></div></div></div></div></div> : <p className="mt-4 text-sm text-muted-foreground">Loading available governed records…</p>}
+      {isLoading ? <p className="mt-4 text-sm text-muted-foreground">Loading available governed records…</p>
+        : isError ? <div role="alert" className="mt-4 flex flex-wrap items-center gap-2 text-sm text-destructive"><span>Governed lifecycle records could not be loaded{readErrorMessage(error) ? `: ${readErrorMessage(error)}` : "."}</span><Button size="sm" variant="outline" onClick={() => void refetch()}><RefreshCw className="size-3.5" /> Retry</Button></div>
+          : draftPlan ? <div className="mt-4 grid gap-4 lg:grid-cols-[0.8fr_1.2fr]"><div><p className="text-xs font-medium text-muted-foreground">Required source inputs</p><div className="mt-2 flex flex-wrap gap-2">{draftPlan.requiredInputs.map((input) => <Badge key={input.name} variant={input.status === "MISSING" ? "secondary" : "outline"} title={input.provenance}>{input.name}{input.status === "MISSING" ? " · missing" : " · linked"}</Badge>)}</div></div><div className="space-y-2">{draftPlan.proposedActions.map((action) => <div key={action.key} className="border-l-2 border-muted pl-3"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{action.title}</p><Badge variant="outline">{action.state}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{action.reason}</p></div>)}<div className="mt-4 border-t pt-4"><div className="flex items-center gap-2"><ShieldCheck className="size-3.5 text-muted-foreground" /><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Governance status</p></div><div className="mt-2 flex flex-wrap gap-x-6 gap-y-2"><div><p className="text-[10px] text-muted-foreground">Template autofill</p><p className="text-xs font-medium">{draftPlan.autofillState}</p></div><div className="flex-1"><p className="text-[10px] text-muted-foreground">Not created</p><p className="text-xs text-muted-foreground">{draftPlan.unavailableGovernedOutputs.join(" · ")}</p><p className="mt-1 text-xs text-muted-foreground italic">{draftPlan.governanceNotice}</p></div></div></div></div></div> : null}
     </Card>
 
     <LifecycleResponsibilityPlan compact />
