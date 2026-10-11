@@ -25,3 +25,14 @@ CREATE TABLE public.drive_node_revisions (id uuid PRIMARY KEY, node_id uuid NOT 
 CREATE TABLE public.document_control_registers (id uuid PRIMARY KEY, drive_node_id uuid NOT NULL REFERENCES public.drive_nodes(id), project_id uuid REFERENCES public.projects(id), document_status text NOT NULL, controlled_version integer NOT NULL);
 CREATE TABLE public.deviation_test_failpoints (name text PRIMARY KEY, enabled boolean NOT NULL DEFAULT false);
 CREATE FUNCTION public.deviation_test_failpoint() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF EXISTS (SELECT 1 FROM public.deviation_test_failpoints WHERE name = TG_TABLE_NAME AND enabled) THEN RAISE EXCEPTION 'Injected deviation test failure'; END IF; RETURN NEW; END $$;
+-- Disposable synchronization only; this schema is created only by the local runner.
+CREATE TABLE public.deviation_test_sync (token text PRIMARY KEY, released boolean NOT NULL DEFAULT false);
+CREATE FUNCTION public.deviation_test_hold_project_lock(p_project_id uuid, p_token text) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended('project-deviation-project:' || p_project_id::text, 0));
+  LOOP
+    EXIT WHEN COALESCE((SELECT released FROM public.deviation_test_sync WHERE token = p_token), false);
+    PERFORM pg_sleep(0.02);
+  END LOOP;
+END;
+$$;
