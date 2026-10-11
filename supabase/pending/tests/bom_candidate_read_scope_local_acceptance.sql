@@ -61,8 +61,10 @@ SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000005
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM public.component_candidate_submitter_read) OR EXISTS (SELECT 1 FROM public.component_candidate_hardware_read) OR EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) THEN RAISE EXCEPTION 'Unrelated caller received a projection'; END IF;
 END $$;
+RESET ROLE;
 SELECT set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000003', false);
 DELETE FROM public.project_team_members WHERE employee_id = '40000000-0000-4000-8000-000000000023';
+SET ROLE authenticated;
 DO $$ BEGIN IF EXISTS (SELECT 1 FROM public.component_candidate_purchase_handoff_read) THEN RAISE EXCEPTION 'Revoked project membership retained purchase read'; END IF; END $$;
 RESET ROLE;
 ROLLBACK;
