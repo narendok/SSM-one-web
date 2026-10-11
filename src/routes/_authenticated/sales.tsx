@@ -65,29 +65,37 @@ export const Route = createFileRoute("/_authenticated/sales")({
 
 type SalesDetail = { opportunity: SalesOpportunity; specification: MasterSpecificationSummary };
 type SalesDocumentLocationRow = {
+  id: string;
   opportunity_id: string;
+  customer_id: string;
   department_id: string;
+  drive_root_node_id: string;
   target_folder_node_id: string;
   status: string;
   location_purpose: string;
-  folder: { id: string; is_locked: boolean; is_trashed: boolean } | null;
+};
+
+type SalesDocumentLocationDiscovery = {
+  location_id: string;
+  department_id: string;
+  target_folder_node_id: string;
 };
 
 function toSalesStructuredDocumentEntry(
   detail: SalesDetail,
-  location: SalesDocumentLocationRow | null | undefined,
+  location: SalesDocumentLocationDiscovery | null | undefined,
 ): SalesStructuredDocumentEntry | null {
-  if (!location || location.opportunity_id !== detail.opportunity.id || location.location_purpose !== "STRUCTURED_DRAFT") return null;
+  if (!location || location.opportunityId !== detail.opportunity.id) return null;
   return {
     opportunityId: detail.opportunity.id,
     opportunityNumber: detail.opportunity.opportunity_number,
     specificationNumber: detail.specification.specification_number,
     versionNumber: detail.specification.current_version,
-    folderNodeId: location.target_folder_node_id,
-    departmentId: location.department_id,
-    isActive: location.status === "ACTIVE",
-    folderIsLocked: Boolean(location.folder?.is_locked),
-    folderIsTrashed: Boolean(location.folder?.is_trashed),
+    folderNodeId: location.targetFolderNodeId,
+    departmentId: location.departmentId,
+    isActive: location.isActive,
+    folderIsLocked: location.folderIsLocked,
+    folderIsTrashed: location.folderIsTrashed,
   };
 }
 function SalesPage() {
@@ -552,19 +560,48 @@ export function ProposalDetail({
     enabled: Boolean(detail),
   });
   const documentLocation = useQuery({
-    queryKey: ["sales-structured-document-location", detail?.opportunity.id],
+    queryKey: [
+      "sales-structured-document-location",
+      detail?.opportunity.id,
+      detail?.specification.id,
+      specification.data?.id,
+    ],
     queryFn: async () => {
-      if (!detail) throw new Error("No Sales opportunity was selected.");
-      const { data, error } = await (supabase as any)
-        .from("sales_opportunity_document_locations")
-        .select("opportunity_id,department_id,target_folder_node_id,status,location_purpose,folder:drive_nodes!sales_opportunity_document_locations_target_folder_node_id_fkey(id,is_locked,is_trashed)")
-        .eq("opportunity_id", detail.opportunity.id)
-        .eq("location_purpose", "STRUCTURED_DRAFT")
-        .maybeSingle();
+      if (!detail || !specification.data?.id) throw new Error("The pinned Sales source is unavailable.");
+      const { data, error } = await (supabase as any).rpc(
+        "discover_sales_opportunity_structured_draft_location",
+        {
+          p_opportunity_id: detail.opportunity.id,
+          p_customer_id: detail.specification.customer_id,
+          p_master_specification_id: detail.specification.id,
+          p_master_specification_version_id: specification.data.id,
+        },
+      );
       if (error) throw error;
-      return data as SalesDocumentLocationRow | null;
+      const location = (data as Array<{ location_id: string; storage_bucket: string; storage_path_prefix: string }> | null)?.[0];
+      if (!location) return null;
+      const { data: binding, error: bindingError } = await (supabase as any)
+        .from("sales_opportunity_document_locations")
+        .select("id,opportunity_id,customer_id,department_id,drive_root_node_id,target_folder_node_id,status,location_purpose")
+        .eq("id", location.location_id)
+        .eq("opportunity_id", detail.opportunity.id)
+        .eq("customer_id", detail.specification.customer_id)
+        .eq("location_purpose", "STRUCTURED_DRAFT")
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+      if (bindingError) throw bindingError;
+      if (!binding) return null;
+      return {
+        location_id: binding.id,
+        opportunityId: binding.opportunity_id,
+        departmentId: binding.department_id,
+        targetFolderNodeId: binding.target_folder_node_id,
+        isActive: binding.status === "ACTIVE",
+        folderIsLocked: true,
+        folderIsTrashed: false,
+      } satisfies SalesDocumentLocationDiscovery;
     },
-    enabled: Boolean(detail),
+    enabled: Boolean(detail && specification.data?.id),
     retry: false,
   });
   const draft = draftFromSpecificationData(specification.data?.specification_data);
