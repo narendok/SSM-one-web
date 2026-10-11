@@ -277,21 +277,21 @@ BEGIN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision-request:' || p_request_key::text, 0));
-  PERFORM 1
-  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  SELECT scope.* INTO v_scope
+  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
   SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
-    PERFORM 1
-    FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+    SELECT scope.* INTO v_scope
+    FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
     END IF;
     SELECT * INTO v_prior FROM public.component_candidate_decision_request_receipts WHERE request_key = p_request_key FOR UPDATE;
-    PERFORM 1
-    FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+    SELECT scope.* INTO v_scope
+    FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
     END IF;
@@ -302,8 +302,8 @@ BEGIN
     RAISE EXCEPTION 'Decision request key conflicts with a different actor or canonical payload';
   END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('component-candidate-decision:' || p_candidate_id::text, 0));
-  SELECT * INTO v_scope
-  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id);
+  SELECT scope.* INTO v_scope
+  FROM public.component_candidate_decision_scope(v_actor, p_candidate_id, p_expected_revision_id) AS scope;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Candidate decision requires active Hardware membership and engineering.approve authority';
   END IF;
