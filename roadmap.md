@@ -25,8 +25,8 @@
 
 - [ ] Complete backend-level Master Specification acceptance against the managed isolated environment, including denied user, transaction rollback, optimistic conflict/concurrency, immutable revision, and non-admin RLS proof. **Current deployed original contract:** the source-of-truth specification and revision records are live; no additional fixtures will be created. **In progress:** Sales reload query repair removes the undeployed `current_version_id` assumption and waits for authenticated identity hydration before fetching. **Blocked evidence:** accepted isolated manager is an administrator; a scoped non-administrator identity is not available and must not be created for this work.
 - [ ] Complete isolated caller-authenticated acceptance for scoped client requirement intake and engineering feasibility. **Pending source hardening:** feasibility assignment now captures review existence before subsequent lookups, derives and verifies the revision's complete immutable opportunity/customer/Master-version UUID+number tuple, rejects missing/null/non-string workstreams, locks requirement → revision → review → version consistently, and scopes uniqueness to source revision plus department so historic terminal decisions remain intact. **Blocked:** **Source-only protected intake correction prepared:** `supabase/pending/20261005_client_requirement_intake.sql` now uses a narrow authenticated actor/contact/party/opportunity/customer-verified SECURITY DEFINER transaction for atomic requirement, immutable revision 1, and audit creation without widening direct external table RLS. **Blocked:** a secure isolated runner with approved scoped external/reviewer identities is required to prove first assignment, same-revision reassignment, terminal-history/new-revision assignment, expiry/revocation/wrong-pair/direct-table denial, audit rollback, caller RLS, reviewer immutability, and concurrency before application. The UI remains disabled; no live schema, permissions, records, or conversion changed.
-  **Sales compatibility repair:** deployed reviews do not expose the pending provenance columns. The Sales overview now queries only deployed review columns and reports provenance/readiness as explicitly unavailable, without blanking existing Sales data or treating it as passed.
-  **Harness added:** `supabase/pending/tests/run_client_requirement_intake_isolated_acceptance.sh` refuses the original backend and emits only a read-only allowlisted isolated-backend preflight; `src/lib/isolated-sales-acceptance.functions.ts` provides the same authenticated, no-mutation status. Execution remains blocked because the isolated executor has no approved scoped external/reviewer identities or authenticated application-RPC transport.
+      **Sales compatibility repair:** deployed reviews do not expose the pending provenance columns. The Sales overview now queries only deployed review columns and reports provenance/readiness as explicitly unavailable, without blanking existing Sales data or treating it as passed.
+      **Harness added:** `supabase/pending/tests/run_client_requirement_intake_isolated_acceptance.sh` refuses the original backend and emits only a read-only allowlisted isolated-backend preflight; `src/lib/isolated-sales-acceptance.functions.ts` provides the same authenticated, no-mutation status. Execution remains blocked because the isolated executor has no approved scoped external/reviewer identities or authenticated application-RPC transport.
 
 - [ ] Surface all agreed Master Specification core and More Options fields in the Proposed Project dialog, backed by immutable versioned specification revisions; create only one synthetic proposal after contract acceptance.
 - [ ] Implement versioned Master Specification persistence for Proposed Projects. **Source and unapplied contract prepared:** canonical fields, immutable append-only versions, actor/source provenance, optimistic conflict checks, audit receipt, and permission-scoped RLS are in `src/lib/master-specification.ts`, `src/lib/master-specifications.functions.ts`, and `supabase/pending/20261005_master_specification_versions.sql`. **Blocked:** original schema does not contain the tables/RPC; accepted isolated backend must prove denied-user, rollback, concurrency and non-admin RLS before the proposal can be applied. Document generation remains gated.
@@ -125,14 +125,16 @@
 - [x] Add finished-goods release, PPAP, and dispatch controls without duplicating shared systems. Finished-goods release, PPAP packages, controlled dispatch, and signed-in production route validation are complete.
 
 ## Phase 8 — Facility, assets, maintenance, calibration, security and workplace
+
 - [x] Implement approved Phase 8 scope; stop before Phase 9.
 - [x] Added Phase 8 facility, asset, maintenance, calibration, security, workplace foundations, QR identifiers, role permissions, RLS, reviewable automations, and mobile-ready operational screens.
 
 ## Phase 9 — QMS, customer quality & governance
+
 - [x] Implement the approved QMS, KPI, audit, CAPA, customer quality, document-control and management-review layer; stop before Phase 10.
 
-
 ## Phase 10 — External collaboration extensions
+
 - [x] Complete the Phase 10 security corrections: authenticated invitations, guarded portal access, immutable sharing, quarantined upload handling, signed webhook intake, workflow guards, and focused validation tests. Phase 11 remains out of scope.
 
 - [ ] Implement the approved lean portal foundation with clearly labeled demo data, preserving protected workflows and existing operational records.
