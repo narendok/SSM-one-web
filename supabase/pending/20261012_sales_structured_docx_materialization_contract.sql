@@ -130,7 +130,6 @@ BEGIN
     OR NEW.department_id IS DISTINCT FROM OLD.department_id
     OR NEW.document_kind IS DISTINCT FROM OLD.document_kind
     OR NEW.responsible_employee_id IS DISTINCT FROM OLD.responsible_employee_id
-    OR NEW.location_id IS DISTINCT FROM OLD.location_id
     OR (OLD.status <> 'ACTIVE' AND NEW.status IS DISTINCT FROM OLD.status)
     OR (OLD.status = 'ACTIVE' AND (NEW.status <> 'REVOKED' OR NEW.revoked_by IS NULL OR NEW.revoked_at IS NULL))
   THEN
@@ -146,7 +145,6 @@ RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   IF TG_OP = 'DELETE'
     OR NEW.request_key IS DISTINCT FROM OLD.request_key
-    OR NEW.location_id IS DISTINCT FROM OLD.location_id
     OR NEW.staged_by IS DISTINCT FROM OLD.staged_by
     OR NEW.storage_bucket IS DISTINCT FROM OLD.storage_bucket
     OR NEW.storage_path IS DISTINCT FROM OLD.storage_path
