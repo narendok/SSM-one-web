@@ -29,6 +29,19 @@ afterEach(() => {
 });
 
 describe("ProjectOperationalTab design-input reads", () => {
+  it("keeps the count unresolved while a design-input read is pending", () => {
+    let resolveRead: (value: { data: unknown[]; error: null }) => void = () => undefined;
+    order.mockImplementationOnce(() => new Promise((resolve) => { resolveRead = resolve; }));
+
+    renderDesignInputs();
+
+    expect(screen.getByText("Loading visible records…")).toBeTruthy();
+    expect(screen.queryByText("0 recorded")).toBeNull();
+    expect(screen.queryByText("No controlled design inputs recorded.")).toBeNull();
+
+    resolveRead({ data: [], error: null });
+  });
+
   it("shows a failed initial read without an empty count or empty-state message, then retries successfully", async () => {
     const user = userEvent.setup();
     order.mockRejectedValueOnce(new Error("Read unavailable")).mockResolvedValueOnce({ data: [{
