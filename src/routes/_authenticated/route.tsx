@@ -9,7 +9,7 @@ import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
 import { VoiceAssistant } from "@/components/inventory/VoiceAssistant";
 
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
 
@@ -26,7 +26,14 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function WorkspaceLoading() {
-  return <main className="flex min-h-screen items-center justify-center p-6"><p className="text-sm text-muted-foreground">Loading workspace…</p></main>;
+  const [timedOut, setTimedOut] = useState(false);
+  const navigate = useNavigate();
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setTimedOut(true), 10_000);
+    return () => window.clearTimeout(timeout);
+  }, []);
+  if (!timedOut) return <main className="flex min-h-screen items-center justify-center p-6"><p className="text-sm text-muted-foreground">Loading workspace…</p></main>;
+  return <main className="flex min-h-screen items-center justify-center p-6"><section className="max-w-md space-y-3 text-center"><h1 className="text-xl font-semibold">Workspace is taking longer than expected</h1><p className="text-sm text-muted-foreground">The workspace did not finish loading. Your access has not been changed.</p><Button onClick={() => void navigate({ to: "/sales", replace: true })}>Try again</Button></section></main>;
 }
 
 function AppLayout() {
