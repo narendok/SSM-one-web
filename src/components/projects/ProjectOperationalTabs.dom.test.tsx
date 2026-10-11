@@ -35,7 +35,7 @@ describe("ProjectOperationalTab design-input reads", () => {
 
     renderDesignInputs();
 
-    expect(screen.getByText("Loading visible records…")).toBeTruthy();
+    expect(screen.getAllByText("Loading visible records…")).toHaveLength(2);
     expect(screen.queryByText("0 recorded")).toBeNull();
     expect(screen.queryByText("No controlled design inputs recorded.")).toBeNull();
 
