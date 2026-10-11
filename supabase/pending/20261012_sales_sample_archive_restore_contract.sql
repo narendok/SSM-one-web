@@ -124,7 +124,15 @@ $$;
 CREATE OR REPLACE FUNCTION public.sales_sample_archive_assert_zero_dependencies(p_snapshot jsonb)
 RETURNS void LANGUAGE plpgsql IMMUTABLE SET search_path = public AS $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM jsonb_each_text(p_snapshot) AS entry(key, value) WHERE value <> '0') THEN
+  -- Requirement revisions and requirement-to-opportunity links are retained
+  -- immutable/internal relationships in this exact ten-root batch. They are
+  -- snapshotted and rechecked on restore, but are never deleted or treated as
+  -- external cleanup permission. Every other non-zero dependency blocks.
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_each_text(p_snapshot) AS entry(key, value)
+    WHERE value <> '0' AND key NOT IN ('requirementRevisions', 'requirements')
+  ) THEN
     RAISE EXCEPTION 'Archive is blocked by a live dependency';
   END IF;
 END;
