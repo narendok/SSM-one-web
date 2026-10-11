@@ -39,7 +39,7 @@ wait_for_exact_project_lock() {
   local expected_request_key="$1"
   for _ in $(seq 1 100); do
     local observed
-    observed="$(run_psql -Atqc "WITH key AS (SELECT hashtextextended('component-candidate-project:' || '$project_id', 0) AS value), waiter AS (SELECT pid FROM pg_stat_activity WHERE application_name = '$waiter_name' AND query LIKE '%submit_component_candidate%' ORDER BY query_start DESC LIMIT 1) SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_stat_activity activity JOIN waiter ON waiter.pid = activity.pid JOIN pg_locks lock ON lock.pid = activity.pid CROSS JOIN key WHERE activity.wait_event_type = 'Lock' AND lock.locktype = 'advisory' AND NOT lock.granted AND lock.classid::int = (key.value >> 32)::int AND lock.objid::int = key.value::int) THEN 'waiting-on-exact-project-lock' ELSE '' END")"
+    observed="$(run_psql -Atqc "WITH key AS (SELECT hashtextextended('component-candidate-project:' || '$project_id', 0) AS value), waiter AS (SELECT pid FROM pg_stat_activity WHERE application_name = '$waiter_name' AND query LIKE '%submit_component_candidate%' ORDER BY query_start DESC LIMIT 1) SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_stat_activity activity JOIN waiter ON waiter.pid = activity.pid JOIN pg_locks lock ON lock.pid = activity.pid CROSS JOIN key WHERE activity.wait_event_type = 'Lock' AND lock.locktype = 'advisory' AND NOT lock.granted AND lock.classid::bigint = ((key.value >> 32) & 4294967295) AND lock.objid::bigint = (key.value & 4294967295)) THEN 'waiting-on-exact-project-lock' ELSE '' END")"
     [[ "$observed" == 'waiting-on-exact-project-lock' ]] && return 0
     sleep 0.02
   done
