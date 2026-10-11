@@ -1406,16 +1406,16 @@ export function FormattedPreview({
   userEdits,
   error,
   controlledText,
-  persistedRevisionNumber,
-  cleanPersisted,
+  persistedRevisionNumber = null,
+  cleanPersisted = false,
 }: {
   item: (typeof structuredLifecycleTemplatePreviews)[number];
   source: StructuredTemplateSource | null;
   userEdits: Record<string, string>;
   error: string | null;
   controlledText: string;
-  persistedRevisionNumber: number | null;
-  cleanPersisted: boolean;
+  persistedRevisionNumber?: number | null;
+  cleanPersisted?: boolean;
 }) {
   const value = (field: string) =>
     userEdits[editKey(item.kind, field)] ?? userEdits[field] ?? "TBC";
