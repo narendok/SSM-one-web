@@ -104,8 +104,12 @@ BEGIN
       'baselines', (SELECT count(*) FROM public.requirement_baselines WHERE requirement_id=p_id),
       'changeRequests', (SELECT count(*) FROM public.requirement_change_requests WHERE requirement_id=p_id),
       'projectDesignInputs', (SELECT count(*) FROM public.project_design_inputs WHERE source_requirement_id=p_id OR source_revision_id IN (SELECT id FROM public.customer_requirement_revisions WHERE requirement_id=p_id)),
+      'handovers', (SELECT count(*) FROM public.sales_project_handovers h JOIN public.requirement_baselines b ON b.id=h.baseline_id WHERE b.requirement_id=p_id),
       'portalShares', (SELECT count(*) FROM public.customer_portal_shares WHERE entity_id=p_id),
-      'history', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'action', action, 'createdAt', created_at) ORDER BY created_at, id) FROM public.activity_log WHERE entity_id=p_id), '[]'::jsonb)
+      'provenance', (SELECT count(*) FROM public.data_provenance WHERE entity_id=p_id),
+      'registry', (SELECT count(*) FROM public.entity_registry WHERE entity_id=p_id),
+      'externalAccess', (SELECT count(*) FROM public.external_access_events WHERE entity_id=p_id),
+      'history', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'moduleKey', module_key, 'entityType', entity_type, 'action', action, 'summary', summary, 'actorUserId', actor_user_id, 'createdAt', created_at) ORDER BY created_at, id) FROM public.activity_log WHERE entity_id=p_id), '[]'::jsonb)
     );
   END IF;
   RETURN jsonb_build_object(
@@ -118,8 +122,34 @@ BEGIN
     'structuredMaterializations', (SELECT count(*) FROM public.sales_opportunity_structured_draft_materializations WHERE opportunity_id=p_id),
     'projects', (SELECT count(*) FROM public.projects WHERE opportunity_id=p_id),
     'portalShares', (SELECT count(*) FROM public.customer_portal_shares WHERE entity_id=p_id),
-    'history', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'action', action, 'createdAt', created_at) ORDER BY created_at, id) FROM public.activity_log WHERE entity_id=p_id), '[]'::jsonb)
+    'provenance', (SELECT count(*) FROM public.data_provenance WHERE entity_id=p_id),
+    'registry', (SELECT count(*) FROM public.entity_registry WHERE entity_id=p_id),
+    'externalAccess', (SELECT count(*) FROM public.external_access_events WHERE entity_id=p_id),
+    'history', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'moduleKey', module_key, 'entityType', entity_type, 'action', action, 'summary', summary, 'actorUserId', actor_user_id, 'createdAt', created_at) ORDER BY created_at, id) FROM public.activity_log WHERE entity_id=p_id), '[]'::jsonb)
   );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.sales_sample_archive_assert_expected_facts(p_kind text, p_id uuid, p_snapshot jsonb)
+RETURNS void LANGUAGE plpgsql IMMUTABLE SET search_path = public, extensions AS $$
+DECLARE v_expected jsonb;
+BEGIN
+  IF p_kind = 'REQUIREMENT' THEN
+    v_expected := CASE p_id
+      WHEN 'aaabd18c-5885-45de-9e0e-da70d4ec491f'::uuid THEN '[{"id":"dc0ccda7-b4ee-4d16-b4d5-a11a9ee8e7c6","revisionNumber":1,"status":"working"}]'::jsonb
+      WHEN '36cdc159-57c7-4568-a1b0-ec481f5d3d93'::uuid THEN '[{"id":"23e2a05a-d8b3-421c-b760-e0273143d766","revisionNumber":1,"status":"working"}]'::jsonb
+      WHEN '6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c'::uuid THEN '[{"id":"a3c747a3-cb61-43a6-805a-788848143680","revisionNumber":1,"status":"working"}]'::jsonb
+      WHEN '2db48440-5424-4e5e-bb5b-01f203a7662f'::uuid THEN '[{"id":"1bced975-c1c6-445c-be44-fa988c01e434","revisionNumber":1,"status":"working"}]'::jsonb
+      WHEN 'e829dd82-381d-42ab-a808-62979e9156f4'::uuid THEN '[{"id":"2a238167-050c-4e31-92a3-6d0ab0e611d9","revisionNumber":1,"status":"working"}]'::jsonb
+      ELSE NULL
+    END;
+    IF v_expected IS NULL OR p_snapshot->'requirementRevisions' IS DISTINCT FROM v_expected THEN
+      RAISE EXCEPTION 'Reviewed requirement revision facts changed';
+    END IF;
+    IF jsonb_array_length(p_snapshot->'history') <> 1 THEN RAISE EXCEPTION 'Reviewed requirement history facts changed'; END IF;
+    RETURN;
+  END IF;
+  IF jsonb_array_length(p_snapshot->'history') <> 1 THEN RAISE EXCEPTION 'Reviewed opportunity history facts changed'; END IF;
 END;
 $$;
 
@@ -165,6 +195,7 @@ BEGIN
       IF NOT FOUND THEN RAISE EXCEPTION 'Reviewed requirement is missing, changed, or already archived'; END IF;
       v_state:=jsonb_build_object('status','draft','title','testcust','customerId','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','opportunityId','0f965acc-5f00-4e3d-9000-9176d739a38c','currentRevision',1,'archivedAt',NULL); v_snapshot:=public.sales_sample_archive_dependency_snapshot('REQUIREMENT',(v_root->>'id')::uuid);
     END IF;
+    PERFORM public.sales_sample_archive_assert_expected_facts(v_root->>'kind',(v_root->>'id')::uuid,v_snapshot);
     PERFORM public.sales_sample_archive_assert_zero_dependencies(v_snapshot);
     INSERT INTO public.sales_sample_archive_manifest_items(manifest_id,root_kind,root_id,display_number,prior_state,dependency_snapshot) VALUES(v_manifest,v_root->>'kind',(v_root->>'id')::uuid,v_root->>'displayNumber',v_state,v_snapshot);
   END LOOP;
@@ -236,6 +267,7 @@ $$;
 REVOKE ALL ON FUNCTION public.sales_sample_archive_can_manage(uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.sales_sample_archive_canonical_roots(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.sales_sample_archive_dependency_snapshot(text,uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.sales_sample_archive_assert_expected_facts(text,uuid,jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.sales_sample_archive_assert_zero_dependencies(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.archive_reviewed_sales_samples(jsonb,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.restore_reviewed_sales_samples(uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
