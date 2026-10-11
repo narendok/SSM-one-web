@@ -26,6 +26,7 @@ import { ProjectTeamTab } from "@/components/projects/ProjectTeamTab";
 import { ProjectOperationalTab, ProjectRequirementContext } from "@/components/projects/ProjectOperationalTabs";
 import { SharedProductLifecycle } from "@/components/projects/SharedProductLifecycle";
 import { StructuredTemplatePreview } from "@/components/lifecycle/StructuredTemplatePreview";
+import { ProjectStructuredDocuments } from "@/components/projects/ProjectStructuredDocuments";
 import type { Project } from "@/lib/projects";
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -157,6 +158,7 @@ function ProjectDetailPage() {
           <TabsTrigger value="inputs">Inputs</TabsTrigger>
           <TabsTrigger value="delivery">Delivery</TabsTrigger>
           <TabsTrigger value="engineering">Engineering</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="bom">BOM</TabsTrigger>
           <TabsTrigger value="bom-review">BOM review</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
@@ -347,6 +349,10 @@ function ProjectDetailPage() {
           <ProjectOperationalTab projectId={projectId} kind="registers" onOpenFiles={() => openProjectTab("files")} />
         </TabsContent>
 
+        <TabsContent value="documents" className="pt-4">
+          <ProjectStructuredDocuments projectId={projectId} projectDepartmentId={project.department_id} />
+        </TabsContent>
+
         <TabsContent value="bom" className="pt-4">
           <ProjectBomsTab projectId={projectId} />
         </TabsContent>
@@ -355,6 +361,7 @@ function ProjectDetailPage() {
           <StructuredTemplatePreview
             projectId={projectId}
             project={{ id: project.id, name: project.name, code: project.code }}
+            catalogScope="project-documents"
           />
         </TabsContent>
 

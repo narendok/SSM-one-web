@@ -22,3 +22,10 @@
 -- 6. Request-key replay compares actor, assignment, source/template/schema,
 --    canonical payload, location, storage identity, checksum, and expected revision.
 -- 7. Existing HTML Sales materializations, APIs, and data are unchanged and independent.
+-- 8. The resolver must bind project_id + document_kind + department_id + active
+--    responsible assignment + private location. Project-team membership, general
+--    project visibility, sales.manage, and platform-admin status alone must not
+--    grant normal category reads, writes, history, or downloads.
+-- 9. Reuse one authoritative project Drive node/revision/document-control register
+--    across stage/category/history views. Do not create a parallel folder or file
+--    authority. Reject proposed-only Sales sources that have no committed project.
