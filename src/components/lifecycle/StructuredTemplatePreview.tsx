@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Box, Download, Eye, LockKeyhole, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { AlertCircle, Box, Download, Eye, FileDown, LockKeyhole, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
@@ -61,6 +61,7 @@ import {
   canonicalizeStructuredSalesLocalPayload,
   validateStructuredSalesLocalPayload,
 } from "@/lib/structured-sales-local-payload";
+import { renderStructuredLifecycleDocx } from "@/lib/structured-lifecycle-docx-renderer";
 
 export type StructuredTemplatePreviewSourcePin = {
   opportunityNumber: string;
@@ -258,6 +259,7 @@ export function StructuredTemplatePreview({
   const [requestKeys, setRequestKeys] = useState<Partial<Record<StructuredSalesPreviewKind, string>>>({});
   const [persistedEdits, setPersistedEdits] = useState<Partial<Record<StructuredSalesPreviewKind, Record<string, string>>>>({});
   const [saving, setSaving] = useState(false);
+  const [exportingDocx, setExportingDocx] = useState(false);
   const [downloadingRevisionId, setDownloadingRevisionId] = useState<string | null>(null);
   const [downloadFeedback, setDownloadFeedback] = useState<DownloadFeedback>({ state: "idle" });
   const hydratedRevisionRef = useRef<Record<string, string>>({});
@@ -594,6 +596,30 @@ export function StructuredTemplatePreview({
       setDownloadingRevisionId(null);
     }
   };
+  const exportLocalDocx = async () => {
+    if (exportingDocx) return;
+    setExportingDocx(true);
+    try {
+      const payload = localEditsForStructuredPreview(kind, effectiveEdits);
+      const renderedDocx = await renderStructuredLifecycleDocx(kind, source.data ?? null, payload);
+      const copy = new Uint8Array(renderedDocx.bytes.byteLength);
+      copy.set(renderedDocx.bytes);
+      const objectUrl = URL.createObjectURL(new Blob([copy.buffer], { type: renderedDocx.mimeType }));
+      const download = document.createElement("a");
+      download.href = objectUrl;
+      download.download = renderedDocx.fileName;
+      download.rel = "noopener";
+      document.body.appendChild(download);
+      download.click();
+      download.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      toast.success("Editable DOCX download started. It remains a local working document.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The editable DOCX could not be prepared.");
+    } finally {
+      setExportingDocx(false);
+    }
+  };
   return (
     <Card>
       <CardHeader>
@@ -739,10 +765,19 @@ export function StructuredTemplatePreview({
         </Tabs>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <p className="text-xs text-muted-foreground">
-            {saveBoundaryMessage} Export, issuance, release, and controlled document generation
-            remain unavailable.
+            {saveBoundaryMessage} DOCX export is local only; Drive save, import, issuance, release,
+            and controlled DOCX generation remain unavailable.
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              disabled={exportingDocx}
+              aria-label="Export editable local DOCX"
+              title="Download an editable local DOCX. It is not saved to Drive or issued."
+              variant="outline"
+              onClick={() => void exportLocalDocx()}
+            >
+              <FileDown className="size-4" /> {exportingDocx ? "Preparing DOCX…" : "Export DOCX"}
+            </Button>
             <Button
               disabled={!historyCapability.available || structuredHistory.isLoading}
               aria-label="View saved revision history"

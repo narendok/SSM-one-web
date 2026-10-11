@@ -1,0 +1,18 @@
+-- REVIEW-ONLY, UNAPPLIED DESIGN. DO NOT EXECUTE.
+--
+-- Proposed additive DOCX materialization contract for the twelve structured
+-- document types. This file is deliberately comments only: no table, function,
+-- policy, grant, or data change is approved by this design.
+--
+-- Required future invariants:
+-- 1. Materialization stores immutable source/template/schema/payload pins and
+--    `application/vnd.openxmlformats-officedocument.wordprocessingml.document`.
+-- 2. The Drive object is a server-rendered .docx with an exact checksum.
+-- 3. Access resolves the caller to an active employee and requires equality
+--    with document_control_registers.owner_employee_id or reviewer_employee_id,
+--    or a separately approved document-control authority.
+-- 4. Department membership alone never authorizes read, download, save, or
+--    revision access.
+-- 5. Request-key replay compares actor, assignment, source/template/schema,
+--    canonical payload, storage identity, checksum, and expected revision.
+-- 6. Existing HTML Sales materializations are unchanged and remain independent.
