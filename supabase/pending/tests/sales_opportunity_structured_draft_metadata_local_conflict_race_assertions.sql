@@ -2,7 +2,7 @@
 \set ON_ERROR_STOP on
 
 DO $assert$
-DECLARE v_case text; v_results integer; v_returned integer; v_errors integer; v_bad integer; v_drafts integer; v_revisions integer; v_requests integer;
+DECLARE v_case text; v_results integer; v_returned integer; v_errors integer; v_bad integer; v_drafts integer; v_revisions integer; v_requests integer; v_observed text;
 BEGIN
   FOREACH v_case IN ARRAY ARRAY['changed_payload', 'different_actor'] LOOP
     SELECT count(*), count(*) FILTER (WHERE outcome = 'returned'), count(*) FILTER (WHERE outcome = 'error'),
@@ -10,7 +10,11 @@ BEGIN
     INTO v_results, v_returned, v_errors, v_bad
     FROM public.structured_draft_conflict_race_results WHERE case_name = v_case;
     IF v_results <> 2 OR v_returned <> 1 OR v_errors <> 1 OR v_bad <> 1 THEN
-      RAISE EXCEPTION 'Conflict race % did not produce one winner and one receipt-conflict denial', v_case;
+      SELECT string_agg(worker_label || ':' || outcome || ':' || coalesce(sqlstate, 'none') || ':' || coalesce(message, 'none'), ' | ' ORDER BY worker_label)
+      INTO v_observed
+      FROM public.structured_draft_conflict_race_results
+      WHERE case_name = v_case;
+      RAISE EXCEPTION 'Conflict race % did not produce one winner and one receipt-conflict denial: %', v_case, v_observed;
     END IF;
   END LOOP;
   SELECT count(*) INTO v_drafts FROM public.sales_opportunity_structured_drafts;
