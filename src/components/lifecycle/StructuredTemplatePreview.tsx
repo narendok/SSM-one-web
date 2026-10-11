@@ -57,7 +57,10 @@ import {
 } from "@/lib/structured-sales-draft-capability";
 import { discoverStructuredSalesDraftCapability } from "@/lib/structured-sales-draft.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { canonicalizeStructuredSalesLocalPayload } from "@/lib/structured-sales-local-payload";
+import {
+  canonicalizeStructuredSalesLocalPayload,
+  validateStructuredSalesLocalPayload,
+} from "@/lib/structured-sales-local-payload";
 
 export type StructuredTemplatePreviewSourcePin = {
   opportunityNumber: string;
@@ -98,7 +101,14 @@ type StructuredSalesDraftHistoryItem = {
   storagePath: string | null;
   checksum: string | null;
   createdAt: string;
+  payload: Record<string, string> | null;
 };
+
+type DownloadFeedback =
+  | { state: "idle" }
+  | { state: "loading"; revisionNumber: number }
+  | { state: "success"; revisionNumber: number }
+  | { state: "error"; message: string };
 
 function revisionFileName(kind: StructuredSalesPreviewKind, revisionNumber: number) {
   return `${kind.toLowerCase().replaceAll("_", "-")}-draft-rev-${revisionNumber}.html`;
@@ -107,6 +117,40 @@ function revisionFileName(kind: StructuredSalesPreviewKind, revisionNumber: numb
 async function sha256Text(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export function persistedStructuredSalesDraftFields(
+  kind: StructuredSalesPreviewKind,
+  payload: unknown,
+): Record<string, string> | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const candidate = payload as { kind?: unknown; fields?: unknown };
+  if (candidate.kind !== kind) return null;
+  const validated = validateStructuredSalesLocalPayload(kind, candidate.fields);
+  return validated.ok ? { ...validated.payload } : null;
+}
+
+export async function downloadVerifiedStructuredSalesDraft(
+  download: () => PromiseLike<{ data: Blob | null; error: { message?: string } | null }>,
+  expectedChecksum: string | null,
+  timeoutMs = 15_000,
+): Promise<Blob> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const result = await Promise.race([
+      download(),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("The private file download timed out. Try again.")), timeoutMs);
+      }),
+    ]);
+    if (result.error || !result.data) throw new Error(result.error?.message ?? "The verified private file is unavailable.");
+    if (!expectedChecksum) throw new Error("The verified private file has no checksum.");
+    const actualChecksum = await sha256Text(await result.data.text());
+    if (actualChecksum !== expectedChecksum.toLowerCase()) throw new Error("The downloaded private file did not match its verified checksum.");
+    return result.data;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 function newRequestKey() {
@@ -208,8 +252,11 @@ export function StructuredTemplatePreview({
   const [selectedComponentIds, setSelectedComponentIds] = useState<LocalBomComponentSelection>({});
   const [selectedBomId, setSelectedBomId] = useState<string | null>(null);
   const [requestKeys, setRequestKeys] = useState<Partial<Record<StructuredSalesPreviewKind, string>>>({});
+  const [persistedEdits, setPersistedEdits] = useState<Partial<Record<StructuredSalesPreviewKind, Record<string, string>>>>({});
   const [saving, setSaving] = useState(false);
   const [downloadingRevisionId, setDownloadingRevisionId] = useState<string | null>(null);
+  const [downloadFeedback, setDownloadFeedback] = useState<DownloadFeedback>({ state: "idle" });
+  const hydratedRevisionRef = useRef<Record<string, string>>({});
   const queryClient = useQueryClient();
   const source = useQuery({
     queryKey: [
@@ -298,7 +345,7 @@ export function StructuredTemplatePreview({
       if (!draftIds.length) return [];
       const { data: revisions, error: revisionsError } = await supabase
         .from("sales_opportunity_structured_draft_revisions")
-        .select("id,revision_number,created_at,draft_id")
+        .select("id,revision_number,created_at,draft_id,canonical_payload")
         .in("draft_id", draftIds)
         .order("revision_number", { ascending: false });
       if (revisionsError) throw new Error("Saved draft revisions could not be read.");
@@ -329,6 +376,7 @@ export function StructuredTemplatePreview({
           storagePath: materialization?.storage_path ?? null,
           checksum: materialization?.rendered_sha256_checksum ?? null,
           createdAt: revision.created_at,
+          payload: persistedStructuredSalesDraftFields(kind, revision.canonical_payload),
         }];
       });
     },
@@ -360,6 +408,9 @@ export function StructuredTemplatePreview({
       setSelectedComponentIds({});
       setSelectedBomId(null);
       setRequestKeys({});
+      setPersistedEdits({});
+      setDownloadFeedback({ state: "idle" });
+      hydratedRevisionRef.current = {};
     }
   }, [scopeChanged, scopeKey, onLocalEditsChange]);
   useEffect(() => {
@@ -378,9 +429,24 @@ export function StructuredTemplatePreview({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  const localEditsForKind = localEditsForStructuredPreview(kind, userEdits);
+  const persistedRevision = structuredHistory.data?.[0];
+  const persistedFields = isStructuredSalesPreviewKind(kind) ? persistedEdits[kind] : undefined;
+  const effectiveEdits = persistedFields
+    ? { ...Object.fromEntries(Object.entries(persistedFields).map(([field, value]) => [editKey(kind, field), value])), ...userEdits }
+    : userEdits;
+  useEffect(() => {
+    if (!actorId || !isStructuredSalesPreviewKind(kind) || saving || structuredHistory.isPending || structuredHistory.isError) return;
+    const latest = structuredHistory.data?.[0];
+    if (!latest?.payload || Object.keys(localEditsForKind).length > 0) return;
+    const hydrationKey = `${scopeKey}:${kind}:${latest.revisionId}`;
+    if (hydratedRevisionRef.current[kind] === hydrationKey) return;
+    hydratedRevisionRef.current[kind] = hydrationKey;
+    setPersistedEdits((current) => ({ ...current, [kind]: latest.payload ?? {} }));
+  }, [actorId, kind, localEditsForKind, saving, scopeKey, structuredHistory.data, structuredHistory.isError, structuredHistory.isPending]);
   const rendered = useMemo(
-    () => buildStructuredPreviewContent(kind, source.data ?? null, userEdits),
-    [kind, source.data, userEdits],
+    () => buildStructuredPreviewContent(kind, source.data ?? null, effectiveEdits),
+    [kind, source.data, effectiveEdits],
   );
   // Keep local manual fields available while an identity/source transition is
   // in progress; only a settled authenticated source result can block them.
@@ -408,7 +474,7 @@ export function StructuredTemplatePreview({
           : null;
   const saveDraft = async () => {
     if (!source.data || !isStructuredSalesPreviewKind(kind) || !saveCapability.available || saving) return;
-    const payload = localEditsForStructuredPreview(kind, userEdits);
+    const payload = localEditsForStructuredPreview(kind, effectiveEdits);
     let canonicalPayload: string;
     try {
       canonicalPayload = canonicalizeStructuredSalesLocalPayload(kind, payload);
@@ -480,6 +546,7 @@ export function StructuredTemplatePreview({
         }
         return next;
       });
+      setPersistedEdits((current) => ({ ...current, [kind]: payload }));
       toast.success(receipt.replayed ? "Saved draft replayed." : "Draft saved as an unissued revision.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "The draft could not be saved.");
@@ -494,20 +561,26 @@ export function StructuredTemplatePreview({
     }
     setDownloadingRevisionId(entry.revisionId);
     try {
-      const { data, error } = await supabase.storage
-        .from(entry.storageBucket)
-        .createSignedUrl(entry.storagePath, 60, { download: revisionFileName(kind as StructuredSalesPreviewKind, entry.revisionNumber) });
-      if (error || !data?.signedUrl) throw new Error(error?.message ?? "The saved draft could not be prepared for download.");
+      setDownloadFeedback({ state: "loading", revisionNumber: entry.revisionNumber });
+      const blob = await downloadVerifiedStructuredSalesDraft(
+        () => supabase.storage.from(entry.storageBucket as string).download(entry.storagePath as string),
+        entry.checksum,
+      );
       const download = document.createElement("a");
-      download.href = data.signedUrl;
+      const objectUrl = URL.createObjectURL(blob);
+      download.href = objectUrl;
       download.download = revisionFileName(kind as StructuredSalesPreviewKind, entry.revisionNumber);
       download.rel = "noopener";
       document.body.appendChild(download);
       download.click();
       download.remove();
-      toast.success(`Download prepared for revision ${entry.revisionNumber}.`);
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      setDownloadFeedback({ state: "success", revisionNumber: entry.revisionNumber });
+      toast.success(`Revision ${entry.revisionNumber} download started.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "The saved draft could not be prepared for download.");
+      const message = error instanceof Error ? error.message : "The saved draft could not be downloaded.";
+      setDownloadFeedback({ state: "error", message });
+      toast.error(message);
     } finally {
       setDownloadingRevisionId(null);
     }
@@ -623,7 +696,7 @@ export function StructuredTemplatePreview({
                   ) : (
                     <LocalEditor
                       item={item}
-                      userEdits={userEdits}
+                      userEdits={effectiveEdits}
                       selectedComponentIds={selectedComponentIds}
                       onChange={updateLocalEdit}
                       onSelectLocalBomComponent={selectLocalBomComponent}
@@ -634,9 +707,11 @@ export function StructuredTemplatePreview({
                   <FormattedPreview
                     item={item}
                     source={source.data ?? null}
-                    userEdits={userEdits}
+                    userEdits={effectiveEdits}
                     error={rendered.error}
                     controlledText={rendered.content}
+                    persistedRevisionNumber={persistedRevision?.revisionNumber ?? null}
+                    cleanPersisted={Boolean(persistedRevision?.payload && !dirty)}
                   />
                   {salesGate && (
                     <p
@@ -677,7 +752,7 @@ export function StructuredTemplatePreview({
                 if (latest) void downloadSavedDraft(latest);
               }}
             >
-              <Download className="size-4" /> Download
+              <Download className="size-4" /> {downloadingRevisionId ? "Downloading…" : "Download"}
             </Button>
             <Button disabled={!saveCapability.available || saving || !isStructuredSalesPreviewKind(kind)} aria-label="Save structured Sales draft" title={saveBoundaryMessage} onClick={() => void saveDraft()}>
               <Save className="size-4" /> {saving ? "Saving…" : saveCapability.available ? "Save draft" : "Save unavailable"}
@@ -693,6 +768,15 @@ export function StructuredTemplatePreview({
           <p role="alert" className="mt-3 border border-destructive/40 p-3 text-sm text-destructive">
             Saved revision history could not be read: {structuredHistory.error instanceof Error ? structuredHistory.error.message : "Unexpected read error"}
           </p>
+        )}
+        {downloadFeedback.state === "loading" && (
+          <p role="status" className="mt-3 border p-3 text-sm text-muted-foreground">Downloading verified private revision {downloadFeedback.revisionNumber}…</p>
+        )}
+        {downloadFeedback.state === "success" && (
+          <p role="status" className="mt-3 border border-primary/30 bg-primary/5 p-3 text-sm">Revision {downloadFeedback.revisionNumber} passed checksum verification and the browser download was started.</p>
+        )}
+        {downloadFeedback.state === "error" && (
+          <p role="alert" className="mt-3 border border-destructive/40 p-3 text-sm text-destructive">Private download unavailable: {downloadFeedback.message}</p>
         )}
         {historyCapability.available && !structuredHistory.isLoading && !structuredHistory.isError && (
           <section className="mt-3 border p-3" aria-label="Saved structured Sales draft history">
