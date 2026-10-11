@@ -275,7 +275,7 @@ export function StructuredTemplatePreview({
         },
       });
     },
-    enabled: Boolean(actorId && capabilitySourceId && isSalesDraftKind),
+    enabled: Boolean(actorId && capabilitySourceId && isSalesDraftKind && source.isSuccess),
     retry: false,
   });
   const structuredHistory = useQuery({
@@ -328,7 +328,7 @@ export function StructuredTemplatePreview({
         }];
       });
     },
-    enabled: Boolean(actorId && capabilitySourceId && isSalesDraftKind),
+    enabled: Boolean(actorId && capabilitySourceId && isSalesDraftKind && source.isSuccess),
     retry: false,
   });
   const updateLocalEdit = (field: string, value: string) => {
