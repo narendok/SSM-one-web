@@ -29,7 +29,7 @@ archive_status=0
 PGOPTIONS="-c request.jwt.claim.sub=00000000-0000-4000-8000-000000000001" psql "${psql_args[@]}" -Atqc "SELECT * FROM public.archive_reviewed_sales_samples('$roots'::jsonb,'concurrent downstream writer','00000000-0000-4000-8000-000000000032');" >"$work_dir/archive.out" 2>"$work_dir/archive.err" || archive_status=$?
 wait "$writer_pid"
 [[ $archive_status -ne 0 ]] || { echo 'ASSERT_FAIL downstream writer race unexpectedly archived roots' >&2; exit 1; }
-if ! grep -Eq 'Archived opportunity is missing, changed, or already archived|Archive is blocked by a live business dependency' "$work_dir/archive.err"; then
+if ! grep -Eq 'Reviewed opportunity is missing, changed, or already archived|Archive is blocked by a live business dependency' "$work_dir/archive.err"; then
   cat "$work_dir/archive.err" >&2
   exit 1
 fi
