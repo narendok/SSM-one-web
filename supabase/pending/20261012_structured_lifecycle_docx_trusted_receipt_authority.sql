@@ -90,7 +90,15 @@ BEGIN
     OR p_storage_path <> v_location.private_storage_prefix || p_request_key::text || '-draft.docx'
     OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE')
   THEN RAISE EXCEPTION 'Trusted DOCX receipt no longer has an active assigned-person location scope'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.master_specifications s WHERE s.id=v_request.master_specification_id AND s.current_version_id=v_request.master_specification_version_id) THEN RAISE EXCEPTION 'Trusted DOCX receipt source is no longer current'; END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.master_specifications specification
+    JOIN public.master_specification_versions current_version
+      ON current_version.id=v_request.master_specification_version_id
+     AND current_version.specification_id=specification.id
+     AND current_version.version_number=specification.current_version
+    WHERE specification.id=v_request.master_specification_id
+  ) THEN RAISE EXCEPTION 'Trusted DOCX receipt source is no longer current'; END IF;
   -- The registry resolver only trusts auth.uid(). This service-only function
   -- has already proven p_actor_user_id against the request and responsibility;
   -- it therefore repeats the registry pin/source checks locally rather than

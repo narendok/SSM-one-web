@@ -266,7 +266,11 @@ BEGIN
   END IF;
   SELECT * INTO v_revision FROM public.sales_opportunity_structured_draft_revisions WHERE id = v_html_request.revision_id FOR UPDATE;
   SELECT * INTO v_draft FROM public.sales_opportunity_structured_drafts WHERE id = v_html_request.draft_id FOR UPDATE;
-  IF NOT FOUND OR v_revision.source_fingerprint <> v_html_request.source_fingerprint OR v_draft.master_specification_version_id <> v_html_request.master_specification_version_id OR NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_html_request.master_specification_id AND current_specification.current_version_id = v_html_request.master_specification_version_id) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
+  IF NOT FOUND OR v_revision.source_fingerprint <> v_html_request.source_fingerprint OR v_draft.master_specification_version_id <> v_html_request.master_specification_version_id OR NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_html_request.master_specification_id
+    AND EXISTS (SELECT 1 FROM public.master_specification_versions current_version
+                WHERE current_version.id=v_html_request.master_specification_version_id
+                  AND current_version.specification_id=current_specification.id
+                  AND current_version.version_number=current_specification.current_version)) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
   -- The trusted issuer and commit recheck the immutable registry pin after
   -- upload. Request staging preserves only existing Sales source/assignment
   -- provenance, avoiding a registry call before the receipt authority runs.
@@ -316,7 +320,10 @@ BEGIN
     OR NOT EXISTS (
       SELECT 1 FROM public.master_specifications current_specification
       WHERE current_specification.id=v_request.master_specification_id
-        AND current_specification.current_version_id=v_request.master_specification_version_id
+        AND EXISTS (SELECT 1 FROM public.master_specification_versions current_version
+                    WHERE current_version.id=v_request.master_specification_version_id
+                      AND current_version.specification_id=current_specification.id
+                      AND current_version.version_number=current_specification.current_version)
     )
   THEN RAISE EXCEPTION 'DOCX upload request no longer has an active assigned-person source scope'; END IF;
   v_storage_bucket := v_scope.storage_bucket;
@@ -354,7 +361,11 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'DOCX request is not owned by this actor and source'; END IF;
   SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,v_request.document_kind,p_assignment_id);
   IF v_request.assignment_id <> p_assignment_id OR v_request.location_id <> v_scope.location_id OR p_storage_bucket <> v_scope.storage_bucket OR p_storage_path <> v_scope.storage_path_prefix || p_request_key::text || '-draft.docx' OR btrim(coalesce(p_object_version,'')) = '' OR btrim(coalesce(p_file_name,'')) = '' OR p_file_name !~ '\.docx$' THEN RAISE EXCEPTION 'Invalid DOCX materialization payload'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_request.master_specification_id AND current_specification.current_version_id = v_request.master_specification_version_id) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_request.master_specification_id
+    AND EXISTS (SELECT 1 FROM public.master_specification_versions current_version
+                WHERE current_version.id=v_request.master_specification_version_id
+                  AND current_version.specification_id=current_specification.id
+                  AND current_version.version_number=current_specification.current_version)) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
   SELECT * INTO v_prior FROM public.sales_opportunity_structured_docx_materializations AS prior_materialization WHERE prior_materialization.request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_prior.requested_by = v_actor AND v_prior.assignment_id = p_assignment_id AND v_prior.docx_sha256_checksum = p_sha256_checksum AND v_prior.storage_bucket = p_storage_bucket AND v_prior.storage_path = p_storage_path AND v_prior.object_version = p_object_version AND v_prior.size_bytes = p_size_bytes AND p_file_name = (SELECT name FROM public.drive_nodes WHERE id = v_prior.drive_node_id) THEN RETURN QUERY SELECT v_prior.id,v_prior.drive_node_id,v_prior.drive_revision_id,v_prior.document_control_register_id,true; RETURN; END IF;
