@@ -33,7 +33,6 @@ CREATE TABLE public.project_bom_procurement_review_requests (
       AND char_length(btrim(decision_note)) BETWEEN 1 AND 500)
   )
 );
-GRANT SELECT ON public.project_bom_procurement_review_requests TO authenticated;
 GRANT ALL ON public.project_bom_procurement_review_requests TO service_role;
 ALTER TABLE public.project_bom_procurement_review_requests ENABLE ROW LEVEL SECURITY;
 
@@ -56,7 +55,6 @@ CREATE TABLE public.project_bom_procurement_review_request_lines (
   ),
   UNIQUE (request_id, line_number)
 );
-GRANT SELECT ON public.project_bom_procurement_review_request_lines TO authenticated;
 GRANT ALL ON public.project_bom_procurement_review_request_lines TO service_role;
 ALTER TABLE public.project_bom_procurement_review_request_lines ENABLE ROW LEVEL SECURITY;
 
@@ -77,7 +75,6 @@ CREATE TABLE public.project_bom_procurement_review_analyses (
   analyzed_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (request_line_id, analysis_revision)
 );
-GRANT SELECT ON public.project_bom_procurement_review_analyses TO authenticated;
 GRANT ALL ON public.project_bom_procurement_review_analyses TO service_role;
 ALTER TABLE public.project_bom_procurement_review_analyses ENABLE ROW LEVEL SECURITY;
 
@@ -91,7 +88,6 @@ CREATE TABLE public.project_bom_procurement_review_receipts (
   result jsonb NOT NULL CHECK (jsonb_typeof(result) = 'object'),
   created_at timestamptz NOT NULL DEFAULT now()
 );
-GRANT SELECT ON public.project_bom_procurement_review_receipts TO service_role;
 GRANT ALL ON public.project_bom_procurement_review_receipts TO service_role;
 ALTER TABLE public.project_bom_procurement_review_receipts ENABLE ROW LEVEL SECURITY;
 
@@ -104,7 +100,6 @@ CREATE TABLE public.project_bom_procurement_review_audit_events (
   event_data jsonb NOT NULL CHECK (jsonb_typeof(event_data) = 'object'),
   created_at timestamptz NOT NULL DEFAULT now()
 );
-GRANT SELECT ON public.project_bom_procurement_review_audit_events TO service_role;
 GRANT ALL ON public.project_bom_procurement_review_audit_events TO service_role;
 ALTER TABLE public.project_bom_procurement_review_audit_events ENABLE ROW LEVEL SECURITY;
 
@@ -229,6 +224,42 @@ BEGIN
 END;
 $$;
 
+-- Read-only caller scope deliberately differs from analysis/decision scope:
+-- the original authenticated project-manager requester can retrieve only their
+-- exact immutable request through the protected function, while Procurement
+-- reviewers require the active assigned Procurement scope above. No direct
+-- table policy exposes request, line, analysis, receipt, or audit rows.
+CREATE OR REPLACE FUNCTION public.project_bom_procurement_review_read_scope(
+  p_actor uuid, p_request_id uuid
+) RETURNS TABLE(request_id uuid)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF p_actor IS NULL OR p_request_id IS NULL THEN
+    RAISE EXCEPTION 'Authenticated actor and Procurement request are required';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.project_bom_procurement_review_requests request
+    WHERE request.id = p_request_id
+      AND request.submitted_by = p_actor
+  ) THEN
+    RETURN QUERY SELECT p_request_id;
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT scope.request_id
+  FROM public.project_bom_procurement_review_procurement_scope(p_actor, p_request_id) scope;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Procurement request read requires the original requester or an active assigned Procurement employee';
+  END IF;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.project_bom_procurement_review_canonical_analysis(p_analysis jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -348,8 +379,9 @@ BEGIN
 END;
 $$;
 
--- Readback resolves only a Procurement-assigned caller's exact immutable request snapshot.
--- It does not expose private receipts/audit data and does not imply a decision or release.
+-- Readback resolves only the original requester or an active assigned
+-- Procurement employee's exact immutable request snapshot. It does not expose
+-- private receipts/audit data and does not imply a decision or release.
 CREATE OR REPLACE FUNCTION public.read_project_bom_procurement_review(p_request_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -359,7 +391,7 @@ AS $$
 DECLARE v_actor uuid:=auth.uid(); v_scope record; v_result jsonb;
 BEGIN
   IF v_actor IS NULL OR p_request_id IS NULL THEN RAISE EXCEPTION 'Authenticated actor and Procurement request are required'; END IF;
-  SELECT * INTO v_scope FROM public.project_bom_procurement_review_procurement_scope(v_actor,p_request_id);
+  SELECT * INTO v_scope FROM public.project_bom_procurement_review_read_scope(v_actor,p_request_id);
   SELECT jsonb_build_object(
     'id', request.id,
     'projectId', request.project_id,
@@ -414,17 +446,15 @@ BEGIN
 END;
 $$;
 
--- Scoped caller readback. Receipts/audit entries remain private implementation evidence.
-CREATE POLICY project_bom_procurement_review_request_read ON public.project_bom_procurement_review_requests FOR SELECT TO authenticated USING (
-  submitted_by=auth.uid() OR public.has_permission(auth.uid(),'procurement.edit')
-);
-CREATE POLICY project_bom_procurement_review_line_read ON public.project_bom_procurement_review_request_lines FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.project_bom_procurement_review_requests request WHERE request.id=request_id));
-CREATE POLICY project_bom_procurement_review_analysis_read ON public.project_bom_procurement_review_analyses FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.project_bom_procurement_review_request_lines line JOIN public.project_bom_procurement_review_requests request ON request.id=line.request_id WHERE line.id=request_line_id));
+-- No authenticated table grants or SELECT policies are intentionally created.
+-- All requester/reviewer reads flow through the scope-checked SECURITY DEFINER
+-- entrypoint above; receipts and audit evidence remain implementation-private.
 
 -- Execution is intentionally withheld pending installation review and authenticated caller acceptance.
 REVOKE ALL ON FUNCTION public.project_bom_procurement_review_canonical_submission(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_bom_procurement_review_submission_scope(uuid, uuid, uuid, text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_bom_procurement_review_procurement_scope(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_bom_procurement_review_read_scope(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_bom_procurement_review_canonical_analysis(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.submit_project_bom_procurement_review(uuid, uuid, text, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.analyze_project_bom_procurement_review(uuid, uuid, integer, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
