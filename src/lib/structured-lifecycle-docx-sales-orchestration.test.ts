@@ -18,7 +18,7 @@ function rpcClient(overrides: { fail?: string; objectVersion?: string; changedOb
     rpc: async (name: string, args: Record<string, unknown>) => {
       calls.push({ name, args });
       if (overrides.fail === name) return { data: null, error: { message: `${name} denied` } };
-      if (name === "resolve_sales_structured_docx_server_scope") return { data: { ...scope(), actor_id: args.p_actor_user_id, object_version: overrides.objectVersion ?? "v1" }, error: null };
+      if (name === "resolve_sales_structured_docx_server_scope") return { data: { ...scope(), object_version: overrides.objectVersion ?? "v1" }, error: null };
       if (name === "issue_sales_structured_docx_trusted_receipt") return { data: ids.receipt, error: null };
       if (name === "commit_sales_structured_docx_materialization") return { data: overrides.committed ?? [{ materialization_id: "local" }], error: null };
       return { data: undefined, error: null };
