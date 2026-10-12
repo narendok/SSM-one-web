@@ -12,6 +12,9 @@ CREATE TABLE public.projects(id uuid PRIMARY KEY, status text NOT NULL CHECK(sta
 CREATE TABLE public.project_team_members(project_id uuid NOT NULL REFERENCES public.projects(id), employee_id uuid NOT NULL REFERENCES public.employees(id), PRIMARY KEY(project_id, employee_id));
 CREATE TABLE public.customers(id uuid PRIMARY KEY);
 CREATE TABLE public.sales_opportunities(id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id));
+CREATE TABLE public.customer_requirements(id uuid PRIMARY KEY, opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id), customer_id uuid NOT NULL REFERENCES public.customers(id));
+CREATE TABLE public.requirement_baselines(id uuid PRIMARY KEY, requirement_id uuid NOT NULL REFERENCES public.customer_requirements(id));
+CREATE TABLE public.sales_project_handovers(id uuid PRIMARY KEY, baseline_id uuid NOT NULL REFERENCES public.requirement_baselines(id), project_id uuid NOT NULL REFERENCES public.projects(id), status text NOT NULL);
 CREATE TABLE public.department_process_templates(id uuid PRIMARY KEY, department_id uuid NOT NULL REFERENCES public.departments(id), template_key text NOT NULL, version integer NOT NULL CHECK(version > 0), status text NOT NULL CHECK(status IN ('DRAFT','ACTIVE','RETIRED')), active_document_revision_id uuid NULL, UNIQUE(department_id,template_key,version));
 CREATE TABLE public.department_process_template_document_revisions(id uuid PRIMARY KEY, template_id uuid NOT NULL REFERENCES public.department_process_templates(id), revision_number integer NOT NULL CHECK(revision_number > 0), content text NOT NULL, content_sha256 text NOT NULL, UNIQUE(template_id,id));
 ALTER TABLE public.department_process_templates ADD CONSTRAINT template_active_revision_fkey FOREIGN KEY(id,active_document_revision_id) REFERENCES public.department_process_template_document_revisions(template_id,id);

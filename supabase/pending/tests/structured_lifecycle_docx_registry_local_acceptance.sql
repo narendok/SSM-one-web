@@ -61,6 +61,16 @@ DO $$ BEGIN
 END $$;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 DO $$ BEGIN
+  INSERT INTO public.customers(id) VALUES ('00000000-0000-4000-8000-000000000091');
+  INSERT INTO public.sales_opportunities(id,customer_id) VALUES ('00000000-0000-4000-8000-000000000090','00000000-0000-4000-8000-000000000091');
+  INSERT INTO public.customer_requirements(id,opportunity_id,customer_id) VALUES ('00000000-0000-4000-8000-000000000092','00000000-0000-4000-8000-000000000090','00000000-0000-4000-8000-000000000091');
+  INSERT INTO public.requirement_baselines(id,requirement_id) VALUES ('00000000-0000-4000-8000-000000000093','00000000-0000-4000-8000-000000000092');
+  INSERT INTO public.sales_project_handovers(id,baseline_id,project_id,status) VALUES ('00000000-0000-4000-8000-000000000094','00000000-0000-4000-8000-000000000093','00000000-0000-4000-8000-000000000020','completed');
+  -- A caller-set trusted_actor setting cannot replace auth.uid().
+  PERFORM set_config('structured_docx.trusted_actor','00000000-0000-4000-8000-000000000002',true);
+  PERFORM set_config('request.jwt.claim.sub','',true);
+  BEGIN PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000090','00000000-0000-4000-8000-000000000091','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000061','HW-SOR',2,repeat('c',64),repeat('d',64)); RAISE EXCEPTION 'Forged trusted_actor setting resolved authority'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Authenticated pinned DOCX registry lookup%' THEN RAISE; END IF; END;
+  PERFORM set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
   BEGIN PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000020','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000061','HW-SOR',2,repeat('c',64),repeat('d',64)); RAISE EXCEPTION 'Stale template version accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Current immutable approved template pin%' THEN RAISE; END IF; END;
   BEGIN PERFORM public.approve_structured_lifecycle_docx_template_pin('00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000030','00000000-0000-4000-8000-000000000041',repeat('c',64),'00000000-0000-4000-8000-000000000062'); RAISE EXCEPTION 'Foreign template revision accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Template approval requires%' THEN RAISE; END IF; END;
 END $$;
