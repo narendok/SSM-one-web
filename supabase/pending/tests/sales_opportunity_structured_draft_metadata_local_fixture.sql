@@ -63,7 +63,7 @@ CREATE TABLE public.sales_project_handovers (
 CREATE TABLE public.master_specifications (
   id uuid PRIMARY KEY, opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id),
   customer_id uuid NOT NULL REFERENCES public.customers(id),
-  current_version_id uuid NULL
+  current_version integer NOT NULL DEFAULT 0
 );
 CREATE TABLE public.master_specification_versions (
   id uuid PRIMARY KEY, specification_id uuid NOT NULL REFERENCES public.master_specifications(id),
@@ -98,9 +98,9 @@ INSERT INTO public.customers (id, name) VALUES
 INSERT INTO public.sales_opportunities (id, customer_id) VALUES
   ('00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000101'),
   ('00000000-0000-4000-8000-000000000202', '00000000-0000-4000-8000-000000000102');
-INSERT INTO public.master_specifications (id, opportunity_id, customer_id) VALUES
-  ('00000000-0000-4000-8000-000000000301', '00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000101'),
-  ('00000000-0000-4000-8000-000000000302', '00000000-0000-4000-8000-000000000202', '00000000-0000-4000-8000-000000000102');
+INSERT INTO public.master_specifications (id, opportunity_id, customer_id, current_version) VALUES
+  ('00000000-0000-4000-8000-000000000301', '00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000101', 1),
+  ('00000000-0000-4000-8000-000000000302', '00000000-0000-4000-8000-000000000202', '00000000-0000-4000-8000-000000000102', 1);
 INSERT INTO public.master_specification_versions (id, specification_id, version_number, specification_data, created_at) VALUES
   ('00000000-0000-4000-8000-000000000401', '00000000-0000-4000-8000-000000000301', 1, '{"source":"A"}'::jsonb, '2026-10-10T00:00:00Z'),
   ('00000000-0000-4000-8000-000000000402', '00000000-0000-4000-8000-000000000302', 1, '{"source":"B"}'::jsonb, '2026-10-10T00:00:00Z');
@@ -135,8 +135,8 @@ INSERT INTO public.customers (id, name) VALUES
   ('03e06115-a7d4-4965-9e92-9c37462f5ddc', 'Phase B Customer');
 INSERT INTO public.sales_opportunities (id, customer_id) VALUES
   ('a6c62c81-1cc2-4804-b1c5-c004c6730b52', '03e06115-a7d4-4965-9e92-9c37462f5ddc');
-INSERT INTO public.master_specifications (id, opportunity_id, customer_id) VALUES
-  ('7a3aba95-61f6-495a-a280-f37a3be77670', 'a6c62c81-1cc2-4804-b1c5-c004c6730b52', '03e06115-a7d4-4965-9e92-9c37462f5ddc');
+INSERT INTO public.master_specifications (id, opportunity_id, customer_id, current_version) VALUES
+  ('7a3aba95-61f6-495a-a280-f37a3be77670', 'a6c62c81-1cc2-4804-b1c5-c004c6730b52', '03e06115-a7d4-4965-9e92-9c37462f5ddc', 1);
 INSERT INTO public.master_specification_versions (id, specification_id, version_number, specification_data, created_at) VALUES
   ('4914fba5-43a0-4486-b62f-d775a9bb16b9', '7a3aba95-61f6-495a-a280-f37a3be77670', 1, '{"source":"Phase B"}'::jsonb, '2026-10-11T00:00:00Z');
 INSERT INTO public.departments(id, code, name) VALUES

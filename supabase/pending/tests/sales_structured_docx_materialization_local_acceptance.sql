@@ -53,7 +53,6 @@ BEGIN
   ) THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL post-handover project scope did not resolve'; END IF;
 END;
 $scope_discriminator$;
-UPDATE public.master_specifications SET current_version_id='00000000-0000-4000-8000-000000000401' WHERE id='00000000-0000-4000-8000-000000000301';
 CREATE TEMP TABLE requested AS SELECT * FROM public.request_sales_structured_docx_materialization(
  '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000901','sales-sor-local',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','00000000-0000-4000-8000-000000000902');
 CREATE TEMP TABLE authorized_upload AS SELECT * FROM public.authorize_sales_structured_docx_upload(
