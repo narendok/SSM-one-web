@@ -212,6 +212,39 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.assign_project_structured_docx_responsibility(
+  p_project_id uuid, p_department_id uuid, p_document_kind text, p_responsible_employee_id uuid,
+  p_reviewer_employee_id uuid, p_request_key uuid
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_actor uuid; v_existing_audit public.structured_lifecycle_docx_registry_audit_events%ROWTYPE;
+  v_existing public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE; v_assignment uuid; v_payload_hash text;
+BEGIN
+  IF p_request_key IS NULL OR p_document_kind NOT IN ('SOR','NDA','COMMERCIAL_QUOTATION','CONTRACT_REVIEW','PRS','BOM','DFMEA','MANUFACTURING_CONTROL_PLAN','DVPR','PDI','COMMERCIAL_TAX_INVOICE','ANNUAL_SKILL_MATRIX')
+     OR p_responsible_employee_id IS NULL OR (p_reviewer_employee_id IS NOT NULL AND p_reviewer_employee_id = p_responsible_employee_id) THEN
+    RAISE EXCEPTION 'Invalid project structured DOCX responsibility assignment payload';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',p_project_id::text,p_document_kind),0));
+  v_actor := public.assert_structured_lifecycle_docx_registry_manager(p_project_id,p_department_id);
+  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object('scope_type','PROJECT','project_id',p_project_id,'department_id',p_department_id,'document_kind',p_document_kind,'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id)::text,'UTF8'),'sha256'),'hex');
+  SELECT * INTO v_existing_audit FROM public.structured_lifecycle_docx_registry_audit_events WHERE actor_user_id=v_actor AND request_key=p_request_key FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing_audit.action='ASSIGNED' AND v_existing_audit.payload_hash=v_payload_hash THEN RETURN v_existing_audit.assignment_id; END IF;
+    RAISE EXCEPTION 'Registry request key conflicts with a different assignment payload';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_departments membership ON membership.employee_id=employee.id AND membership.department_id=p_department_id WHERE employee.id=p_responsible_employee_id AND employee.employment_status='ACTIVE')
+     OR (p_reviewer_employee_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_departments membership ON membership.employee_id=employee.id AND membership.department_id=p_department_id WHERE employee.id=p_reviewer_employee_id AND employee.employment_status='ACTIVE')) THEN
+    RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department members';
+  END IF;
+  SELECT * INTO v_existing FROM public.structured_lifecycle_docx_responsibility_assignments WHERE scope_type='PROJECT' AND project_id=p_project_id AND document_kind=p_document_kind AND status='ACTIVE' FOR UPDATE;
+  IF FOUND THEN RAISE EXCEPTION 'An active project structured DOCX responsibility assignment already exists'; END IF;
+  INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(scope_type,project_id,department_id,document_kind,responsible_employee_id,reviewer_employee_id,assigned_by,created_by)
+  VALUES('PROJECT',p_project_id,p_department_id,p_document_kind,p_responsible_employee_id,p_reviewer_employee_id,v_actor,v_actor) RETURNING id INTO v_assignment;
+  INSERT INTO public.structured_lifecycle_docx_registry_audit_events(request_key,actor_user_id,action,assignment_id,payload_hash,after_data)
+  VALUES(p_request_key,v_actor,'ASSIGNED',v_assignment,v_payload_hash,jsonb_build_object('assignment_id',v_assignment,'scope_type','PROJECT','project_id',p_project_id,'department_id',p_department_id,'document_kind',p_document_kind));
+  RETURN v_assignment;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_registry_manager(
   p_opportunity_id uuid, p_customer_id uuid, p_department_id uuid
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -264,39 +297,6 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.assign_structured_lifecycle_docx_responsibility(
-  p_project_id uuid, p_department_id uuid, p_document_kind text, p_responsible_employee_id uuid,
-  p_reviewer_employee_id uuid, p_request_key uuid
-) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE v_actor uuid; v_existing_audit public.structured_lifecycle_docx_registry_audit_events%ROWTYPE;
-  v_existing public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE; v_assignment uuid;
-  v_payload_hash text;
-BEGIN
-  IF p_request_key IS NULL OR p_document_kind NOT IN ('SOR','NDA','COMMERCIAL_QUOTATION','CONTRACT_REVIEW','PRS','BOM','DFMEA','MANUFACTURING_CONTROL_PLAN','DVPR','PDI','COMMERCIAL_TAX_INVOICE','ANNUAL_SKILL_MATRIX')
-     OR p_responsible_employee_id IS NULL OR (p_reviewer_employee_id IS NOT NULL AND p_reviewer_employee_id = p_responsible_employee_id) THEN
-    RAISE EXCEPTION 'Invalid structured DOCX responsibility assignment payload';
-  END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',p_project_id::text,p_document_kind), 0));
-  v_actor := public.assert_structured_lifecycle_docx_registry_manager(p_project_id, p_department_id);
-  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object('project_id',p_project_id,'department_id',p_department_id,'document_kind',p_document_kind,'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id)::text, 'UTF8'), 'sha256'), 'hex');
-  SELECT * INTO v_existing_audit FROM public.structured_lifecycle_docx_registry_audit_events WHERE actor_user_id=v_actor AND request_key=p_request_key FOR UPDATE;
-  IF FOUND THEN
-    IF v_existing_audit.action='ASSIGNED' AND v_existing_audit.payload_hash=v_payload_hash THEN RETURN v_existing_audit.assignment_id; END IF;
-    RAISE EXCEPTION 'Registry request key conflicts with a different assignment payload';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_departments membership ON membership.employee_id=employee.id AND membership.department_id=p_department_id WHERE employee.id=p_responsible_employee_id AND employee.employment_status='ACTIVE')
-     OR (p_reviewer_employee_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_departments membership ON membership.employee_id=employee.id AND membership.department_id=p_department_id WHERE employee.id=p_reviewer_employee_id AND employee.employment_status='ACTIVE')) THEN
-    RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department members';
-  END IF;
-  SELECT * INTO v_existing FROM public.structured_lifecycle_docx_responsibility_assignments WHERE project_id=p_project_id AND document_kind=p_document_kind AND status='ACTIVE' FOR UPDATE;
-  IF FOUND THEN RAISE EXCEPTION 'An active structured DOCX responsibility assignment already exists for this project and document kind'; END IF;
-  INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(project_id,department_id,document_kind,responsible_employee_id,reviewer_employee_id,assigned_by,created_by)
-  VALUES(p_project_id,p_department_id,p_document_kind,p_responsible_employee_id,p_reviewer_employee_id,v_actor,v_actor) RETURNING id INTO v_assignment;
-  INSERT INTO public.structured_lifecycle_docx_registry_audit_events(request_key,actor_user_id,action,assignment_id,payload_hash,after_data)
-  VALUES(p_request_key,v_actor,'ASSIGNED',v_assignment,v_payload_hash,jsonb_build_object('assignment_id',v_assignment,'project_id',p_project_id,'department_id',p_department_id,'document_kind',p_document_kind,'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id));
-  RETURN v_assignment;
-END;
-$$;
 
 CREATE OR REPLACE FUNCTION public.revoke_structured_lifecycle_docx_responsibility(p_assignment_id uuid, p_request_key uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -382,7 +382,7 @@ $$;
 REVOKE ALL ON FUNCTION public.resolve_structured_lifecycle_docx_registry_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_registry_manager(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.assign_sales_structured_docx_responsibility(uuid,uuid,uuid,text,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.assign_structured_lifecycle_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.assign_project_structured_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.revoke_structured_lifecycle_docx_responsibility(uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.approve_structured_lifecycle_docx_template_pin(uuid,text,uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.revoke_structured_lifecycle_docx_template_pin(uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
