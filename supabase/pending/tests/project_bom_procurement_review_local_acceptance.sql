@@ -54,6 +54,9 @@ SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8
  {"kind":"new","mpn":"NEW-007","manufacturer":"Proposal Ltd","description":"Uncreated proposed part","referenceDesignators":"U1","quantity":1}
 ]'::jsonb,'00000000-0000-4000-8000-000000000060');
 GRANT SELECT ON first_submit TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
+CREATE TEMP TABLE first_submit_lines AS
+SELECT id, source_kind FROM public.project_bom_procurement_review_request_lines WHERE request_id=(SELECT request_id FROM first_submit);
+GRANT SELECT ON first_submit_lines TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 DO $$ BEGIN
  IF (SELECT count(*) FROM first_submit)<>1 OR (SELECT replayed FROM first_submit) THEN RAISE EXCEPTION 'First submission failed'; END IF;
  IF (SELECT count(*) FROM public.project_bom_procurement_review_requests)<>1 OR (SELECT count(*) FROM public.project_bom_procurement_review_request_lines)<>2 OR (SELECT count(*) FROM public.project_bom_procurement_review_audit_events)<>1 OR (SELECT count(*) FROM public.project_bom_procurement_review_receipts)<>1 THEN RAISE EXCEPTION 'Submission did not atomically persist snapshot, audit, and receipt'; END IF;
@@ -68,8 +71,8 @@ END $$;
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 DO $$ DECLARE v_request uuid:=(SELECT request_id FROM first_submit); v_existing_line uuid; v_new_line uuid; BEGIN
- SELECT id INTO v_existing_line FROM public.project_bom_procurement_review_request_lines WHERE request_id=v_request AND source_kind='EXISTING_COMPONENT';
- SELECT id INTO v_new_line FROM public.project_bom_procurement_review_request_lines WHERE request_id=v_request AND source_kind='NEW_PART';
+  SELECT id INTO v_existing_line FROM first_submit_lines WHERE source_kind='EXISTING_COMPONENT';
+  SELECT id INTO v_new_line FROM first_submit_lines WHERE source_kind='NEW_PART';
  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7','ALLOW','all rows reviewed','00000000-0000-4000-8000-000000000061'); RAISE EXCEPTION 'Allow without analysis accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Allow requires an analysis%' THEN RAISE; END IF; END;
   PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_existing_line,0,'{"availabilityState":"AVAILABLE","costState":"TBC","sourcingState":"PENDING","observedUnitCost":12.5,"currency":"INR","leadTimeDays":14,"analysisNote":"Supplier response pending"}'::jsonb,'00000000-0000-4000-8000-000000000062');
   PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_new_line,0,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"UNAVAILABLE","analysisNote":"No verified source yet"}'::jsonb,'00000000-0000-4000-8000-000000000063');
@@ -80,7 +83,7 @@ RESET ROLE;
 SET ROLE procurement_other_department_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',false);
 DO $$ BEGIN
-  BEGIN PERFORM * FROM public.analyze_project_bom_procurement_review((SELECT request_id FROM first_submit),(SELECT id FROM public.project_bom_procurement_review_request_lines LIMIT 1),0,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"TBC","analysisNote":"unauthorized"}'::jsonb,'00000000-0000-4000-8000-000000000064'); RAISE EXCEPTION 'Other-department analyst accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Procurement analysis requires an active assigned Procurement employee%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.analyze_project_bom_procurement_review((SELECT request_id FROM first_submit),(SELECT id FROM first_submit_lines LIMIT 1),0,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"TBC","analysisNote":"unauthorized"}'::jsonb,'00000000-0000-4000-8000-000000000064'); RAISE EXCEPTION 'Other-department analyst accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Procurement analysis requires an active assigned Procurement employee%' THEN RAISE; END IF; END;
   BEGIN PERFORM public.read_project_bom_procurement_review((SELECT request_id FROM first_submit)); RAISE EXCEPTION 'Other-department read accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Procurement analysis requires an active assigned Procurement employee%' THEN RAISE; END IF; END;
 END $$;
 RESET ROLE;
@@ -99,7 +102,7 @@ END $$;
 RESET ROLE;
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
-DO $$ DECLARE v_request uuid:=(SELECT request_id FROM first_submit); v_line uuid:=(SELECT id FROM public.project_bom_procurement_review_request_lines WHERE request_id=(SELECT request_id FROM first_submit) AND source_kind='EXISTING_COMPONENT'); v_read jsonb; BEGIN
+DO $$ DECLARE v_request uuid:=(SELECT request_id FROM first_submit); v_line uuid:=(SELECT id FROM first_submit_lines WHERE source_kind='EXISTING_COMPONENT'); v_read jsonb; BEGIN
   SELECT public.read_project_bom_procurement_review(v_request) INTO v_read;
   IF v_read->>'pinnedBomRevision' <> '7' OR jsonb_array_length(v_read->'lines') <> 2 THEN RAISE EXCEPTION 'Scoped read did not return exact immutable request snapshot'; END IF;
   IF ((v_read->'lines'->0->'analysis'->>'revision')::integer) <> 1 OR (v_read->'lines'->0->'analysis'->>'observedUnitCost') <> '12.5' THEN RAISE EXCEPTION 'Scoped read did not return latest audited analysis'; END IF;
