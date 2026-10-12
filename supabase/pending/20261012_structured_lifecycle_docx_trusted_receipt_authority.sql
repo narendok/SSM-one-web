@@ -58,11 +58,12 @@ BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_trusted_rece
 FOR EACH ROW EXECUTE FUNCTION public.guard_sales_structured_docx_trusted_receipt();
 
 -- Internal shared authority validator. It is never granted to a browser role.
--- Caller/request locks are always acquired first, followed by the registry
--- assignment, template pin/template/revision, Master/current version, then the
--- handover/project-membership rows. Registry revoke paths use their own root
--- advisory lock before changing the locked row, so no path takes these locks in
--- reverse order.
+-- Every verification or caller-authenticated commit first locks the immutable
+-- request key, then the source-scoped registry root, then assignment/location,
+-- template root/pin/revision, Master/current version, and handover/membership.
+-- Registry mutation paths take the same source/template roots before their row
+-- locks, so a revoke or replacement cannot pass between validation and receipt
+-- consumption and no path in this contract reverses that lock order.
 CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_actor_scope(
   p_actor_user_id uuid, p_request_key uuid, p_assignment_id uuid,
   p_storage_bucket text, p_storage_path text, p_object_version text,
@@ -93,6 +94,7 @@ BEGIN
     OR v_request.source_fingerprint <> p_source_fingerprint OR v_request.template_key <> p_template_key
     OR v_request.template_version <> p_template_version OR v_request.template_schema_hash <> p_template_schema_hash
   THEN RAISE EXCEPTION 'Trusted DOCX receipt actor, request, source, or template pin changed'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','sales-structured-docx-assignment',v_request.opportunity_id::text,v_request.document_kind),0));
   SELECT * INTO v_assignment FROM public.sales_opportunity_structured_docx_assignments WHERE id=v_request.assignment_id FOR UPDATE;
   SELECT * INTO v_location FROM public.sales_opportunity_document_locations WHERE id=v_request.location_id FOR UPDATE;
   IF NOT FOUND OR v_assignment.status <> 'ACTIVE' OR v_location.status <> 'ACTIVE'
@@ -133,6 +135,7 @@ BEGIN
   ELSE
     RAISE EXCEPTION 'Trusted DOCX receipt registry scope is invalid';
   END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-template',v_registry.department_id::text,v_registry.document_kind),0));
   SELECT * INTO v_template_pin
   FROM public.structured_lifecycle_docx_template_pins template_pin
   WHERE template_pin.department_id=v_registry.department_id
@@ -236,8 +239,9 @@ BEGIN
 END;
 $$;
 
--- Commit is service-only at this layer: the authenticated server function
--- validates actor identity then calls this after it has rechecked the receipt.
+-- This internal recheck is called by the caller-authenticated atomic commit
+-- function. It accepts the caller subject through its explicit actor parameter;
+-- only its ACL is service-only, so a browser cannot invoke it directly.
 CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(
   p_actor_user_id uuid, p_receipt_id uuid, p_request_key uuid, p_assignment_id uuid,
   p_storage_bucket text, p_storage_path text, p_object_version text,
@@ -245,9 +249,12 @@ CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_receipt_f
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_receipt public.sales_opportunity_structured_docx_trusted_receipts%ROWTYPE;
 BEGIN
-  -- The public caller-owned commit function invokes this internal recheck in
-  -- the same transaction. Direct caller access remains blocked by its ACL;
-  -- this helper does not use a mutable setting as actor identity.
+  IF auth.uid() IS DISTINCT FROM p_actor_user_id THEN
+    RAISE EXCEPTION 'Trusted DOCX commit actor does not match the authenticated caller';
+  END IF;
+  -- The caller-owned atomic commit invokes this service-only helper inside the
+  -- same transaction. It compares the immutable caller subject and never reads
+  -- a mutable setting as actor identity.
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','sales-structured-docx',p_request_key::text),0));
   SELECT * INTO v_receipt FROM public.sales_opportunity_structured_docx_trusted_receipts WHERE id=p_receipt_id AND request_key=p_request_key FOR UPDATE;
   IF NOT FOUND OR v_receipt.consumed_at IS NOT NULL OR v_receipt.actor_user_id<>p_actor_user_id OR v_receipt.assignment_id<>p_assignment_id OR v_receipt.storage_bucket<>p_storage_bucket OR v_receipt.storage_path<>p_storage_path OR v_receipt.object_version<>p_object_version OR v_receipt.sha256_checksum<>p_sha256_checksum OR v_receipt.size_bytes<>p_size_bytes THEN RAISE EXCEPTION 'Trusted DOCX receipt is absent, consumed, or conflicts with commit facts'; END IF;

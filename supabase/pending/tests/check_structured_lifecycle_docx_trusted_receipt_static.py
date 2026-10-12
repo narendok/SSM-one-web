@@ -37,7 +37,9 @@ forbid(receipt, "set_config('structured_docx.trusted_actor'", "caller-controlled
 for item in ("p_trusted_receipt_id uuid", "object_version text NOT NULL", "SET consumed_at=now()"):
     need(materialization, item, item)
 need(receipt, "Trusted DOCX receipt is absent, consumed, or conflicts with commit facts", "protected receipt rejection")
+need(receipt, "Trusted DOCX commit actor does not match the authenticated caller", "caller-authenticated commit actor binding")
 need(materialization, "assert_sales_structured_docx_trusted_receipt_for_commit", "commit-side protected receipt recheck")
+need(materialization, "An authenticated assigned responsible person is required", "authenticated atomic commit")
 for item in ("createContractBoundCurrentPathPrivateDocxReader", "issue_sales_structured_docx_trusted_receipt", "commit_sales_structured_docx_materialization", "assert_sales_structured_docx_current_path_create_only"):
     need(server, item, item)
 need(functions, "lifecycleAcceptanceEnabled", "deployment gate")

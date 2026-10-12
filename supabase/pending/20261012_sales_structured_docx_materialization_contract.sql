@@ -356,32 +356,31 @@ CREATE OR REPLACE FUNCTION public.commit_sales_structured_docx_materialization(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_scope record; v_attempt public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE; v_prior public.sales_opportunity_structured_docx_materializations%ROWTYPE; v_node uuid; v_drive_revision uuid; v_register uuid; v_materialization uuid;
 BEGIN
-  -- Global order: caller request key -> registry assignment root -> template
-  -- root -> request/source rows -> receipt row. Registry revoke/approve paths
-  -- acquire their root lock before changing the same locked registry rows.
+  -- Global order: request key -> source registry root -> assignment/location ->
+  -- template root/pin/revision -> source/current version -> receipt. The shared
+  -- receipt validator obtains those locks after this caller-owned request lock;
+  -- registry revoke/approval paths take the same roots before their row locks.
   -- A completed immutable graph is replayed before receipt consumption is
   -- inspected. Exact retries therefore return the original result after the
   -- one-time receipt has been consumed; altered retries still conflict.
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|',p_opportunity_id::text,p_request_key::text),0));
   SELECT * INTO v_request FROM public.sales_opportunity_structured_docx_requests AS docx_request WHERE docx_request.request_key = p_request_key AND docx_request.requested_by = v_actor AND docx_request.opportunity_id = p_opportunity_id AND docx_request.customer_id = p_customer_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'DOCX request is not owned by this actor and source'; END IF;
-  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,v_request.document_kind,p_assignment_id);
-  IF v_request.assignment_id <> p_assignment_id OR v_request.location_id <> v_scope.location_id OR p_storage_bucket <> v_scope.storage_bucket OR p_storage_path <> v_scope.storage_path_prefix || p_request_key::text || '-draft.docx' OR btrim(coalesce(p_object_version,'')) = '' OR btrim(coalesce(p_file_name,'')) = '' OR p_file_name !~ '\.docx$' THEN RAISE EXCEPTION 'Invalid DOCX materialization payload'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_request.master_specification_id
-    AND EXISTS (SELECT 1 FROM public.master_specification_versions current_version
-                WHERE current_version.id=v_request.master_specification_version_id
-                  AND current_version.specification_id=current_specification.id
-                  AND current_version.version_number=current_specification.current_version)) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
+  IF v_actor IS NULL THEN RAISE EXCEPTION 'An authenticated assigned responsible person is required'; END IF;
+  IF v_request.assignment_id <> p_assignment_id OR btrim(coalesce(p_object_version,'')) = '' OR btrim(coalesce(p_file_name,'')) = '' OR p_file_name !~ '\.docx$' THEN RAISE EXCEPTION 'Invalid DOCX materialization payload'; END IF;
   SELECT * INTO v_prior FROM public.sales_opportunity_structured_docx_materializations AS prior_materialization WHERE prior_materialization.request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_prior.requested_by = v_actor AND v_prior.assignment_id = p_assignment_id AND v_prior.docx_sha256_checksum = p_sha256_checksum AND v_prior.storage_bucket = p_storage_bucket AND v_prior.storage_path = p_storage_path AND v_prior.object_version = p_object_version AND v_prior.size_bytes = p_size_bytes AND p_file_name = (SELECT name FROM public.drive_nodes WHERE id = v_prior.drive_node_id) THEN RETURN QUERY SELECT v_prior.id,v_prior.drive_node_id,v_prior.drive_revision_id,v_prior.document_control_register_id,true; RETURN; END IF;
     RAISE EXCEPTION 'DOCX request key conflicts with a different materialization payload';
   END IF;
-  -- The service-only helper serializes the receipt row with the same trusted
-  -- request lock and repeats current responsible-person/template/source scope.
+  -- This internal helper compares v_actor with auth.uid(), locks the receipt,
+  -- and repeats all assigned-person/template/source checks in the same
+  -- transaction. It is intentionally not directly callable by browser roles.
   PERFORM public.assert_sales_structured_docx_trusted_receipt_for_commit(
     v_actor,p_trusted_receipt_id,p_request_key,p_assignment_id,p_storage_bucket,p_storage_path,p_object_version,p_sha256_checksum,p_size_bytes
   );
+  SELECT * INTO v_scope FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,v_request.document_kind,p_assignment_id);
+  IF v_request.location_id <> v_scope.location_id OR p_storage_bucket <> v_scope.storage_bucket OR p_storage_path <> v_scope.storage_path_prefix || p_request_key::text || '-draft.docx' THEN RAISE EXCEPTION 'Invalid DOCX materialization payload'; END IF;
   SELECT * INTO v_attempt FROM public.sales_opportunity_structured_docx_storage_attempts AS staged_attempt WHERE staged_attempt.request_key = p_request_key AND staged_attempt.location_id = v_scope.location_id AND staged_attempt.staged_by = v_actor AND staged_attempt.consumed_at IS NULL FOR UPDATE;
   IF NOT FOUND OR v_attempt.storage_bucket <> p_storage_bucket OR v_attempt.storage_path <> p_storage_path OR v_attempt.sha256_checksum <> p_sha256_checksum OR v_attempt.object_version <> p_object_version OR v_attempt.size_bytes <> p_size_bytes OR v_attempt.ooxml_verified_at IS NULL THEN RAISE EXCEPTION 'Staged DOCX object lacks an immutable trusted verifier receipt'; END IF;
   INSERT INTO public.drive_nodes(department_id,project_id,parent_id,name,slug,node_type,file_type,mime_type,file_size_bytes,storage_bucket,storage_path,sha256_checksum,current_version,is_locked,created_by,metadata)
