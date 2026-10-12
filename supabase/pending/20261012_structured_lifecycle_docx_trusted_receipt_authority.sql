@@ -57,18 +57,28 @@ CREATE TRIGGER sales_structured_docx_trusted_receipts_guard
 BEFORE UPDATE OR DELETE ON public.sales_opportunity_structured_docx_trusted_receipts
 FOR EACH ROW EXECUTE FUNCTION public.guard_sales_structured_docx_trusted_receipt();
 
--- Service-only scope resolver. The issuer supplies the already authenticated
--- actor as p_actor_user_id; this routine verifies that it agrees with the
--- current request, active assignment, location, source and immutable template
--- pin. Lock order is advisory request -> request -> assignment/location ->
--- source/template and is shared by issue and commit paths.
-CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_issue_scope(
+-- Internal shared authority validator. It is never granted to a browser role.
+-- Caller/request locks are always acquired first, followed by the registry
+-- assignment, template pin/template/revision, Master/current version, then the
+-- handover/project-membership rows. Registry revoke paths use their own root
+-- advisory lock before changing the locked row, so no path takes these locks in
+-- reverse order.
+CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_actor_scope(
   p_actor_user_id uuid, p_request_key uuid, p_assignment_id uuid,
   p_storage_bucket text, p_storage_path text, p_object_version text,
   p_sha256_checksum text, p_size_bytes bigint, p_source_fingerprint text,
   p_template_key text, p_template_version integer, p_template_schema_hash text
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_assignment public.sales_opportunity_structured_docx_assignments%ROWTYPE; v_location public.sales_opportunity_document_locations%ROWTYPE;
+DECLARE
+  v_request public.sales_opportunity_structured_docx_requests%ROWTYPE;
+  v_assignment public.sales_opportunity_structured_docx_assignments%ROWTYPE;
+  v_location public.sales_opportunity_document_locations%ROWTYPE;
+  v_registry public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE;
+  v_template_pin public.structured_lifecycle_docx_template_pins%ROWTYPE;
+  v_template public.department_process_templates%ROWTYPE;
+  v_template_revision public.department_process_template_document_revisions%ROWTYPE;
+  v_specification public.master_specifications%ROWTYPE;
+  v_current_version public.master_specification_versions%ROWTYPE;
 BEGIN
   IF p_actor_user_id IS NULL OR p_request_key IS NULL OR p_assignment_id IS NULL
     OR p_storage_bucket <> 'project-drive' OR btrim(coalesce(p_storage_path,'')) = ''
@@ -90,60 +100,72 @@ BEGIN
     OR p_storage_path <> v_location.private_storage_prefix || p_request_key::text || '-draft.docx'
     OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE')
   THEN RAISE EXCEPTION 'Trusted DOCX receipt no longer has an active assigned-person location scope'; END IF;
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.master_specifications specification
-    JOIN public.master_specification_versions current_version
-      ON current_version.id=v_request.master_specification_version_id
-     AND current_version.specification_id=specification.id
-     AND current_version.version_number=specification.current_version
-    WHERE specification.id=v_request.master_specification_id
-  ) THEN RAISE EXCEPTION 'Trusted DOCX receipt source is no longer current'; END IF;
-  -- The registry resolver only trusts auth.uid(). This service-only function
-  -- has already proven p_actor_user_id against the request and responsibility;
-  -- it therefore repeats the registry pin/source checks locally rather than
-  -- smuggling an identity through a caller-controlled custom setting.
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.structured_lifecycle_docx_responsibility_assignments registry_assignment
-    JOIN public.structured_lifecycle_docx_template_pins template_pin
-      ON template_pin.department_id=registry_assignment.department_id
-     AND template_pin.document_kind=registry_assignment.document_kind
-     AND template_pin.template_key=v_request.template_key
-     AND template_pin.template_version=v_request.template_version
-     AND template_pin.template_schema_hash=v_request.template_schema_hash
-     AND template_pin.status='APPROVED'
-    JOIN public.department_process_templates template
-      ON template.id=template_pin.template_id
-     AND template.department_id=registry_assignment.department_id
-     AND template.template_key=template_pin.template_key
-     AND template.version=template_pin.template_version
-     AND template.status='ACTIVE'
-     AND template.active_document_revision_id=template_pin.template_document_revision_id
-    JOIN public.department_process_template_document_revisions template_revision
-      ON template_revision.id=template_pin.template_document_revision_id
-     AND template_revision.template_id=template.id
-    WHERE registry_assignment.id=v_assignment.registry_assignment_id
-      AND registry_assignment.status='ACTIVE'
-      AND registry_assignment.responsible_employee_id=v_assignment.responsible_employee_id
-      AND registry_assignment.department_id=v_assignment.department_id
-      AND registry_assignment.document_kind=v_request.document_kind
-      AND (
-        (registry_assignment.scope_type='SALES_OPPORTUNITY'
-          AND registry_assignment.opportunity_id=v_request.opportunity_id
-          AND registry_assignment.customer_id=v_request.customer_id)
-        OR (registry_assignment.scope_type='PROJECT' AND EXISTS (
-          SELECT 1
-          FROM public.sales_project_handovers handover
-          JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
-          JOIN public.customer_requirements requirement ON requirement.id=baseline.requirement_id
-          WHERE handover.project_id=registry_assignment.project_id
-            AND handover.status IN ('initiated','completed')
-            AND requirement.opportunity_id=v_request.opportunity_id
-            AND requirement.customer_id=v_request.customer_id
-        ))
-      )
-  ) THEN RAISE EXCEPTION 'Trusted DOCX receipt registry responsibility or template pin changed'; END IF;
+  SELECT * INTO v_registry
+  FROM public.structured_lifecycle_docx_responsibility_assignments registry_assignment
+  WHERE registry_assignment.id=v_assignment.registry_assignment_id
+    AND registry_assignment.status='ACTIVE'
+    AND registry_assignment.responsible_employee_id=v_assignment.responsible_employee_id
+    AND registry_assignment.department_id=v_assignment.department_id
+    AND registry_assignment.document_kind=v_request.document_kind
+  FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Trusted DOCX receipt registry responsibility changed'; END IF;
+  IF v_registry.scope_type='SALES_OPPORTUNITY' THEN
+    IF v_registry.opportunity_id<>v_request.opportunity_id OR v_registry.customer_id<>v_request.customer_id THEN
+      RAISE EXCEPTION 'Trusted DOCX receipt registry Sales source changed';
+    END IF;
+  ELSIF v_registry.scope_type='PROJECT' THEN
+    PERFORM 1 FROM public.project_team_members membership
+      JOIN public.employees employee ON employee.id=membership.employee_id
+      WHERE membership.project_id=v_registry.project_id
+        AND employee.user_id=p_actor_user_id
+        AND employee.employment_status='ACTIVE'
+      FOR SHARE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Trusted DOCX receipt project membership changed'; END IF;
+    PERFORM 1 FROM public.sales_project_handovers handover
+      JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
+      JOIN public.customer_requirements requirement ON requirement.id=baseline.requirement_id
+      WHERE handover.project_id=v_registry.project_id
+        AND handover.status IN ('initiated','completed')
+        AND requirement.opportunity_id=v_request.opportunity_id
+        AND requirement.customer_id=v_request.customer_id
+      FOR SHARE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Trusted DOCX receipt handover source changed'; END IF;
+  ELSE
+    RAISE EXCEPTION 'Trusted DOCX receipt registry scope is invalid';
+  END IF;
+  SELECT * INTO v_template_pin
+  FROM public.structured_lifecycle_docx_template_pins template_pin
+  WHERE template_pin.department_id=v_registry.department_id
+    AND template_pin.document_kind=v_registry.document_kind
+    AND template_pin.template_key=v_request.template_key
+    AND template_pin.template_version=v_request.template_version
+    AND template_pin.template_schema_hash=v_request.template_schema_hash
+    AND template_pin.status='APPROVED'
+  FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Trusted DOCX receipt template pin changed'; END IF;
+  SELECT * INTO v_template FROM public.department_process_templates template
+  WHERE template.id=v_template_pin.template_id
+    AND template.department_id=v_registry.department_id
+    AND template.template_key=v_template_pin.template_key
+    AND template.version=v_template_pin.template_version
+    AND template.status='ACTIVE'
+    AND template.active_document_revision_id=v_template_pin.template_document_revision_id
+  FOR SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Trusted DOCX receipt authoritative template changed'; END IF;
+  SELECT * INTO v_template_revision
+  FROM public.department_process_template_document_revisions template_revision
+  WHERE template_revision.id=v_template_pin.template_document_revision_id
+    AND template_revision.template_id=v_template.id
+  FOR SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Trusted DOCX receipt authoritative template revision changed'; END IF;
+  SELECT * INTO v_specification FROM public.master_specifications specification
+  WHERE specification.id=v_request.master_specification_id FOR SHARE;
+  SELECT * INTO v_current_version FROM public.master_specification_versions current_version
+  WHERE current_version.id=v_request.master_specification_version_id
+    AND current_version.specification_id=v_specification.id
+    AND current_version.version_number=v_specification.current_version
+  FOR SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Trusted DOCX receipt source is no longer current'; END IF;
   IF NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.bucket_id=p_storage_bucket AND o.name=p_storage_path AND o.version=p_object_version AND o.archived_at IS NULL AND coalesce(o.is_delete_marker,false)=false) THEN RAISE EXCEPTION 'Trusted DOCX receipt object version is absent or replaced'; END IF;
 END;
 $$;
@@ -160,7 +182,7 @@ BEGIN
   IF nullif(current_setting('request.jwt.claim.sub', true), '') IS NOT NULL OR btrim(coalesce(p_verifier_service,'')) = '' THEN
     RAISE EXCEPTION 'Only the trusted server DOCX verifier may issue a receipt';
   END IF;
-  PERFORM public.assert_sales_structured_docx_trusted_issue_scope(p_actor_user_id,p_request_key,p_assignment_id,p_storage_bucket,p_storage_path,p_object_version,p_sha256_checksum,p_size_bytes,p_source_fingerprint,p_template_key,p_template_version,p_template_schema_hash);
+  PERFORM public.assert_sales_structured_docx_trusted_actor_scope(p_actor_user_id,p_request_key,p_assignment_id,p_storage_bucket,p_storage_path,p_object_version,p_sha256_checksum,p_size_bytes,p_source_fingerprint,p_template_key,p_template_version,p_template_schema_hash);
   SELECT * INTO v_existing FROM public.sales_opportunity_structured_docx_trusted_receipts WHERE request_key=p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_existing.actor_user_id=p_actor_user_id AND v_existing.assignment_id=p_assignment_id AND v_existing.storage_bucket=p_storage_bucket AND v_existing.storage_path=p_storage_path AND v_existing.object_version=p_object_version AND v_existing.sha256_checksum=p_sha256_checksum AND v_existing.size_bytes=p_size_bytes AND v_existing.source_fingerprint=p_source_fingerprint AND v_existing.template_key=p_template_key AND v_existing.template_version=p_template_version AND v_existing.template_schema_hash=p_template_schema_hash THEN RETURN v_existing.id; END IF;
@@ -198,22 +220,10 @@ BEGIN
   SELECT * INTO v_location FROM public.sales_opportunity_document_locations WHERE id=v_request.location_id FOR UPDATE;
   SELECT * INTO v_attempt FROM public.sales_opportunity_structured_docx_storage_attempts WHERE request_key=p_request_key FOR SHARE;
   IF NOT FOUND OR v_assignment.status<>'ACTIVE' OR v_location.status<>'ACTIVE' OR v_location.private_storage_bucket<>v_attempt.storage_bucket OR v_attempt.storage_path<>v_location.private_storage_prefix||p_request_key::text||'-draft.docx' OR v_attempt.object_version IS NULL OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Trusted DOCX server scope has no active assigned-person request/object'; END IF;
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.structured_lifecycle_docx_responsibility_assignments registry_assignment
-    JOIN public.structured_lifecycle_docx_template_pins template_pin
-      ON template_pin.department_id=registry_assignment.department_id
-     AND template_pin.document_kind=registry_assignment.document_kind
-     AND template_pin.template_key=v_request.template_key
-     AND template_pin.template_version=v_request.template_version
-     AND template_pin.template_schema_hash=v_request.template_schema_hash
-     AND template_pin.status='APPROVED'
-    WHERE registry_assignment.id=v_assignment.registry_assignment_id
-      AND registry_assignment.status='ACTIVE'
-      AND registry_assignment.responsible_employee_id=v_assignment.responsible_employee_id
-      AND registry_assignment.department_id=v_assignment.department_id
-      AND registry_assignment.document_kind=v_request.document_kind
-  ) THEN RAISE EXCEPTION 'Trusted DOCX server scope registry responsibility or template pin changed'; END IF;
+  PERFORM public.assert_sales_structured_docx_trusted_actor_scope(
+    p_actor_user_id,p_request_key,p_assignment_id,v_attempt.storage_bucket,v_attempt.storage_path,v_attempt.object_version,
+    v_attempt.sha256_checksum,v_attempt.size_bytes,p_source_fingerprint,p_template_key,p_template_version,p_template_schema_hash
+  );
   RETURN QUERY SELECT p_actor_user_id,v_assignment.id,v_request.request_key,
     (SELECT scope_type FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=v_assignment.registry_assignment_id),
     p_opportunity_id,p_customer_id,
@@ -235,11 +245,13 @@ CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_receipt_f
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_receipt public.sales_opportunity_structured_docx_trusted_receipts%ROWTYPE;
 BEGIN
-  IF nullif(current_setting('request.jwt.claim.sub', true), '') IS NOT NULL THEN RAISE EXCEPTION 'Only the trusted server DOCX commit path may inspect a receipt'; END IF;
+  -- The public caller-owned commit function invokes this internal recheck in
+  -- the same transaction. Direct caller access remains blocked by its ACL;
+  -- this helper does not use a mutable setting as actor identity.
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','sales-structured-docx',p_request_key::text),0));
   SELECT * INTO v_receipt FROM public.sales_opportunity_structured_docx_trusted_receipts WHERE id=p_receipt_id AND request_key=p_request_key FOR UPDATE;
   IF NOT FOUND OR v_receipt.consumed_at IS NOT NULL OR v_receipt.actor_user_id<>p_actor_user_id OR v_receipt.assignment_id<>p_assignment_id OR v_receipt.storage_bucket<>p_storage_bucket OR v_receipt.storage_path<>p_storage_path OR v_receipt.object_version<>p_object_version OR v_receipt.sha256_checksum<>p_sha256_checksum OR v_receipt.size_bytes<>p_size_bytes THEN RAISE EXCEPTION 'Trusted DOCX receipt is absent, consumed, or conflicts with commit facts'; END IF;
-  PERFORM public.assert_sales_structured_docx_trusted_issue_scope(v_receipt.actor_user_id,p_request_key,p_assignment_id,p_storage_bucket,p_storage_path,p_object_version,p_sha256_checksum,p_size_bytes,v_receipt.source_fingerprint,v_receipt.template_key,v_receipt.template_version,v_receipt.template_schema_hash);
+  PERFORM public.assert_sales_structured_docx_trusted_actor_scope(v_receipt.actor_user_id,p_request_key,p_assignment_id,p_storage_bucket,p_storage_path,p_object_version,p_sha256_checksum,p_size_bytes,v_receipt.source_fingerprint,v_receipt.template_key,v_receipt.template_version,v_receipt.template_schema_hash);
 END;
 $$;
 
@@ -253,12 +265,11 @@ $$;
 
 REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_server_scope(uuid,uuid,uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_trusted_receipt() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_trusted_issue_scope(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_trusted_actor_scope(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.consume_sales_structured_docx_trusted_receipt(uuid,uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.resolve_sales_structured_docx_server_scope(uuid,uuid,uuid,text,uuid,uuid,text,integer,text,text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_trusted_issue_scope(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint) TO service_role;
 GRANT EXECUTE ON FUNCTION public.consume_sales_structured_docx_trusted_receipt(uuid,uuid) TO service_role;

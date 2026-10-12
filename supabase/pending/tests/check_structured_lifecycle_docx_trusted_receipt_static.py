@@ -18,7 +18,7 @@ def forbid(text: str, needle: str, label: str):
 
 for item in (
     "CREATE TABLE public.sales_opportunity_structured_docx_trusted_receipts",
-    "assert_sales_structured_docx_trusted_issue_scope",
+    "assert_sales_structured_docx_trusted_actor_scope",
     "issue_sales_structured_docx_trusted_receipt",
     "resolve_sales_structured_docx_server_scope",
     "assert_sales_structured_docx_trusted_receipt_for_commit",
@@ -26,15 +26,18 @@ for item in (
     "pg_advisory_xact_lock",
     "storage.objects",
     "structured_lifecycle_docx_responsibility_assignments",
-    "Trusted DOCX receipt registry responsibility or template pin changed",
+    "Trusted DOCX receipt registry responsibility changed",
+    "Trusted DOCX receipt template pin changed",
     "Only the trusted server DOCX verifier may issue a receipt",
     "REVOKE ALL ON FUNCTION public.issue_sales_structured_docx_trusted_receipt",
     "GRANT EXECUTE ON FUNCTION public.issue_sales_structured_docx_trusted_receipt",
 ): need(receipt, item, item)
 forbid(receipt, "TO authenticated;", "authenticated receipt issuer grant")
 forbid(receipt, "set_config('structured_docx.trusted_actor'", "caller-controlled trusted actor setting")
-for item in ("p_trusted_receipt_id uuid", "object_version text NOT NULL", "Trusted DOCX receipt is absent, consumed, or conflicts with commit facts", "SET consumed_at=now()"):
+for item in ("p_trusted_receipt_id uuid", "object_version text NOT NULL", "SET consumed_at=now()"):
     need(materialization, item, item)
+need(receipt, "Trusted DOCX receipt is absent, consumed, or conflicts with commit facts", "protected receipt rejection")
+need(materialization, "assert_sales_structured_docx_trusted_receipt_for_commit", "commit-side protected receipt recheck")
 for item in ("createContractBoundCurrentPathPrivateDocxReader", "issue_sales_structured_docx_trusted_receipt", "commit_sales_structured_docx_materialization", "assert_sales_structured_docx_current_path_create_only"):
     need(server, item, item)
 need(functions, "lifecycleAcceptanceEnabled", "deployment gate")
