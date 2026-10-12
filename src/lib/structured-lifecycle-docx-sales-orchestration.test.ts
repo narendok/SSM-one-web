@@ -23,7 +23,7 @@ function rpcClient(overrides: { fail?: string; objectVersion?: string; changedOb
       if (name === "commit_sales_structured_docx_materialization") return { data: overrides.committed ?? [{ materialization_id: "local" }], error: null };
       return { data: undefined, error: null };
     },
-    from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ is: async () => ({ data: { bucket_id: "project-drive", name: path, version: overrides.changedObject ? "v2" : "v1", archived_at: null, is_delete_marker: false, metadata: { size: 1 } }, error: null }) }) }) }) }) }),
+    from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ is: () => ({ maybeSingle: async () => ({ data: { bucket_id: "project-drive", name: path, version: overrides.changedObject ? "v2" : "v1", archived_at: null, is_delete_marker: false, metadata: { size: 1 } }, error: null }) }) }) }) }) }) }),
     storage: { from: () => ({ download: async () => ({ data: new Blob([await bytesPromise]), error: null }) }) },
   } as never;
 }
