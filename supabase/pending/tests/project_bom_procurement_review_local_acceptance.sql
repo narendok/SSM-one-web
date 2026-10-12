@@ -58,7 +58,7 @@ CREATE TEMP TABLE first_submit_lines AS
 SELECT id, source_kind FROM public.project_bom_procurement_review_request_lines WHERE request_id=(SELECT request_id FROM first_submit);
 GRANT SELECT ON first_submit_lines TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 CREATE TEMP TABLE first_submit_state AS
-SELECT id, status, decision_note FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM first_submit);
+SELECT id, status, decision_note, pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM first_submit);
 GRANT SELECT ON first_submit_state TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 DO $$ BEGIN
  IF (SELECT count(*) FROM first_submit)<>1 OR (SELECT replayed FROM first_submit) THEN RAISE EXCEPTION 'First submission failed'; END IF;
@@ -145,18 +145,23 @@ SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001'
 CREATE TEMP TABLE deny_submit AS
 SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000030','8','[{"kind":"existing","sourceBomItemId":"00000000-0000-4000-8000-000000000031","componentId":"00000000-0000-4000-8000-000000000040","referenceDesignators":"D1","quantity":1}]'::jsonb,'00000000-0000-4000-8000-000000000070');
 GRANT SELECT ON deny_submit TO procurement_assigned_test;
+-- This owner-only fixture projection is the sole direct request-table read.
+-- Review roles receive only the projection, matching the protected RPC boundary.
 RESET ROLE;
+CREATE TEMP TABLE deny_submit_state AS
+SELECT id, pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit);
+GRANT SELECT ON deny_submit_state TO procurement_assigned_test;
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 CREATE TEMP TABLE first_deny AS
-SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit)),'[]'::jsonb,'DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
+SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM deny_submit_state),'[]'::jsonb,'DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
 CREATE TEMP TABLE exact_deny_replay AS
-SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit)),'[]'::jsonb,'DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
+SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM deny_submit_state),'[]'::jsonb,'DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
 DO $$ BEGIN
   IF (SELECT replayed FROM first_deny) OR NOT (SELECT replayed FROM exact_deny_replay) THEN RAISE EXCEPTION 'Deny replay state is incorrect'; END IF;
   IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM deny_submit)) ->> 'status')) <> 'DENIED' THEN RAISE EXCEPTION 'Deny did not set terminal denied status'; END IF;
   IF (SELECT public.read_project_bom_procurement_review((SELECT request_id FROM deny_submit)) -> 'lines' -> 0 -> 'analysis') <> 'null'::jsonb THEN RAISE EXCEPTION 'Deny incorrectly required or created analysis'; END IF;
-  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit)),'[]'::jsonb,'DENY','Changed denial rationale','00000000-0000-4000-8000-000000000071'); RAISE EXCEPTION 'Changed deny replay accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Request key conflicts%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM deny_submit_state),'[]'::jsonb,'DENY','Changed denial rationale','00000000-0000-4000-8000-000000000071'); RAISE EXCEPTION 'Changed deny replay accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Request key conflicts%' THEN RAISE; END IF; END;
 END $$;
 RESET ROLE;
 DO $$ BEGIN
@@ -169,11 +174,14 @@ CREATE TEMP TABLE stale_deny_submit AS
 SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000030','8','[{"kind":"new","mpn":"STALE-DENY","description":"Stale deny proposal","referenceDesignators":"D2","quantity":1}]'::jsonb,'00000000-0000-4000-8000-000000000072');
 GRANT SELECT ON stale_deny_submit TO procurement_assigned_test;
 RESET ROLE;
+CREATE TEMP TABLE stale_deny_submit_state AS
+SELECT id, pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM stale_deny_submit);
+GRANT SELECT ON stale_deny_submit_state TO procurement_assigned_test;
 UPDATE public.project_boms SET revision='9' WHERE id='00000000-0000-4000-8000-000000000030';
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 DO $$ BEGIN
-  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM stale_deny_submit),'8',(SELECT pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM stale_deny_submit)),'[]'::jsonb,'DENY','Revision changed before decision','00000000-0000-4000-8000-000000000073'); RAISE EXCEPTION 'Stale deny accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM source is stale%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM stale_deny_submit),'8',(SELECT pinned_bom_updated_at FROM stale_deny_submit_state),'[]'::jsonb,'DENY','Revision changed before decision','00000000-0000-4000-8000-000000000073'); RAISE EXCEPTION 'Stale deny accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM source is stale%' THEN RAISE; END IF; END;
   IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM stale_deny_submit)) ->> 'status')) <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Stale deny mutated request state'; END IF;
 END $$;
 RESET ROLE;

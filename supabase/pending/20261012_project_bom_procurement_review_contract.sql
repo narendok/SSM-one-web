@@ -394,12 +394,13 @@ BEGIN
   SELECT revision, updated_at INTO v_current_revision, v_current_updated_at FROM public.project_boms WHERE id=v_scope.project_bom_id FOR UPDATE;
   IF v_current_revision IS DISTINCT FROM v_scope.pinned_bom_revision OR v_current_revision IS DISTINCT FROM p_expected_bom_revision OR v_current_updated_at IS DISTINCT FROM p_expected_bom_updated_at THEN RAISE EXCEPTION 'The project BOM source is stale'; END IF;
   IF v_scope.request_status <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Procurement request is no longer pending analysis'; END IF;
-  SELECT count(*) INTO v_line_count FROM public.project_bom_procurement_review_request_lines WHERE request_id=p_request_id FOR UPDATE;
+  PERFORM 1 FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id FOR UPDATE;
+  SELECT count(*) INTO v_line_count FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id;
   SELECT count(*) INTO v_reviewed_count FROM jsonb_array_elements(v_reviewed);
   IF v_decision='ALLOW' AND v_reviewed_count <> v_line_count THEN RAISE EXCEPTION 'Allow requires an exact reviewed analysis revision for every submitted line'; END IF;
   IF v_decision='ALLOW' THEN
-    FOR v_line IN SELECT id FROM public.project_bom_procurement_review_request_lines WHERE request_id=p_request_id ORDER BY id FOR UPDATE LOOP
-      SELECT analysis_revision INTO v_current_analysis FROM public.project_bom_procurement_review_analyses WHERE request_line_id=v_line.id ORDER BY analysis_revision DESC LIMIT 1 FOR UPDATE;
+    FOR v_line IN SELECT line.id FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id ORDER BY line.id FOR UPDATE LOOP
+      SELECT analysis.analysis_revision INTO v_current_analysis FROM public.project_bom_procurement_review_analyses analysis WHERE analysis.request_line_id=v_line.id ORDER BY analysis.analysis_revision DESC LIMIT 1 FOR UPDATE;
       IF v_current_analysis IS NULL OR v_current_analysis IS DISTINCT FROM (SELECT (value ->> 'analysisRevision')::integer FROM jsonb_array_elements(v_reviewed) WHERE (value ->> 'requestLineId')::uuid = v_line.id) THEN RAISE EXCEPTION 'Reviewed Procurement analysis is missing or stale'; END IF;
     END LOOP;
   ELSIF jsonb_array_length(v_reviewed) <> 0 THEN RAISE EXCEPTION 'Deny must not supply reviewed analysis revisions';
