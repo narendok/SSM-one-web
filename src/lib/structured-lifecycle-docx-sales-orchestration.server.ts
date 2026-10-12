@@ -42,6 +42,9 @@ export function createSalesStructuredDocxAuthorization(admin: RpcClient): Privat
         p_template_schema_hash: input.templateSchemaHash,
         p_source_fingerprint: input.sourceFingerprint,
       } as never), "The trusted DOCX assignment scope is unavailable.") as unknown as Record<string, unknown>;
+      if (rawScope.actor_id !== actorId) {
+        throw new Error("The trusted DOCX assignment authority changed during verification.");
+      }
       return {
         actorId: rawScope.actor_id as string,
         assignmentId: rawScope.assignment_id as string,
