@@ -173,10 +173,10 @@ SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001'
 CREATE TEMP TABLE stale_deny_submit AS
 SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000030','8','[{"kind":"new","mpn":"STALE-DENY","description":"Stale deny proposal","referenceDesignators":"D2","quantity":1}]'::jsonb,'00000000-0000-4000-8000-000000000072');
 GRANT SELECT ON stale_deny_submit TO procurement_assigned_test;
+RESET ROLE;
 CREATE TEMP TABLE stale_deny_submit_state AS
 SELECT id, pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM stale_deny_submit);
 GRANT SELECT ON stale_deny_submit_state TO procurement_assigned_test;
-RESET ROLE;
 UPDATE public.project_boms SET revision='9' WHERE id='00000000-0000-4000-8000-000000000030';
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
