@@ -57,6 +57,9 @@ GRANT SELECT ON first_submit TO procurement_requester_test, procurement_assigned
 CREATE TEMP TABLE first_submit_lines AS
 SELECT id, source_kind FROM public.project_bom_procurement_review_request_lines WHERE request_id=(SELECT request_id FROM first_submit);
 GRANT SELECT ON first_submit_lines TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
+CREATE TEMP TABLE first_submit_state AS
+SELECT id, status, decision_note FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM first_submit);
+GRANT SELECT ON first_submit_state TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 DO $$ BEGIN
  IF (SELECT count(*) FROM first_submit)<>1 OR (SELECT replayed FROM first_submit) THEN RAISE EXCEPTION 'First submission failed'; END IF;
  IF (SELECT count(*) FROM public.project_bom_procurement_review_requests)<>1 OR (SELECT count(*) FROM public.project_bom_procurement_review_request_lines)<>2 OR (SELECT count(*) FROM public.project_bom_procurement_review_audit_events)<>1 OR (SELECT count(*) FROM public.project_bom_procurement_review_receipts)<>1 THEN RAISE EXCEPTION 'Submission did not atomically persist snapshot, audit, and receipt'; END IF;
@@ -77,7 +80,7 @@ DO $$ DECLARE v_request uuid:=(SELECT request_id FROM first_submit); v_existing_
   PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_existing_line,0,'{"availabilityState":"AVAILABLE","costState":"TBC","sourcingState":"PENDING","observedUnitCost":12.5,"currency":"INR","leadTimeDays":14,"analysisNote":"Supplier response pending"}'::jsonb,'00000000-0000-4000-8000-000000000062');
   PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_new_line,0,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"UNAVAILABLE","analysisNote":"No verified source yet"}'::jsonb,'00000000-0000-4000-8000-000000000063');
  PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7','ALLOW','analysis complete; Hardware selection remains separate','00000000-0000-4000-8000-000000000061');
- IF (SELECT status FROM public.project_bom_procurement_review_requests WHERE id=v_request) <> 'ALLOWED_PENDING_HARDWARE_SELECTION' THEN RAISE EXCEPTION 'Allow did not remain handoff-only'; END IF;
+  IF (SELECT status FROM first_submit_state WHERE id=v_request) <> 'ALLOWED_PENDING_HARDWARE_SELECTION' THEN RAISE EXCEPTION 'Allow did not remain handoff-only'; END IF;
 END $$;
 RESET ROLE;
 SET ROLE procurement_other_department_test;
