@@ -188,4 +188,32 @@ RESET ROLE;
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM stale_deny_submit) AND event_type='DENIED') THEN RAISE EXCEPTION 'Stale deny wrote audit evidence'; END IF;
 END $$;
+-- The reviewer may see the newer timestamp, but it cannot replace the
+-- immutable request pin. The old request must be resubmitted from the edited
+-- BOM before either decision path can proceed.
+UPDATE public.project_boms SET revision='8', updated_at=clock_timestamp() + interval '1 microsecond' WHERE id='00000000-0000-4000-8000-000000000030';
+SET ROLE procurement_requester_test;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
+CREATE TEMP TABLE refreshed_pin_submit AS
+SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000030','8','[{"kind":"new","mpn":"REFRESHED-PIN","description":"Caller refresh attempt","referenceDesignators":"D3","quantity":1}]'::jsonb,'00000000-0000-4000-8000-000000000074');
+GRANT SELECT ON refreshed_pin_submit TO procurement_assigned_test;
+RESET ROLE;
+CREATE TEMP TABLE refreshed_pin_submit_state AS
+SELECT id, pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM refreshed_pin_submit);
+GRANT SELECT ON refreshed_pin_submit_state TO procurement_assigned_test;
+UPDATE public.project_boms SET updated_at=clock_timestamp() + interval '1 microsecond' WHERE id='00000000-0000-4000-8000-000000000030';
+CREATE TEMP TABLE refreshed_pin_current_bom_state AS
+SELECT updated_at FROM public.project_boms WHERE id='00000000-0000-4000-8000-000000000030';
+GRANT SELECT ON refreshed_pin_current_bom_state TO procurement_assigned_test;
+SET ROLE procurement_assigned_test;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
+DO $$ BEGIN
+  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM refreshed_pin_submit),'8',(SELECT updated_at FROM refreshed_pin_current_bom_state),'[]'::jsonb,'DENY','Caller refreshed the visible timestamp after source drift','00000000-0000-4000-8000-000000000075'); RAISE EXCEPTION 'Refreshed caller timestamp accepted stale request'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM source is stale%' THEN RAISE; END IF; END;
+  IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM refreshed_pin_submit)) ->> 'status')) <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Refreshed caller timestamp mutated request state'; END IF;
+END $$;
+RESET ROLE;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM public.project_bom_procurement_review_receipts WHERE request_id=(SELECT request_id FROM refreshed_pin_submit) AND action IN ('ALLOW','DENY')) THEN RAISE EXCEPTION 'Refreshed caller timestamp wrote decision receipt'; END IF;
+  IF EXISTS (SELECT 1 FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM refreshed_pin_submit) AND event_type IN ('ALLOWED_PENDING_HARDWARE_SELECTION','DENIED')) THEN RAISE EXCEPTION 'Refreshed caller timestamp wrote decision audit'; END IF;
+END $$;
 ROLLBACK;

@@ -1,15 +1,15 @@
 PROJECT BOM PROCUREMENT REVIEW — SOURCE REVIEW BUNDLE
 Status: REVIEW ONLY — UNDEPLOYED AND UNACCEPTED.
-Generated UTC: 2026-10-12T17:41:15Z
-Source HEAD: e28948ffec15dcd49f3e6e3b3f227cb872f53e94
+Generated UTC: 2026-10-12T18:10:00Z
+Source HEAD: 1d3ded3c1de456a728774960d6701476493a1a83
 
 NO LIVE CHANGE
-This bundle caused no managed SQL, grants, policies, users, records, fixtures, stock, purchase-order, approval/release, or publishing change. The application deployment gate remains OFF: Submit, queue reads, analysis, and decisions do not invoke pending RPCs.
+This bundle caused no managed SQL, grants, policies, users, records, fixtures, stock, purchase-order, approval/release, storage, deployment, or publishing change. The application deployment gate remains OFF: Submit, queue reads, analysis, and decisions do not invoke pending RPCs.
 
 ORDERED SOURCE DEPENDENCIES — DO NOT EXECUTE
 1. Existing deployed primitives: public.projects.project_manager_employee_id; public.project_team_members; public.project_boms.revision/updated_at; public.project_bom_items.bom_id/matched_component_id; public.components; public.employees; public.employee_departments; public.departments; public.has_permission(uuid,text).
 2. supabase/pending/20261012_project_bom_procurement_review_contract.sql
-   SHA-256: f5601d3d311f8dba164aae3639c10a4c73465e1c60762727000eff7bcb92274b
+   SHA-256: 2917296844d3b742a1b560c0bc0addebe1e947a060abcc90d874eaa677a59815
    It creates five additive review tables, indexes, canonicalizers, submit/reviewer/requester scope helpers, and four public entrypoints. It leaves every function revoked and adds no authenticated table SELECT grant or table SELECT policy.
 3. Disposable-only fixture and acceptance (never managed):
    - supabase/pending/tests/project_bom_procurement_review_local_fixture.sql
@@ -31,28 +31,15 @@ AUTHORIZATION, SNAPSHOT, AND READ BOUNDARY
 - Read-as-requester allows only the original submitted_by actor and only through the SECURITY DEFINER read entrypoint. It does not broaden analysis/decision authority.
 - There is intentionally no authenticated table SELECT grant or SELECT policy on requests, immutable request lines, commercial analyses, receipts, or audits. Direct access remains denied; the protected read entrypoint returns only the request snapshot/latest line analysis, never receipts or audit evidence.
 - Existing catalog rows are server-derived and optional sourceBomItemId is locked under the exact pinned BOM with component pairing. New parts have no component/source BOM ID and create nothing.
-- ALLOW canonically pins every exact current line-analysis revision and the expected BOM updated_at in its replay hash and audit record. DENY supplies no analysis pins. Neither action releases a BOM, approves a part, creates a PO, or changes inventory/stock.
-
-TYPED ADAPTER AND FORM SOURCES
-- src/lib/project-bom-procurement-review.functions.ts — requireSupabaseAuth typed GET/POST adapters for read/analyze/decide; deploymentRequired() stops all calls while gate is false.
-- src/lib/project-bom-procurement-review.ts — localRowId stays local; sourceBomItemId is emitted only from a pinned saved BOM line; decision pins are stable line/revision pairs.
-- src/components/procurement/ProcurementReviewQueue.tsx — analysis/allow/deny controls remain disabled while the gate is OFF.
-- src/components/projects/ProjectBomReview.tsx — Submit disabled; no live queue/read query while unaccepted.
-- src/components/projects/SelectedProjectBomReview.test.tsx — 12 focused client adapter/gating tests.
-
-READ-ONLY MANAGED PREFLIGHT
-- Source: docs/planning/20261012_project_bom_procurement_managed_preflight_read_only.sql
-- Result: docs/evidence/20261012_project_bom_procurement_managed_preflight_result.json
-- Result SHA-256: dbfea5ca6bce0ff35e6116dc9435265fe59b6f03dc5186975911d1133239bebc
-- The saved preflight confirms all five review tables and all four entrypoints are absent, prerequisites exist, and public.has_permission(uuid,text) is deployed. It is evidence of non-deployment only, not activation acceptance.
+- ALLOW canonically pins every exact current line-analysis revision and reviewer-inspected BOM revision/timestamp in its replay hash. The decision also locks and compares current BOM revision/timestamp with both the immutable submitted request pins and the caller inspected pins. Any source drift requires a new submission. DENY supplies no analysis pins. Neither action releases a BOM, approves a part, creates a PO, or changes inventory/stock.
 
 ISOLATED ACCEPTANCE — ALL EXIT 0
 1. LOCAL_PROJECT_BOM_PROCUREMENT_DISPOSABLE=yes bash supabase/pending/tests/run_project_bom_procurement_review_local_acceptance.sh
    Result: PROJECT_BOM_PROCUREMENT_REVIEW_LOCAL_ACCEPTANCE_PASS=true; CLEANUP_VERIFIED disposable_fixture_removed=true.
-   Covers ordinary test-role authorization, source pinning, submit replay/conflict, Allow/Deny, requester/reviewer read scope, direct-table denial, stale denial, rollback cleanup.
+   Covers ordinary test-role authorization, source pinning, submit replay/conflict, Allow/Deny, requester/reviewer read scope, direct-table denial, stale denial, and a current-timestamp attempt against an immutable older request pin.
 2. LOCAL_PROJECT_BOM_PROCUREMENT_DISPOSABLE=yes bash supabase/pending/tests/run_project_bom_procurement_review_local_concurrency_acceptance.sh
-   Result: ANALYZE_VS_ALLOW_STALE_PIN_PASS=true; SAME_REVISION_BOM_MANUAL_EDIT_STALE_DECISION_PASS=true; PROJECT_BOM_PROCUREMENT_REVIEW_LOCAL_CONCURRENCY_ACCEPTANCE_PASS=true; CLEANUP_VERIFIED project_bom_procurement_concurrency_fixture_removed=true.
-   Two independent PostgreSQL sessions prove an analysis revision committed while ALLOW waited causes the stale ALLOW to fail before receipt/status/audit mutation. A same-revision BOM updated_at-only manual edit likewise rejects ALLOW with no receipt/status/audit mutation.
+   Result: ANALYZE_VS_ALLOW_STALE_PIN_PASS=true; SAME_REVISION_BOM_MANUAL_EDIT_STALE_DECISION_PASS=true; REFRESHED_CALLER_TIMESTAMP_OLD_REQUEST_STALE_PASS=true; PROJECT_BOM_PROCUREMENT_REVIEW_LOCAL_CONCURRENCY_ACCEPTANCE_PASS=true; CLEANUP_VERIFIED project_bom_procurement_concurrency_fixture_removed=true.
+   Two independent PostgreSQL sessions prove an analysis revision committed while ALLOW waited causes the stale ALLOW to fail before receipt/status/audit mutation. A same-revision BOM updated_at-only manual edit likewise rejects ALLOW. A reviewer passing that new visible timestamp for the old request also rejects: current and caller timestamps may agree, but neither matches the immutable submission pin.
 3. python3 supabase/pending/tests/check_project_bom_procurement_review_contract_static.py
    Result: PROJECT_BOM_PROCUREMENT_REVIEW_STATIC_GUARD_PASS=true.
 4. bunx vitest run src/components/projects/SelectedProjectBomReview.test.tsx
@@ -61,10 +48,10 @@ ISOLATED ACCEPTANCE — ALL EXIT 0
 6. npm run build — exit 0; preview diagnostics report build OK.
 7. git diff --check — exit 0.
 
-EXPLICIT CONCURRENCY ASSERTIONS
-- analyze-vs-Allow: the reviewer creates analysis revision 2 in a separate transaction while an ALLOW submits the exact revision-1 pin. The Allow function locks the same request line/analysis state, sees revision 2, raises “Reviewed Procurement analysis is missing or stale”, leaves status PENDING_PROCUREMENT_ANALYSIS, and leaves ALLOW receipt/audit counts at zero.
-- same-revision BOM manual-edit-vs-decision: a separate owner-only fixture update changes project_boms.updated_at while preserving revision 7. The reviewer ALLOW carries the submission pin, raises “The project BOM source is stale”, leaves status PENDING_PROCUREMENT_ANALYSIS, and leaves ALLOW receipt/audit counts at zero.
-- These writes exist only in rollback-scoped disposable databases. The live database, records, grants, SQL, data, and deployment state were not touched.
+EXPLICIT REFRESHED-TIMESTAMP ASSERTION
+- A pending request pins BOM revision 7 and its original updated_at. A manual edit changes only project_boms.updated_at; the reviewer deliberately submits that NEW current timestamp with the OLD request. The decision fails “The project BOM source is stale; resubmit the Procurement request from the current BOM”, leaves status PENDING_PROCUREMENT_ANALYSIS, and leaves ALLOW receipt/audit counts at zero.
+- The review scope supplies the immutable request timestamp to the decision path. Analyze works only against immutable request lines and does not read or overwrite the live BOM, so it cannot refresh a request source pin.
+- These writes exist only in rollback-scoped disposable databases. The live database, records, grants, SQL, data, storage, and deployment state were not touched.
 
 EXPLICIT LIMITS / REMAINING BLOCKERS
 - This is an isolated PostgreSQL role acceptance, not a managed production installation or real hosted authenticated RPC session. It uses test-only local roles plus request.jwt.claim.sub to emulate caller identity.
@@ -302,7 +289,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.project_bom_procurement_review_procurement_scope(
   p_actor uuid, p_request_id uuid
-) RETURNS TABLE(request_id uuid, project_id uuid, project_bom_id uuid, pinned_bom_revision text, request_status text)
+) RETURNS TABLE(request_id uuid, project_id uuid, project_bom_id uuid, pinned_bom_revision text, pinned_bom_updated_at timestamptz, request_status text)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -311,8 +298,8 @@ BEGIN
   IF p_actor IS NULL OR NOT public.has_permission(p_actor, 'procurement.edit') THEN
     RAISE EXCEPTION 'Procurement analysis requires procurement.edit';
   END IF;
-  SELECT request.id, request.project_id, request.project_bom_id, request.pinned_bom_revision, request.status
-  INTO request_id, project_id, project_bom_id, pinned_bom_revision, request_status
+  SELECT request.id, request.project_id, request.project_bom_id, request.pinned_bom_revision, request.pinned_bom_updated_at, request.status
+  INTO request_id, project_id, project_bom_id, pinned_bom_revision, pinned_bom_updated_at, request_status
   FROM public.project_bom_procurement_review_requests request
   JOIN public.employees employee ON employee.user_id = p_actor AND employee.employment_status = 'ACTIVE'
   JOIN public.employee_departments membership ON membership.employee_id = employee.id
@@ -473,7 +460,15 @@ BEGIN
   SELECT * INTO v_prior FROM public.project_bom_procurement_review_receipts WHERE request_key=p_request_key FOR UPDATE;
   IF FOUND THEN SELECT * INTO v_scope FROM public.project_bom_procurement_review_procurement_scope(v_actor,p_request_id); IF v_prior.requested_by=v_actor AND v_prior.action=v_decision AND v_prior.payload_hash=v_hash THEN RETURN QUERY SELECT v_prior.request_id,true; RETURN; END IF; RAISE EXCEPTION 'Request key conflicts with a different actor or canonical payload'; END IF;
   SELECT revision, updated_at INTO v_current_revision, v_current_updated_at FROM public.project_boms WHERE id=v_scope.project_bom_id FOR UPDATE;
-  IF v_current_revision IS DISTINCT FROM v_scope.pinned_bom_revision OR v_current_revision IS DISTINCT FROM p_expected_bom_revision OR v_current_updated_at IS DISTINCT FROM p_expected_bom_updated_at THEN RAISE EXCEPTION 'The project BOM source is stale'; END IF;
+  -- The immutable submission pin is authoritative. The caller's inspected
+  -- pins must agree with it and with the currently locked BOM; a reviewer
+  -- cannot refresh a timestamp after a manual same-revision BOM edit and
+  -- decide an older submitted snapshot.
+  IF v_current_revision IS DISTINCT FROM v_scope.pinned_bom_revision
+    OR v_current_revision IS DISTINCT FROM p_expected_bom_revision
+    OR v_current_updated_at IS DISTINCT FROM v_scope.pinned_bom_updated_at
+    OR p_expected_bom_updated_at IS DISTINCT FROM v_scope.pinned_bom_updated_at
+  THEN RAISE EXCEPTION 'The project BOM source is stale; resubmit the Procurement request from the current BOM'; END IF;
   IF v_scope.request_status <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Procurement request is no longer pending analysis'; END IF;
   PERFORM 1 FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id FOR UPDATE;
   SELECT count(*) INTO v_line_count FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id;
@@ -487,7 +482,7 @@ BEGIN
   ELSIF jsonb_array_length(v_reviewed) <> 0 THEN RAISE EXCEPTION 'Deny must not supply reviewed analysis revisions';
   END IF;
   UPDATE public.project_bom_procurement_review_requests SET status=CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,decided_by=v_actor,decided_at=clock_timestamp(),decision_note=v_note WHERE id=p_request_id;
-  INSERT INTO public.project_bom_procurement_review_audit_events(request_id,event_type,actor_user_id,event_data) VALUES(p_request_id,CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,v_actor,jsonb_build_object('pinned_bom_revision',v_scope.pinned_bom_revision,'pinned_bom_updated_at',p_expected_bom_updated_at,'reviewed_analysis_revisions',v_reviewed,'decision_note',v_note,'payload_hash',v_hash));
+  INSERT INTO public.project_bom_procurement_review_audit_events(request_id,event_type,actor_user_id,event_data) VALUES(p_request_id,CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,v_actor,jsonb_build_object('pinned_bom_revision',v_scope.pinned_bom_revision,'pinned_bom_updated_at',v_scope.pinned_bom_updated_at,'reviewer_expected_bom_updated_at',p_expected_bom_updated_at,'reviewed_analysis_revisions',v_reviewed,'decision_note',v_note,'payload_hash',v_hash));
   INSERT INTO public.project_bom_procurement_review_receipts(request_key,requested_by,action,request_id,payload_hash,result) VALUES(p_request_key,v_actor,v_decision,p_request_id,v_hash,jsonb_build_object('request_id',p_request_id,'status',CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END));
   RETURN QUERY SELECT p_request_id,false;
 END;
@@ -793,6 +788,34 @@ RESET ROLE;
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM stale_deny_submit) AND event_type='DENIED') THEN RAISE EXCEPTION 'Stale deny wrote audit evidence'; END IF;
 END $$;
+-- The reviewer may see the newer timestamp, but it cannot replace the
+-- immutable request pin. The old request must be resubmitted from the edited
+-- BOM before either decision path can proceed.
+UPDATE public.project_boms SET revision='8', updated_at=clock_timestamp() + interval '1 microsecond' WHERE id='00000000-0000-4000-8000-000000000030';
+SET ROLE procurement_requester_test;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
+CREATE TEMP TABLE refreshed_pin_submit AS
+SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000030','8','[{"kind":"new","mpn":"REFRESHED-PIN","description":"Caller refresh attempt","referenceDesignators":"D3","quantity":1}]'::jsonb,'00000000-0000-4000-8000-000000000074');
+GRANT SELECT ON refreshed_pin_submit TO procurement_assigned_test;
+RESET ROLE;
+CREATE TEMP TABLE refreshed_pin_submit_state AS
+SELECT id, pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM refreshed_pin_submit);
+GRANT SELECT ON refreshed_pin_submit_state TO procurement_assigned_test;
+UPDATE public.project_boms SET updated_at=clock_timestamp() + interval '1 microsecond' WHERE id='00000000-0000-4000-8000-000000000030';
+CREATE TEMP TABLE refreshed_pin_current_bom_state AS
+SELECT updated_at FROM public.project_boms WHERE id='00000000-0000-4000-8000-000000000030';
+GRANT SELECT ON refreshed_pin_current_bom_state TO procurement_assigned_test;
+SET ROLE procurement_assigned_test;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
+DO $$ BEGIN
+  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM refreshed_pin_submit),'8',(SELECT updated_at FROM refreshed_pin_current_bom_state),'[]'::jsonb,'DENY','Caller refreshed the visible timestamp after source drift','00000000-0000-4000-8000-000000000075'); RAISE EXCEPTION 'Refreshed caller timestamp accepted stale request'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM source is stale%' THEN RAISE; END IF; END;
+  IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM refreshed_pin_submit)) ->> 'status')) <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Refreshed caller timestamp mutated request state'; END IF;
+END $$;
+RESET ROLE;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM public.project_bom_procurement_review_receipts WHERE request_id=(SELECT request_id FROM refreshed_pin_submit) AND action IN ('ALLOW','DENY')) THEN RAISE EXCEPTION 'Refreshed caller timestamp wrote decision receipt'; END IF;
+  IF EXISTS (SELECT 1 FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM refreshed_pin_submit) AND event_type IN ('ALLOWED_PENDING_HARDWARE_SELECTION','DENIED')) THEN RAISE EXCEPTION 'Refreshed caller timestamp wrote decision audit'; END IF;
+END $$;
 ROLLBACK;
 ===== END DISPOSABLE ACCEPTANCE =====
 
@@ -871,8 +894,18 @@ assert_eq "$(q "SELECT status FROM public.project_bom_procurement_review_request
 assert_eq "$(q "SELECT count(*) FROM public.project_bom_procurement_review_receipts WHERE request_id='$request_two' AND action='ALLOW'")" 0 'manual BOM edit writes no allow receipt'
 assert_eq "$(q "SELECT count(*) FROM public.project_bom_procurement_review_audit_events WHERE request_id='$request_two' AND event_type='ALLOWED_PENDING_HARDWARE_SELECTION'")" 0 'manual BOM edit writes no allow audit'
 printf 'SAME_REVISION_BOM_MANUAL_EDIT_STALE_DECISION_PASS=true\n'
-printf 'PROJECT_BOM_PROCUREMENT_REVIEW_LOCAL_CONCURRENCY_ACCEPTANCE_PASS=true\n'
-===== END DISPOSABLE CONCURRENCY RUNNER =====
+
+request_three="$(submit_request 00000000-0000-4000-8000-000000000108)"; line_three="$(q "SELECT id FROM public.project_bom_procurement_review_request_lines WHERE request_id='$request_three'")"; assert_eq "$(analyze "$request_three" "$line_three" 0 'Refreshed caller-pin comparison analysis' 00000000-0000-4000-8000-000000000109)" 1 'refreshed caller pin initial analysis revision'
+q "UPDATE public.project_boms SET updated_at=clock_timestamp() + interval '1 microsecond' WHERE id='00000000-0000-4000-8000-000000000030';"
+refreshed_updated_three="$(q "SELECT updated_at FROM public.project_boms WHERE id='00000000-0000-4000-8000-000000000030'")"
+refreshed_status=0; decide_allow "$request_three" "$refreshed_updated_three" "$line_three" 1 00000000-0000-4000-8000-000000000110 >"$work_dir/refreshed-pin.out" 2>"$work_dir/refreshed-pin.err" || refreshed_status=$?
+[[ $refreshed_status -ne 0 ]] || { echo 'ASSERT_FAIL refreshed caller timestamp unexpectedly allowed stale submitted BOM snapshot' >&2; exit 1; }
+grep -q 'The project BOM source is stale' "$work_dir/refreshed-pin.err"
+assert_eq "$(q "SELECT status FROM public.project_bom_procurement_review_requests WHERE id='$request_three'")" 'PENDING_PROCUREMENT_ANALYSIS' 'refreshed caller timestamp leaves request pending'
+assert_eq "$(q "SELECT count(*) FROM public.project_bom_procurement_review_receipts WHERE request_id='$request_three' AND action='ALLOW'")" 0 'refreshed caller timestamp writes no allow receipt'
+assert_eq "$(q "SELECT count(*) FROM public.project_bom_procurement_review_audit_events WHERE request_id='$request_three' AND event_type='ALLOWED_PENDING_HARDWARE_SELECTION'")" 0 'refreshed caller timestamp writes no allow audit'
+printf 'REFRESHED_CALLER_TIMESTAMP_OLD_REQUEST_STALE_PASS=true\n'
+printf 'PROJECT_BOM_PROCUREMENT_REVIEW_LOCAL_CONCURRENCY_ACCEPTANCE_PASS=true\n'===== END DISPOSABLE CONCURRENCY RUNNER =====
 
 ===== BEGIN STATIC GUARD: supabase/pending/tests/check_project_bom_procurement_review_contract_static.py =====
 #!/usr/bin/env python3
@@ -891,9 +924,9 @@ checks = {
     "analysis isolates commercial facts": all(token in sql for token in ("availability_state", "cost_state", "sourcing_state", "observed_unit_cost", "currency", "lead_time_days", "alternate_component_id")),
     "protected requester or reviewer read returns immutable pin and latest analysis": all(token in sql for token in ("project_bom_procurement_review_read_scope", "submitted_by = p_actor", "read_project_bom_procurement_review", "pinnedBomRevision", "ORDER BY analysis.analysis_revision DESC", "Procurement request is unavailable")),
     "analysis revisions reject stale updates": all(token in sql for token in ("p_expected_analysis_revision integer", "The Procurement line analysis revision is stale", "v_current_analysis_revision+1")),
-    "allow pins each reviewed analysis and exact bom source state": all(token in sql for token in ("p_expected_bom_updated_at timestamptz", "p_reviewed_analysis_revisions jsonb", "project_bom_procurement_review_canonical_decision_analyses", "Reviewed Procurement analysis is missing or stale", "The project BOM source is stale", "reviewed_analysis_revisions")),
+    "allow requires immutable request and caller BOM source pins": all(token in sql for token in ("p_expected_bom_updated_at timestamptz", "p_reviewed_analysis_revisions jsonb", "project_bom_procurement_review_canonical_decision_analyses", "v_current_updated_at IS DISTINCT FROM v_scope.pinned_bom_updated_at", "p_expected_bom_updated_at IS DISTINCT FROM v_scope.pinned_bom_updated_at", "The project BOM source is stale; resubmit the Procurement request from the current BOM", "reviewer_expected_bom_updated_at")),
     "stale locking and idempotency": all(token in sql for token in ("pg_advisory_xact_lock", "FOR UPDATE", "The project BOM revision is stale", "Request key conflicts")),
-    "isolated two-session stale-decision evidence": all(token in concurrency for token in ("ANALYZE_VS_ALLOW_STALE_PIN_PASS=true", "SAME_REVISION_BOM_MANUAL_EDIT_STALE_DECISION_PASS=true", "Reviewed Procurement analysis is missing or stale", "The project BOM source is stale", "action='ALLOW'")),
+    "isolated stale-decision evidence including refreshed caller pin": all(token in concurrency for token in ("ANALYZE_VS_ALLOW_STALE_PIN_PASS=true", "SAME_REVISION_BOM_MANUAL_EDIT_STALE_DECISION_PASS=true", "REFRESHED_CALLER_TIMESTAMP_OLD_REQUEST_STALE_PASS=true", "Reviewed Procurement analysis is missing or stale", "The project BOM source is stale", "action='ALLOW'")),
     "transaction audit and receipt": all(token in sql for token in ("project_bom_procurement_review_audit_events", "project_bom_procurement_review_receipts", "payload_hash", "v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED'")),
     "no inventory approval po or bom write": all(token not in sql for token in ("UPDATE public.project_boms", "INSERT INTO public.project_bom_items", "UPDATE public.project_bom_items", "INSERT INTO public.inventory", "UPDATE public.inventory", "INSERT INTO public.purchase_orders", "INSERT INTO public.purchase_requests", "INSERT INTO public.components")),
     "direct tables remain private and entrypoints execution withheld": all(token in sql for token in ("No authenticated table grants or SELECT policies", "REVOKE ALL ON FUNCTION public.project_bom_procurement_review_read_scope", "REVOKE ALL ON FUNCTION public.submit_project_bom_procurement_review", "REVOKE ALL ON FUNCTION public.analyze_project_bom_procurement_review", "REVOKE ALL ON FUNCTION public.decide_project_bom_procurement_review", "REVOKE ALL ON FUNCTION public.read_project_bom_procurement_review", "No GRANT EXECUTE statement is present")) and "GRANT EXECUTE ON FUNCTION" not in sql and "CREATE POLICY project_bom_procurement_review" not in sql,

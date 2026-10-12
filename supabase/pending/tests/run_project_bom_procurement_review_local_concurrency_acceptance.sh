@@ -49,4 +49,15 @@ assert_eq "$(q "SELECT status FROM public.project_bom_procurement_review_request
 assert_eq "$(q "SELECT count(*) FROM public.project_bom_procurement_review_receipts WHERE request_id='$request_two' AND action='ALLOW'")" 0 'manual BOM edit writes no allow receipt'
 assert_eq "$(q "SELECT count(*) FROM public.project_bom_procurement_review_audit_events WHERE request_id='$request_two' AND event_type='ALLOWED_PENDING_HARDWARE_SELECTION'")" 0 'manual BOM edit writes no allow audit'
 printf 'SAME_REVISION_BOM_MANUAL_EDIT_STALE_DECISION_PASS=true\n'
+
+request_three="$(submit_request 00000000-0000-4000-8000-000000000108)"; line_three="$(q "SELECT id FROM public.project_bom_procurement_review_request_lines WHERE request_id='$request_three'")"; assert_eq "$(analyze "$request_three" "$line_three" 0 'Refreshed caller-pin comparison analysis' 00000000-0000-4000-8000-000000000109)" 1 'refreshed caller pin initial analysis revision'
+q "UPDATE public.project_boms SET updated_at=clock_timestamp() + interval '1 microsecond' WHERE id='00000000-0000-4000-8000-000000000030';"
+refreshed_updated_three="$(q "SELECT updated_at FROM public.project_boms WHERE id='00000000-0000-4000-8000-000000000030'")"
+refreshed_status=0; decide_allow "$request_three" "$refreshed_updated_three" "$line_three" 1 00000000-0000-4000-8000-000000000110 >"$work_dir/refreshed-pin.out" 2>"$work_dir/refreshed-pin.err" || refreshed_status=$?
+[[ $refreshed_status -ne 0 ]] || { echo 'ASSERT_FAIL refreshed caller timestamp unexpectedly allowed stale submitted BOM snapshot' >&2; exit 1; }
+grep -q 'The project BOM source is stale' "$work_dir/refreshed-pin.err"
+assert_eq "$(q "SELECT status FROM public.project_bom_procurement_review_requests WHERE id='$request_three'")" 'PENDING_PROCUREMENT_ANALYSIS' 'refreshed caller timestamp leaves request pending'
+assert_eq "$(q "SELECT count(*) FROM public.project_bom_procurement_review_receipts WHERE request_id='$request_three' AND action='ALLOW'")" 0 'refreshed caller timestamp writes no allow receipt'
+assert_eq "$(q "SELECT count(*) FROM public.project_bom_procurement_review_audit_events WHERE request_id='$request_three' AND event_type='ALLOWED_PENDING_HARDWARE_SELECTION'")" 0 'refreshed caller timestamp writes no allow audit'
+printf 'REFRESHED_CALLER_TIMESTAMP_OLD_REQUEST_STALE_PASS=true\n'
 printf 'PROJECT_BOM_PROCUREMENT_REVIEW_LOCAL_CONCURRENCY_ACCEPTANCE_PASS=true\n'
