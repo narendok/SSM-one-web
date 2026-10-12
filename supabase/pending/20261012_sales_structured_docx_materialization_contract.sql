@@ -267,6 +267,8 @@ DECLARE
   v_request public.sales_opportunity_structured_docx_requests%ROWTYPE;
   v_scope record;
   v_existing_object boolean;
+  v_storage_bucket text;
+  v_storage_path text;
 BEGIN
   IF v_actor IS NULL OR p_request_key IS NULL OR p_assignment_id IS NULL
     OR p_content_type <> 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -291,18 +293,18 @@ BEGIN
         AND current_specification.current_version_id=v_request.master_specification_version_id
     )
   THEN RAISE EXCEPTION 'DOCX upload request no longer has an active assigned-person source scope'; END IF;
-  p_storage_bucket := v_scope.storage_bucket;
-  p_storage_path := v_scope.storage_path_prefix || p_request_key::text || '-draft.docx';
+  v_storage_bucket := v_scope.storage_bucket;
+  v_storage_path := v_scope.storage_path_prefix || p_request_key::text || '-draft.docx';
   SELECT EXISTS(
     SELECT 1 FROM storage.objects object_row
-    WHERE object_row.bucket_id=p_storage_bucket AND object_row.name=p_storage_path
+    WHERE object_row.bucket_id=v_storage_bucket AND object_row.name=v_storage_path
   ) INTO v_existing_object;
   IF v_existing_object THEN
     IF EXISTS (
       SELECT 1 FROM public.sales_opportunity_structured_docx_storage_attempts attempt
-      WHERE attempt.request_key=p_request_key AND attempt.storage_bucket=p_storage_bucket AND attempt.storage_path=p_storage_path
+      WHERE attempt.request_key=p_request_key AND attempt.storage_bucket=v_storage_bucket AND attempt.storage_path=v_storage_path
     ) THEN
-      RETURN QUERY SELECT p_request_key,p_storage_bucket,p_storage_path,10485760::bigint,true;
+      RETURN QUERY SELECT p_request_key,v_storage_bucket,v_storage_path,10485760::bigint,true;
       RETURN;
     END IF;
     RAISE EXCEPTION 'DOCX upload path already exists without this immutable request receipt';
@@ -311,7 +313,7 @@ BEGIN
     SELECT 1 FROM public.sales_opportunity_structured_docx_storage_attempts attempt
     WHERE attempt.request_key=p_request_key
   ) THEN RAISE EXCEPTION 'DOCX upload request already has an immutable verifier receipt'; END IF;
-  RETURN QUERY SELECT p_request_key,p_storage_bucket,p_storage_path,10485760::bigint,false;
+  RETURN QUERY SELECT p_request_key,v_storage_bucket,v_storage_path,10485760::bigint,false;
 END;
 $$;
 
