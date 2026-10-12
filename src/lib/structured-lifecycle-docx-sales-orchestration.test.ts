@@ -10,7 +10,7 @@ const source = mapMasterSpecificationSource({ opportunityId: ids.project, opport
 
 async function realBytes() { return (await renderStructuredLifecycleDocx("SOR", source, { SCOPE_STATEMENT: "Trusted receipt round trip" })).bytes; }
 function scope() { return { actor_id: ids.actor, assignment_id: ids.assignment, request_key: ids.request, project_id: ids.project, document_kind: "SOR", department_id: ids.department, responsible_employee_id: ids.employee, reviewer_employee_id: null, template_id: ids.template, template_key: input.templateKey, template_version: 1, template_document_revision_id: ids.templateRevision, template_schema_hash: input.templateSchemaHash, source_fingerprint: input.sourceFingerprint, storage_bucket: "project-drive", storage_path: path, object_version: "v1" }; }
-type MockClient = { calls: Array<{ name: string; args: Record<string, unknown> }> };
+type MockClient = { calls: Array<{ name: string; args: Record<string, unknown> }> } & Parameters<typeof verifySalesStructuredDocxObject>[0];
 
 function rpcClient(overrides: { fail?: string; objectVersion?: string; changedObject?: boolean; committed?: unknown } = {}): MockClient {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
@@ -31,7 +31,7 @@ function rpcClient(overrides: { fail?: string; objectVersion?: string; changedOb
     } }) }) }) }) }) }),
     storage: { from: () => ({ download: async () => {
       const bytes = await bytesPromise;
-      return { data: new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)]), error: null };
+      return { data: new Blob([new Uint8Array(bytes).buffer]), error: null };
     } }) },
   } as unknown as MockClient;
 }
