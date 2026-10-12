@@ -51,8 +51,9 @@ for required in ("Active project-team membership", "Scoped department document-m
     need(required, required)
 
 for signature in (
-    "public.resolve_structured_lifecycle_docx_registry_scope(uuid,text,uuid,uuid,text,integer,text,text)",
-    "public.assign_structured_lifecycle_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid)",
+    "public.resolve_structured_lifecycle_docx_registry_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text)",
+    "public.assign_sales_structured_docx_responsibility(uuid,uuid,uuid,text,uuid,uuid,uuid)",
+    "public.assign_project_structured_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid)",
     "public.revoke_structured_lifecycle_docx_responsibility(uuid,uuid)",
     "public.approve_structured_lifecycle_docx_template_pin(uuid,text,uuid,uuid,text,uuid)",
     "public.revoke_structured_lifecycle_docx_template_pin(uuid,uuid)",
