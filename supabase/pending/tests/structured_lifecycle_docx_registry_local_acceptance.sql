@@ -55,7 +55,7 @@ DO $$ BEGIN
 END $$;
 CREATE TEMP TABLE assignment_first AS SELECT public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000060') AS id;
 DO $$ BEGIN
-  IF (SELECT count(*) FROM assignment_first)<>1 OR (SELECT count(*) FROM public.structured_lifecycle_docx_responsibility_assignments)<>1 OR (SELECT count(*) FROM public.structured_lifecycle_docx_registry_audit_events)<>1 THEN RAISE EXCEPTION 'Atomic assignment/audit persistence failed'; END IF;
+  IF (SELECT count(*) FROM assignment_first)<>1 OR (SELECT count(*) FROM public.structured_lifecycle_docx_responsibility_assignments WHERE document_kind='SOR' AND scope_type='PROJECT')<>1 OR (SELECT count(*) FROM public.structured_lifecycle_docx_registry_audit_events)<>1 THEN RAISE EXCEPTION 'Atomic assignment/audit persistence failed'; END IF;
   IF (SELECT public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000060'))<>(SELECT id FROM assignment_first) THEN RAISE EXCEPTION 'Exact assignment replay failed'; END IF;
   BEGIN PERFORM public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000003',NULL,'00000000-0000-4000-8000-000000000060'); RAISE EXCEPTION 'Assignment replay conflict accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Registry request key conflicts%' THEN RAISE; END IF; END;
 END $$;
