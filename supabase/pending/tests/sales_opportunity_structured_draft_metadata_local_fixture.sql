@@ -11,6 +11,8 @@ CREATE SCHEMA public;
 CREATE SCHEMA auth;
 CREATE SCHEMA storage;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE OR REPLACE FUNCTION extensions.gen_random_uuid() RETURNS uuid LANGUAGE sql VOLATILE AS $$ SELECT gen_random_uuid() $$;
 DO $roles$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
@@ -99,6 +101,12 @@ INSERT INTO public.sales_structured_draft_test_project_permissions(user_id, perm
   ('00000000-0000-4000-8000-000000000004', 'engineering.manage');
 COMMIT;
 CREATE TABLE public.departments (id uuid PRIMARY KEY, code text NOT NULL, name text NOT NULL, is_active boolean NOT NULL DEFAULT true);
+CREATE TABLE public.projects (id uuid PRIMARY KEY, status text NOT NULL DEFAULT 'active');
+CREATE TABLE public.project_team_members (project_id uuid NOT NULL REFERENCES public.projects(id), employee_id uuid NOT NULL REFERENCES public.employees(id), PRIMARY KEY(project_id, employee_id));
+CREATE TABLE public.department_process_templates (id uuid PRIMARY KEY, department_id uuid NOT NULL REFERENCES public.departments(id), template_key text NOT NULL, version integer NOT NULL, status text NOT NULL, active_document_revision_id uuid NULL);
+CREATE TABLE public.department_process_template_document_revisions (id uuid PRIMARY KEY, template_id uuid NOT NULL REFERENCES public.department_process_templates(id));
+CREATE FUNCTION public.lifecycle_actor() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT auth.uid() $$;
+CREATE FUNCTION public.lifecycle_can_manage_department(p_actor uuid,p_department uuid) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 INSERT INTO public.departments(id, code, name) VALUES ('00000000-0000-4000-8000-000000000501', 'SAL', 'Sales');
 INSERT INTO public.employees(id,user_id,employment_status) VALUES
   ('00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','ACTIVE'),
@@ -127,7 +135,7 @@ CREATE FUNCTION public.can_access_department_drive(p_user uuid, p_department uui
   SELECT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id WHERE e.user_id=p_user AND e.employment_status='ACTIVE' AND ed.department_id=p_department)
 $$;
 CREATE FUNCTION public.next_business_number(p_kind text, p_prefix text, p_context text) RETURNS text LANGUAGE sql AS $$ SELECT upper(p_prefix) || '-LOCAL-' || substr(md5(coalesce(p_context,'') || p_kind), 1, 8) $$;
-CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, version text NOT NULL DEFAULT 'v1', archived_at timestamptz NULL, is_delete_marker boolean NOT NULL DEFAULT false, PRIMARY KEY(bucket_id,name));
+CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, version text NOT NULL DEFAULT 'v1', archived_at timestamptz NULL, is_delete_marker boolean NOT NULL DEFAULT false, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, PRIMARY KEY(bucket_id,name));
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon;
