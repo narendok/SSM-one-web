@@ -29,7 +29,7 @@ INSERT INTO public.permission_test_grants VALUES
 -- of the pending contract or a managed role.
 GRANT EXECUTE ON FUNCTION public.submit_project_bom_procurement_review(uuid,uuid,text,jsonb,uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 GRANT EXECUTE ON FUNCTION public.analyze_project_bom_procurement_review(uuid,uuid,integer,jsonb,uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
-GRANT EXECUTE ON FUNCTION public.decide_project_bom_procurement_review(uuid,text,text,text,uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
+GRANT EXECUTE ON FUNCTION public.decide_project_bom_procurement_review(uuid,text,timestamptz,jsonb,text,text,uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 GRANT EXECUTE ON FUNCTION public.read_project_bom_procurement_review(uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 SET ROLE procurement_requester_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
