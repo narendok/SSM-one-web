@@ -16,6 +16,7 @@ export type ProposedBomPart = {
 export type ProcurementAnalysisState = "PENDING" | "AVAILABLE" | "UNAVAILABLE" | "TBC";
 
 export type ProcurementReviewDecision = "ALLOW_FOR_HARDWARE_SELECTION" | "DENY";
+export type ProcurementReviewedAnalysisRevision = { requestLineId: string; analysisRevision: number };
 
 export type ProcurementAnalysisDraft = {
   availabilityState: ProcurementAnalysisState;
@@ -129,4 +130,9 @@ export function procurementAnalysisPayload(draft: ProcurementAnalysisDraft) {
     alternateComponentId: draft.alternateComponentId.trim() || null,
     analysisNote: draft.analysisNote.trim(),
   };
+}
+
+export function procurementDecisionAnalysisPins(lines: Array<{ id: string; analysis: { revision: number } | null }>): ProcurementReviewedAnalysisRevision[] | null {
+  if (lines.some((line) => !line.analysis || !Number.isInteger(line.analysis.revision) || line.analysis.revision <= 0)) return null;
+  return lines.map((line) => ({ requestLineId: line.id, analysisRevision: line.analysis?.revision ?? 0 })).sort((left, right) => left.requestLineId.localeCompare(right.requestLineId));
 }

@@ -29,7 +29,7 @@ INSERT INTO public.permission_test_grants VALUES
 -- of the pending contract or a managed role.
 GRANT EXECUTE ON FUNCTION public.submit_project_bom_procurement_review(uuid,uuid,text,jsonb,uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 GRANT EXECUTE ON FUNCTION public.analyze_project_bom_procurement_review(uuid,uuid,integer,jsonb,uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
-GRANT EXECUTE ON FUNCTION public.decide_project_bom_procurement_review(uuid,text,text,text,uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
+GRANT EXECUTE ON FUNCTION public.decide_project_bom_procurement_review(uuid,text,timestamptz,jsonb,text,text,uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 GRANT EXECUTE ON FUNCTION public.read_project_bom_procurement_review(uuid) TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 SET ROLE procurement_requester_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
@@ -76,10 +76,10 @@ SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002'
 DO $$ DECLARE v_request uuid:=(SELECT request_id FROM first_submit); v_existing_line uuid; v_new_line uuid; BEGIN
   SELECT id INTO v_existing_line FROM first_submit_lines WHERE source_kind='EXISTING_COMPONENT';
   SELECT id INTO v_new_line FROM first_submit_lines WHERE source_kind='NEW_PART';
- BEGIN PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7','ALLOW','all rows reviewed','00000000-0000-4000-8000-000000000061'); RAISE EXCEPTION 'Allow without analysis accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Allow requires an analysis%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7',(SELECT pinned_bom_updated_at FROM first_submit_state WHERE id=v_request),'[]'::jsonb,'ALLOW','all rows reviewed','00000000-0000-4000-8000-000000000061'); RAISE EXCEPTION 'Allow without analysis accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Allow requires an exact reviewed analysis revision%' THEN RAISE; END IF; END;
   PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_existing_line,0,'{"availabilityState":"AVAILABLE","costState":"TBC","sourcingState":"PENDING","observedUnitCost":12.5,"currency":"INR","leadTimeDays":14,"analysisNote":"Supplier response pending"}'::jsonb,'00000000-0000-4000-8000-000000000062');
   PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_new_line,0,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"UNAVAILABLE","analysisNote":"No verified source yet"}'::jsonb,'00000000-0000-4000-8000-000000000063');
- PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7','ALLOW','analysis complete; Hardware selection remains separate','00000000-0000-4000-8000-000000000061');
+  PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7',(SELECT pinned_bom_updated_at FROM first_submit_state WHERE id=v_request),(SELECT jsonb_agg(jsonb_build_object('requestLineId', id, 'analysisRevision', 1) ORDER BY id) FROM first_submit_lines),'ALLOW','analysis complete; Hardware selection remains separate','00000000-0000-4000-8000-000000000061');
   IF (SELECT (public.read_project_bom_procurement_review(v_request) ->> 'status')) <> 'ALLOWED_PENDING_HARDWARE_SELECTION' THEN RAISE EXCEPTION 'Allow did not remain handoff-only'; END IF;
 END $$;
 RESET ROLE;
@@ -149,14 +149,14 @@ RESET ROLE;
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 CREATE TEMP TABLE first_deny AS
-SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8','DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
+SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit)),'[]'::jsonb,'DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
 CREATE TEMP TABLE exact_deny_replay AS
-SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8','DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
+SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit)),'[]'::jsonb,'DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
 DO $$ BEGIN
   IF (SELECT replayed FROM first_deny) OR NOT (SELECT replayed FROM exact_deny_replay) THEN RAISE EXCEPTION 'Deny replay state is incorrect'; END IF;
   IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM deny_submit)) ->> 'status')) <> 'DENIED' THEN RAISE EXCEPTION 'Deny did not set terminal denied status'; END IF;
   IF (SELECT public.read_project_bom_procurement_review((SELECT request_id FROM deny_submit)) -> 'lines' -> 0 -> 'analysis') <> 'null'::jsonb THEN RAISE EXCEPTION 'Deny incorrectly required or created analysis'; END IF;
-  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8','DENY','Changed denial rationale','00000000-0000-4000-8000-000000000071'); RAISE EXCEPTION 'Changed deny replay accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Request key conflicts%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8',(SELECT pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit)),'[]'::jsonb,'DENY','Changed denial rationale','00000000-0000-4000-8000-000000000071'); RAISE EXCEPTION 'Changed deny replay accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Request key conflicts%' THEN RAISE; END IF; END;
 END $$;
 RESET ROLE;
 DO $$ BEGIN
@@ -173,7 +173,7 @@ UPDATE public.project_boms SET revision='9' WHERE id='00000000-0000-4000-8000-00
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 DO $$ BEGIN
-  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM stale_deny_submit),'8','DENY','Revision changed before decision','00000000-0000-4000-8000-000000000073'); RAISE EXCEPTION 'Stale deny accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM revision is stale%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM stale_deny_submit),'8',(SELECT pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM stale_deny_submit)),'[]'::jsonb,'DENY','Revision changed before decision','00000000-0000-4000-8000-000000000073'); RAISE EXCEPTION 'Stale deny accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM source is stale%' THEN RAISE; END IF; END;
   IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM stale_deny_submit)) ->> 'status')) <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Stale deny mutated request state'; END IF;
 END $$;
 RESET ROLE;
