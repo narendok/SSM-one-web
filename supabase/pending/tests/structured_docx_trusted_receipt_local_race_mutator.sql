@@ -1,4 +1,5 @@
 \set ON_ERROR_STOP on
+SELECT :'case_name' AS case_name \gset
 DO $wait$
 DECLARE deadline timestamptz:=clock_timestamp()+interval '15 seconds';
 BEGIN LOOP

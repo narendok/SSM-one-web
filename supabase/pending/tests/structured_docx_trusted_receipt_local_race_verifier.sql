@@ -1,4 +1,5 @@
 \set ON_ERROR_STOP on
+SELECT :'case_name' AS case_name \gset
 SELECT set_config('request.jwt.claim.sub', NULL, false);
 SELECT pg_advisory_lock(hashtextextended(concat_ws('|','sales-structured-docx',:'request_key'),0));
 UPDATE public.trusted_receipt_race_control SET verifier_ready=true WHERE case_name=:'case_name';
