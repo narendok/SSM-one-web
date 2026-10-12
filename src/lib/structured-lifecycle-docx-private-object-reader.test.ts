@@ -17,7 +17,7 @@ function contractAdmin(records: Array<{ data: unknown; error: { message: string 
   };
   return {
     from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ eq: () => chain }) }) }) }),
-    storage: { from: () => ({ download: async () => ({ data: new Blob([bytes]), error: null }) }) },
+    storage: { from: () => ({ download: async () => ({ data: new Blob([new Uint8Array(bytes).buffer]), error: null }) }) },
   } as never;
 }
 
