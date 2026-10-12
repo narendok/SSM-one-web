@@ -202,10 +202,10 @@ USING (NOT public.is_sales_structured_docx_request_path(bucket_id, name) OR publ
 CREATE POLICY sales_structured_docx_insert_restrictive ON storage.objects AS RESTRICTIVE FOR INSERT TO authenticated
 WITH CHECK (NOT public.is_sales_structured_docx_request_path(bucket_id, name) OR public.can_stage_sales_structured_docx_object(bucket_id, name));
 CREATE POLICY sales_structured_docx_update_restrictive ON storage.objects AS RESTRICTIVE FOR UPDATE TO authenticated
-USING (NOT public.is_sales_structured_docx_request_path(bucket_id, name))
-WITH CHECK (NOT public.is_sales_structured_docx_request_path(bucket_id, name));
+USING (false)
+WITH CHECK (false);
 CREATE POLICY sales_structured_docx_delete_restrictive ON storage.objects AS RESTRICTIVE FOR DELETE TO authenticated
-USING (NOT public.is_sales_structured_docx_request_path(bucket_id, name));
+USING (false);
 
 ALTER TABLE public.drive_nodes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.drive_node_revisions ENABLE ROW LEVEL SECURITY;
