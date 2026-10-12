@@ -21,11 +21,7 @@ export const authorizePrivateStructuredDocxUpload = createServerFn({ method: "PO
       throw new Error("Verified DOCX Save is unavailable pending reviewed deployment acceptance.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    return authorizeSalesStructuredDocxUpload(supabaseAdmin as never, context.userId, {
-      ...data,
-      storageBucket: "project-drive",
-      storagePath: `server-derived/${data.requestKey}-draft.docx`,
-    });
+    return authorizeSalesStructuredDocxUpload(supabaseAdmin as never, context.userId, data);
   });
 
 /** Deployment-gated trusted server verifier. It has no browser/admin transport. */
