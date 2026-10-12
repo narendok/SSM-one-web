@@ -1,6 +1,11 @@
 CREATE ROLE anon;
 CREATE ROLE authenticated;
 CREATE ROLE service_role;
+CREATE ROLE procurement_requester_test NOINHERIT;
+CREATE ROLE procurement_assigned_test NOINHERIT;
+CREATE ROLE procurement_other_department_test NOINHERIT;
+CREATE ROLE procurement_unassigned_test NOINHERIT;
+GRANT authenticated TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 CREATE SCHEMA auth;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 CREATE TABLE public.employees(id uuid PRIMARY KEY, user_id uuid UNIQUE, employment_status text NOT NULL);
