@@ -14,6 +14,14 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
 
 type RpcClient = Pick<SupabaseClient<Database>, "rpc" | "storage" | "from">;
 
+export type SalesStructuredDocxUploadAuthorization = {
+  requestKey: string;
+  storageBucket: "project-drive";
+  storagePath: string;
+  maxSizeBytes: number;
+  replayed: boolean;
+};
+
 function requireRpc<T>(result: { data: T | null; error: { message: string } | null }, fallback: string): T {
   if (result.error || result.data === null) throw new Error(result.error?.message ?? fallback);
   return result.data;
@@ -110,6 +118,44 @@ export function createSalesStructuredDocxReader(admin: RpcClient) {
       } as never), "The current private DOCX object could not be rechecked.");
     },
   });
+}
+
+/** Server-only request authority for the exact one-time private DOCX path. */
+export async function authorizeSalesStructuredDocxUpload(
+  admin: RpcClient,
+  actorId: string,
+  input: {
+    opportunityId: string;
+    customerId: string;
+    assignmentId: string;
+    requestKey: string;
+    contentType: typeof DOCX_MIME;
+    sizeBytes: number;
+  },
+): Promise<SalesStructuredDocxUploadAuthorization> {
+  if (!Number.isSafeInteger(input.sizeBytes) || input.sizeBytes <= 0 || input.sizeBytes > 10 * 1024 * 1024) {
+    throw new Error("The DOCX upload must be between 1 byte and 10 MB.");
+  }
+  const rows = requireRpc(await admin.rpc("authorize_sales_structured_docx_upload" as never, {
+    p_opportunity_id: input.opportunityId,
+    p_customer_id: input.customerId,
+    p_assignment_id: input.assignmentId,
+    p_request_key: input.requestKey,
+    p_content_type: input.contentType,
+    p_size_bytes: input.sizeBytes,
+  } as never), "The protected DOCX upload path could not be authorized.") as unknown as Array<Record<string, unknown>>;
+  const row = rows[0];
+  if (!row || row.request_key !== input.requestKey || row.storage_bucket !== "project-drive" || typeof row.storage_path !== "string" || !row.storage_path.endsWith(`${input.requestKey}-draft.docx`) || row.max_size_bytes !== 10 * 1024 * 1024) {
+    throw new Error("The protected DOCX upload authority returned inconsistent path facts.");
+  }
+  if (actorId.trim().length === 0) throw new Error("The authenticated DOCX actor is unavailable.");
+  return {
+    requestKey: row.request_key as string,
+    storageBucket: row.storage_bucket as "project-drive",
+    storagePath: row.storage_path as string,
+    maxSizeBytes: row.max_size_bytes as number,
+    replayed: row.replayed === true,
+  };
 }
 
 export async function verifySalesStructuredDocxObject(

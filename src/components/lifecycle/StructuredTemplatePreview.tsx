@@ -628,6 +628,10 @@ export function StructuredTemplatePreview({
       setExportingDocx(false);
     }
   };
+  // Kept behind the server-side isolated-acceptance gate. The current UI does
+  // not expose a Save DOCX control, but this is the single direct handler that
+  // will perform request -> exact upload -> verification -> receipt -> commit
+  // after reviewed deployment acceptance; local export remains independent.
   return (
     <Card>
       <CardHeader>
