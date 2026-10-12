@@ -22,7 +22,9 @@ INSERT INTO public.sales_opportunity_structured_docx_assignments(id,opportunity_
 UPDATE public.sales_opportunities SET archived_at=now() WHERE id='104fb9e2-7f83-40f9-a295-64b37aa8c7ee';
 DO $$ BEGIN BEGIN PERFORM * FROM public.restore_reviewed_sales_samples((SELECT manifest_id FROM archived),'restore with DOCX lineage drift','00000000-0000-4000-8000-000000000012'); RAISE EXCEPTION 'DOCX lineage-drift restore accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Restore is blocked by dependency drift%' THEN RAISE; END IF; END; END $$;
 DELETE FROM public.sales_opportunity_structured_docx_assignments WHERE id='00000000-0000-4000-8000-000000000021';
+UPDATE public.customer_requirements SET archived_at=NULL WHERE id='aaabd18c-5885-45de-9e0e-da70d4ec491f';
 INSERT INTO public.customer_requirement_revisions(id,requirement_id,revision_number,status) VALUES ('11111111-1111-4111-8111-111111111111','aaabd18c-5885-45de-9e0e-da70d4ec491f',2,'working');
+UPDATE public.customer_requirements SET archived_at=now() WHERE id='aaabd18c-5885-45de-9e0e-da70d4ec491f';
 DO $$ BEGIN BEGIN PERFORM * FROM public.restore_reviewed_sales_samples((SELECT manifest_id FROM archived),'restore with revision drift','00000000-0000-4000-8000-000000000012'); RAISE EXCEPTION 'Revision-drift restore accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Restore is blocked by dependency drift%' THEN RAISE; END IF; END; END $$;
 DELETE FROM public.customer_requirement_revisions WHERE id='11111111-1111-4111-8111-111111111111';
 INSERT INTO public.sales_nda_records VALUES ('104fb9e2-7f83-40f9-a295-64b37aa8c7ee');
