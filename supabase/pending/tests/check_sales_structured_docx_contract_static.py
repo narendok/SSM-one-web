@@ -46,7 +46,7 @@ for signature in (
   'public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid)',
   'public.authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,bigint)',
   'public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text)',
-  'public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,bigint)',
+  'public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,text,bigint,uuid)',
   'public.read_sales_structured_docx_materializations(uuid,uuid,uuid)',
 ):
     need(sql, f'REVOKE ALL ON FUNCTION {signature} FROM PUBLIC, anon, authenticated, service_role;', f'default revoke {signature}')
