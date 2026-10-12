@@ -154,12 +154,14 @@ CREATE TEMP TABLE exact_deny_replay AS
 SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8','DENY','No approved source satisfies the submitted requirement','00000000-0000-4000-8000-000000000071');
 DO $$ BEGIN
   IF (SELECT replayed FROM first_deny) OR NOT (SELECT replayed FROM exact_deny_replay) THEN RAISE EXCEPTION 'Deny replay state is incorrect'; END IF;
-  IF (SELECT status FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit)) <> 'DENIED' THEN RAISE EXCEPTION 'Deny did not set terminal denied status'; END IF;
-  IF (SELECT count(*) FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM deny_submit) AND event_type='DENIED' AND actor_user_id='00000000-0000-4000-8000-000000000002') <> 1 THEN RAISE EXCEPTION 'Deny audit receipt was not exactly once'; END IF;
-  IF (SELECT count(*) FROM public.project_bom_procurement_review_receipts WHERE request_key='00000000-0000-4000-8000-000000000071' AND action='DENY') <> 1 THEN RAISE EXCEPTION 'Deny replay created duplicate receipt'; END IF;
+  IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM deny_submit)) ->> 'status')) <> 'DENIED' THEN RAISE EXCEPTION 'Deny did not set terminal denied status'; END IF;
   BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8','DENY','Changed denial rationale','00000000-0000-4000-8000-000000000071'); RAISE EXCEPTION 'Changed deny replay accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Request key conflicts%' THEN RAISE; END IF; END;
 END $$;
 RESET ROLE;
+DO $$ BEGIN
+  IF (SELECT count(*) FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM deny_submit) AND event_type='DENIED' AND actor_user_id='00000000-0000-4000-8000-000000000002') <> 1 THEN RAISE EXCEPTION 'Deny audit receipt was not exactly once'; END IF;
+  IF (SELECT count(*) FROM public.project_bom_procurement_review_receipts WHERE request_key='00000000-0000-4000-8000-000000000071' AND action='DENY') <> 1 THEN RAISE EXCEPTION 'Deny replay created duplicate receipt'; END IF;
+END $$;
 SET ROLE procurement_requester_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 CREATE TEMP TABLE stale_deny_submit AS
@@ -171,8 +173,10 @@ SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 DO $$ BEGIN
   BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM stale_deny_submit),'8','DENY','Revision changed before decision','00000000-0000-4000-8000-000000000073'); RAISE EXCEPTION 'Stale deny accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM revision is stale%' THEN RAISE; END IF; END;
-  IF (SELECT status FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM stale_deny_submit)) <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Stale deny mutated request state'; END IF;
-  IF EXISTS (SELECT 1 FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM stale_deny_submit) AND event_type='DENIED') THEN RAISE EXCEPTION 'Stale deny wrote audit evidence'; END IF;
+  IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM stale_deny_submit)) ->> 'status')) <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Stale deny mutated request state'; END IF;
 END $$;
 RESET ROLE;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM stale_deny_submit) AND event_type='DENIED') THEN RAISE EXCEPTION 'Stale deny wrote audit evidence'; END IF;
+END $$;
 ROLLBACK;
