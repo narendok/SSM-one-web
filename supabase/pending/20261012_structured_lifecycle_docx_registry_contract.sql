@@ -12,7 +12,10 @@
 
 CREATE TABLE public.structured_lifecycle_docx_responsibility_assignments (
   id uuid PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
-  project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE RESTRICT,
+  scope_type text NOT NULL CHECK (scope_type IN ('SALES_OPPORTUNITY','PROJECT')),
+  opportunity_id uuid NULL REFERENCES public.sales_opportunities(id) ON DELETE RESTRICT,
+  customer_id uuid NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
+  project_id uuid NULL REFERENCES public.projects(id) ON DELETE RESTRICT,
   department_id uuid NOT NULL REFERENCES public.departments(id) ON DELETE RESTRICT,
   document_kind text NOT NULL CHECK (document_kind IN (
     'SOR','NDA','COMMERCIAL_QUOTATION','CONTRACT_REVIEW','PRS','BOM','DFMEA',
@@ -28,12 +31,16 @@ CREATE TABLE public.structured_lifecycle_docx_responsibility_assignments (
   created_at timestamptz NOT NULL DEFAULT now(),
   created_by uuid NOT NULL,
   CHECK (reviewer_employee_id IS NULL OR reviewer_employee_id <> responsible_employee_id),
+  CHECK (
+    (scope_type = 'SALES_OPPORTUNITY' AND opportunity_id IS NOT NULL AND customer_id IS NOT NULL AND project_id IS NULL)
+    OR (scope_type = 'PROJECT' AND opportunity_id IS NULL AND customer_id IS NULL AND project_id IS NOT NULL)
+  ),
   CHECK ((status = 'ACTIVE' AND revoked_by IS NULL AND revoked_at IS NULL) OR (status = 'REVOKED' AND revoked_by IS NOT NULL AND revoked_at IS NOT NULL))
 );
 GRANT ALL ON public.structured_lifecycle_docx_responsibility_assignments TO service_role;
 ALTER TABLE public.structured_lifecycle_docx_responsibility_assignments ENABLE ROW LEVEL SECURITY;
 CREATE UNIQUE INDEX structured_lifecycle_docx_one_active_assignment
-  ON public.structured_lifecycle_docx_responsibility_assignments(project_id, document_kind)
+  ON public.structured_lifecycle_docx_responsibility_assignments(scope_type, opportunity_id, project_id, document_kind)
   WHERE status = 'ACTIVE';
 
 CREATE TABLE public.structured_lifecycle_docx_template_pins (
@@ -87,6 +94,9 @@ CREATE OR REPLACE FUNCTION public.guard_structured_lifecycle_docx_assignment()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   IF TG_OP = 'DELETE'
+    OR NEW.scope_type IS DISTINCT FROM OLD.scope_type
+    OR NEW.opportunity_id IS DISTINCT FROM OLD.opportunity_id
+    OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
     OR NEW.project_id IS DISTINCT FROM OLD.project_id
     OR NEW.department_id IS DISTINCT FROM OLD.department_id
     OR NEW.document_kind IS DISTINCT FROM OLD.document_kind
@@ -136,10 +146,10 @@ BEFORE UPDATE OR DELETE ON public.structured_lifecycle_docx_registry_audit_event
 FOR EACH ROW EXECUTE FUNCTION public.reject_structured_lifecycle_docx_registry_audit_mutation();
 
 CREATE OR REPLACE FUNCTION public.resolve_structured_lifecycle_docx_registry_scope(
-  p_project_id uuid, p_document_kind text, p_assignment_id uuid, p_request_key uuid,
+  p_opportunity_id uuid, p_customer_id uuid, p_document_kind text, p_assignment_id uuid, p_request_key uuid,
   p_template_key text, p_template_version integer, p_template_schema_hash text, p_source_fingerprint text
 ) RETURNS TABLE(
-  assignment_id uuid, project_id uuid, department_id uuid, document_kind text,
+  assignment_id uuid, scope_type text, opportunity_id uuid, customer_id uuid, project_id uuid, department_id uuid, document_kind text,
   responsible_employee_id uuid, reviewer_employee_id uuid, template_id uuid,
   template_document_revision_id uuid, template_key text, template_version integer,
   template_schema_hash text
@@ -148,13 +158,32 @@ DECLARE v_actor uuid := auth.uid(); v_assignment public.structured_lifecycle_doc
 BEGIN
   IF (v_actor IS NULL AND NULLIF(current_setting('structured_docx.trusted_actor', true), '') IS NULL) OR p_request_key IS NULL OR p_template_schema_hash !~ '^[a-f0-9]{64}$' OR p_source_fingerprint !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Authenticated pinned DOCX registry lookup is required'; END IF;
   v_actor := coalesce(v_actor, NULLIF(current_setting('structured_docx.trusted_actor', true), '')::uuid);
-  SELECT * INTO v_assignment FROM public.structured_lifecycle_docx_responsibility_assignments assignment WHERE assignment.id=p_assignment_id AND assignment.project_id=p_project_id AND assignment.document_kind=p_document_kind AND assignment.status='ACTIVE' FOR UPDATE;
+  SELECT * INTO v_assignment
+  FROM public.structured_lifecycle_docx_responsibility_assignments assignment
+  WHERE assignment.id=p_assignment_id AND assignment.document_kind=p_document_kind AND assignment.status='ACTIVE'
+    AND (
+      (assignment.scope_type='SALES_OPPORTUNITY' AND assignment.opportunity_id=p_opportunity_id AND assignment.customer_id=p_customer_id)
+      OR (
+        assignment.scope_type='PROJECT' AND assignment.project_id IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM public.sales_project_handovers handover
+          JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
+          JOIN public.customer_requirements requirement ON requirement.id=baseline.customer_requirement_id
+          WHERE handover.project_id=assignment.project_id
+            AND handover.status IN ('initiated','completed')
+            AND requirement.opportunity_id=p_opportunity_id
+            AND requirement.customer_id=p_customer_id
+        )
+      )
+    )
+  FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Current assigned-person DOCX authority is unavailable'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id IN (v_assignment.responsible_employee_id, v_assignment.reviewer_employee_id) AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Current actor is not an active assigned responsible person'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.project_team_members ptm JOIN public.employees e ON e.id=ptm.employee_id WHERE ptm.project_id=p_project_id AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Project membership is required in addition to assigned-person authority'; END IF;
+  IF v_assignment.scope_type='PROJECT' AND NOT EXISTS (SELECT 1 FROM public.project_team_members ptm JOIN public.employees e ON e.id=ptm.employee_id WHERE ptm.project_id=v_assignment.project_id AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Project membership is required after handover in addition to assigned-person authority'; END IF;
   SELECT * INTO v_template FROM public.structured_lifecycle_docx_template_pins template_pin WHERE template_pin.department_id=v_assignment.department_id AND template_pin.document_kind=v_assignment.document_kind AND template_pin.template_key=p_template_key AND template_pin.template_version=p_template_version AND template_pin.template_schema_hash=p_template_schema_hash AND template_pin.status='APPROVED' FOR UPDATE;
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.department_process_templates t JOIN public.department_process_template_document_revisions r ON r.id=v_template.template_document_revision_id AND r.template_id=t.id WHERE t.id=v_template.template_id AND t.department_id=v_assignment.department_id AND t.template_key=v_template.template_key AND t.version=v_template.template_version AND t.status='ACTIVE' AND t.active_document_revision_id=v_template.template_document_revision_id) THEN RAISE EXCEPTION 'Current immutable approved template pin is unavailable'; END IF;
-  RETURN QUERY SELECT v_assignment.id,v_assignment.project_id,v_assignment.department_id,v_assignment.document_kind,v_assignment.responsible_employee_id,v_assignment.reviewer_employee_id,v_template.template_id,v_template.template_document_revision_id,v_template.template_key,v_template.template_version,v_template.template_schema_hash;
+  RETURN QUERY SELECT v_assignment.id,v_assignment.scope_type,v_assignment.opportunity_id,v_assignment.customer_id,v_assignment.project_id,v_assignment.department_id,v_assignment.document_kind,v_assignment.responsible_employee_id,v_assignment.reviewer_employee_id,v_template.template_id,v_template.template_document_revision_id,v_template.template_key,v_template.template_version,v_template.template_schema_hash;
 END;
 $$;
 
