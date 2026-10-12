@@ -10,4 +10,4 @@ BEGIN LOOP
   PERFORM pg_sleep(.02);
 END LOOP; END $wait$;
 SELECT pg_advisory_unlock(hashtextextended(concat_ws('|','sales-structured-docx',:'request_key'),0));
-SELECT public.issue_sales_structured_docx_trusted_receipt('00000000-0000-4000-8000-000000000001',:'request_key'::uuid,'00000000-0000-4000-8000-000000000901','project-drive','sales/race/'||:'request_key'||'-draft.docx','race-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,:'source_fingerprint','sales-sor-race',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','local-race-verifier');
+SELECT public.issue_sales_structured_docx_trusted_receipt('00000000-0000-4000-8000-000000000001',:'request_key'::uuid,'00000000-0000-4000-8000-000000000901','project-drive','sales/opportunity/00000000-0000-4000-8000-000000000201/'||:'request_key'||'-draft.docx','race-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,:'source_fingerprint','sales-sor-race',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','local-race-verifier');
