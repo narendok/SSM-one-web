@@ -17,6 +17,18 @@ export type ProcurementAnalysisState = "PENDING" | "AVAILABLE" | "UNAVAILABLE" |
 
 export type ProcurementReviewDecision = "ALLOW_FOR_HARDWARE_SELECTION" | "DENY";
 
+export type ProcurementAnalysisDraft = {
+  availabilityState: ProcurementAnalysisState;
+  costState: ProcurementAnalysisState;
+  sourcingState: ProcurementAnalysisState;
+  observedUnitCost: string;
+  currency: string;
+  supplierName: string;
+  leadTimeDays: string;
+  alternateComponentId: string;
+  analysisNote: string;
+};
+
 export type ProcurementReviewSubmission = {
   projectId: string;
   projectBomId: string;
@@ -97,4 +109,24 @@ export function reviewDecisionLabel(decision: ProcurementReviewDecision) {
   return decision === "ALLOW_FOR_HARDWARE_SELECTION"
     ? "Allow for Hardware selection"
     : "Deny for Procurement reasons";
+}
+
+export function procurementAnalysisPayload(draft: ProcurementAnalysisDraft) {
+  const cost = draft.observedUnitCost.trim();
+  const leadTime = draft.leadTimeDays.trim();
+  const observedUnitCost = cost === "" ? null : Number(cost);
+  const leadTimeDays = leadTime === "" ? null : Number(leadTime);
+  if ((observedUnitCost !== null && (!Number.isFinite(observedUnitCost) || observedUnitCost < 0)) || (leadTimeDays !== null && (!Number.isInteger(leadTimeDays) || leadTimeDays < 0))) return null;
+  if (!draft.analysisNote.trim()) return null;
+  return {
+    availabilityState: draft.availabilityState,
+    costState: draft.costState,
+    sourcingState: draft.sourcingState,
+    observedUnitCost,
+    currency: draft.currency.trim() || null,
+    supplierName: draft.supplierName.trim() || null,
+    leadTimeDays,
+    alternateComponentId: draft.alternateComponentId.trim() || null,
+    analysisNote: draft.analysisNote.trim(),
+  };
 }

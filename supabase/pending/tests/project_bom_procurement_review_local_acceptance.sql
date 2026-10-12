@@ -54,14 +54,21 @@ DO $$ DECLARE v_request uuid:=(SELECT request_id FROM first_submit); v_existing_
  SELECT id INTO v_existing_line FROM public.project_bom_procurement_review_request_lines WHERE request_id=v_request AND source_kind='EXISTING_COMPONENT';
  SELECT id INTO v_new_line FROM public.project_bom_procurement_review_request_lines WHERE request_id=v_request AND source_kind='NEW_PART';
  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7','ALLOW','all rows reviewed','00000000-0000-4000-8000-000000000061'); RAISE EXCEPTION 'Allow without analysis accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Allow requires an analysis%' THEN RAISE; END IF; END;
- PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_existing_line,'{"availabilityState":"AVAILABLE","costState":"TBC","sourcingState":"PENDING","analysisNote":"Supplier response pending"}'::jsonb,'00000000-0000-4000-8000-000000000062');
- PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_new_line,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"UNAVAILABLE","analysisNote":"No verified source yet"}'::jsonb,'00000000-0000-4000-8000-000000000063');
+  PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_existing_line,0,'{"availabilityState":"AVAILABLE","costState":"TBC","sourcingState":"PENDING","observedUnitCost":12.5,"currency":"INR","leadTimeDays":14,"analysisNote":"Supplier response pending"}'::jsonb,'00000000-0000-4000-8000-000000000062');
+  PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_new_line,0,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"UNAVAILABLE","analysisNote":"No verified source yet"}'::jsonb,'00000000-0000-4000-8000-000000000063');
  PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7','ALLOW','analysis complete; Hardware selection remains separate','00000000-0000-4000-8000-000000000061');
  IF (SELECT status FROM public.project_bom_procurement_review_requests WHERE id=v_request) <> 'ALLOWED_PENDING_HARDWARE_SELECTION' THEN RAISE EXCEPTION 'Allow did not remain handoff-only'; END IF;
 END $$;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',false);
 DO $$ BEGIN
- BEGIN PERFORM * FROM public.analyze_project_bom_procurement_review((SELECT request_id FROM first_submit),(SELECT id FROM public.project_bom_procurement_review_request_lines LIMIT 1),'{"availabilityState":"TBC","costState":"TBC","sourcingState":"TBC","analysisNote":"unauthorized"}'::jsonb,'00000000-0000-4000-8000-000000000064'); RAISE EXCEPTION 'Unauthorized analyst accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Procurement analysis requires procurement.edit%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.analyze_project_bom_procurement_review((SELECT request_id FROM first_submit),(SELECT id FROM public.project_bom_procurement_review_request_lines LIMIT 1),0,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"TBC","analysisNote":"unauthorized"}'::jsonb,'00000000-0000-4000-8000-000000000064'); RAISE EXCEPTION 'Unauthorized analyst accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Procurement analysis requires procurement.edit%' THEN RAISE; END IF; END;
+END $$;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
+DO $$ DECLARE v_request uuid:=(SELECT request_id FROM first_submit); v_line uuid:=(SELECT id FROM public.project_bom_procurement_review_request_lines WHERE request_id=(SELECT request_id FROM first_submit) AND source_kind='EXISTING_COMPONENT'); v_read jsonb; BEGIN
+  SELECT public.read_project_bom_procurement_review(v_request) INTO v_read;
+  IF v_read->>'pinnedBomRevision' <> '7' OR jsonb_array_length(v_read->'lines') <> 2 THEN RAISE EXCEPTION 'Scoped read did not return exact immutable request snapshot'; END IF;
+  IF ((v_read->'lines'->0->'analysis'->>'revision')::integer) <> 1 OR (v_read->'lines'->0->'analysis'->>'observedUnitCost') <> '12.5' THEN RAISE EXCEPTION 'Scoped read did not return latest audited analysis'; END IF;
+  BEGIN PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_line,0,'{"availabilityState":"AVAILABLE","costState":"AVAILABLE","sourcingState":"AVAILABLE","analysisNote":"stale"}'::jsonb,'00000000-0000-4000-8000-000000000066'); RAISE EXCEPTION 'Stale analysis revision accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Procurement request is no longer pending analysis%' AND SQLERRM NOT LIKE 'The Procurement line analysis revision is stale%' THEN RAISE; END IF; END;
 END $$;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 DO $$ BEGIN
