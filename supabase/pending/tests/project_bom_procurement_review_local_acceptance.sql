@@ -145,6 +145,8 @@ SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001'
 CREATE TEMP TABLE deny_submit AS
 SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000030','8','[{"kind":"existing","sourceBomItemId":"00000000-0000-4000-8000-000000000031","componentId":"00000000-0000-4000-8000-000000000040","referenceDesignators":"D1","quantity":1}]'::jsonb,'00000000-0000-4000-8000-000000000070');
 GRANT SELECT ON deny_submit TO procurement_assigned_test;
+-- This owner-only fixture projection is the sole direct request-table read.
+-- Review roles receive only the projection, matching the protected RPC boundary.
 CREATE TEMP TABLE deny_submit_state AS
 SELECT id, pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM deny_submit);
 GRANT SELECT ON deny_submit_state TO procurement_assigned_test;
