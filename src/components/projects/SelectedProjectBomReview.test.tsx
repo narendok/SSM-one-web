@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { savedBomReviewSearch } from "./SelectedProjectBomReview";
 import { projectBomReviewContractState } from "./ProjectBomReview";
 import { ProcurementReviewQueue } from "@/components/procurement/ProcurementReviewQueue";
-import { analysisLabel, procurementReviewContractState, procurementSubmissionAdapter, reviewDecisionLabel, reviewableBomRows } from "@/lib/project-bom-procurement-review";
+import { analysisLabel, procurementAnalysisPayload, procurementReviewContractState, procurementSubmissionAdapter, reviewDecisionLabel, reviewableBomRows } from "@/lib/project-bom-procurement-review";
 
 describe("selected project saved BOM review", () => {
   it("keeps the visible review action inside the authenticated BOM route", () => {
@@ -89,5 +89,11 @@ describe("selected project saved BOM review", () => {
     expect(procurementReviewContractState.deployed).toBe(false);
     expect(ProcurementReviewQueue).toBeTypeOf("function");
     expect(projectBomReviewContractState.submitDisabledReason).toContain("purchase order");
+  });
+
+  it("builds only a bounded Procurement analysis payload while leaving server validation and decisions protected", () => {
+    expect(procurementAnalysisPayload({ availabilityState: "AVAILABLE", costState: "TBC", sourcingState: "PENDING", observedUnitCost: "12.5", currency: "INR", supplierName: "Verified supplier", leadTimeDays: "14", alternateComponentId: "", analysisNote: "Supplier response pending" })).toEqual({ availabilityState: "AVAILABLE", costState: "TBC", sourcingState: "PENDING", observedUnitCost: 12.5, currency: "INR", supplierName: "Verified supplier", leadTimeDays: 14, alternateComponentId: null, analysisNote: "Supplier response pending" });
+    expect(procurementAnalysisPayload({ availabilityState: "TBC", costState: "TBC", sourcingState: "TBC", observedUnitCost: "-1", currency: "", supplierName: "", leadTimeDays: "", alternateComponentId: "", analysisNote: "Invalid cost" })).toBeNull();
+    expect(procurementAnalysisPayload({ availabilityState: "TBC", costState: "TBC", sourcingState: "TBC", observedUnitCost: "", currency: "", supplierName: "", leadTimeDays: "1.5", alternateComponentId: "", analysisNote: "Invalid lead time" })).toBeNull();
   });
 });
