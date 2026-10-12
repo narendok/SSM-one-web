@@ -373,28 +373,39 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.decide_project_bom_procurement_review(
-  p_request_id uuid, p_expected_bom_revision text, p_decision text, p_decision_note text, p_request_key uuid
+  p_request_id uuid, p_expected_bom_revision text, p_expected_bom_updated_at timestamptz,
+  p_reviewed_analysis_revisions jsonb, p_decision text, p_decision_note text, p_request_key uuid
 ) RETURNS TABLE(request_id uuid, replayed boolean)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-DECLARE v_actor uuid:=auth.uid(); v_scope record; v_prior public.project_bom_procurement_review_receipts%ROWTYPE; v_decision text:=upper(btrim(coalesce(p_decision,''))); v_note text:=regexp_replace(btrim(coalesce(p_decision_note,'')),'\s+',' ','g'); v_hash text; v_current_revision text;
+DECLARE v_actor uuid:=auth.uid(); v_scope record; v_prior public.project_bom_procurement_review_receipts%ROWTYPE; v_decision text:=upper(btrim(coalesce(p_decision,''))); v_note text:=regexp_replace(btrim(coalesce(p_decision_note,'')),'\s+',' ','g'); v_hash text; v_current_revision text; v_current_updated_at timestamptz; v_reviewed jsonb; v_line_count integer; v_reviewed_count integer; v_line record; v_current_analysis integer;
 BEGIN
-  IF v_actor IS NULL OR p_request_id IS NULL OR p_request_key IS NULL THEN RAISE EXCEPTION 'Authenticated actor, request, and request key are required'; END IF;
+  IF v_actor IS NULL OR p_request_id IS NULL OR p_request_key IS NULL OR p_expected_bom_updated_at IS NULL THEN RAISE EXCEPTION 'Authenticated actor, request, BOM update pin, and request key are required'; END IF;
   IF v_decision NOT IN ('ALLOW','DENY') OR char_length(v_note) NOT BETWEEN 1 AND 500 THEN RAISE EXCEPTION 'Decision and decision note are invalid'; END IF;
-  v_hash:=md5(jsonb_build_object('requestId',p_request_id,'expectedBomRevision',p_expected_bom_revision,'decision',v_decision,'decisionNote',v_note)::text);
+  v_reviewed := public.project_bom_procurement_review_canonical_decision_analyses(p_reviewed_analysis_revisions);
+  v_hash:=md5(jsonb_build_object('requestId',p_request_id,'expectedBomRevision',p_expected_bom_revision,'expectedBomUpdatedAt',p_expected_bom_updated_at,'reviewedAnalysisRevisions',v_reviewed,'decision',v_decision,'decisionNote',v_note)::text);
   PERFORM pg_advisory_xact_lock(hashtextextended('project-bom-procurement-decision-request:'||p_request_key::text,0));
   PERFORM pg_advisory_xact_lock(hashtextextended('project-bom-procurement-decision:'||p_request_id::text,0));
   SELECT * INTO v_scope FROM public.project_bom_procurement_review_procurement_scope(v_actor,p_request_id);
   SELECT * INTO v_prior FROM public.project_bom_procurement_review_receipts WHERE request_key=p_request_key FOR UPDATE;
   IF FOUND THEN SELECT * INTO v_scope FROM public.project_bom_procurement_review_procurement_scope(v_actor,p_request_id); IF v_prior.requested_by=v_actor AND v_prior.action=v_decision AND v_prior.payload_hash=v_hash THEN RETURN QUERY SELECT v_prior.request_id,true; RETURN; END IF; RAISE EXCEPTION 'Request key conflicts with a different actor or canonical payload'; END IF;
-  SELECT revision INTO v_current_revision FROM public.project_boms WHERE id=v_scope.project_bom_id FOR UPDATE;
-  IF v_current_revision IS DISTINCT FROM v_scope.pinned_bom_revision OR v_current_revision IS DISTINCT FROM p_expected_bom_revision THEN RAISE EXCEPTION 'The project BOM revision is stale'; END IF;
+  SELECT revision, updated_at INTO v_current_revision, v_current_updated_at FROM public.project_boms WHERE id=v_scope.project_bom_id FOR UPDATE;
+  IF v_current_revision IS DISTINCT FROM v_scope.pinned_bom_revision OR v_current_revision IS DISTINCT FROM p_expected_bom_revision OR v_current_updated_at IS DISTINCT FROM p_expected_bom_updated_at THEN RAISE EXCEPTION 'The project BOM source is stale'; END IF;
   IF v_scope.request_status <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Procurement request is no longer pending analysis'; END IF;
-  IF v_decision='ALLOW' AND EXISTS (SELECT 1 FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id AND NOT EXISTS (SELECT 1 FROM public.project_bom_procurement_review_analyses analysis WHERE analysis.request_line_id=line.id)) THEN RAISE EXCEPTION 'Allow requires an analysis for every submitted line'; END IF;
+  SELECT count(*) INTO v_line_count FROM public.project_bom_procurement_review_request_lines WHERE request_id=p_request_id FOR UPDATE;
+  SELECT count(*) INTO v_reviewed_count FROM jsonb_array_elements(v_reviewed);
+  IF v_decision='ALLOW' AND v_reviewed_count <> v_line_count THEN RAISE EXCEPTION 'Allow requires an exact reviewed analysis revision for every submitted line'; END IF;
+  IF v_decision='ALLOW' THEN
+    FOR v_line IN SELECT id FROM public.project_bom_procurement_review_request_lines WHERE request_id=p_request_id ORDER BY id FOR UPDATE LOOP
+      SELECT analysis_revision INTO v_current_analysis FROM public.project_bom_procurement_review_analyses WHERE request_line_id=v_line.id ORDER BY analysis_revision DESC LIMIT 1 FOR UPDATE;
+      IF v_current_analysis IS NULL OR v_current_analysis IS DISTINCT FROM (SELECT (value ->> 'analysisRevision')::integer FROM jsonb_array_elements(v_reviewed) WHERE (value ->> 'requestLineId')::uuid = v_line.id) THEN RAISE EXCEPTION 'Reviewed Procurement analysis is missing or stale'; END IF;
+    END LOOP;
+  ELSIF jsonb_array_length(v_reviewed) <> 0 THEN RAISE EXCEPTION 'Deny must not supply reviewed analysis revisions';
+  END IF;
   UPDATE public.project_bom_procurement_review_requests SET status=CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,decided_by=v_actor,decided_at=clock_timestamp(),decision_note=v_note WHERE id=p_request_id;
-  INSERT INTO public.project_bom_procurement_review_audit_events(request_id,event_type,actor_user_id,event_data) VALUES(p_request_id,CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,v_actor,jsonb_build_object('pinned_bom_revision',v_scope.pinned_bom_revision,'decision_note',v_note,'payload_hash',v_hash));
+  INSERT INTO public.project_bom_procurement_review_audit_events(request_id,event_type,actor_user_id,event_data) VALUES(p_request_id,CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,v_actor,jsonb_build_object('pinned_bom_revision',v_scope.pinned_bom_revision,'pinned_bom_updated_at',p_expected_bom_updated_at,'reviewed_analysis_revisions',v_reviewed,'decision_note',v_note,'payload_hash',v_hash));
   INSERT INTO public.project_bom_procurement_review_receipts(request_key,requested_by,action,request_id,payload_hash,result) VALUES(p_request_key,v_actor,v_decision,p_request_id,v_hash,jsonb_build_object('request_id',p_request_id,'status',CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END));
   RETURN QUERY SELECT p_request_id,false;
 END;
@@ -477,9 +488,10 @@ REVOKE ALL ON FUNCTION public.project_bom_procurement_review_submission_scope(uu
 REVOKE ALL ON FUNCTION public.project_bom_procurement_review_procurement_scope(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_bom_procurement_review_read_scope(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.project_bom_procurement_review_canonical_analysis(jsonb) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.project_bom_procurement_review_canonical_decision_analyses(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.submit_project_bom_procurement_review(uuid, uuid, text, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.analyze_project_bom_procurement_review(uuid, uuid, integer, jsonb, uuid) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.decide_project_bom_procurement_review(uuid, text, text, text, uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.decide_project_bom_procurement_review(uuid, text, timestamptz, jsonb, text, text, uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.read_project_bom_procurement_review(uuid) FROM PUBLIC, anon, authenticated, service_role;
 -- No GRANT EXECUTE statement is present. Deployment must grant only the four
 -- public entry points after real caller acceptance; helpers stay private.
