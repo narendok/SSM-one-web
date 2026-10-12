@@ -9,6 +9,7 @@ import { procurementReviewContractState, reviewableBomRows, type ProposedBomPart
 import type { Project } from "@/lib/projects";
 import { fetchProjectBoms, type ProjectBomSummary } from "@/lib/project-bom.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { ProcurementReviewQueue } from "@/components/procurement/ProcurementReviewQueue";
 
 type CatalogPart = { id: string; name: string; part_number: string; manufacturer: string | null };
 type ReviewRow = ProposedBomPart & {
@@ -77,6 +78,8 @@ export function ProjectBomReview({ project }: { project: Project }) {
     <Card className="border-warning/40 p-4">
       <div className="flex gap-3"><ShieldAlert className="mt-0.5 size-5 text-warning" aria-hidden="true" /><div><p className="font-medium">Procurement review contract awaiting activation</p><p className="mt-1 text-sm text-muted-foreground">{projectBomReviewContractState.submitDisabledReason}</p><p className="mt-2 text-xs text-muted-foreground">The planned review records MPN, availability, cost, sourcing, lead time, and alternates. A reviewer can allow a handoff for Hardware selection or deny it; neither action approves a part, releases a BOM, orders material, or changes stock. Unknown values remain TBC.</p></div></div>
     </Card>
+
+    <ProcurementReviewQueue />
 
     <Card className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-medium">Tentative rows</h3><p className="mt-1 text-sm text-muted-foreground">Existing catalog parts retain their authoritative ID, MPN, and manufacturer. New parts remain pending Procurement review.</p></div><Button type="button" variant="outline" size="sm" onClick={() => setRows((current) => [...current, newReviewRow()])}><Plus className="size-4" /> Add row</Button></div>
