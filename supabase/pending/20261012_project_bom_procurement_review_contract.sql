@@ -221,7 +221,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.project_bom_procurement_review_procurement_scope(
   p_actor uuid, p_request_id uuid
-) RETURNS TABLE(request_id uuid, project_id uuid, project_bom_id uuid, pinned_bom_revision text, request_status text)
+) RETURNS TABLE(request_id uuid, project_id uuid, project_bom_id uuid, pinned_bom_revision text, pinned_bom_updated_at timestamptz, request_status text)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -230,8 +230,8 @@ BEGIN
   IF p_actor IS NULL OR NOT public.has_permission(p_actor, 'procurement.edit') THEN
     RAISE EXCEPTION 'Procurement analysis requires procurement.edit';
   END IF;
-  SELECT request.id, request.project_id, request.project_bom_id, request.pinned_bom_revision, request.status
-  INTO request_id, project_id, project_bom_id, pinned_bom_revision, request_status
+  SELECT request.id, request.project_id, request.project_bom_id, request.pinned_bom_revision, request.pinned_bom_updated_at, request.status
+  INTO request_id, project_id, project_bom_id, pinned_bom_revision, pinned_bom_updated_at, request_status
   FROM public.project_bom_procurement_review_requests request
   JOIN public.employees employee ON employee.user_id = p_actor AND employee.employment_status = 'ACTIVE'
   JOIN public.employee_departments membership ON membership.employee_id = employee.id
