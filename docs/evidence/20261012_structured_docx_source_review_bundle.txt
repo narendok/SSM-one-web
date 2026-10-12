@@ -3,24 +3,22 @@ Status: REVIEW ONLY — UNACCEPTED. This bundle authorizes no installation, gran
 
 Scope retained: OPPORTUNITY-2026-0013 / MASTER-2026-0001 revision 1 and existing HTML history are preserved. Procurement review and Sales sample archive/restore remain separate and unaccepted.
 
-CURRENT_HEAD=5ba0d4afe26ac5b4da03d511b3f5ef6e34660765
-HEAD_AUTHOR_DATE=2026-10-12T01:57:59Z
-CURRENT_GIT_STATUS=?? docs/evidence/20261012_structured_docx_source_review_bundle.txt;
+CURRENT_HEAD=a6add9acf108c709ed166c88c60fa5e7f704ab6a
+HEAD_AUTHOR_DATE=2026-10-12T02:06:21Z
+CURRENT_GIT_STATUS=CLEAN
 
 MANAGED PREFLIGHT EVIDENCE
 - File: docs/evidence/20261012_structured_docx_managed_preflight_result.json
-- Run: read-only only through docs/planning/20261012_structured_docx_managed_preflight_read_only.sql
-- Payload includes schema columns, function definitions, policies, table grants, exact source/location rows, constraints, extensions, and checks.
-- It contains execution time and database execution identity, without credentials.
-ca07fc4cf2e46896cafe17dce67b89b9df4a3998d8f5a6ef418aec90e05c42a0  docs/evidence/20261012_structured_docx_managed_preflight_result.json
+- Run: read-only only through docs/planning/20261012_structured_docx_managed_preflight_read_only.sql.
+- Captured evidence is credential-free and records execution time/identity, schema columns, function definitions, policies, grants, source/location facts, extensions, and checks.
+SHA256 ca07fc4cf2e46896cafe17dce67b89b9df4a3998d8f5a6ef418aec90e05c42a0  docs/evidence/20261012_structured_docx_managed_preflight_result.json
 
 ORDERED PENDING SQL — DO NOT EXECUTE
 Dependencies are strict: registry → folder discovery → materialization → private object enforcement → trusted receipt authority.
-The materialization contract derives/persists request facts; object enforcement requires its attempt tables; trusted receipt authority consumes the materialization and enforcement facts.
-
+The corrected registry uses requirement_baselines.requirement_id, partial active-assignment uniqueness per scope, responsible-person-only write authority, and no caller-controlled trusted actor setting.
 
 ===== BEGIN supabase/pending/20261012_structured_lifecycle_docx_registry_contract.sql =====
-SHA256 95ad998175dcc1741141b4b3cd1be9d75854c32671327c54cba5e9eb36fe4e23
+SHA256 33aa3c52708e4aff1c0ff56b3d0baaa26e0edcc48b98d3ee675fd80ede1fd7c6
 -- SOURCE-ONLY, UNDEPLOYED REVIEW CONTRACT. DO NOT EXECUTE.
 --
 -- Configurable document responsibility and immutable approved-template registry
@@ -62,9 +60,14 @@ CREATE TABLE public.structured_lifecycle_docx_responsibility_assignments (
 );
 GRANT ALL ON public.structured_lifecycle_docx_responsibility_assignments TO service_role;
 ALTER TABLE public.structured_lifecycle_docx_responsibility_assignments ENABLE ROW LEVEL SECURITY;
-CREATE UNIQUE INDEX structured_lifecycle_docx_one_active_assignment
-  ON public.structured_lifecycle_docx_responsibility_assignments(scope_type, opportunity_id, project_id, document_kind)
-  WHERE status = 'ACTIVE';
+-- PostgreSQL UNIQUE treats NULL keys as distinct. Separate partial indexes make
+-- the active root unique for both mutually-exclusive scope shapes.
+CREATE UNIQUE INDEX structured_lifecycle_docx_one_active_sales_assignment
+  ON public.structured_lifecycle_docx_responsibility_assignments(opportunity_id, document_kind)
+  WHERE status = 'ACTIVE' AND scope_type = 'SALES_OPPORTUNITY';
+CREATE UNIQUE INDEX structured_lifecycle_docx_one_active_project_assignment
+  ON public.structured_lifecycle_docx_responsibility_assignments(project_id, document_kind)
+  WHERE status = 'ACTIVE' AND scope_type = 'PROJECT';
 
 CREATE TABLE public.structured_lifecycle_docx_template_pins (
   id uuid PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
@@ -179,8 +182,10 @@ CREATE OR REPLACE FUNCTION public.resolve_structured_lifecycle_docx_registry_sco
 ) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_assignment public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE; v_template public.structured_lifecycle_docx_template_pins%ROWTYPE;
 BEGIN
-  IF (v_actor IS NULL AND NULLIF(current_setting('structured_docx.trusted_actor', true), '') IS NULL) OR p_request_key IS NULL OR p_template_schema_hash !~ '^[a-f0-9]{64}$' OR p_source_fingerprint !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Authenticated pinned DOCX registry lookup is required'; END IF;
-  v_actor := coalesce(v_actor, NULLIF(current_setting('structured_docx.trusted_actor', true), '')::uuid);
+  -- This resolver never accepts an ambient custom setting as actor identity.
+  -- Service-only receipt routines pass a trusted actor as an explicit argument
+  -- and verify it independently before this authenticated authority check.
+  IF v_actor IS NULL OR p_request_key IS NULL OR p_template_schema_hash !~ '^[a-f0-9]{64}$' OR p_source_fingerprint !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Authenticated pinned DOCX registry lookup is required'; END IF;
   SELECT * INTO v_assignment
   FROM public.structured_lifecycle_docx_responsibility_assignments assignment
   WHERE assignment.id=p_assignment_id AND assignment.document_kind=p_document_kind AND assignment.status='ACTIVE'
@@ -192,7 +197,7 @@ BEGIN
           SELECT 1
           FROM public.sales_project_handovers handover
           JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
-          JOIN public.customer_requirements requirement ON requirement.id=baseline.customer_requirement_id
+          JOIN public.customer_requirements requirement ON requirement.id=baseline.requirement_id
           WHERE handover.project_id=assignment.project_id
             AND handover.status IN ('initiated','completed')
             AND requirement.opportunity_id=p_opportunity_id
@@ -202,7 +207,7 @@ BEGIN
     )
   FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Current assigned-person DOCX authority is unavailable'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id IN (v_assignment.responsible_employee_id, v_assignment.reviewer_employee_id) AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Current actor is not an active assigned responsible person'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Current actor is not the active assigned responsible person'; END IF;
   IF v_assignment.scope_type='PROJECT' AND NOT EXISTS (SELECT 1 FROM public.project_team_members ptm JOIN public.employees e ON e.id=ptm.employee_id WHERE ptm.project_id=v_assignment.project_id AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Project membership is required after handover in addition to assigned-person authority'; END IF;
   SELECT * INTO v_template FROM public.structured_lifecycle_docx_template_pins template_pin WHERE template_pin.department_id=v_assignment.department_id AND template_pin.document_kind=v_assignment.document_kind AND template_pin.template_key=p_template_key AND template_pin.template_version=p_template_version AND template_pin.template_schema_hash=p_template_schema_hash AND template_pin.status='APPROVED' FOR UPDATE;
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.department_process_templates t JOIN public.department_process_template_document_revisions r ON r.id=v_template.template_document_revision_id AND r.template_id=t.id WHERE t.id=v_template.template_id AND t.department_id=v_assignment.department_id AND t.template_key=v_template.template_key AND t.version=v_template.template_version AND t.status='ACTIVE' AND t.active_document_revision_id=v_template.template_document_revision_id) THEN RAISE EXCEPTION 'Current immutable approved template pin is unavailable'; END IF;
@@ -413,7 +418,6 @@ REVOKE ALL ON FUNCTION public.assign_project_structured_docx_responsibility(uuid
 REVOKE ALL ON FUNCTION public.revoke_structured_lifecycle_docx_responsibility(uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.approve_structured_lifecycle_docx_template_pin(uuid,text,uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.revoke_structured_lifecycle_docx_template_pin(uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
-
 ===== END supabase/pending/20261012_structured_lifecycle_docx_registry_contract.sql =====
 
 ===== BEGIN supabase/pending/20261012_sales_structured_docx_folder_discovery.sql =====
@@ -473,7 +477,7 @@ REVOKE ALL ON FUNCTION public.discover_sales_opportunity_structured_draft_folder
 ===== END supabase/pending/20261012_sales_structured_docx_folder_discovery.sql =====
 
 ===== BEGIN supabase/pending/20261012_sales_structured_docx_materialization_contract.sql =====
-SHA256 d76abfaac092f90058b364d7ade205cb8332aa649fc3d4effffeadb6a635c4e1
+SHA256 a0fa127219d30d862120de01715b24be99c5e50b81efd01ee59b1a9fe4818edd
 -- SOURCE-ONLY, UNDEPLOYED REVIEW CONTRACT.
 --
 -- This additive proposal preserves the installed HTML-only Sales materialization
@@ -701,7 +705,7 @@ BEGIN
           AND EXISTS (
             SELECT 1 FROM public.sales_project_handovers handover
             JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
-            JOIN public.customer_requirements requirement ON requirement.id=baseline.customer_requirement_id
+            JOIN public.customer_requirements requirement ON requirement.id=baseline.requirement_id
             WHERE handover.project_id=registry_assignment.project_id
               AND handover.status IN ('initiated','completed')
               AND requirement.opportunity_id=p_opportunity_id
@@ -1155,7 +1159,7 @@ GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_current_path_creat
 ===== END supabase/pending/20261012_structured_lifecycle_docx_private_object_enforcement.sql =====
 
 ===== BEGIN supabase/pending/20261012_structured_lifecycle_docx_trusted_receipt_authority.sql =====
-SHA256 c81ee0b626ca090ad66f46566911f70b5d3e29eec037207a2b3528dff5564d9f
+SHA256 8f82805d2c1b7568802700f22c3394158df25d63c2a41bd9b13a933bf22d4bf9
 -- SOURCE-ONLY, UNDEPLOYED REVIEW CONTRACT.
 --
 -- Trusted receipt authority for structured Sales DOCX. This is intentionally
@@ -1249,8 +1253,51 @@ BEGIN
     OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE')
   THEN RAISE EXCEPTION 'Trusted DOCX receipt no longer has an active assigned-person location scope'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.master_specifications s WHERE s.id=v_request.master_specification_id AND s.current_version_id=v_request.master_specification_version_id) THEN RAISE EXCEPTION 'Trusted DOCX receipt source is no longer current'; END IF;
-  PERFORM set_config('structured_docx.trusted_actor', p_actor_user_id::text, true);
-  PERFORM public.resolve_structured_lifecycle_docx_registry_scope(v_request.opportunity_id, v_request.customer_id, v_request.document_kind, v_assignment.registry_assignment_id, v_request.request_key, v_request.template_key, v_request.template_version, v_request.template_schema_hash, v_request.source_fingerprint);
+  -- The registry resolver only trusts auth.uid(). This service-only function
+  -- has already proven p_actor_user_id against the request and responsibility;
+  -- it therefore repeats the registry pin/source checks locally rather than
+  -- smuggling an identity through a caller-controlled custom setting.
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.structured_lifecycle_docx_responsibility_assignments registry_assignment
+    JOIN public.structured_lifecycle_docx_template_pins template_pin
+      ON template_pin.department_id=registry_assignment.department_id
+     AND template_pin.document_kind=registry_assignment.document_kind
+     AND template_pin.template_key=v_request.template_key
+     AND template_pin.template_version=v_request.template_version
+     AND template_pin.template_schema_hash=v_request.template_schema_hash
+     AND template_pin.status='APPROVED'
+    JOIN public.department_process_templates template
+      ON template.id=template_pin.template_id
+     AND template.department_id=registry_assignment.department_id
+     AND template.template_key=template_pin.template_key
+     AND template.version=template_pin.template_version
+     AND template.status='ACTIVE'
+     AND template.active_document_revision_id=template_pin.template_document_revision_id
+    JOIN public.department_process_template_document_revisions template_revision
+      ON template_revision.id=template_pin.template_document_revision_id
+     AND template_revision.template_id=template.id
+    WHERE registry_assignment.id=v_assignment.registry_assignment_id
+      AND registry_assignment.status='ACTIVE'
+      AND registry_assignment.responsible_employee_id=v_assignment.responsible_employee_id
+      AND registry_assignment.department_id=v_assignment.department_id
+      AND registry_assignment.document_kind=v_request.document_kind
+      AND (
+        (registry_assignment.scope_type='SALES_OPPORTUNITY'
+          AND registry_assignment.opportunity_id=v_request.opportunity_id
+          AND registry_assignment.customer_id=v_request.customer_id)
+        OR (registry_assignment.scope_type='PROJECT' AND EXISTS (
+          SELECT 1
+          FROM public.sales_project_handovers handover
+          JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
+          JOIN public.customer_requirements requirement ON requirement.id=baseline.requirement_id
+          WHERE handover.project_id=registry_assignment.project_id
+            AND handover.status IN ('initiated','completed')
+            AND requirement.opportunity_id=v_request.opportunity_id
+            AND requirement.customer_id=v_request.customer_id
+        ))
+      )
+  ) THEN RAISE EXCEPTION 'Trusted DOCX receipt registry responsibility or template pin changed'; END IF;
   IF NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.bucket_id=p_storage_bucket AND o.name=p_storage_path AND o.version=p_object_version AND o.archived_at IS NULL AND coalesce(o.is_delete_marker,false)=false) THEN RAISE EXCEPTION 'Trusted DOCX receipt object version is absent or replaced'; END IF;
 END;
 $$;
@@ -1305,8 +1352,31 @@ BEGIN
   SELECT * INTO v_location FROM public.sales_opportunity_document_locations WHERE id=v_request.location_id FOR UPDATE;
   SELECT * INTO v_attempt FROM public.sales_opportunity_structured_docx_storage_attempts WHERE request_key=p_request_key FOR SHARE;
   IF NOT FOUND OR v_assignment.status<>'ACTIVE' OR v_location.status<>'ACTIVE' OR v_location.private_storage_bucket<>v_attempt.storage_bucket OR v_attempt.storage_path<>v_location.private_storage_prefix||p_request_key::text||'-draft.docx' OR v_attempt.object_version IS NULL OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Trusted DOCX server scope has no active assigned-person request/object'; END IF;
-  SELECT * INTO v_registry FROM public.resolve_structured_lifecycle_docx_registry_scope(p_opportunity_id,p_customer_id,p_document_kind,v_assignment.registry_assignment_id,p_request_key,p_template_key,p_template_version,p_template_schema_hash,p_source_fingerprint);
-  RETURN QUERY SELECT p_actor_user_id,v_assignment.id,v_request.request_key,v_registry.scope_type,p_opportunity_id,p_customer_id,v_registry.project_id,v_request.document_kind,v_assignment.department_id,v_assignment.responsible_employee_id,NULL::uuid,v_registry.template_id,v_request.template_key,v_request.template_version,v_registry.template_document_revision_id,v_request.template_schema_hash,v_request.source_fingerprint,v_attempt.storage_bucket,v_attempt.storage_path,v_attempt.object_version;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.structured_lifecycle_docx_responsibility_assignments registry_assignment
+    JOIN public.structured_lifecycle_docx_template_pins template_pin
+      ON template_pin.department_id=registry_assignment.department_id
+     AND template_pin.document_kind=registry_assignment.document_kind
+     AND template_pin.template_key=v_request.template_key
+     AND template_pin.template_version=v_request.template_version
+     AND template_pin.template_schema_hash=v_request.template_schema_hash
+     AND template_pin.status='APPROVED'
+    WHERE registry_assignment.id=v_assignment.registry_assignment_id
+      AND registry_assignment.status='ACTIVE'
+      AND registry_assignment.responsible_employee_id=v_assignment.responsible_employee_id
+      AND registry_assignment.department_id=v_assignment.department_id
+      AND registry_assignment.document_kind=v_request.document_kind
+  ) THEN RAISE EXCEPTION 'Trusted DOCX server scope registry responsibility or template pin changed'; END IF;
+  RETURN QUERY SELECT p_actor_user_id,v_assignment.id,v_request.request_key,
+    (SELECT scope_type FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=v_assignment.registry_assignment_id),
+    p_opportunity_id,p_customer_id,
+    (SELECT project_id FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=v_assignment.registry_assignment_id),
+    v_request.document_kind,v_assignment.department_id,v_assignment.responsible_employee_id,NULL::uuid,
+    (SELECT template_id FROM public.structured_lifecycle_docx_template_pins WHERE department_id=v_assignment.department_id AND document_kind=v_request.document_kind AND template_key=v_request.template_key AND template_version=v_request.template_version AND template_schema_hash=v_request.template_schema_hash AND status='APPROVED'),
+    v_request.template_key,v_request.template_version,
+    (SELECT template_document_revision_id FROM public.structured_lifecycle_docx_template_pins WHERE department_id=v_assignment.department_id AND document_kind=v_request.document_kind AND template_key=v_request.template_key AND template_version=v_request.template_version AND template_schema_hash=v_request.template_schema_hash AND status='APPROVED'),
+    v_request.template_schema_hash,v_request.source_fingerprint,v_attempt.storage_bucket,v_attempt.storage_path,v_attempt.object_version;
 END;
 $$;
 
@@ -1346,147 +1416,26 @@ GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_trusted_issue_scop
 GRANT EXECUTE ON FUNCTION public.issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint) TO service_role;
 GRANT EXECUTE ON FUNCTION public.consume_sales_structured_docx_trusted_receipt(uuid,uuid) TO service_role;
-
 ===== END supabase/pending/20261012_structured_lifecycle_docx_trusted_receipt_authority.sql =====
 
-FUNCTION SIGNATURES / GRANT-POLICY DIFF REVIEW
-Function signatures, REVOKE/GRANT statements, and CREATE POLICY statements below are extracted from the five pending files. The SQL contents above remain authoritative.
+REVIEW ASSERTIONS AND ISOLATED EXECUTION
+- Registry acceptance: LOCAL_STRUCTURED_LIFECYCLE_DOCX_REGISTRY_DISPOSABLE=yes bash supabase/pending/tests/run_structured_lifecycle_docx_registry_local_acceptance.sh
+  Assertions: verified requirement_id handover mapping; direct partial-index conflicts for Sales and Project scope; reviewer write denial; revoked/stale denial; caller setting forgery denial; rollback/cleanup.
+- Registry concurrency: LOCAL_STRUCTURED_LIFECYCLE_DOCX_REGISTRY_DISPOSABLE=yes bash supabase/pending/tests/run_structured_lifecycle_docx_registry_local_concurrency.sh
+  Assertions: two-session active-assignment race; one winner only; cleanup.
+- DOCX integration: LOCAL_SALES_STRUCTURED_DOCX_DISPOSABLE=yes bash supabase/pending/tests/run_sales_structured_docx_materialization_local_acceptance.sh
+  Assertions: representative broad-policy coexistence, assigned/cross-person boundary, create-only current-path object, receipt/commit/replay path, transactional rollback and cleanup.
+- Source mapping tests: bunx vitest run src/lib/structured-lifecycle-docx-*.test.ts.
 
+FUNCTION / ACCESS REVIEW
+- Registry management and resolver entrypoints are explicitly revoked before intentional service-only grants; direct caller table access stays unavailable.
+- Trusted receipt issue remains server-capability-only; no authenticated receipt-issuer grant is present.
+- Private object enforcement overlays reserved DOCX paths; ordinary Drive/register/revision access is separately constrained for DOCX-tagged materializations while legacy HTML behavior remains outside this proposal.
+- Reviewers are read/review-only by contract and cannot save, upload, own, or bypass the responsible-person assignment.
 
---- supabase/pending/20261012_structured_lifecycle_docx_registry_contract.sql ---
-93:CREATE OR REPLACE FUNCTION public.guard_structured_lifecycle_docx_assignment()
-117:CREATE OR REPLACE FUNCTION public.guard_structured_lifecycle_docx_template_pin()
-140:CREATE OR REPLACE FUNCTION public.reject_structured_lifecycle_docx_registry_audit_mutation()
-148:CREATE OR REPLACE FUNCTION public.resolve_structured_lifecycle_docx_registry_scope(
-195:CREATE OR REPLACE FUNCTION public.assert_structured_lifecycle_docx_registry_manager(
-215:CREATE OR REPLACE FUNCTION public.assign_project_structured_docx_responsibility(
-248:CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_registry_manager(
-267:CREATE OR REPLACE FUNCTION public.assign_sales_structured_docx_responsibility(
-301:CREATE OR REPLACE FUNCTION public.revoke_structured_lifecycle_docx_responsibility(p_assignment_id uuid, p_request_key uuid)
-329:CREATE OR REPLACE FUNCTION public.approve_structured_lifecycle_docx_template_pin(
-362:CREATE OR REPLACE FUNCTION public.revoke_structured_lifecycle_docx_template_pin(p_template_pin_id uuid, p_request_key uuid)
-386:REVOKE ALL ON FUNCTION public.resolve_structured_lifecycle_docx_registry_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated, service_role;
-387:REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_registry_manager(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
-388:REVOKE ALL ON FUNCTION public.assign_sales_structured_docx_responsibility(uuid,uuid,uuid,text,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
-389:REVOKE ALL ON FUNCTION public.assign_project_structured_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
-390:REVOKE ALL ON FUNCTION public.revoke_structured_lifecycle_docx_responsibility(uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
-391:REVOKE ALL ON FUNCTION public.approve_structured_lifecycle_docx_template_pin(uuid,text,uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
-392:REVOKE ALL ON FUNCTION public.revoke_structured_lifecycle_docx_template_pin(uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
+UNRESOLVED MANAGED ACCEPTANCE REQUIREMENTS
+- Re-run the read-only managed preflight immediately before any review decision and compare its output with these exact hashes.
+- After separate approval, use managed non-owner assigned, unassigned, cross-department, revoked, and concurrent-replacement identities against the accepted contracts; this bundle does not supply or create identities.
+- Activation remains gated on a reviewed protected upload request, Storage policy installation, trusted server byte-reader/receipt deployment, and transactional commit verification. No activation is approved by this bundle.
 
---- supabase/pending/20261012_sales_structured_docx_folder_discovery.sql ---
-7:CREATE OR REPLACE FUNCTION public.discover_sales_opportunity_structured_draft_folder(
-51:REVOKE ALL ON FUNCTION public.discover_sales_opportunity_structured_draft_folder(uuid,uuid,uuid,uuid)
-
---- supabase/pending/20261012_sales_structured_docx_materialization_contract.sql ---
-127:CREATE OR REPLACE FUNCTION public.reject_sales_structured_docx_history_mutation()
-131:CREATE OR REPLACE FUNCTION public.guard_sales_structured_docx_assignment()
-151:CREATE OR REPLACE FUNCTION public.guard_sales_structured_docx_storage_attempt()
-180:CREATE OR REPLACE FUNCTION public.record_sales_structured_docx_object_verification(
-203:CREATE OR REPLACE FUNCTION public.resolve_sales_structured_docx_assignment(
-247:CREATE OR REPLACE FUNCTION public.request_sales_structured_docx_materialization(
-284:CREATE OR REPLACE FUNCTION public.authorize_sales_structured_docx_upload(
-346:CREATE OR REPLACE FUNCTION public.commit_sales_structured_docx_materialization(
-380:CREATE OR REPLACE FUNCTION public.read_sales_structured_docx_materializations(p_opportunity_id uuid, p_customer_id uuid, p_assignment_id uuid)
-390:REVOKE ALL ON FUNCTION public.reject_sales_structured_docx_history_mutation() FROM PUBLIC, anon;
-391:REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_assignment() FROM PUBLIC, anon;
-392:REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_storage_attempt() FROM PUBLIC, anon;
-393:REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
-394:REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
-395:REVOKE ALL ON FUNCTION public.authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,bigint) FROM PUBLIC, anon, authenticated, service_role;
-396:REVOKE ALL ON FUNCTION public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text) FROM PUBLIC, anon, authenticated, service_role;
-397:REVOKE ALL ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,text,bigint,uuid) FROM PUBLIC, anon, authenticated, service_role;
-398:REVOKE ALL ON FUNCTION public.read_sales_structured_docx_materializations(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
-
---- supabase/pending/20261012_structured_lifecycle_docx_private_object_enforcement.sql ---
-9:CREATE OR REPLACE FUNCTION public.is_sales_structured_docx_request_path(p_bucket text, p_path text)
-18:CREATE OR REPLACE FUNCTION public.can_stage_sales_structured_docx_object(p_bucket text, p_path text)
-47:CREATE OR REPLACE FUNCTION public.can_upload_sales_structured_docx_object(
-61:CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_uploaded_object(
-109:CREATE OR REPLACE FUNCTION public.can_read_sales_structured_docx_object(p_bucket text, p_path text)
-130:CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_current_path_create_only(
-169:CREATE OR REPLACE FUNCTION public.is_sales_structured_docx_drive_node(p_node_id uuid)
-181:CREATE OR REPLACE FUNCTION public.can_read_sales_structured_docx_drive_node(p_node_id uuid)
-198:CREATE OR REPLACE FUNCTION public.can_read_sales_structured_docx_drive_revision(p_revision_id uuid)
-207:CREATE OR REPLACE FUNCTION public.can_read_sales_structured_docx_register(p_register_id uuid)
-216:CREATE POLICY sales_structured_docx_read_restrictive ON storage.objects AS RESTRICTIVE FOR SELECT TO authenticated
-218:CREATE POLICY sales_structured_docx_insert_restrictive ON storage.objects AS RESTRICTIVE FOR INSERT TO authenticated
-228:CREATE POLICY sales_structured_docx_update_restrictive ON storage.objects AS RESTRICTIVE FOR UPDATE TO authenticated
-231:CREATE POLICY sales_structured_docx_delete_restrictive ON storage.objects AS RESTRICTIVE FOR DELETE TO authenticated
-238:CREATE POLICY sales_structured_docx_drive_nodes_read_restrictive ON public.drive_nodes AS RESTRICTIVE FOR SELECT TO authenticated
-240:CREATE POLICY sales_structured_docx_drive_revisions_read_restrictive ON public.drive_node_revisions AS RESTRICTIVE FOR SELECT TO authenticated
-248:CREATE POLICY sales_structured_docx_registers_read_restrictive ON public.document_control_registers AS RESTRICTIVE FOR SELECT TO authenticated
-257:REVOKE ALL ON FUNCTION public.is_sales_structured_docx_request_path(text,text) FROM PUBLIC, anon;
-258:REVOKE ALL ON FUNCTION public.can_stage_sales_structured_docx_object(text,text) FROM PUBLIC, anon;
-259:REVOKE ALL ON FUNCTION public.can_upload_sales_structured_docx_object(text,text,text,bigint) FROM PUBLIC, anon;
-260:REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_object(text,text) FROM PUBLIC, anon;
-261:REVOKE ALL ON FUNCTION public.is_sales_structured_docx_drive_node(uuid) FROM PUBLIC, anon;
-262:REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_drive_node(uuid) FROM PUBLIC, anon;
-263:REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_drive_revision(uuid) FROM PUBLIC, anon;
-264:REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_register(uuid) FROM PUBLIC, anon;
-265:REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_uploaded_object(uuid,text,text,text) FROM PUBLIC, anon, authenticated;
-266:REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_current_path_create_only(uuid,text,text,text) FROM PUBLIC, anon;
-267:GRANT EXECUTE ON FUNCTION public.is_sales_structured_docx_request_path(text,text) TO authenticated, service_role;
-268:GRANT EXECUTE ON FUNCTION public.can_stage_sales_structured_docx_object(text,text) TO authenticated, service_role;
-269:GRANT EXECUTE ON FUNCTION public.can_upload_sales_structured_docx_object(text,text,text,bigint) TO authenticated, service_role;
-270:GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_object(text,text) TO authenticated, service_role;
-271:GRANT EXECUTE ON FUNCTION public.is_sales_structured_docx_drive_node(uuid) TO authenticated, service_role;
-272:GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_drive_node(uuid) TO authenticated, service_role;
-273:GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_drive_revision(uuid) TO authenticated, service_role;
-274:GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_register(uuid) TO authenticated, service_role;
-275:GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_uploaded_object(uuid,text,text,text) TO service_role;
-276:GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_current_path_create_only(uuid,text,text,text) TO authenticated, service_role;
-
---- supabase/pending/20261012_structured_lifecycle_docx_trusted_receipt_authority.sql ---
-32:CREATE OR REPLACE FUNCTION public.guard_sales_structured_docx_trusted_receipt()
-65:CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_issue_scope(
-100:CREATE OR REPLACE FUNCTION public.issue_sales_structured_docx_trusted_receipt(
-128:CREATE OR REPLACE FUNCTION public.resolve_sales_structured_docx_server_scope(
-157:CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(
-172:CREATE OR REPLACE FUNCTION public.consume_sales_structured_docx_trusted_receipt(p_receipt_id uuid, p_request_key uuid)
-180:REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_server_scope(uuid,uuid,uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated;
-181:REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_trusted_receipt() FROM PUBLIC, anon, authenticated;
-182:REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_trusted_issue_scope(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text) FROM PUBLIC, anon, authenticated;
-183:REVOKE ALL ON FUNCTION public.issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text) FROM PUBLIC, anon, authenticated;
-184:REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint) FROM PUBLIC, anon, authenticated;
-185:REVOKE ALL ON FUNCTION public.consume_sales_structured_docx_trusted_receipt(uuid,uuid) FROM PUBLIC, anon, authenticated;
-186:GRANT EXECUTE ON FUNCTION public.resolve_sales_structured_docx_server_scope(uuid,uuid,uuid,text,uuid,uuid,text,integer,text,text) TO service_role;
-187:GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_trusted_issue_scope(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text) TO service_role;
-188:GRANT EXECUTE ON FUNCTION public.issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text) TO service_role;
-189:GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint) TO service_role;
-190:GRANT EXECUTE ON FUNCTION public.consume_sales_structured_docx_trusted_receipt(uuid,uuid) TO service_role;
-
-SOURCE MAPPING (ALL RUNTIME PATHS REMAIN GATED)
-- src/lib/structured-lifecycle-docx-private-object-reader.server.ts — current-path immutable identity checks before/after byte read.
-- src/lib/structured-lifecycle-docx-private-object-bridge.server.ts — server-only bounded DOCX verification bound to actor, source, template, assignment and object identity.
-- src/lib/structured-lifecycle-docx-sales-orchestration.server.ts — service-only receipt/recheck/atomic commit adapter.
-- src/lib/structured-lifecycle-docx-private-object-bridge.functions.ts — gated authorized upload, verification/receipt and commit entrypoints; no acceptance gate means no operational DOCX Save.
-- src/components/lifecycle/StructuredTemplatePreview.tsx — existing local DOCX export is retained; private Save remains disabled.
-
-ISOLATED ACCEPTANCE COMMANDS AND RECORDED EXPECTED OUTPUT
-1. LOCAL_SALES_STRUCTURED_DOCX_DISPOSABLE=yes bash supabase/pending/tests/run_sales_structured_docx_materialization_local_acceptance.sh
-   Expected markers: SALES_STRUCTURED_DOCX_EXECUTION_COMPLETE=true; CLEANUP_VERIFIED docx_fixture_removed=true.
-   Scope: disposable local database; applies pending contracts there only, rolls it back by deleting the temporary database directory.
-2. python3 supabase/pending/tests/check_structured_lifecycle_docx_private_object_enforcement_static.py
-   Expected marker: static enforcement guard pass.
-3. python3 supabase/pending/tests/check_structured_lifecycle_docx_trusted_receipt_static.py
-   Expected marker: static trusted-receipt guard pass.
-4. bunx vitest run src/lib/structured-lifecycle-docx-*.test.ts
-   Scope: renderer, bounded OOXML verifier, immutable reader, server bridge, orchestration, and registry boundary.
-5. bunx tsgo; bun run build; git diff --check
-   Scope: source type/build/whitespace checks.
-
-Named test coverage: authenticated assigned scope; unassigned/cross-scope denials; stale/revoked assignments; forged/cross-actor receipt denial; object replacement/changed checksum denial; replay/conflict; create-only reserved-path prohibition for update/delete/rename; Drive/revision/register read scope; atomic rollback/concurrency-oriented receipt/commit checks. These remain isolated source/disposable evidence, not managed non-owner caller proof.
-
-UNRESOLVED MANAGED NON-OWNER IDENTITY REQUIREMENTS
-- Run managed caller-authenticated acceptance with distinct assigned, unassigned, cross-department, and revoked actors.
-- Prove restrictive policies still deny replacement/update/delete/rename under the existing permissive Drive/Storage policies.
-- Verify exact current source, active folder binding, template pin, responsibility assignment, object metadata/version, receipt recheck, atomic rollback, and replay behavior in the managed environment.
-- Do not create identities, fixtures, assignments, bindings, template pins, or private objects until separately and explicitly approved.
-
-ACTIVATION STEPS (ONLY AFTER A SPECIFIC AUTHORIZATION)
-1. Re-run and independently review the read-only managed preflight evidence and all five exact hashes.
-2. Review the policy/function/grant diff and approve the ordered installation plan explicitly.
-3. Install only the approved ordered contracts, then run approved managed non-owner acceptance without broad grants or history replay.
-4. Configure only approved existing responsibility/template/location facts, retain rollback evidence, and keep the UI gate disabled until acceptance is signed off.
-5. Enable the private DOCX Save handler only after the preceding checks succeed and an explicit authorization names that action.
-
+END OF REVIEW BUNDLE
