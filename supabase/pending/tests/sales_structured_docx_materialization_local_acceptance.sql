@@ -35,8 +35,10 @@ DO $storage_policy$
 DECLARE v_path text := (SELECT storage_path FROM docx_storage_path);
 BEGIN
   BEGIN INSERT INTO storage.objects(bucket_id,name,version) VALUES ('project-drive',v_path,'fixture-v2'); RAISE EXCEPTION 'LOCAL_DOCX_FAIL replacement accepted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
-  BEGIN UPDATE storage.objects SET version='fixture-v2' WHERE bucket_id='project-drive' AND name=v_path; RAISE EXCEPTION 'LOCAL_DOCX_FAIL update accepted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
-  BEGIN DELETE FROM storage.objects WHERE bucket_id='project-drive' AND name=v_path; RAISE EXCEPTION 'LOCAL_DOCX_FAIL delete accepted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  UPDATE storage.objects SET version='fixture-v2' WHERE bucket_id='project-drive' AND name=v_path;
+  IF FOUND THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL update accepted'; END IF;
+  DELETE FROM storage.objects WHERE bucket_id='project-drive' AND name=v_path;
+  IF FOUND THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL delete accepted'; END IF;
 END;
 $storage_policy$;
 RESET ROLE;
