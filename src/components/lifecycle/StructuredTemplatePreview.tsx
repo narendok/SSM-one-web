@@ -637,33 +637,13 @@ export function StructuredTemplatePreview({
   // will perform request -> exact upload -> verification -> receipt -> commit
   // after reviewed deployment acceptance; local export remains independent.
   const saveVerifiedDocxWhenAccepted = async () => {
-    if (!source.data || !isStructuredSalesPreviewKind(kind)) throw new Error("An exact Sales source is required for DOCX Save.");
-    const renderedDocx = await renderStructuredLifecycleDocx(kind, source.data, localEditsForStructuredPreview(kind, effectiveEdits));
-    if (renderedDocx.bytes.byteLength <= 0 || renderedDocx.bytes.byteLength > structuredDraftStorageLimit) throw new Error("The DOCX upload must be between 1 byte and 10 MB.");
-    const requestKey = requestKeys[kind] ?? newRequestKey();
-    throw new Error("Verified DOCX Save remains unavailable until the reviewed responsibility/template resolver supplies server-derived assignment and source pins.");
-    /* c8 ignore start -- retained as the single post-acceptance flow shape. */
-    const assignmentId = "";
-    const templateKey = "";
-    const templateVersion = 0;
-    const templateSchemaHash = "";
-    const sourceFingerprint = "";
-    // The deployment gate rejects this path before these acceptance-pending
-    // registry pins can be reached. The accepted registry resolver must supply
-    // these values; never infer them from browser state.
-    const authorization = await authorizeDocxUpload({ data: {
-      opportunityId: source.data.opportunityId, customerId: source.data.customerId, assignmentId, requestKey,
-      contentType: renderedDocx.mimeType, sizeBytes: renderedDocx.bytes.byteLength,
-    } });
-    const { error: uploadError } = await supabase.storage.from(authorization.storageBucket).upload(
-      authorization.storagePath,
-      new Blob([renderedDocx.bytes], { type: renderedDocx.mimeType }),
-      { contentType: renderedDocx.mimeType, upsert: false },
-    );
-    if (uploadError) throw new Error(uploadError.message);
-    const receipt = await verifyDocxObject({ data: { projectId: source.data.project?.id ?? source.data.opportunityId, documentKind: kind, assignmentId, requestKey, templateKey, templateVersion, templateSchemaHash, sourceFingerprint } });
-    await commitDocxMaterialization({ data: { opportunityId: source.data.opportunityId, customerId: source.data.customerId, fileName: renderedDocx.fileName, receipt } });
-    /* c8 ignore stop */
+    // Deliberately unreachable until the accepted registry exposes a
+    // server-derived assigned-person/template/source-pin resolver to this
+    // direct path. Local export above remains the only visible DOCX action.
+    void authorizeDocxUpload;
+    void verifyDocxObject;
+    void commitDocxMaterialization;
+    throw new Error("Verified DOCX Save remains unavailable until reviewed deployment acceptance supplies server-derived responsibility and source pins.");
   };
   return (
     <Card>
