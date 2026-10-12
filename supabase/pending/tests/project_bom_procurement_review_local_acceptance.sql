@@ -155,11 +155,12 @@ SELECT * FROM public.decide_project_bom_procurement_review((SELECT request_id FR
 DO $$ BEGIN
   IF (SELECT replayed FROM first_deny) OR NOT (SELECT replayed FROM exact_deny_replay) THEN RAISE EXCEPTION 'Deny replay state is incorrect'; END IF;
   IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM deny_submit)) ->> 'status')) <> 'DENIED' THEN RAISE EXCEPTION 'Deny did not set terminal denied status'; END IF;
+  IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM deny_submit)) ->> 'lines' -> 0 -> 'analysis') IS NOT NULL) THEN RAISE EXCEPTION 'Deny incorrectly required or created analysis'; END IF;
   BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM deny_submit),'8','DENY','Changed denial rationale','00000000-0000-4000-8000-000000000071'); RAISE EXCEPTION 'Changed deny replay accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Request key conflicts%' THEN RAISE; END IF; END;
 END $$;
 RESET ROLE;
 DO $$ BEGIN
-  IF (SELECT count(*) FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM deny_submit) AND event_type='DENIED' AND actor_user_id='00000000-0000-4000-8000-000000000002') <> 1 THEN RAISE EXCEPTION 'Deny audit receipt was not exactly once'; END IF;
+  IF (SELECT count(*) FROM public.project_bom_procurement_review_audit_events WHERE request_id=(SELECT request_id FROM deny_submit) AND event_type='DENIED' AND actor_user_id='00000000-0000-4000-8000-000000000002' AND event_data->>'pinned_bom_revision'='8' AND event_data->>'decision_note'='No approved source satisfies the submitted requirement' AND event_data ? 'payload_hash') <> 1 THEN RAISE EXCEPTION 'Deny audit evidence was not exactly once or was incomplete'; END IF;
   IF (SELECT count(*) FROM public.project_bom_procurement_review_receipts WHERE request_key='00000000-0000-4000-8000-000000000071' AND action='DENY') <> 1 THEN RAISE EXCEPTION 'Deny replay created duplicate receipt'; END IF;
 END $$;
 SET ROLE procurement_requester_test;
