@@ -6,10 +6,14 @@ BEGIN LOOP
   IF clock_timestamp()>=deadline THEN RAISE EXCEPTION 'Verifier did not acquire its request lock'; END IF;
   PERFORM pg_sleep(.02);
 END LOOP; END $wait$;
-\if :{?case_name}
-\endif
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
--- Each mutation is committed before verifier release; the subsequent issue must
--- re-evaluate the changed authority rather than minting a receipt from stale facts.
-UPDATE public.trusted_receipt_race_control SET mutation_ready=true WHERE case_name=:'case_name';
-UPDATE public.trusted_receipt_race_control SET released=true WHERE case_name=:'case_name';
+UPDATE public.structured_lifecycle_docx_responsibility_assignments
+SET status='REVOKED', revoked_by='00000000-0000-4000-8000-000000000001', revoked_at=now()
+WHERE :'case_name'='revoke' AND id='00000000-0000-4000-8000-000000000901';
+UPDATE public.structured_lifecycle_docx_template_pins
+SET status='REVOKED', revoked_by='00000000-0000-4000-8000-000000000001', revoked_at=now()
+WHERE :'case_name'='template' AND id='00000000-0000-4000-8000-000000000994';
+UPDATE public.master_specifications
+SET current_version=2
+WHERE :'case_name'='source' AND id='00000000-0000-4000-8000-000000000301';
+UPDATE public.trusted_receipt_race_control SET mutation_ready=true,released=true WHERE case_name=:'case_name';
