@@ -482,9 +482,16 @@ export function StructuredTemplatePreview({
     capabilityDiscovery.data,
   );
   const saveBoundaryMessage = structuredSalesDraftSaveBoundaryMessage(saveCapability);
+  // Historical HTML revisions are read through the deployed owner-bound RLS
+  // contract. A future private-location/DOCX probe cannot be used to infer that
+  // this separate, authorized history path is unavailable.
   const historyCapability = structuredSalesDraftHistoryCapability(
     isStructuredSalesPreviewKind(kind) && salesGate?.state === "VERIFIED",
-    capabilityDiscovery.data,
+    {
+      locationId: "legacy-html-history",
+      storageBucket: "legacy-html-history",
+      storagePathPrefix: "",
+    },
   );
   const historyBoundaryMessage = structuredSalesDraftHistoryBoundaryMessage(historyCapability);
   const sourceState = !actorId
