@@ -7,7 +7,7 @@ concurrency = (Path(__file__).resolve().parent / "run_project_bom_procurement_re
 bundle = (Path(__file__).resolve().parents[3] / "docs/evidence/20261012_project_bom_procurement_source_review_bundle.txt").read_text()
 bundle_start = "===== BEGIN FULL PENDING SQL: supabase/pending/20261012_project_bom_procurement_review_contract.sql =====\n"
 bundle_end = "\n===== END FULL PENDING SQL ====="
-embedded_sql = bundle.split(bundle_start, 1)[1].split(bundle_end, 1)[0] if bundle_start in bundle and bundle_end in bundle else None
+embedded_sql = bundle.split(bundle_start, 1)[1].split(bundle_end, 1)[0] + "\n" if bundle_start in bundle and bundle_end in bundle else None
 checks = {
     "source-only header": "SOURCE-ONLY, UNDEPLOYED REVIEW CONTRACT. DO NOT APPLY." in sql,
     "five additive tables are service-only before rls": sql.count("CREATE TABLE public.project_bom_procurement_review_") == 5 and sql.count("ENABLE ROW LEVEL SECURITY") == 5 and sql.count("GRANT ALL ON public.project_bom_procurement_review") >= 5 and "GRANT SELECT ON public.project_bom_procurement_review" not in sql,
