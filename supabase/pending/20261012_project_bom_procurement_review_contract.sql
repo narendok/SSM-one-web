@@ -110,6 +110,27 @@ CREATE INDEX project_bom_procurement_review_lines_request_idx
 CREATE INDEX project_bom_procurement_review_analyses_line_idx
   ON public.project_bom_procurement_review_analyses(request_line_id, analysis_revision DESC);
 
+CREATE OR REPLACE FUNCTION public.project_bom_procurement_review_canonical_decision_analyses(p_analysis_revisions jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public
+AS $$
+DECLARE v_item jsonb; v_out jsonb := '[]'::jsonb; v_line_id uuid; v_revision integer;
+BEGIN
+  IF jsonb_typeof(p_analysis_revisions) IS DISTINCT FROM 'array' OR jsonb_array_length(p_analysis_revisions) > 500 THEN RAISE EXCEPTION 'Reviewed analysis revisions must be an array of at most 500 lines'; END IF;
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_analysis_revisions) AS rows(value) LOOP
+    IF jsonb_typeof(v_item) IS DISTINCT FROM 'object' OR EXISTS (SELECT 1 FROM jsonb_object_keys(v_item) AS key WHERE key NOT IN ('requestLineId', 'analysisRevision')) OR jsonb_typeof(v_item -> 'requestLineId') IS DISTINCT FROM 'string' OR jsonb_typeof(v_item -> 'analysisRevision') IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'Each reviewed analysis revision requires only requestLineId and analysisRevision'; END IF;
+    v_line_id := (v_item ->> 'requestLineId')::uuid; v_revision := (v_item ->> 'analysisRevision')::integer;
+    IF v_revision <= 0 THEN RAISE EXCEPTION 'Reviewed analysis revisions must be positive'; END IF;
+    v_out := v_out || jsonb_build_array(jsonb_build_object('requestLineId', v_line_id, 'analysisRevision', v_revision));
+  END LOOP;
+  SELECT coalesce(jsonb_agg(item ORDER BY item ->> 'requestLineId'), '[]'::jsonb) INTO v_out FROM jsonb_array_elements(v_out) AS values(item);
+  IF (SELECT count(*) FROM jsonb_array_elements(v_out)) <> (SELECT count(DISTINCT value ->> 'requestLineId') FROM jsonb_array_elements(v_out) AS values(value)) THEN RAISE EXCEPTION 'Reviewed analysis revisions contain a duplicate line'; END IF;
+  RETURN v_out;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.project_bom_procurement_review_canonical_submission(
   p_rows jsonb
 ) RETURNS jsonb
