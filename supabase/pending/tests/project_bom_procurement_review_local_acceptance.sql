@@ -202,10 +202,13 @@ CREATE TEMP TABLE refreshed_pin_submit_state AS
 SELECT id, pinned_bom_updated_at FROM public.project_bom_procurement_review_requests WHERE id=(SELECT request_id FROM refreshed_pin_submit);
 GRANT SELECT ON refreshed_pin_submit_state TO procurement_assigned_test;
 UPDATE public.project_boms SET updated_at=clock_timestamp() + interval '1 microsecond' WHERE id='00000000-0000-4000-8000-000000000030';
+CREATE TEMP TABLE refreshed_pin_current_bom_state AS
+SELECT updated_at FROM public.project_boms WHERE id='00000000-0000-4000-8000-000000000030';
+GRANT SELECT ON refreshed_pin_current_bom_state TO procurement_assigned_test;
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 DO $$ BEGIN
-  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM refreshed_pin_submit),'8',(SELECT updated_at FROM public.project_boms WHERE id='00000000-0000-4000-8000-000000000030'),'[]'::jsonb,'DENY','Caller refreshed the visible timestamp after source drift','00000000-0000-4000-8000-000000000075'); RAISE EXCEPTION 'Refreshed caller timestamp accepted stale request'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM source is stale%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.decide_project_bom_procurement_review((SELECT request_id FROM refreshed_pin_submit),'8',(SELECT updated_at FROM refreshed_pin_current_bom_state),'[]'::jsonb,'DENY','Caller refreshed the visible timestamp after source drift','00000000-0000-4000-8000-000000000075'); RAISE EXCEPTION 'Refreshed caller timestamp accepted stale request'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'The project BOM source is stale%' THEN RAISE; END IF; END;
   IF (SELECT (public.read_project_bom_procurement_review((SELECT request_id FROM refreshed_pin_submit)) ->> 'status')) <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Refreshed caller timestamp mutated request state'; END IF;
 END $$;
 RESET ROLE;
