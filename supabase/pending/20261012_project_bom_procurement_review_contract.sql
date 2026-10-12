@@ -392,7 +392,15 @@ BEGIN
   SELECT * INTO v_prior FROM public.project_bom_procurement_review_receipts WHERE request_key=p_request_key FOR UPDATE;
   IF FOUND THEN SELECT * INTO v_scope FROM public.project_bom_procurement_review_procurement_scope(v_actor,p_request_id); IF v_prior.requested_by=v_actor AND v_prior.action=v_decision AND v_prior.payload_hash=v_hash THEN RETURN QUERY SELECT v_prior.request_id,true; RETURN; END IF; RAISE EXCEPTION 'Request key conflicts with a different actor or canonical payload'; END IF;
   SELECT revision, updated_at INTO v_current_revision, v_current_updated_at FROM public.project_boms WHERE id=v_scope.project_bom_id FOR UPDATE;
-  IF v_current_revision IS DISTINCT FROM v_scope.pinned_bom_revision OR v_current_revision IS DISTINCT FROM p_expected_bom_revision OR v_current_updated_at IS DISTINCT FROM p_expected_bom_updated_at THEN RAISE EXCEPTION 'The project BOM source is stale'; END IF;
+  -- The immutable submission pin is authoritative. The caller's inspected
+  -- pins must agree with it and with the currently locked BOM; a reviewer
+  -- cannot refresh a timestamp after a manual same-revision BOM edit and
+  -- decide an older submitted snapshot.
+  IF v_current_revision IS DISTINCT FROM v_scope.pinned_bom_revision
+    OR v_current_revision IS DISTINCT FROM p_expected_bom_revision
+    OR v_current_updated_at IS DISTINCT FROM v_scope.pinned_bom_updated_at
+    OR p_expected_bom_updated_at IS DISTINCT FROM v_scope.pinned_bom_updated_at
+  THEN RAISE EXCEPTION 'The project BOM source is stale; resubmit the Procurement request from the current BOM'; END IF;
   IF v_scope.request_status <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Procurement request is no longer pending analysis'; END IF;
   PERFORM 1 FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id FOR UPDATE;
   SELECT count(*) INTO v_line_count FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id;
@@ -406,7 +414,7 @@ BEGIN
   ELSIF jsonb_array_length(v_reviewed) <> 0 THEN RAISE EXCEPTION 'Deny must not supply reviewed analysis revisions';
   END IF;
   UPDATE public.project_bom_procurement_review_requests SET status=CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,decided_by=v_actor,decided_at=clock_timestamp(),decision_note=v_note WHERE id=p_request_id;
-  INSERT INTO public.project_bom_procurement_review_audit_events(request_id,event_type,actor_user_id,event_data) VALUES(p_request_id,CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,v_actor,jsonb_build_object('pinned_bom_revision',v_scope.pinned_bom_revision,'pinned_bom_updated_at',p_expected_bom_updated_at,'reviewed_analysis_revisions',v_reviewed,'decision_note',v_note,'payload_hash',v_hash));
+  INSERT INTO public.project_bom_procurement_review_audit_events(request_id,event_type,actor_user_id,event_data) VALUES(p_request_id,CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END,v_actor,jsonb_build_object('pinned_bom_revision',v_scope.pinned_bom_revision,'pinned_bom_updated_at',v_scope.pinned_bom_updated_at,'reviewer_expected_bom_updated_at',p_expected_bom_updated_at,'reviewed_analysis_revisions',v_reviewed,'decision_note',v_note,'payload_hash',v_hash));
   INSERT INTO public.project_bom_procurement_review_receipts(request_key,requested_by,action,request_id,payload_hash,result) VALUES(p_request_key,v_actor,v_decision,p_request_id,v_hash,jsonb_build_object('request_id',p_request_id,'status',CASE WHEN v_decision='ALLOW' THEN 'ALLOWED_PENDING_HARDWARE_SELECTION' ELSE 'DENIED' END));
   RETURN QUERY SELECT p_request_id,false;
 END;
