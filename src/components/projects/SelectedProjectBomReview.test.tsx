@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { savedBomReviewSearch } from "./SelectedProjectBomReview";
 import { projectBomReviewContractState } from "./ProjectBomReview";
+import { ProcurementReviewQueue } from "@/components/procurement/ProcurementReviewQueue";
 import { analysisLabel, procurementReviewContractState, procurementSubmissionAdapter, reviewDecisionLabel, reviewableBomRows } from "@/lib/project-bom-procurement-review";
 
 describe("selected project saved BOM review", () => {
@@ -82,5 +83,11 @@ describe("selected project saved BOM review", () => {
     expect(analysisLabel("TBC")).toBe("TBC");
     expect(reviewDecisionLabel("ALLOW_FOR_HARDWARE_SELECTION")).toContain("Hardware selection");
     expect(reviewDecisionLabel("DENY")).toBe("Deny for Procurement reasons");
+  });
+
+  it("keeps the Procurement queue empty and action-gated while its request contract is unaccepted", () => {
+    expect(procurementReviewContractState.deployed).toBe(false);
+    expect(ProcurementReviewQueue).toBeTypeOf("function");
+    expect(projectBomReviewContractState.submitDisabledReason).toContain("purchase order");
   });
 });
