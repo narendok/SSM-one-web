@@ -53,6 +53,7 @@ SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8
  {"kind":"existing","sourceBomItemId":"00000000-0000-4000-8000-000000000031","componentId":"00000000-0000-4000-8000-000000000040","referenceDesignators":"R1","quantity":2,"manualNote":"keep manual note"},
  {"kind":"new","mpn":"NEW-007","manufacturer":"Proposal Ltd","description":"Uncreated proposed part","referenceDesignators":"U1","quantity":1}
 ]'::jsonb,'00000000-0000-4000-8000-000000000060');
+GRANT SELECT ON first_submit TO procurement_requester_test, procurement_assigned_test, procurement_other_department_test, procurement_unassigned_test;
 DO $$ BEGIN
  IF (SELECT count(*) FROM first_submit)<>1 OR (SELECT replayed FROM first_submit) THEN RAISE EXCEPTION 'First submission failed'; END IF;
  IF (SELECT count(*) FROM public.project_bom_procurement_review_requests)<>1 OR (SELECT count(*) FROM public.project_bom_procurement_review_request_lines)<>2 OR (SELECT count(*) FROM public.project_bom_procurement_review_audit_events)<>1 OR (SELECT count(*) FROM public.project_bom_procurement_review_receipts)<>1 THEN RAISE EXCEPTION 'Submission did not atomically persist snapshot, audit, and receipt'; END IF;
@@ -133,6 +134,7 @@ SET ROLE procurement_requester_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 CREATE TEMP TABLE deny_submit AS
 SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000030','8','[{"kind":"existing","sourceBomItemId":"00000000-0000-4000-8000-000000000031","componentId":"00000000-0000-4000-8000-000000000040","referenceDesignators":"D1","quantity":1}]'::jsonb,'00000000-0000-4000-8000-000000000070');
+GRANT SELECT ON deny_submit TO procurement_assigned_test;
 RESET ROLE;
 SET ROLE procurement_assigned_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
@@ -152,6 +154,7 @@ SET ROLE procurement_requester_test;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 CREATE TEMP TABLE stale_deny_submit AS
 SELECT * FROM public.submit_project_bom_procurement_review('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000030','8','[{"kind":"new","mpn":"STALE-DENY","description":"Stale deny proposal","referenceDesignators":"D2","quantity":1}]'::jsonb,'00000000-0000-4000-8000-000000000072');
+GRANT SELECT ON stale_deny_submit TO procurement_assigned_test;
 UPDATE public.project_boms SET revision='9' WHERE id='00000000-0000-4000-8000-000000000030';
 RESET ROLE;
 SET ROLE procurement_assigned_test;
