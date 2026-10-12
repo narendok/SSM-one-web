@@ -49,6 +49,7 @@ export type ProcurementReviewRequest = {
 };
 
 export type ProcurementAnalysisInput = Omit<ProcurementLineAnalysis, "id" | "revision" | "analyzedAt">;
+export type ProcurementReviewedAnalysisRevision = { requestLineId: string; analysisRevision: number };
 
 function deploymentRequired() {
   if (!procurementReviewContractState.deployed) {
@@ -164,6 +165,8 @@ export const decideProjectBomProcurementReview = createServerFn({ method: "POST"
   .inputValidator((data) => z.object({
     requestId: uuid,
     expectedBomRevision: z.string().min(1).max(200),
+    expectedBomUpdatedAt: z.string().datetime({ offset: true }),
+    reviewedAnalysisRevisions: z.array(z.object({ requestLineId: uuid, analysisRevision: z.number().int().positive() })).max(500),
     decision: z.enum(["ALLOW", "DENY"]),
     decisionNote: z.string().trim().min(1).max(500),
     requestKey: uuid,
@@ -173,6 +176,8 @@ export const decideProjectBomProcurementReview = createServerFn({ method: "POST"
     const { data: result, error } = await (context.supabase as any).rpc("decide_project_bom_procurement_review", {
       p_request_id: data.requestId,
       p_expected_bom_revision: data.expectedBomRevision,
+      p_expected_bom_updated_at: data.expectedBomUpdatedAt,
+      p_reviewed_analysis_revisions: data.reviewedAnalysisRevisions,
       p_decision: data.decision,
       p_decision_note: data.decisionNote,
       p_request_key: data.requestKey,

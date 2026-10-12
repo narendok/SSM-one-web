@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { savedBomReviewSearch } from "./SelectedProjectBomReview";
 import { projectBomReviewContractState } from "./ProjectBomReview";
 import { ProcurementReviewQueue } from "@/components/procurement/ProcurementReviewQueue";
-import { analysisLabel, procurementAnalysisPayload, procurementReviewContractState, procurementSubmissionAdapter, reviewDecisionLabel, reviewableBomRows } from "@/lib/project-bom-procurement-review";
+import { analysisLabel, procurementAnalysisPayload, procurementDecisionAnalysisPins, procurementReviewContractState, procurementSubmissionAdapter, reviewDecisionLabel, reviewableBomRows } from "@/lib/project-bom-procurement-review";
 
 describe("selected project saved BOM review", () => {
   it("keeps the visible review action inside the authenticated BOM route", () => {
@@ -95,5 +95,10 @@ describe("selected project saved BOM review", () => {
     expect(procurementAnalysisPayload({ availabilityState: "AVAILABLE", costState: "TBC", sourcingState: "PENDING", observedUnitCost: "12.5", currency: "INR", supplierName: "Verified supplier", leadTimeDays: "14", alternateComponentId: "", analysisNote: "Supplier response pending" })).toEqual({ availabilityState: "AVAILABLE", costState: "TBC", sourcingState: "PENDING", observedUnitCost: 12.5, currency: "INR", supplierName: "Verified supplier", leadTimeDays: 14, alternateComponentId: null, analysisNote: "Supplier response pending" });
     expect(procurementAnalysisPayload({ availabilityState: "TBC", costState: "TBC", sourcingState: "TBC", observedUnitCost: "-1", currency: "", supplierName: "", leadTimeDays: "", alternateComponentId: "", analysisNote: "Invalid cost" })).toBeNull();
     expect(procurementAnalysisPayload({ availabilityState: "TBC", costState: "TBC", sourcingState: "TBC", observedUnitCost: "", currency: "", supplierName: "", leadTimeDays: "1.5", alternateComponentId: "", analysisNote: "Invalid lead time" })).toBeNull();
+  });
+
+  it("pins every current line-analysis revision before a future allow decision", () => {
+    expect(procurementDecisionAnalysisPins([{ id: "line-b", analysis: { revision: 2 } }, { id: "line-a", analysis: { revision: 1 } }])).toEqual([{ requestLineId: "line-a", analysisRevision: 1 }, { requestLineId: "line-b", analysisRevision: 2 }]);
+    expect(procurementDecisionAnalysisPins([{ id: "line-a", analysis: null }])).toBeNull();
   });
 });
