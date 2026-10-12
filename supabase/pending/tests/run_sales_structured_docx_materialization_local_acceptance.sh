@@ -17,4 +17,5 @@ psql "${args[@]}" -f "$root/supabase/pending/20261012_structured_lifecycle_docx_
 psql "${args[@]}" -c "GRANT EXECUTE ON FUNCTION public.save_sales_opportunity_structured_draft_at_location(uuid,uuid,uuid,uuid,text,integer,jsonb,uuid,uuid) TO authenticated; GRANT EXECUTE ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) TO authenticated; GRANT EXECUTE ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,text,bigint,uuid) TO authenticated; GRANT EXECUTE ON FUNCTION public.read_sales_structured_docx_materializations(uuid,uuid,uuid) TO authenticated;"
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_structured_docx_materialization_local_acceptance.sql"
 python3 "$root/supabase/pending/tests/check_structured_lifecycle_docx_private_object_enforcement_static.py"
+python3 "$root/supabase/pending/tests/check_structured_lifecycle_docx_trusted_receipt_static.py"
 printf 'SALES_STRUCTURED_DOCX_EXECUTION_COMPLETE=true\n'
