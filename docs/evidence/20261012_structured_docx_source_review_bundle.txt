@@ -3,9 +3,9 @@ Status: REVIEW ONLY — UNACCEPTED. This bundle authorizes no installation, gran
 
 Scope retained: OPPORTUNITY-2026-0013 / MASTER-2026-0001 revision 1 and existing HTML history are preserved. Procurement review and Sales sample archive/restore remain separate and unaccepted.
 
-CURRENT_HEAD=d6c38f0e84609541c702bde14aa5c2290772f1b1
-CURRENT_GIT_STATUS=CLEAN
-BUNDLE_REGENERATED_UTC=2026-10-12T02:54:00Z
+CURRENT_HEAD=aede2a5657f1989c6c8e30a1e0dd4b5f09805017
+CURRENT_GIT_STATUS=CLEAN (before this evidence-only bundle refresh; this refresh is the sole working-tree change)
+BUNDLE_REGENERATED_UTC=2026-10-12T03:03:00Z
 
 MANAGED PREFLIGHT EVIDENCE
 - File: docs/evidence/20261012_structured_docx_managed_preflight_result.json
@@ -1467,7 +1467,11 @@ REVIEW ASSERTIONS AND ISOLATED EXECUTION
   Assertions: two-session active-assignment race; one winner only; cleanup.
 - PASS (exit 0): LOCAL_SALES_STRUCTURED_DOCX_DISPOSABLE=yes bash supabase/pending/tests/run_structured_docx_trusted_receipt_local_races.sh
   Assertions: two-session revoke, approved-template revocation, and Master current-version source change each win against a stale issuer; the issuer fails; zero receipt rows are minted for each request; fixture cleanup is verified.
-- PASS (prior focused source suite): bunx vitest run src/lib/structured-lifecycle-docx-*.test.ts.
+- PASS (exit 0, 2026-10-12T03:03Z): bunx vitest run src/lib/structured-lifecycle-docx-private-object-bridge.test.ts src/lib/structured-lifecycle-docx-sales-orchestration.test.ts (2 files, 10 tests).
+- PASS (exit 0, 2026-10-12T03:03Z): bunx tsgo -p tsconfig.json.
+- PASS (exit 0, 2026-10-12T03:03Z): bun run build.
+- PASS (exit 0, 2026-10-12T03:03Z): python3 supabase/pending/tests/check_structured_lifecycle_docx_trusted_receipt_static.py.
+- PASS (exit 0, 2026-10-12T03:03Z): git diff --check.
 
 FUNCTION / ACCESS REVIEW
 - assert_sales_structured_docx_trusted_actor_scope(...) is the single shared service-only authority validator for receipt issue, server scope resolution, and commit recheck.
