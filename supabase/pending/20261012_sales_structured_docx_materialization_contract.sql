@@ -21,6 +21,7 @@ CREATE TABLE public.sales_opportunity_structured_docx_assignments (
   department_id uuid NOT NULL REFERENCES public.departments(id) ON DELETE RESTRICT,
   responsible_employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE RESTRICT,
   status text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','REVOKED')),
+  registry_assignment_id uuid NOT NULL REFERENCES public.structured_lifecycle_docx_responsibility_assignments(id) ON DELETE RESTRICT,
   assigned_by uuid NOT NULL,
   assigned_at timestamptz NOT NULL DEFAULT now(),
   revoked_by uuid NULL,
@@ -207,6 +208,30 @@ BEGIN
   IF v_actor IS NULL OR NOT public.has_permission(v_actor, 'sales.manage') THEN RAISE EXCEPTION 'Sales management permission is required'; END IF;
   SELECT * INTO v_assignment FROM public.sales_opportunity_structured_docx_assignments WHERE id = p_assignment_id AND opportunity_id = p_opportunity_id AND customer_id = p_customer_id AND document_kind = p_document_kind AND status = 'ACTIVE' FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'The current assigned-person DOCX authority is unavailable'; END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.structured_lifecycle_docx_responsibility_assignments registry_assignment
+    WHERE registry_assignment.id=v_assignment.registry_assignment_id
+      AND registry_assignment.status='ACTIVE'
+      AND registry_assignment.document_kind=v_assignment.document_kind
+      AND registry_assignment.department_id=v_assignment.department_id
+      AND registry_assignment.responsible_employee_id=v_assignment.responsible_employee_id
+      AND (
+        (registry_assignment.scope_type='SALES_OPPORTUNITY'
+          AND registry_assignment.opportunity_id=p_opportunity_id
+          AND registry_assignment.customer_id=p_customer_id)
+        OR (registry_assignment.scope_type='PROJECT'
+          AND EXISTS (
+            SELECT 1 FROM public.sales_project_handovers handover
+            JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
+            JOIN public.customer_requirements requirement ON requirement.id=baseline.customer_requirement_id
+            WHERE handover.project_id=registry_assignment.project_id
+              AND handover.status IN ('initiated','completed')
+              AND requirement.opportunity_id=p_opportunity_id
+              AND requirement.customer_id=p_customer_id
+          ))
+      )
+  ) THEN RAISE EXCEPTION 'The assigned DOCX responsibility no longer matches the current Sales or handed-over project scope'; END IF;
   SELECT * INTO v_employee FROM public.employees WHERE id = v_assignment.responsible_employee_id AND user_id = v_actor AND employment_status = 'ACTIVE' FOR UPDATE;
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.employee_departments ed WHERE ed.employee_id = v_employee.id AND ed.department_id = v_assignment.department_id) THEN RAISE EXCEPTION 'The current actor is not the assigned active responsible person'; END IF;
   IF NOT public.can_access_department_drive(v_actor, v_assignment.department_id, NULL) THEN RAISE EXCEPTION 'The assigned person cannot access the configured department Drive'; END IF;
