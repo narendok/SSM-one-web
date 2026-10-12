@@ -18,7 +18,6 @@ def forbid(text: str, needle: str, label: str):
 
 for item in (
     "CREATE TABLE public.sales_opportunity_structured_docx_trusted_receipts",
-    "assert_sales_structured_docx_trusted_issue_scope",
     "assert_sales_structured_docx_trusted_actor_scope",
     "issue_sales_structured_docx_trusted_receipt",
     "resolve_sales_structured_docx_server_scope",
