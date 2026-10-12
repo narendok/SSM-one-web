@@ -257,7 +257,7 @@ $$;
 -- boundary before Storage RLS admits the one permitted INSERT.
 CREATE OR REPLACE FUNCTION public.authorize_sales_structured_docx_upload(
   p_opportunity_id uuid, p_customer_id uuid, p_assignment_id uuid, p_request_key uuid,
-  p_storage_bucket text, p_storage_path text, p_content_type text, p_size_bytes bigint
+  p_content_type text, p_size_bytes bigint
 ) RETURNS TABLE(
   request_key uuid, storage_bucket text, storage_path text,
   max_size_bytes bigint, replayed boolean
@@ -269,7 +269,6 @@ DECLARE
   v_existing_object boolean;
 BEGIN
   IF v_actor IS NULL OR p_request_key IS NULL OR p_assignment_id IS NULL
-    OR p_storage_bucket <> 'project-drive'
     OR p_content_type <> 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     OR p_size_bytes IS NULL OR p_size_bytes <= 0 OR p_size_bytes > 10485760
   THEN RAISE EXCEPTION 'Invalid protected DOCX upload request'; END IF;
@@ -286,13 +285,14 @@ BEGIN
   FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,v_request.document_kind,p_assignment_id);
   IF v_request.assignment_id <> p_assignment_id
     OR v_request.location_id <> v_scope.location_id
-    OR p_storage_path <> v_scope.storage_path_prefix || p_request_key::text || '-draft.docx'
     OR NOT EXISTS (
       SELECT 1 FROM public.master_specifications current_specification
       WHERE current_specification.id=v_request.master_specification_id
         AND current_specification.current_version_id=v_request.master_specification_version_id
     )
   THEN RAISE EXCEPTION 'DOCX upload request no longer has an active assigned-person source scope'; END IF;
+  p_storage_bucket := v_scope.storage_bucket;
+  p_storage_path := v_scope.storage_path_prefix || p_request_key::text || '-draft.docx';
   SELECT EXISTS(
     SELECT 1 FROM storage.objects object_row
     WHERE object_row.bucket_id=p_storage_bucket AND object_row.name=p_storage_path
@@ -364,7 +364,7 @@ REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_assignment() FROM PUBL
 REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_storage_attempt() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,text,text,bigint) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,bigint) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,text,bigint,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.read_sales_structured_docx_materializations(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;

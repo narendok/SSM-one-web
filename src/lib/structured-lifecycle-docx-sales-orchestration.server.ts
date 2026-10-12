@@ -129,8 +129,6 @@ export async function authorizeSalesStructuredDocxUpload(
     customerId: string;
     assignmentId: string;
     requestKey: string;
-    storageBucket: "project-drive";
-    storagePath: string;
     contentType: typeof DOCX_MIME;
     sizeBytes: number;
   },
@@ -143,13 +141,11 @@ export async function authorizeSalesStructuredDocxUpload(
     p_customer_id: input.customerId,
     p_assignment_id: input.assignmentId,
     p_request_key: input.requestKey,
-    p_storage_bucket: input.storageBucket,
-    p_storage_path: input.storagePath,
     p_content_type: input.contentType,
     p_size_bytes: input.sizeBytes,
   } as never), "The protected DOCX upload path could not be authorized.") as unknown as Array<Record<string, unknown>>;
   const row = rows[0];
-  if (!row || row.request_key !== input.requestKey || row.storage_bucket !== input.storageBucket || row.storage_path !== input.storagePath || row.max_size_bytes !== 10 * 1024 * 1024) {
+  if (!row || row.request_key !== input.requestKey || row.storage_bucket !== "project-drive" || typeof row.storage_path !== "string" || !row.storage_path.endsWith(`${input.requestKey}-draft.docx`) || row.max_size_bytes !== 10 * 1024 * 1024) {
     throw new Error("The protected DOCX upload authority returned inconsistent path facts.");
   }
   if (actorId.trim().length === 0) throw new Error("The authenticated DOCX actor is unavailable.");

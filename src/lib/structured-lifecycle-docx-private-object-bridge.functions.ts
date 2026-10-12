@@ -8,7 +8,6 @@ const inputSchema = z.object({ projectId: z.string().uuid(), documentKind: z.enu
 
 const uploadAuthorizationSchema = z.object({
   opportunityId: z.string().uuid(), customerId: z.string().uuid(), assignmentId: z.string().uuid(), requestKey: z.string().uuid(),
-  storageBucket: z.literal("project-drive"), storagePath: z.string().min(1).max(1024),
   contentType: z.literal(DOCX_MIME), sizeBytes: z.number().int().positive().max(10 * 1024 * 1024),
 });
 
@@ -22,7 +21,11 @@ export const authorizePrivateStructuredDocxUpload = createServerFn({ method: "PO
       throw new Error("Verified DOCX Save is unavailable pending reviewed deployment acceptance.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    return authorizeSalesStructuredDocxUpload(supabaseAdmin as never, context.userId, data);
+    return authorizeSalesStructuredDocxUpload(supabaseAdmin as never, context.userId, {
+      ...data,
+      storageBucket: "project-drive",
+      storagePath: `server-derived/${data.requestKey}-draft.docx`,
+    });
   });
 
 /** Deployment-gated trusted server verifier. It has no browser/admin transport. */

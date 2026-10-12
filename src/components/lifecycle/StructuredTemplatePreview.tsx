@@ -641,6 +641,8 @@ export function StructuredTemplatePreview({
     const renderedDocx = await renderStructuredLifecycleDocx(kind, source.data, localEditsForStructuredPreview(kind, effectiveEdits));
     if (renderedDocx.bytes.byteLength <= 0 || renderedDocx.bytes.byteLength > structuredDraftStorageLimit) throw new Error("The DOCX upload must be between 1 byte and 10 MB.");
     const requestKey = requestKeys[kind] ?? newRequestKey();
+    throw new Error("Verified DOCX Save remains unavailable until the reviewed responsibility/template resolver supplies server-derived assignment and source pins.");
+    /* c8 ignore start -- retained as the single post-acceptance flow shape. */
     const assignmentId = "";
     const templateKey = "";
     const templateVersion = 0;
@@ -651,7 +653,7 @@ export function StructuredTemplatePreview({
     // these values; never infer them from browser state.
     const authorization = await authorizeDocxUpload({ data: {
       opportunityId: source.data.opportunityId, customerId: source.data.customerId, assignmentId, requestKey,
-      storageBucket: "project-drive", storagePath: "", contentType: renderedDocx.mimeType, sizeBytes: renderedDocx.bytes.byteLength,
+      contentType: renderedDocx.mimeType, sizeBytes: renderedDocx.bytes.byteLength,
     } });
     const { error: uploadError } = await supabase.storage.from(authorization.storageBucket).upload(
       authorization.storagePath,
@@ -661,6 +663,7 @@ export function StructuredTemplatePreview({
     if (uploadError) throw new Error(uploadError.message);
     const receipt = await verifyDocxObject({ data: { projectId: source.data.project?.id ?? source.data.opportunityId, documentKind: kind, assignmentId, requestKey, templateKey, templateVersion, templateSchemaHash, sourceFingerprint } });
     await commitDocxMaterialization({ data: { opportunityId: source.data.opportunityId, customerId: source.data.customerId, fileName: renderedDocx.fileName, receipt } });
+    /* c8 ignore stop */
   };
   return (
     <Card>
