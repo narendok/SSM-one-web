@@ -43,10 +43,10 @@ BEGIN
   INSERT INTO public.requirement_baselines(id,customer_requirement_id) VALUES ('00000000-0000-4000-8000-000000000822','00000000-0000-4000-8000-000000000821');
   INSERT INTO public.sales_project_handovers(id,baseline_id,project_id,status) VALUES ('00000000-0000-4000-8000-000000000823','00000000-0000-4000-8000-000000000822','00000000-0000-4000-8000-000000000211','completed');
   INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(id,scope_type,project_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by)
-  VALUES(v_project_assignment,'PROJECT','00000000-0000-4000-8000-000000000211','00000000-0000-4000-8000-000000000501','CONTRACT_REVIEW','00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
+  VALUES(v_project_assignment,'PROJECT','00000000-0000-4000-8000-000000000211','00000000-0000-4000-8000-000000000501','SOR','00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
   IF NOT EXISTS (
     SELECT 1 FROM public.resolve_structured_lifecycle_docx_registry_scope(
-      '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','CONTRACT_REVIEW',v_project_assignment,
+      '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','SOR',v_project_assignment,
       '00000000-0000-4000-8000-000000000902','sales-sor-local',1,
       'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     )
