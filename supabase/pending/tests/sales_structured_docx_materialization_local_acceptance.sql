@@ -51,22 +51,27 @@ END;
 $stale_object$;
 SELECT set_config('request.jwt.claim.sub', NULL, true);
 SELECT public.record_sales_structured_docx_object_verification('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM docx_storage_path),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,true,true,false,'local-ooxml-verifier');
+CREATE TEMP TABLE docx_receipt AS SELECT public.issue_sales_structured_docx_trusted_receipt(
+ '00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000902','00000000-0000-4000-8000-000000000901',
+ 'project-drive',(SELECT storage_path FROM docx_storage_path),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,
+ (SELECT source_fingerprint FROM public.sales_opportunity_structured_docx_requests WHERE request_key='00000000-0000-4000-8000-000000000902'),
+ 'sales-sor-local',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','local-ooxml-verifier') AS receipt_id;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 SELECT public.assert_sales_structured_docx_current_path_create_only('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM docx_storage_path),'fixture-v1');
 RESET ROLE;
 SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
-CREATE TEMP TABLE committed AS SELECT * FROM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sor-draft.docx','project-drive',(SELECT storage_path FROM requested),'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512);
+CREATE TEMP TABLE committed AS SELECT * FROM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sor-draft.docx','project-drive',(SELECT storage_path FROM requested),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,(SELECT receipt_id FROM docx_receipt));
 DO $assert$
 DECLARE v_before integer;
 BEGIN
  IF (SELECT count(*) FROM committed) <> 1 OR (SELECT replayed FROM committed) OR (SELECT count(*) FROM public.sales_opportunity_structured_docx_audit_events) <> 1 THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL initial immutable graph missing'; END IF;
  IF NOT EXISTS (SELECT 1 FROM public.drive_nodes WHERE mime_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document') THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL OOXML MIME missing'; END IF;
- PERFORM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sor-draft.docx','project-drive',(SELECT storage_path FROM requested),'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512);
+ PERFORM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sor-draft.docx','project-drive',(SELECT storage_path FROM requested),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,(SELECT receipt_id FROM docx_receipt));
  IF (SELECT count(*) FROM public.sales_opportunity_structured_docx_materializations) <> 1 THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL replay duplicated materialization'; END IF;
  SELECT count(*) INTO v_before FROM public.sales_opportunity_structured_docx_materializations;
  BEGIN
-  PERFORM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','changed.docx','project-drive',(SELECT storage_path FROM requested),'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512);
+  PERFORM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','changed.docx','project-drive',(SELECT storage_path FROM requested),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,(SELECT receipt_id FROM docx_receipt));
   RAISE EXCEPTION 'LOCAL_DOCX_FAIL changed replay accepted';
  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'DOCX request key conflicts with a different materialization payload' THEN RAISE; END IF; END;
  IF (SELECT count(*) FROM public.sales_opportunity_structured_docx_materializations) <> v_before THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL conflict changed graph'; END IF;
