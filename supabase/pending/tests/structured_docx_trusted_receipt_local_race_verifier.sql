@@ -1,12 +1,12 @@
 \set ON_ERROR_STOP on
-SELECT :'case_name' AS case_name \gset
+SELECT set_config('trusted_receipt_race.case_name', :'case_name', false);
 SELECT set_config('request.jwt.claim.sub', NULL, false);
 SELECT pg_advisory_lock(hashtextextended(concat_ws('|','sales-structured-docx',:'request_key'),0));
 UPDATE public.trusted_receipt_race_control SET verifier_ready=true WHERE case_name=:'case_name';
 DO $wait$
 DECLARE deadline timestamptz:=clock_timestamp()+interval '15 seconds';
 BEGIN LOOP
-  EXIT WHEN (SELECT mutation_ready FROM public.trusted_receipt_race_control WHERE case_name=:'case_name');
+  EXIT WHEN (SELECT mutation_ready FROM public.trusted_receipt_race_control WHERE case_name=current_setting('trusted_receipt_race.case_name'));
   IF clock_timestamp()>=deadline THEN RAISE EXCEPTION 'Mutator did not prepare'; END IF;
   PERFORM pg_sleep(.02);
 END LOOP; END $wait$;
