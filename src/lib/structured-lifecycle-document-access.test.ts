@@ -7,6 +7,10 @@ import {
 describe("structured lifecycle document catalog routing", () => {
   it("excludes technical templates from the Sales proposal catalog", () => {
     expect(isStructuredDocumentInCatalog("SOR", "sales-proposal", "SAL")).toBe(true);
+    expect(isStructuredDocumentInCatalog("CONTRACT_REVIEW", "sales-proposal", "SAL")).toBe(true);
+    expect(isStructuredDocumentInCatalog("NDA", "sales-proposal", "SAL")).toBe(false);
+    expect(isStructuredDocumentInCatalog("COMMERCIAL_QUOTATION", "sales-proposal", "SAL")).toBe(false);
+    expect(isStructuredDocumentInCatalog("PRS", "sales-proposal", "SAL")).toBe(false);
     expect(isStructuredDocumentInCatalog("BOM_COST_TRACKER", "sales-proposal", "SAL")).toBe(false);
     expect(isStructuredDocumentInCatalog("DFMEA", "sales-proposal", "SAL")).toBe(false);
   });

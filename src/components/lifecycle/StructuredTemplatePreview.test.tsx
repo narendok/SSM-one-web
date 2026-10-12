@@ -107,8 +107,8 @@ describe("local structured preview draft safety", () => {
     expect(markup).toContain("Local unsaved draft — NOT APPROVED / TBC.");
   });
 
-  it("permits SOR, Contract Review, and PRS local editing only behind an exact verified Sales source pin", () => {
-    for (const kind of ["SOR", "CONTRACT_REVIEW", "PRS"] as const) {
+  it("keeps Sales source gating to SOR and Contract Review only", () => {
+    for (const kind of ["SOR", "CONTRACT_REVIEW"] as const) {
       expect(structuredSalesDocumentGate(kind, source)).toEqual({
         state: "VERIFIED",
         message: expect.stringContaining("OPPORTUNITY-2026-0013 · MASTER-2026-0001 rev 1"),
@@ -119,6 +119,7 @@ describe("local structured preview draft safety", () => {
       });
     }
     expect(structuredSalesDocumentGate("NDA", null)).toBeNull();
+    expect(structuredSalesDocumentGate("PRS", null)).toBeNull();
   });
 
   it("labels a clean persisted Sales draft as unissued instead of claiming local notes remain unsaved", () => {
