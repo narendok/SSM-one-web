@@ -356,6 +356,9 @@ CREATE OR REPLACE FUNCTION public.commit_sales_structured_docx_materialization(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_scope record; v_attempt public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE; v_prior public.sales_opportunity_structured_docx_materializations%ROWTYPE; v_node uuid; v_drive_revision uuid; v_register uuid; v_materialization uuid;
 BEGIN
+  -- Global order: caller request key -> registry assignment root -> template
+  -- root -> request/source rows -> receipt row. Registry revoke/approve paths
+  -- acquire their root lock before changing the same locked registry rows.
   -- A completed immutable graph is replayed before receipt consumption is
   -- inspected. Exact retries therefore return the original result after the
   -- one-time receipt has been consumed; altered retries still conflict.
