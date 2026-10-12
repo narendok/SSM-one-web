@@ -10,7 +10,7 @@ const inputSchema = z.object({ projectId: z.string().uuid(), documentKind: z.enu
 export const verifyPrivateStructuredDocxObject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => inputSchema.parse(data))
-  .handler(async ({ context }) => {
+  .handler(async ({ context, data }) => {
     if (!context.userId) throw new Error("Unauthorized");
     if (!lifecycleAcceptanceEnabled(process.env["SUPABASE_URL"], process.env["LIFECYCLE_DOCUMENT_ACCEPTANCE"])) {
       throw new Error("Verified DOCX Save is unavailable pending reviewed deployment acceptance.");
