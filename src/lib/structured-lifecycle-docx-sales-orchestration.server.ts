@@ -27,7 +27,7 @@ function requireRpc<T>(result: { data: T | null; error: { message: string } | nu
 export function createSalesStructuredDocxAuthorization(admin: RpcClient): PrivateDocxAuthorizationPort {
   return {
     async resolveCurrentRegistryAssignment(input, actorId): Promise<StructuredDocxRegistryScope> {
-      const scope = requireRpc(await admin.rpc("resolve_sales_structured_docx_server_scope" as never, {
+      const rawScope = requireRpc(await admin.rpc("resolve_sales_structured_docx_server_scope" as never, {
         p_actor_user_id: actorId,
         p_project_id: input.projectId,
         p_document_kind: input.documentKind,
@@ -37,8 +37,26 @@ export function createSalesStructuredDocxAuthorization(admin: RpcClient): Privat
         p_template_version: input.templateVersion,
         p_template_schema_hash: input.templateSchemaHash,
         p_source_fingerprint: input.sourceFingerprint,
-      } as never), "The trusted DOCX assignment scope is unavailable.") as unknown as StructuredDocxRegistryScope;
-      return scope;
+      } as never), "The trusted DOCX assignment scope is unavailable.") as unknown as Record<string, unknown>;
+      return {
+        actorId: rawScope.actor_id as string,
+        assignmentId: rawScope.assignment_id as string,
+        requestKey: rawScope.request_key as string,
+        projectId: rawScope.project_id as string,
+        documentKind: rawScope.document_kind as StructuredDocxRegistryScope["documentKind"],
+        departmentId: rawScope.department_id as string,
+        responsibleEmployeeId: rawScope.responsible_employee_id as string,
+        reviewerEmployeeId: rawScope.reviewer_employee_id as string | null,
+        templateId: rawScope.template_id as string,
+        templateKey: rawScope.template_key as string,
+        templateVersion: rawScope.template_version as number,
+        templateDocumentRevisionId: rawScope.template_document_revision_id as string,
+        templateSchemaHash: rawScope.template_schema_hash as string,
+        sourceFingerprint: rawScope.source_fingerprint as string,
+        storageBucket: rawScope.storage_bucket as "project-drive",
+        storagePath: rawScope.storage_path as string,
+        objectVersion: rawScope.object_version as string,
+      };
     },
     async issueVerifiedObjectReceipt(receipt) {
       const receiptId = requireRpc(await admin.rpc("issue_sales_structured_docx_trusted_receipt" as never, {
