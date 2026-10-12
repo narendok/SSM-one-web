@@ -277,7 +277,11 @@ BEGIN
     IF v_row ->> 'kind' = 'existing' THEN
       SELECT * INTO v_component FROM public.components WHERE id = (v_row ->> 'componentId')::uuid FOR SHARE;
       IF NOT FOUND THEN RAISE EXCEPTION 'Selected component is unavailable'; END IF;
-      IF nullif(v_row ->> 'sourceBomItemId','') IS NOT NULL THEN SELECT * INTO v_bom_item FROM public.project_bom_items WHERE id=(v_row ->> 'sourceBomItemId')::uuid AND bom_id=v_scope.project_bom_id FOR SHARE; IF NOT FOUND THEN RAISE EXCEPTION 'Source BOM item does not belong to the pinned BOM'; END IF; END IF;
+      IF nullif(v_row ->> 'sourceBomItemId','') IS NOT NULL THEN
+        SELECT * INTO v_bom_item FROM public.project_bom_items WHERE id=(v_row ->> 'sourceBomItemId')::uuid AND bom_id=v_scope.project_bom_id FOR SHARE;
+        IF NOT FOUND THEN RAISE EXCEPTION 'Source BOM item does not belong to the pinned BOM'; END IF;
+        IF v_bom_item.matched_component_id IS DISTINCT FROM v_component.id THEN RAISE EXCEPTION 'Source BOM item does not pin the selected authoritative component'; END IF;
+      END IF;
       INSERT INTO public.project_bom_procurement_review_request_lines(request_id,line_number,source_kind,source_bom_item_id,component_id,authoritative_mpn,authoritative_manufacturer,description,reference_designators,quantity,manual_note) VALUES(v_request.id,v_line_no,'EXISTING_COMPONENT',v_bom_item.id,v_component.id,v_component.part_number,v_component.manufacturer,v_component.name,v_row->>'referenceDesignators',(v_row->>'quantity')::numeric,nullif(v_row->>'manualNote',''));
     ELSE
       INSERT INTO public.project_bom_procurement_review_request_lines(request_id,line_number,source_kind,authoritative_mpn,authoritative_manufacturer,description,reference_designators,quantity,manual_note) VALUES(v_request.id,v_line_no,'NEW_PART',v_row->>'mpn',nullif(v_row->>'manufacturer',''),v_row->>'description',v_row->>'referenceDesignators',(v_row->>'quantity')::numeric,nullif(v_row->>'manualNote',''));

@@ -49,26 +49,28 @@ describe("selected project saved BOM review", () => {
 
   it("prepares only complete selected or new-part rows for a future protected Procurement request", () => {
     const rows = reviewableBomRows([
-      { lineId: "1", reference: "R1", quantity: "2", manualNote: "", kind: "existing", componentId: "component-1", mpn: "SERVER-MPN", manufacturer: "Vendor", description: "Catalog part" },
-      { lineId: "2", reference: "U1", quantity: "1", manualNote: "", kind: "new", componentId: "", mpn: "NEW-MPN", manufacturer: "New vendor", description: "New part" },
-      { lineId: "3", reference: "", quantity: "1", manualNote: "", kind: "new", componentId: "", mpn: "INCOMPLETE", manufacturer: "", description: "" },
+      { localRowId: "local-1", reference: "R1", quantity: "2", manualNote: "", kind: "existing", componentId: "component-1", mpn: "SERVER-MPN", manufacturer: "Vendor", description: "Catalog part" },
+      { localRowId: "local-2", reference: "U1", quantity: "1", manualNote: "", kind: "new", componentId: "", mpn: "NEW-MPN", manufacturer: "New vendor", description: "New part" },
+      { localRowId: "local-3", reference: "", quantity: "1", manualNote: "", kind: "new", componentId: "", mpn: "INCOMPLETE", manufacturer: "", description: "" },
     ]);
-    expect(rows.map((row) => row.lineId)).toEqual(["1", "2"]);
+    expect(rows.map((row) => row.localRowId)).toEqual(["local-1", "local-2"]);
     expect(procurementReviewContractState.deployed).toBe(false);
   });
 
-  it("adapts only complete project/BOM-pinned rows to the exact pending RPC payload shape", () => {
+  it("keeps the local row key out of catalog additions while preserving an explicit saved-BOM source pin", () => {
     const payload = procurementSubmissionAdapter({
       projectId: "project-id", projectBomId: "bom-id", expectedBomRevision: "7", requestKey: "request-key",
       rows: [
-        { lineId: "bom-line-id", reference: "R1", quantity: "2", manualNote: "manual", kind: "existing", componentId: "component-id", mpn: "client-forged", manufacturer: "client-forged", description: "client-forged" },
-        { lineId: "", reference: "U1", quantity: "1", manualNote: "", kind: "new", componentId: "", mpn: "NEW-1", manufacturer: "Maker", description: "New part" },
+        { localRowId: "saved-row-local-key", sourceBomItemId: "bom-line-id", reference: "R1", quantity: "2", manualNote: "manual", kind: "existing", componentId: "component-id", mpn: "client-forged", manufacturer: "client-forged", description: "client-forged" },
+        { localRowId: "catalog-addition-local-key", reference: "C1", quantity: "3", manualNote: "", kind: "existing", componentId: "catalog-component-id", mpn: "client-forged", manufacturer: "client-forged", description: "client-forged" },
+        { localRowId: "new-part-local-key", reference: "U1", quantity: "1", manualNote: "", kind: "new", componentId: "", mpn: "NEW-1", manufacturer: "Maker", description: "New part" },
       ],
     });
     expect(payload).toEqual({
       projectId: "project-id", projectBomId: "bom-id", expectedBomRevision: "7", requestKey: "request-key",
       rows: [
         { kind: "existing", sourceBomItemId: "bom-line-id", componentId: "component-id", referenceDesignators: "R1", quantity: 2, manualNote: "manual" },
+        { kind: "existing", sourceBomItemId: undefined, componentId: "catalog-component-id", referenceDesignators: "C1", quantity: 3, manualNote: undefined },
         { kind: "new", mpn: "NEW-1", manufacturer: "Maker", description: "New part", referenceDesignators: "U1", quantity: 1, manualNote: undefined },
       ],
     });
