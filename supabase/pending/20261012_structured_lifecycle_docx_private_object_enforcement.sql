@@ -39,6 +39,22 @@ BEGIN
 END;
 $$;
 
+-- Storage INSERT policies receive only the object row. The matching upload
+-- authorization above locks the exact request/scope immediately before the
+-- upload; this helper repeats the create-only/assigned-person checks at the
+-- Storage boundary, where broad permissive Drive policies would otherwise
+-- combine with OR.
+CREATE OR REPLACE FUNCTION public.can_upload_sales_structured_docx_object(
+  p_bucket text, p_path text, p_content_type text, p_size_bytes bigint
+) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF p_content_type <> 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    OR p_size_bytes IS NULL OR p_size_bytes <= 0 OR p_size_bytes > 10485760
+  THEN RETURN false; END IF;
+  RETURN public.can_stage_sales_structured_docx_object(p_bucket,p_path);
+END;
+$$;
+
 -- Post-upload verifier boundary. This deliberately does not require a storage
 -- attempt: the trusted verifier must be able to attest bytes before it issues
 -- the immutable receipt. It is server-only and has no authenticated grant.
@@ -200,7 +216,15 @@ $$;
 CREATE POLICY sales_structured_docx_read_restrictive ON storage.objects AS RESTRICTIVE FOR SELECT TO authenticated
 USING (NOT public.is_sales_structured_docx_request_path(bucket_id, name) OR public.can_read_sales_structured_docx_object(bucket_id, name));
 CREATE POLICY sales_structured_docx_insert_restrictive ON storage.objects AS RESTRICTIVE FOR INSERT TO authenticated
-WITH CHECK (NOT public.is_sales_structured_docx_request_path(bucket_id, name) OR public.can_stage_sales_structured_docx_object(bucket_id, name));
+WITH CHECK (
+  NOT public.is_sales_structured_docx_request_path(bucket_id, name)
+  OR public.can_upload_sales_structured_docx_object(
+    bucket_id,
+    name,
+    coalesce(metadata ->> 'mimetype', metadata ->> 'contentType', ''),
+    coalesce((metadata ->> 'size')::bigint, 0)
+  )
+);
 CREATE POLICY sales_structured_docx_update_restrictive ON storage.objects AS RESTRICTIVE FOR UPDATE TO authenticated
 USING (false)
 WITH CHECK (false);
@@ -232,6 +256,7 @@ USING (
 
 REVOKE ALL ON FUNCTION public.is_sales_structured_docx_request_path(text,text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.can_stage_sales_structured_docx_object(text,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.can_upload_sales_structured_docx_object(text,text,text,bigint) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_object(text,text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.is_sales_structured_docx_drive_node(uuid) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_drive_node(uuid) FROM PUBLIC, anon;
@@ -241,6 +266,7 @@ REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_uploaded_object(uuid,
 REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_current_path_create_only(uuid,text,text,text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_sales_structured_docx_request_path(text,text) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.can_stage_sales_structured_docx_object(text,text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.can_upload_sales_structured_docx_object(text,text,text,bigint) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_object(text,text) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.is_sales_structured_docx_drive_node(uuid) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_drive_node(uuid) TO authenticated, service_role;

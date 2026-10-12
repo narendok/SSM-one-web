@@ -2,9 +2,28 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { lifecycleAcceptanceEnabled } from "./lifecycle-acceptance-gate";
-import { verifySalesStructuredDocxObject, commitVerifiedSalesStructuredDocx } from "./structured-lifecycle-docx-sales-orchestration.server";
+import { authorizeSalesStructuredDocxUpload, DOCX_MIME, verifySalesStructuredDocxObject, commitVerifiedSalesStructuredDocx } from "./structured-lifecycle-docx-sales-orchestration.server";
 
 const inputSchema = z.object({ projectId: z.string().uuid(), documentKind: z.enum(["SOR", "NDA", "COMMERCIAL_QUOTATION", "CONTRACT_REVIEW", "PRS", "BOM", "DFMEA", "MANUFACTURING_CONTROL_PLAN", "DVPR", "PDI", "COMMERCIAL_TAX_INVOICE", "ANNUAL_SKILL_MATRIX"]), assignmentId: z.string().uuid(), requestKey: z.string().uuid(), templateKey: z.string().min(1), templateVersion: z.number().int().positive(), templateSchemaHash: z.string().regex(/^[a-f0-9]{64}$/i), sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/i) });
+
+const uploadAuthorizationSchema = z.object({
+  opportunityId: z.string().uuid(), customerId: z.string().uuid(), assignmentId: z.string().uuid(), requestKey: z.string().uuid(),
+  storageBucket: z.literal("project-drive"), storagePath: z.string().min(1).max(1024),
+  contentType: z.literal(DOCX_MIME), sizeBytes: z.number().int().positive().max(10 * 1024 * 1024),
+});
+
+/** Deployment-gated authority for one exact DOCX upload path; it never uploads browser bytes itself. */
+export const authorizePrivateStructuredDocxUpload = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => uploadAuthorizationSchema.parse(data))
+  .handler(async ({ context, data }) => {
+    if (!context.userId) throw new Error("Unauthorized");
+    if (!lifecycleAcceptanceEnabled(process.env["SUPABASE_URL"], process.env["LIFECYCLE_DOCUMENT_ACCEPTANCE"])) {
+      throw new Error("Verified DOCX Save is unavailable pending reviewed deployment acceptance.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return authorizeSalesStructuredDocxUpload(supabaseAdmin as never, context.userId, data);
+  });
 
 /** Deployment-gated trusted server verifier. It has no browser/admin transport. */
 export const verifyPrivateStructuredDocxObject = createServerFn({ method: "POST" })

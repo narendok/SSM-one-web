@@ -63,6 +63,7 @@ import {
 } from "@/lib/structured-sales-local-payload";
 import { renderStructuredLifecycleDocx } from "@/lib/structured-lifecycle-docx-renderer";
 import { isStructuredDocumentInCatalog, type StructuredDocumentCatalogScope } from "@/lib/structured-lifecycle-document-access";
+import { authorizePrivateStructuredDocxUpload, commitPrivateStructuredDocxMaterialization, verifyPrivateStructuredDocxObject } from "@/lib/structured-lifecycle-docx-private-object-bridge.functions";
 
 export type StructuredTemplatePreviewSourcePin = {
   opportunityNumber: string;
@@ -283,6 +284,9 @@ export function StructuredTemplatePreview({
   const listBoms = useServerFn(fetchProjectBoms);
   const getBomItems = useServerFn(fetchProjectBomItems);
   const discoverCapability = useServerFn(discoverStructuredSalesDraftCapability);
+  const authorizeDocxUpload = useServerFn(authorizePrivateStructuredDocxUpload);
+  const verifyDocxObject = useServerFn(verifyPrivateStructuredDocxObject);
+  const commitDocxMaterialization = useServerFn(commitPrivateStructuredDocxMaterialization);
   const linkedProject = project ?? source.data?.project ?? null;
   const effectiveProjectId = projectId ?? linkedProject?.id;
   const projectBoms = useQuery({
@@ -627,6 +631,36 @@ export function StructuredTemplatePreview({
     } finally {
       setExportingDocx(false);
     }
+  };
+  // Kept behind the server-side isolated-acceptance gate. The current UI does
+  // not expose a Save DOCX control, but this is the single direct handler that
+  // will perform request -> exact upload -> verification -> receipt -> commit
+  // after reviewed deployment acceptance; local export remains independent.
+  const saveVerifiedDocxWhenAccepted = async () => {
+    if (!source.data || !isStructuredSalesPreviewKind(kind)) throw new Error("An exact Sales source is required for DOCX Save.");
+    const renderedDocx = await renderStructuredLifecycleDocx(kind, source.data, localEditsForStructuredPreview(kind, effectiveEdits));
+    if (renderedDocx.bytes.byteLength <= 0 || renderedDocx.bytes.byteLength > structuredDraftStorageLimit) throw new Error("The DOCX upload must be between 1 byte and 10 MB.");
+    const requestKey = requestKeys[kind] ?? newRequestKey();
+    const assignmentId = "";
+    const templateKey = "";
+    const templateVersion = 0;
+    const templateSchemaHash = "";
+    const sourceFingerprint = "";
+    // The deployment gate rejects this path before these acceptance-pending
+    // registry pins can be reached. The accepted registry resolver must supply
+    // these values; never infer them from browser state.
+    const authorization = await authorizeDocxUpload({ data: {
+      opportunityId: source.data.opportunityId, customerId: source.data.customerId, assignmentId, requestKey,
+      storageBucket: "project-drive", storagePath: "", contentType: renderedDocx.mimeType, sizeBytes: renderedDocx.bytes.byteLength,
+    } });
+    const { error: uploadError } = await supabase.storage.from(authorization.storageBucket).upload(
+      authorization.storagePath,
+      new Blob([renderedDocx.bytes], { type: renderedDocx.mimeType }),
+      { contentType: renderedDocx.mimeType, upsert: false },
+    );
+    if (uploadError) throw new Error(uploadError.message);
+    const receipt = await verifyDocxObject({ data: { projectId: source.data.project?.id ?? source.data.opportunityId, documentKind: kind, assignmentId, requestKey, templateKey, templateVersion, templateSchemaHash, sourceFingerprint } });
+    await commitDocxMaterialization({ data: { opportunityId: source.data.opportunityId, customerId: source.data.customerId, fileName: renderedDocx.fileName, receipt } });
   };
   return (
     <Card>

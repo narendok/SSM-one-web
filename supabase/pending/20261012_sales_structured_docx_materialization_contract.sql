@@ -250,6 +250,71 @@ BEGIN
 END;
 $$;
 
+-- Caller-authenticated upload request. It returns only the exact create-only
+-- private path derived from the immutable DOCX request row. The caller cannot
+-- choose a bucket, folder, storage path, source, or template outside the
+-- already locked request. The bounded payload is checked here as a second
+-- boundary before Storage RLS admits the one permitted INSERT.
+CREATE OR REPLACE FUNCTION public.authorize_sales_structured_docx_upload(
+  p_opportunity_id uuid, p_customer_id uuid, p_assignment_id uuid, p_request_key uuid,
+  p_storage_bucket text, p_storage_path text, p_content_type text, p_size_bytes bigint
+) RETURNS TABLE(
+  request_key uuid, storage_bucket text, storage_path text,
+  max_size_bytes bigint, replayed boolean
+) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  v_actor uuid := auth.uid();
+  v_request public.sales_opportunity_structured_docx_requests%ROWTYPE;
+  v_scope record;
+  v_existing_object boolean;
+BEGIN
+  IF v_actor IS NULL OR p_request_key IS NULL OR p_assignment_id IS NULL
+    OR p_storage_bucket <> 'project-drive'
+    OR p_content_type <> 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    OR p_size_bytes IS NULL OR p_size_bytes <= 0 OR p_size_bytes > 10485760
+  THEN RAISE EXCEPTION 'Invalid protected DOCX upload request'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|',p_opportunity_id::text,p_request_key::text),0));
+  SELECT * INTO v_request
+  FROM public.sales_opportunity_structured_docx_requests request_row
+  WHERE request_row.request_key=p_request_key
+    AND request_row.requested_by=v_actor
+    AND request_row.opportunity_id=p_opportunity_id
+    AND request_row.customer_id=p_customer_id
+  FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'DOCX upload request is not owned by this actor and source'; END IF;
+  SELECT * INTO v_scope
+  FROM public.resolve_sales_structured_docx_assignment(p_opportunity_id,p_customer_id,v_request.document_kind,p_assignment_id);
+  IF v_request.assignment_id <> p_assignment_id
+    OR v_request.location_id <> v_scope.location_id
+    OR p_storage_path <> v_scope.storage_path_prefix || p_request_key::text || '-draft.docx'
+    OR NOT EXISTS (
+      SELECT 1 FROM public.master_specifications current_specification
+      WHERE current_specification.id=v_request.master_specification_id
+        AND current_specification.current_version_id=v_request.master_specification_version_id
+    )
+  THEN RAISE EXCEPTION 'DOCX upload request no longer has an active assigned-person source scope'; END IF;
+  SELECT EXISTS(
+    SELECT 1 FROM storage.objects object_row
+    WHERE object_row.bucket_id=p_storage_bucket AND object_row.name=p_storage_path
+  ) INTO v_existing_object;
+  IF v_existing_object THEN
+    IF EXISTS (
+      SELECT 1 FROM public.sales_opportunity_structured_docx_storage_attempts attempt
+      WHERE attempt.request_key=p_request_key AND attempt.storage_bucket=p_storage_bucket AND attempt.storage_path=p_storage_path
+    ) THEN
+      RETURN QUERY SELECT p_request_key,p_storage_bucket,p_storage_path,10485760::bigint,true;
+      RETURN;
+    END IF;
+    RAISE EXCEPTION 'DOCX upload path already exists without this immutable request receipt';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.sales_opportunity_structured_docx_storage_attempts attempt
+    WHERE attempt.request_key=p_request_key
+  ) THEN RAISE EXCEPTION 'DOCX upload request already has an immutable verifier receipt'; END IF;
+  RETURN QUERY SELECT p_request_key,p_storage_bucket,p_storage_path,10485760::bigint,false;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.commit_sales_structured_docx_materialization(
   p_opportunity_id uuid, p_customer_id uuid, p_assignment_id uuid, p_request_key uuid, p_file_name text, p_storage_bucket text, p_storage_path text, p_object_version text, p_sha256_checksum text, p_size_bytes bigint, p_trusted_receipt_id uuid
 ) RETURNS TABLE(materialization_id uuid, drive_node_id uuid, drive_revision_id uuid, document_control_register_id uuid, replayed boolean)
@@ -299,6 +364,7 @@ REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_assignment() FROM PUBL
 REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_storage_attempt() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,text,text,bigint) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,text,bigint,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.read_sales_structured_docx_materializations(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
