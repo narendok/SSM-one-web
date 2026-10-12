@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[[ "${LOCAL_SALES_STRUCTURED_DOCX_DISPOSABLE:-}" == "yes" ]] || { echo 'Set LOCAL_SALES_STRUCTURED_DOCX_DISPOSABLE=yes for local disposable execution.' >&2; exit 64; }
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; work_dir="$(mktemp -d /tmp/structured_docx_receipt_race_XXXXXX)"; data_dir="$work_dir/data"; socket_dir="$work_dir/socket"; database="structured_docx_receipt_race"; port=55477; server_pid=""
+cleanup(){ status=$?; if [[ -n "$server_pid" ]] && kill -0 "$server_pid" 2>/dev/null; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi; rm -rf "$work_dir"; printf 'CLEANUP_VERIFIED trusted_receipt_race_fixture_removed=true\n'; exit "$status"; }; trap cleanup EXIT
+[[ "$(id -u)" == 0 ]] || { echo 'Requires disposable root runner only.' >&2; exit 64; }
+mkdir -p "$socket_dir"; chown -R 1000:1000 "$work_dir"; setpriv --reuid=1000 --regid=1000 --clear-groups initdb -D "$data_dir" --no-locale --encoding=UTF8 --auth-local=trust -U lovable >/dev/null
+printf "listen_addresses=''\nport=%s\nunix_socket_directories='%s'\nshared_memory_type=mmap\ndynamic_shared_memory_type=mmap\n" "$port" "$socket_dir" >> "$data_dir/postgresql.conf"; setpriv --reuid=1000 --regid=1000 --clear-groups postgres -D "$data_dir" >/dev/null 2>&1 & server_pid=$!
+for _ in $(seq 1 150); do psql --host="$socket_dir" --port="$port" --username=lovable --dbname=postgres -Atqc 'SELECT 1' >/dev/null 2>&1 && break; sleep .1; done
+createdb --host="$socket_dir" --port="$port" --username=lovable "$database"; args=(--set=ON_ERROR_STOP=1 --host="$socket_dir" --port="$port" --username=lovable --dbname="$database")
+psql "${args[@]}" -f "$root/supabase/pending/tests/sales_opportunity_structured_draft_metadata_local_fixture.sql" >/dev/null
+for sql in 20261009_sales_opportunity_structured_draft_metadata.sql 20261011_sales_opportunity_structured_draft_audit_location.sql 20261011_sales_opportunity_structured_draft_materialization.sql 20261012_structured_lifecycle_docx_registry_contract.sql 20261012_sales_structured_docx_materialization_contract.sql 20261012_structured_lifecycle_docx_trusted_receipt_authority.sql 20261012_structured_lifecycle_docx_private_object_enforcement.sql; do psql "${args[@]}" -f "$root/supabase/pending/$sql" >/dev/null; done
+psql "${args[@]}" -f "$root/supabase/pending/tests/structured_docx_trusted_receipt_local_race_setup.sql" >/dev/null
+for case_name in revoke template source; do
+  request_key="00000000-0000-4000-8000-0000000009${case_name:0:1}2"
+  source_fingerprint="$(printf 'a%.0s' {1..64})"
+  psql "${args[@]}" -c "INSERT INTO public.sales_opportunity_structured_docx_requests(request_key,requested_by,assignment_id,structured_draft_request_key,structured_draft_revision_id,location_id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,document_kind,editable_schema_key,editable_schema_hash,source_fingerprint,payload_hash,template_key,template_version,template_schema_hash) VALUES ('$request_key','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000720',(SELECT revision_id FROM public.sales_opportunity_structured_draft_requests WHERE request_key='00000000-0000-4000-8000-000000000720'),'00000000-0000-4000-8000-000000000710','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000401','SOR','SOR',repeat('d',64),'$source_fingerprint',repeat('e',64),'sales-sor-race',1,repeat('b',64)); INSERT INTO storage.objects(bucket_id,name,version,metadata) VALUES ('project-drive','sales/race/$request_key-draft.docx','race-v1','{\"mimetype\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"size\":512}');" >/dev/null
+  psql "${args[@]}" -v case_name="$case_name" -v request_key="$request_key" -v source_fingerprint="$source_fingerprint" -f "$root/supabase/pending/tests/structured_docx_trusted_receipt_local_race_verifier.sql" >"$work_dir/$case_name-verifier.out" 2>&1 & verifier=$!
+  psql "${args[@]}" -v case_name="$case_name" -f "$root/supabase/pending/tests/structured_docx_trusted_receipt_local_race_mutator.sql" >"$work_dir/$case_name-mutator.out" 2>&1 & mutator=$!
+  set +e; wait "$verifier"; verifier_status=$?; wait "$mutator"; mutator_status=$?; set -e
+  [[ $verifier_status -ne 0 && $mutator_status -eq 0 ]] || { echo "Expected $case_name mutation to succeed and stale issuer to fail" >&2; exit 1; }
+  [[ "$(psql "${args[@]}" -Atqc "SELECT count(*) FROM public.sales_opportunity_structured_docx_trusted_receipts WHERE request_key='$request_key'")" == 0 ]] || { echo "Stale $case_name race minted a receipt" >&2; exit 1; }
+done
+printf 'STRUCTURED_DOCX_TRUSTED_RECEIPT_RACES_PASS=true\n'
