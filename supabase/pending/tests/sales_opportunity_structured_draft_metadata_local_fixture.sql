@@ -45,6 +45,21 @@ CREATE TABLE public.customers (id uuid PRIMARY KEY, name text NOT NULL);
 CREATE TABLE public.sales_opportunities (
   id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id)
 );
+CREATE TABLE public.customer_requirements (
+  id uuid PRIMARY KEY,
+  opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id),
+  customer_id uuid NOT NULL REFERENCES public.customers(id)
+);
+CREATE TABLE public.requirement_baselines (
+  id uuid PRIMARY KEY,
+  customer_requirement_id uuid NOT NULL REFERENCES public.customer_requirements(id)
+);
+CREATE TABLE public.sales_project_handovers (
+  id uuid PRIMARY KEY,
+  baseline_id uuid NOT NULL REFERENCES public.requirement_baselines(id),
+  project_id uuid NULL,
+  status text NOT NULL
+);
 CREATE TABLE public.master_specifications (
   id uuid PRIMARY KEY, opportunity_id uuid NOT NULL REFERENCES public.sales_opportunities(id),
   customer_id uuid NOT NULL REFERENCES public.customers(id),

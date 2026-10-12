@@ -6,7 +6,7 @@ Status: unaccepted; **do not install**. This package makes no live database, Sto
 
 Apply only after the managed preflight reports every prerequisite exactly and a root reviewer approves the resulting plan.
 
-1. `20261012_structured_lifecycle_docx_registry_contract.sql` — immutable template pins and explicitly assigned responsible people.
+1. `20261012_structured_lifecycle_docx_registry_contract.sql` — immutable template pins and explicit assignments with two non-interchangeable scopes: `SALES_OPPORTUNITY` before handover and `PROJECT` only through an existing completed/initiated handover baseline.
 2. `20261012_sales_structured_docx_folder_discovery.sql` — exact active, locked, non-trashed Sales location from pinned source.
 3. `20261012_sales_structured_docx_materialization_contract.sql` — assignment/request/attempt/materialization/audit and atomic Drive/register/revision commit.
 4. `20261012_structured_lifecycle_docx_private_object_enforcement.sql` — reserved request paths and restrictive Storage/Drive/register read overlays.
@@ -16,7 +16,7 @@ Record SHA-256 values from the release checkout immediately before review; any m
 
 ## Protected recipient scope
 
-Only the current explicit responsible employee may stage, read, verify, save, history-read, or download a DOCX tagged materialization. The scope also requires current employee/dept membership, a live assignment, immutable template pin, exact source fingerprint, active private Sales location, and the request-bound create-only object version. Normal Sales access, department membership, project visibility, Drive visibility, or administrator status alone is insufficient. The restrictive Storage policy overlays are deliberately evaluated alongside broad permissive policies; UPDATE, DELETE, rename, and replacement are denied for the reserved prefix.
+Only the current explicit responsible employee may stage, read, verify, save, history-read, or download a DOCX tagged materialization. Before handover, the assignment binds the exact Sales opportunity and customer; this has no project dependency. After handover, the assignment binds the project and resolves only through a matching `sales_project_handovers` → baseline → customer requirement chain to the same opportunity/customer. Both paths require current employee/department membership, an immutable template pin, exact source fingerprint, active private Sales location, and the request-bound create-only object version. Normal Sales access, department membership, project visibility, Drive visibility, or administrator status alone is insufficient. The restrictive Storage policy overlays are deliberately evaluated alongside broad permissive policies; UPDATE, DELETE, rename, and replacement are denied for the reserved prefix.
 
 ## Server runtime integration
 
@@ -29,7 +29,8 @@ Only the current explicit responsible employee may stage, read, verify, save, hi
 ## Function/grant boundary
 
 - `authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,bigint)` is caller-authenticated only after review; it derives current assignment, source, active location, bucket, and request-key path and rejects arbitrary folder/path/template authority, non-DOCX MIME, values above 10 MB, stale source, conflicting replay, or a pre-existing unreceipted object. Its default ACL is revoked from every runtime role.
-- `resolve_sales_structured_docx_server_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text)`, `issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text)`, `assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint)`, and `consume_sales_structured_docx_trusted_receipt(uuid,uuid)` are revoked from PUBLIC/anon/authenticated and granted only to `service_role`.
+- `resolve_sales_structured_docx_server_scope(uuid,uuid,uuid,text,uuid,uuid,text,integer,text,text)`, `issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text)`, `assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint)`, and `consume_sales_structured_docx_trusted_receipt(uuid,uuid)` are revoked from PUBLIC/anon/authenticated and granted only to `service_role`.
+- `resolve_structured_lifecycle_docx_registry_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text)`, `assign_sales_structured_docx_responsibility(uuid,uuid,uuid,text,uuid,uuid,uuid)`, and `assign_project_structured_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid)` are revoked from every runtime role. They are review-only management primitives; no assignment or template pin is a pre-install requirement.
 - Storage policy helper functions have minimal `authenticated` EXECUTE only where PostgreSQL policy evaluation needs it; byte-upload assertion is service-only.
 - The materialization commit remains caller-authenticated but rejects missing, altered, cross-actor, consumed, or mismatched receipts and consumes the receipt in the same transaction as Drive/revision/register/audit work.
 
@@ -39,7 +40,7 @@ The existing HTML structured-draft requests, materializations, history, private 
 
 ## Preflight and activation
 
-Run `20261012_structured_docx_managed_preflight_read_only.sql` read-only against the managed database. Halt for any missing/changed columns, extension, function definition, policy, role grant, active assignment/template pin, source-bound location, or conflicting reserved-path policy. Minimal activation after approval: run the five SQL files in order, run their disposable/managed acceptance evidence, configure the isolated acceptance gate, then enable the UI save handler only after a protected create-only upload request endpoint is accepted. No history replay, fixture creation, broad grants, policy weakening, or storage cleanup is permitted.
+Run `20261012_structured_docx_managed_preflight_read_only.sql` read-only against the managed database. Halt for missing/changed installed source columns, extension, resolver/function body, policy, role grant, source-bound location, or conflicting reserved-path policy. Do not halt merely because new pending registry, assignment, or template-pin tables/rows do not yet exist: configure the explicitly reviewed Sales or project assignment and immutable template pin only after approved installation. Minimal activation after approval: run the five SQL files in order, run their disposable/managed acceptance evidence, configure the isolated acceptance gate, then enable the UI save handler only after a protected create-only upload request endpoint is accepted. No history replay, fixture creation, broad grants, policy weakening, or storage cleanup is permitted.
 
 ## Recovery and rollback
 
@@ -48,7 +49,7 @@ Before activation, capture function/policy/grant/schema snapshots and the pendin
 ## Outstanding prerequisites
 
 1. Managed preflight evidence that the inspected Storage object-version columns, resolver schema, helper bodies, restrictive policy behavior, roles, active pins, and exact folder binding match this package.
-2. Root review of the registry's project-scoped authority mapping to Sales opportunity/Master provenance; current isolated acceptance represents the mapping with an ephemeral project row only.
+2. Root review of the exact Sales `OPPORTUNITY-2026-0013` / `MASTER-2026-0001` source and handover chain. Read-only inspection confirms the Master belongs to that opportunity/customer and has current revision 1; it must use `SALES_OPPORTUNITY` scope until an existing handover links it to a project. No project is fabricated.
 3. A managed, non-owner authenticated acceptance run covering assigned, unassigned, cross-department, revoked, stale, replay, replacement, and rollback cases.
 
 Procurement review and sample archive/restore remain separate, unaccepted work.

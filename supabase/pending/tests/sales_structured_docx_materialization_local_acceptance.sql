@@ -13,14 +13,46 @@ INSERT INTO public.sales_opportunity_structured_draft_private_locations(id,drive
  ('00000000-0000-4000-8000-000000000701','00000000-0000-4000-8000-000000000610','project-drive','sales/opportunity/00000000-0000-4000-8000-000000000201/',now(),'00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
 CREATE TEMP TABLE saved AS SELECT * FROM public.save_sales_opportunity_structured_draft_at_location(
  '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000401','SOR',0,'{"SCOPE_STATEMENT":"DOCX scope"}'::jsonb,'00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000701');
-INSERT INTO public.sales_opportunity_structured_docx_assignments(id,opportunity_id,customer_id,document_kind,department_id,responsible_employee_id,assigned_by,created_by) VALUES
- ('00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','SOR','00000000-0000-4000-8000-000000000501','00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
-INSERT INTO public.projects(id,status) VALUES ('00000000-0000-4000-8000-000000000201','active');
-INSERT INTO public.project_team_members(project_id,employee_id) VALUES ('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000801');
 INSERT INTO public.department_process_templates(id,department_id,template_key,version,status,active_document_revision_id) VALUES ('00000000-0000-4000-8000-000000000991','00000000-0000-4000-8000-000000000501','sales-sor-local',1,'ACTIVE','00000000-0000-4000-8000-000000000992');
 INSERT INTO public.department_process_template_document_revisions(id,template_id) VALUES ('00000000-0000-4000-8000-000000000992','00000000-0000-4000-8000-000000000991');
-INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(id,project_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by) VALUES ('00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000501','SOR','00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
+INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(id,scope_type,opportunity_id,customer_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by) VALUES ('00000000-0000-4000-8000-000000000901','SALES_OPPORTUNITY','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000501','SOR','00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
+INSERT INTO public.sales_opportunity_structured_docx_assignments(id,opportunity_id,customer_id,document_kind,department_id,responsible_employee_id,registry_assignment_id,assigned_by,created_by) VALUES
+ ('00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','SOR','00000000-0000-4000-8000-000000000501','00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
 INSERT INTO public.structured_lifecycle_docx_template_pins(id,department_id,document_kind,template_id,template_document_revision_id,template_key,template_version,template_schema_hash,approved_by,request_key,payload_hash,created_by) VALUES ('00000000-0000-4000-8000-000000000994','00000000-0000-4000-8000-000000000501','SOR','00000000-0000-4000-8000-000000000991','00000000-0000-4000-8000-000000000992','sales-sor-local',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000995','cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc','00000000-0000-4000-8000-000000000001');
+DO $scope_discriminator$
+DECLARE v_project_assignment uuid := '00000000-0000-4000-8000-000000000906';
+BEGIN
+  -- The pre-handover Sales SOR assignment is deliberately valid without any project row.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.resolve_structured_lifecycle_docx_registry_scope(
+      '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','SOR',
+      '00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sales-sor-local',1,
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    )
+  ) THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL pre-handover Sales scope did not resolve without a project'; END IF;
+  BEGIN
+    PERFORM public.resolve_structured_lifecycle_docx_registry_scope(
+      '00000000-0000-4000-8000-000000000202','00000000-0000-4000-8000-000000000102','SOR',
+      '00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sales-sor-local',1,
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    ); RAISE EXCEPTION 'LOCAL_DOCX_FAIL other opportunity/customer resolved Sales responsibility';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Current assigned-person DOCX authority is unavailable' THEN RAISE; END IF; END;
+  INSERT INTO public.projects(id,status) VALUES ('00000000-0000-4000-8000-000000000211','active');
+  INSERT INTO public.project_team_members(project_id,employee_id) VALUES ('00000000-0000-4000-8000-000000000211','00000000-0000-4000-8000-000000000801');
+  INSERT INTO public.customer_requirements(id,opportunity_id,customer_id) VALUES ('00000000-0000-4000-8000-000000000821','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101');
+  INSERT INTO public.requirement_baselines(id,customer_requirement_id) VALUES ('00000000-0000-4000-8000-000000000822','00000000-0000-4000-8000-000000000821');
+  INSERT INTO public.sales_project_handovers(id,baseline_id,project_id,status) VALUES ('00000000-0000-4000-8000-000000000823','00000000-0000-4000-8000-000000000822','00000000-0000-4000-8000-000000000211','completed');
+  INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(id,scope_type,project_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by)
+  VALUES(v_project_assignment,'PROJECT','00000000-0000-4000-8000-000000000211','00000000-0000-4000-8000-000000000501','SOR','00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
+  IF NOT EXISTS (
+    SELECT 1 FROM public.resolve_structured_lifecycle_docx_registry_scope(
+      '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','SOR',v_project_assignment,
+      '00000000-0000-4000-8000-000000000902','sales-sor-local',1,
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    )
+  ) THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL post-handover project scope did not resolve'; END IF;
+END;
+$scope_discriminator$;
 UPDATE public.master_specifications SET current_version_id='00000000-0000-4000-8000-000000000401' WHERE id='00000000-0000-4000-8000-000000000301';
 CREATE TEMP TABLE requested AS SELECT * FROM public.request_sales_structured_docx_materialization(
  '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000901','sales-sor-local',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','00000000-0000-4000-8000-000000000902');

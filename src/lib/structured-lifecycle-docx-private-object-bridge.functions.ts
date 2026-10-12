@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { lifecycleAcceptanceEnabled } from "./lifecycle-acceptance-gate";
 import { authorizeSalesStructuredDocxUpload, DOCX_MIME, verifySalesStructuredDocxObject, commitVerifiedSalesStructuredDocx } from "./structured-lifecycle-docx-sales-orchestration.server";
 
-const inputSchema = z.object({ projectId: z.string().uuid(), documentKind: z.enum(["SOR", "NDA", "COMMERCIAL_QUOTATION", "CONTRACT_REVIEW", "PRS", "BOM", "DFMEA", "MANUFACTURING_CONTROL_PLAN", "DVPR", "PDI", "COMMERCIAL_TAX_INVOICE", "ANNUAL_SKILL_MATRIX"]), assignmentId: z.string().uuid(), requestKey: z.string().uuid(), templateKey: z.string().min(1), templateVersion: z.number().int().positive(), templateSchemaHash: z.string().regex(/^[a-f0-9]{64}$/i), sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/i) });
+const inputSchema = z.object({ opportunityId: z.string().uuid(), customerId: z.string().uuid(), documentKind: z.enum(["SOR", "NDA", "COMMERCIAL_QUOTATION", "CONTRACT_REVIEW", "PRS", "BOM", "DFMEA", "MANUFACTURING_CONTROL_PLAN", "DVPR", "PDI", "COMMERCIAL_TAX_INVOICE", "ANNUAL_SKILL_MATRIX"]), assignmentId: z.string().uuid(), requestKey: z.string().uuid(), templateKey: z.string().min(1), templateVersion: z.number().int().positive(), templateSchemaHash: z.string().regex(/^[a-f0-9]{64}$/i), sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/i) });
 
 const uploadAuthorizationSchema = z.object({
   opportunityId: z.string().uuid(), customerId: z.string().uuid(), assignmentId: z.string().uuid(), requestKey: z.string().uuid(),
@@ -43,7 +43,7 @@ const commitSchema = z.object({
   fileName: z.string().min(1).max(255),
   receipt: z.object({
     receiptId: z.string().uuid(), actorId: z.string().uuid(), assignmentId: z.string().uuid(), requestKey: z.string().uuid(),
-    projectId: z.string().uuid(), documentKind: z.enum(["SOR", "CONTRACT_REVIEW"]), departmentId: z.string().uuid(),
+    scopeType: z.enum(["SALES_OPPORTUNITY", "PROJECT"]), opportunityId: z.string().uuid(), customerId: z.string().uuid(), projectId: z.string().uuid().nullable(), documentKind: z.enum(["SOR", "CONTRACT_REVIEW"]), departmentId: z.string().uuid(),
     templateId: z.string().uuid(), templateDocumentRevisionId: z.string().uuid(), templateKey: z.string().min(1),
     templateVersion: z.number().int().positive(), templateSchemaHash: z.string().regex(/^[a-f0-9]{64}$/i),
     sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/i), storageBucket: z.literal("project-drive"), storagePath: z.string().min(1),

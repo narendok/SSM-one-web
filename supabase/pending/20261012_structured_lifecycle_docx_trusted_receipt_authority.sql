@@ -92,7 +92,7 @@ BEGIN
   THEN RAISE EXCEPTION 'Trusted DOCX receipt no longer has an active assigned-person location scope'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.master_specifications s WHERE s.id=v_request.master_specification_id AND s.current_version_id=v_request.master_specification_version_id) THEN RAISE EXCEPTION 'Trusted DOCX receipt source is no longer current'; END IF;
   PERFORM set_config('structured_docx.trusted_actor', p_actor_user_id::text, true);
-  PERFORM public.resolve_structured_lifecycle_docx_registry_scope(v_request.opportunity_id, v_request.document_kind, v_request.assignment_id, v_request.request_key, v_request.template_key, v_request.template_version, v_request.template_schema_hash, v_request.source_fingerprint);
+  PERFORM public.resolve_structured_lifecycle_docx_registry_scope(v_request.opportunity_id, v_request.customer_id, v_request.document_kind, v_assignment.registry_assignment_id, v_request.request_key, v_request.template_key, v_request.template_version, v_request.template_schema_hash, v_request.source_fingerprint);
   IF NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.bucket_id=p_storage_bucket AND o.name=p_storage_path AND o.version=p_object_version AND o.archived_at IS NULL AND coalesce(o.is_delete_marker,false)=false) THEN RAISE EXCEPTION 'Trusted DOCX receipt object version is absent or replaced'; END IF;
 END;
 $$;

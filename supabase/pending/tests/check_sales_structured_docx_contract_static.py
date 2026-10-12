@@ -21,6 +21,10 @@ for table in ('sales_opportunity_structured_docx_assignments', 'sales_opportunit
     need(sql, f'GRANT ALL ON public.{table} TO service_role;', f'{table} service grant only')
     need(sql, f'ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY;', f'{table} RLS')
 need(sql, "responsible_employee_id", 'responsible employee pin')
+need(sql, 'registry_assignment_id', 'registry assignment pin')
+need(sql, "scope_type='SALES_OPPORTUNITY'", 'pre-handover Sales scope')
+need(sql, "scope_type='PROJECT'", 'post-handover project scope')
+need(sql, 'sales_project_handovers', 'handover-only project association')
 need(sql, "user_id = v_actor AND employment_status = 'ACTIVE'", 'active employee actor check')
 need(sql, 'public.employee_departments', 'department membership recheck')
 need(sql, 'public.can_access_department_drive', 'scoped Drive recheck')
@@ -60,7 +64,7 @@ need(folder, 'target_folder_node_id', 'narrow folder identifier')
 need(folder, 'REVOKE ALL ON FUNCTION public.discover_sales_opportunity_structured_draft_folder', 'folder transport revoke')
 for value in ('storage_bucket', 'storage_path_prefix'):
     forbid(folder, f'RETURNS TABLE(location_id uuid, department_id uuid, target_folder_node_id uuid, {value}', f'folder read does not expose {value}')
-for expected in ('LOCAL_DOCX_FAIL exact protected upload authority missing', 'LOCAL_DOCX_FAIL non-DOCX upload accepted', 'LOCAL_DOCX_FAIL unassigned actor read the DOCX object past restrictive policy', 'LOCAL_DOCX_FAIL unassigned reader accepted', 'LOCAL_DOCX_FAIL cross-department/source accepted', 'LOCAL_DOCX_FAIL changed replay accepted', 'LOCAL_DOCX_FAIL revoked assignment accepted', 'SALES_STRUCTURED_DOCX_LOCAL_ACCEPTANCE_PASS'):
+for expected in ('LOCAL_DOCX_FAIL pre-handover Sales scope did not resolve without a project', 'LOCAL_DOCX_FAIL other opportunity/customer resolved Sales responsibility', 'LOCAL_DOCX_FAIL post-handover project scope did not resolve', 'LOCAL_DOCX_FAIL exact protected upload authority missing', 'LOCAL_DOCX_FAIL non-DOCX upload accepted', 'LOCAL_DOCX_FAIL unassigned actor read the DOCX object past restrictive policy', 'LOCAL_DOCX_FAIL unassigned reader accepted', 'LOCAL_DOCX_FAIL cross-department/source accepted', 'LOCAL_DOCX_FAIL changed replay accepted', 'LOCAL_DOCX_FAIL revoked assignment accepted', 'SALES_STRUCTURED_DOCX_LOCAL_ACCEPTANCE_PASS'):
     need(acceptance, expected, expected)
 need(runner, 'LOCAL_SALES_STRUCTURED_DOCX_DISPOSABLE=yes', 'explicit disposable opt-in')
 need(runner, 'CLEANUP_VERIFIED docx_fixture_removed=true', 'fixture cleanup')
