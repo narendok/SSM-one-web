@@ -10,7 +10,7 @@ export type AuthorizedStructuredDocxObject = StructuredDocxRegistryScope;
 export type PrivateDocxObject = { bucket: "project-drive"; path: string; objectVersion: string; mimeType: string | null; bytes: Uint8Array };
 export type StructuredDocxVerificationReceipt = StructuredDocxRegistryReceipt;
 export type PrivateDocxAuthorizationPort = PrivateDocxRegistryAuthorizationPort;
-export type PrivateDocxObjectReader = { readExactObject(input: Pick<AuthorizedStructuredDocxObject, "storageBucket" | "storagePath" | "objectVersion">): Promise<PrivateDocxObject> };
+export type PrivateDocxObjectReader = { readExactObject(input: Pick<AuthorizedStructuredDocxObject, "requestKey" | "storageBucket" | "storagePath" | "objectVersion">): Promise<PrivateDocxObject> };
 
 function fail(message: string): never { throw new Error(`Private DOCX verification failed: ${message}`); }
 function ensureUuid(value: string, label: string) { if (!UUID.test(value)) fail(`${label} must be a UUID`); }
