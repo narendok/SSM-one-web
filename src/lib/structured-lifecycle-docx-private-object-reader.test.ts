@@ -43,7 +43,9 @@ describe("pending immutable private DOCX reader", () => {
     const object = { bucket_id: input.storageBucket, name: input.storagePath, version: input.objectVersion, archived_at: null, is_delete_marker: false, metadata: { size: bytes.byteLength } };
     let assertions = 0;
     const reader = createContractBoundCurrentPathPrivateDocxReader(contractAdmin([{ data: object, error: null }, { data: object, error: null }], bytes), authority({ assertCurrentCreateOnlyPath: async () => { assertions += 1; } }));
-    await expect(reader.readExactObject({ ...input, requestKey: "00000000-0000-4000-8000-000000000001" })).resolves.toMatchObject({ bytes, objectVersion: "v1" });
+    const result = await reader.readExactObject({ ...input, requestKey: "00000000-0000-4000-8000-000000000001" });
+    expect(Array.from(result.bytes)).toEqual(Array.from(bytes));
+    expect(result.objectVersion).toBe("v1");
     expect(assertions).toBe(2);
   });
   it("rejects a replacement, changed bytes, or revoked authority around a current-path read", async () => {

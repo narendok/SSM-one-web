@@ -31,7 +31,7 @@ export type PrivateDocxCreateOnlyAuthority = {
    * Binds the exact request, active assigned-person scope, and reserved
    * create-only storage path before and after the mutable-path SDK read.
    */
-  assertCurrentCreateOnlyPath(input: Pick<PrivateDocxObject, "bucket" | "path" | "objectVersion"> & { requestKey: string }): Promise<void>;
+  assertCurrentCreateOnlyPath(input: { bucket: "project-drive"; path: string; objectVersion: string; requestKey: string }): Promise<void>;
 };
 
 type CurrentPathStorageAdmin = PrivateStorageAdmin & {
@@ -88,7 +88,7 @@ export function createContractBoundCurrentPathPrivateDocxReader(
   admin: CurrentPathStorageAdmin,
   authority: PrivateDocxCreateOnlyAuthority,
 ): PrivateDocxObjectReader {
-  async function readIdentity(input: Pick<PrivateDocxObject, "bucket" | "path" | "objectVersion">): Promise<ImmutableObjectRecord> {
+  async function readIdentity(input: { bucket: "project-drive"; path: string; objectVersion: string }): Promise<ImmutableObjectRecord> {
     const { data: object, error } = await admin
       .from("objects")
       .select("bucket_id,name,version,archived_at,is_delete_marker,metadata")
