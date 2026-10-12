@@ -19,7 +19,7 @@ required = [
     "sales_structured_docx_drive_nodes_read_restrictive",
     "sales_structured_docx_drive_revisions_read_restrictive",
     "sales_structured_docx_registers_read_restrictive",
-    "REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_current_path_create_only",
+    "GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_current_path_create_only(uuid,text,text,text) TO authenticated, service_role;",
     "GRANT EXECUTE ON FUNCTION public.can_stage_sales_structured_docx_object(text,text) TO authenticated, service_role;",
     "GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_object(text,text) TO authenticated, service_role;",
 ]

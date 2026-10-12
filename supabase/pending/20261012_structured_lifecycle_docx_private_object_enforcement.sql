@@ -238,7 +238,7 @@ REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_drive_node(uuid) FR
 REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_drive_revision(uuid) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.can_read_sales_structured_docx_register(uuid) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_uploaded_object(uuid,text,text,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_current_path_create_only(uuid,text,text,text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_current_path_create_only(uuid,text,text,text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_sales_structured_docx_request_path(text,text) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.can_stage_sales_structured_docx_object(text,text) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_object(text,text) TO authenticated, service_role;
@@ -247,3 +247,4 @@ GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_drive_node(uuid)
 GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_drive_revision(uuid) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.can_read_sales_structured_docx_register(uuid) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_uploaded_object(uuid,text,text,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_current_path_create_only(uuid,text,text,text) TO authenticated, service_role;
