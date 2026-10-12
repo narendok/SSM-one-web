@@ -31,6 +31,28 @@ DO $$ BEGIN
   BEGIN PERFORM public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000011','SOR','00000000-0000-4000-8000-000000000002',NULL,'00000000-0000-4000-8000-000000000051'); RAISE EXCEPTION 'Cross-department assignment accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Scoped department document-management authority%' THEN RAISE; END IF; END;
   BEGIN PERFORM public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000004',NULL,'00000000-0000-4000-8000-000000000052'); RAISE EXCEPTION 'Inactive employee assigned'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Assigned responsible%' THEN RAISE; END IF; END;
 END $$;
+-- Direct inserts prove the partial indexes enforce active-root uniqueness even
+-- if a future writer bypasses the assignment functions and advisory lock.
+DO $$ BEGIN
+  INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(scope_type,project_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by)
+  VALUES('PROJECT','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','PRS','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
+  BEGIN
+    INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(scope_type,project_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by)
+    VALUES('PROJECT','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','PRS','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
+    RAISE EXCEPTION 'Direct duplicate active PROJECT assignment accepted';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+  INSERT INTO public.customers(id) VALUES ('00000000-0000-4000-8000-000000000082');
+  INSERT INTO public.sales_opportunities(id,customer_id) VALUES ('00000000-0000-4000-8000-000000000081','00000000-0000-4000-8000-000000000082');
+  INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(scope_type,opportunity_id,customer_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by)
+  VALUES('SALES_OPPORTUNITY','00000000-0000-4000-8000-000000000081','00000000-0000-4000-8000-000000000082','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
+  BEGIN
+    INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(scope_type,opportunity_id,customer_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by)
+    VALUES('SALES_OPPORTUNITY','00000000-0000-4000-8000-000000000081','00000000-0000-4000-8000-000000000082','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');
+    RAISE EXCEPTION 'Direct duplicate active SALES assignment accepted';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+END $$;
 CREATE TEMP TABLE assignment_first AS SELECT public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000060') AS id;
 DO $$ BEGIN
   IF (SELECT count(*) FROM assignment_first)<>1 OR (SELECT count(*) FROM public.structured_lifecycle_docx_responsibility_assignments)<>1 OR (SELECT count(*) FROM public.structured_lifecycle_docx_registry_audit_events)<>1 THEN RAISE EXCEPTION 'Atomic assignment/audit persistence failed'; END IF;
