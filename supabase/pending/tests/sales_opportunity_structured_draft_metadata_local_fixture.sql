@@ -127,7 +127,7 @@ CREATE FUNCTION public.can_access_department_drive(p_user uuid, p_department uui
   SELECT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id WHERE e.user_id=p_user AND e.employment_status='ACTIVE' AND ed.department_id=p_department)
 $$;
 CREATE FUNCTION public.next_business_number(p_kind text, p_prefix text, p_context text) RETURNS text LANGUAGE sql AS $$ SELECT upper(p_prefix) || '-LOCAL-' || substr(md5(coalesce(p_context,'') || p_kind), 1, 8) $$;
-CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, version text NOT NULL DEFAULT 'v1', archived_at timestamptz NULL, is_delete_marker boolean NOT NULL DEFAULT false, PRIMARY KEY(bucket_id,name));
+CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL, version text NOT NULL DEFAULT 'v1', archived_at timestamptz NULL, is_delete_marker boolean NOT NULL DEFAULT false, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, PRIMARY KEY(bucket_id,name));
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon;
