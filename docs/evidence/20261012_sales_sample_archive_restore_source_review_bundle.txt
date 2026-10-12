@@ -1,35 +1,37 @@
 SALES SAMPLE ARCHIVE / RESTORE — SOURCE REVIEW BUNDLE
 Status: REVIEW ONLY — UNDEPLOYED AND UNACCEPTED.
-Generated UTC: 2026-10-12T18:31:34Z
-Source HEAD at generation: 6ab6aab68deac90b0704ac753676368dda389cb1
+Generated UTC: 2026-10-12T18:57:33Z
+Source HEAD at generation: 8f6644ca68f48f016ad719ee43041d5dbacfda22
 
 NO LIVE CHANGE
 This bundle caused no managed SQL, grants, policies, records, users, storage, archive, restore, deployment, or publishing change. Archive/restore and all DOCX/Procurement live gates remain OFF.
 
 PENDING SOURCE — DO NOT EXECUTE
 1. supabase/pending/20261012_sales_sample_archive_restore_contract.sql
-   SHA-256: a23f31dfd8af1f0cd68a944da684651c91d2c3bdc38177fb329174da9758921d
-2. Disposable-only fixture and acceptance:
+   SHA-256: f16c371be25eefbd7f003ddd3996c330d21aea97b61a360b0898b743f79c90bd
+2. Disposable-only evidence:
    - supabase/pending/tests/sales_sample_archive_restore_local_fixture.sql
    - supabase/pending/tests/sales_sample_archive_restore_local_acceptance.sql
    - supabase/pending/tests/run_sales_sample_archive_restore_local_acceptance.sh
    - supabase/pending/tests/run_sales_sample_archive_restore_local_concurrency_acceptance.sh
-3. Static guard:
    - supabase/pending/tests/check_sales_sample_archive_restore_contract_static.py
 
 FROZEN ROOT SCOPE
-Only the exact reviewed ten roots are eligible: OPPORTUNITY-2026-0006 through OPPORTUNITY-2026-0010 and CUSTOMER-2026-0003 through CUSTOMER-2026-0007. The contract preserves customer/company records, all history/manual edits, OPPORTUNITY-2026-0013, and MASTER-2026-0001 revision 1. It never deletes or rewrites a dependency; archive/restore mutate only additive root archive metadata and append-only manifest/audit rows.
+Only OPPORTUNITY-2026-0006 through OPPORTUNITY-2026-0010 and CUSTOMER-2026-0003 through CUSTOMER-2026-0007 are eligible. The contract preserves customer/company records, all history/manual edits, OPPORTUNITY-2026-0013, and MASTER-2026-0001 revision 1. It never deletes or rewrites a dependency; archive/restore mutate only root archive metadata and append-only manifest/audit rows.
 
-LINEAGE EXCLUSION
-Opportunity dependency snapshots now fail closed on structured HTML storage attempts, revision/private-location bindings, audits, materializations, their linked Drive nodes/revisions/registers, and the equivalent SOR/CONTRACT_REVIEW DOCX assignments, requests, storage attempts, trusted receipts, materializations, audits, and linked Drive/register lineage. Requirement dependency gates retain exact revision/history facts and their existing baseline/review/commercial/change/design/handover exclusions.
+ACTUAL WRITER / LOCK REVIEW
+The archive locks each reviewed sales_opportunities/customer_requirements root FOR UPDATE before dependency snapshot and archive state change. Existing HTML draft creation/location paths also lock the opportunity row FOR UPDATE, while DOCX request/materialization paths do not take the archive advisory key. The previous writer race was therefore cooperative and is superseded by the two schedules below.
+
+SOURCE-ONLY ENFORCEMENT
+The pending archive contract now adds narrow BEFORE INSERT/UPDATE root-lineage triggers for the reviewed direct root-reference surfaces: HTML document locations/drafts/requests/materializations; DOCX assignments/requests/materializations; and requirement revisions. Each trigger SELECTs only its root FOR KEY SHARE and rejects when archived_at is non-null. No table lock, policy change, grant change, or writer advisory-lock cooperation is used. The disposable fixture now mirrors the relevant ON DELETE RESTRICT opportunity FKs.
 
 ISOLATED ACCEPTANCE — ALL EXIT 0
 1. LOCAL_SALES_SAMPLE_ARCHIVE_DISPOSABLE=yes bash supabase/pending/tests/run_sales_sample_archive_restore_local_acceptance.sh
-   Result: SALES_SAMPLE_ARCHIVE_RESTORE_LOCAL_ACCEPTANCE_PASS=true; CLEANUP_VERIFIED disposable_fixture_removed=true.
-   Covers denied actor, all-ten-root archive/reordered replay/restore, requirement revision drift, business dependency drift, stale root state, history drift, DOCX assignment dependency drift, and atomic restoration.
+   Result: SALES_SAMPLE_ARCHIVE_RESTORE_LOCAL_ACCEPTANCE_PASS=true; cleanup verified.
 2. LOCAL_SALES_SAMPLE_ARCHIVE_DISPOSABLE=yes bash supabase/pending/tests/run_sales_sample_archive_restore_local_concurrency_acceptance.sh
-   Result: DOWNSTREAM_WRITER_VS_ARCHIVE_ATOMIC_REJECT_PASS=true; SALES_SAMPLE_ARCHIVE_RESTORE_LOCAL_CONCURRENCY_ACCEPTANCE_PASS=true; CLEANUP_VERIFIED sales_sample_archive_concurrency_fixture_removed=true.
-   Two independent local PostgreSQL sessions serialize on the archive root key. The writer commits a new candidate-opportunity DOCX assignment first; archive then fails closed. Counts after rejection: archived opportunities=0; archived requirements=0; manifests=0; manifest items=0; archive audits=0; writer lineage row=1.
+   Result: UNMODIFIED_WRITER_FIRST_ARCHIVE_ATOMIC_REJECT_PASS=true; UNMODIFIED_WRITER_ARCHIVE_FIRST_REJECT_PASS=true; SALES_SAMPLE_ARCHIVE_RESTORE_LOCAL_CONCURRENCY_ACCEPTANCE_PASS=true; cleanup verified.
+   Writer-first: plain DOCX assignment INSERT with no archive advisory lock commits; archive rejects on the lineage snapshot. Post-rejection counts: archived opportunities=0, archived requirements=0, manifests=0, manifest items=0, archive audits=0, writer row=1.
+   Archive-first: one session holds the candidate root FOR UPDATE and commits archived_at; a separate plain DOCX assignment INSERT uses no archive advisory lock, waits on FOR KEY SHARE, and fails "Archived opportunity cannot receive downstream lineage". Post-rejection counts: downstream writer row=0, manifests=0, archive audits=0.
 3. python3 supabase/pending/tests/check_sales_sample_archive_restore_contract_static.py
    Result: SALES_SAMPLE_ARCHIVE_RESTORE_STATIC_PASS=true.
 4. bunx vitest run src/components/projects/SelectedProjectBomReview.test.tsx
@@ -38,8 +40,8 @@ ISOLATED ACCEPTANCE — ALL EXIT 0
 6. npm run build — exit 0.
 7. git diff --check — exit 0.
 
-LIMITS / BLOCKERS
-This is source-only, isolated local evidence; it is not deployment authorization or caller acceptance. The contract retains REVOKE ALL and includes no EXECUTE grant. Procurement remains unaccepted and OFF. DOCX remains SOR/CONTRACT_REVIEW-only and OFF pending its separate reviewed deployment and caller acceptance.
+LIMITS / REMAINING DEPLOYMENT GATES
+Source-only local evidence is not deployment authorization or real caller acceptance. The contract remains uninstalled and ungranted for execution. Every future direct opportunity/requirement child writer outside the enumerated reviewed HTML/DOCX/revision surfaces must either use an existing guarded parent writer or receive an equivalent root-row guard before this archive contract may be accepted. Procurement remains OFF and unaccepted. DOCX remains SOR/CONTRACT_REVIEW-only and OFF pending separate reviewed deployment and caller acceptance.
 
 FROZEN DOCX PACKAGE — VERIFIED UNCHANGED
 8a193a8bd3f9b3125e0cfad2804d827d86dbcbe6210f9ff6c11171c2d8107209  supabase/pending/20261012_structured_lifecycle_docx_registry_contract.sql
@@ -246,6 +248,65 @@ BEGIN
 END;
 $$;
 
+-- Existing document and downstream writers reference the root opportunity or
+-- requirement. These narrowly scoped guards take the same root-row lock as the
+-- archive transaction, then reject a new lineage record once that root is
+-- archived. They do not use the archive advisory lock, take no table lock, and
+-- do not relax any existing RLS policy. The child tables below are the only
+-- direct root-reference writer surfaces in the reviewed HTML/DOCX contracts.
+CREATE OR REPLACE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
+DECLARE v_archived_at timestamptz;
+BEGIN
+  SELECT archived_at INTO v_archived_at
+  FROM public.sales_opportunities
+  WHERE id = NEW.opportunity_id
+  FOR KEY SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Opportunity lineage root is missing'; END IF;
+  IF v_archived_at IS NOT NULL THEN RAISE EXCEPTION 'Archived opportunity cannot receive downstream lineage'; END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.sales_sample_archive_reject_archived_requirement_lineage()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
+DECLARE v_archived_at timestamptz;
+BEGIN
+  SELECT archived_at INTO v_archived_at
+  FROM public.customer_requirements
+  WHERE id = NEW.requirement_id
+  FOR KEY SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Requirement lineage root is missing'; END IF;
+  IF v_archived_at IS NOT NULL THEN RAISE EXCEPTION 'Archived requirement cannot receive downstream lineage'; END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER sales_sample_archive_guard_document_locations
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_document_locations
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_structured_drafts
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_drafts
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_structured_requests
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_draft_requests
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_structured_materializations
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_draft_materializations
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_docx_assignments
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_docx_assignments
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_docx_requests
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_docx_requests
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_docx_materializations
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_docx_materializations
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_requirements
+BEFORE INSERT OR UPDATE OF requirement_id ON public.customer_requirement_revisions
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_requirement_lineage();
+
 CREATE OR REPLACE FUNCTION public.archive_reviewed_sales_samples(p_roots jsonb, p_reason text, p_request_key uuid)
 RETURNS TABLE(manifest_id uuid, replayed boolean)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions, pg_temp AS $$
@@ -377,25 +438,41 @@ q() { psql "${psql_args[@]}" -Atqc "$1"; }
 assert_eq() { [[ "$1" == "$2" ]] || { echo "ASSERT_FAIL $3 expected=$2 actual=$1" >&2; exit 1; }; }
 roots='[{"kind":"OPPORTUNITY","id":"104fb9e2-7f83-40f9-a295-64b37aa8c7ee","displayNumber":"OPPORTUNITY-2026-0006"},{"kind":"OPPORTUNITY","id":"becebb23-e0f2-4264-a78f-fda04275cade","displayNumber":"OPPORTUNITY-2026-0007"},{"kind":"OPPORTUNITY","id":"428d7d9e-25bf-4e98-94d5-416ea56155e3","displayNumber":"OPPORTUNITY-2026-0008"},{"kind":"OPPORTUNITY","id":"dc101dd9-89a2-4dad-9903-3b2301a97d3b","displayNumber":"OPPORTUNITY-2026-0009"},{"kind":"OPPORTUNITY","id":"d79f58c1-bbee-4940-9e67-88f267f5449b","displayNumber":"OPPORTUNITY-2026-0010"},{"kind":"REQUIREMENT","id":"aaabd18c-5885-45de-9e0e-da70d4ec491f","displayNumber":"CUSTOMER-2026-0003"},{"kind":"REQUIREMENT","id":"36cdc159-57c7-4568-a1b0-ec481f5d3d93","displayNumber":"CUSTOMER-2026-0004"},{"kind":"REQUIREMENT","id":"6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c","displayNumber":"CUSTOMER-2026-0005"},{"kind":"REQUIREMENT","id":"2db48440-5424-4e5e-bb5b-01f203a7662f","displayNumber":"CUSTOMER-2026-0006"},{"kind":"REQUIREMENT","id":"e829dd82-381d-42ab-a808-62979e9156f4","displayNumber":"CUSTOMER-2026-0007"}]'
 q "INSERT INTO public.permission_test_grants VALUES ('00000000-0000-4000-8000-000000000001','sales.manage');"
+q "INSERT INTO public.sales_opportunities(id,opportunity_number,customer_id,name,stage,status) VALUES ('104fb9e2-7f83-40f9-a295-64b37aa8c7ee','OPPORTUNITY-2026-0006','03e06115-a7d4-4965-9e92-9c37462f5ddc','SYNTHETIC ONLY — Automotive Vehicle Tracker','new','active'),('becebb23-e0f2-4264-a78f-fda04275cade','OPPORTUNITY-2026-0007','03e06115-a7d4-4965-9e92-9c37462f5ddc','SYNTHETIC ONLY — Automotive Vehicle Tracker','new','active'),('428d7d9e-25bf-4e98-94d5-416ea56155e3','OPPORTUNITY-2026-0008','03e06115-a7d4-4965-9e92-9c37462f5ddc','SYNTHETIC ONLY — Automotive Vehicle Tracker','new','active'),('dc101dd9-89a2-4dad-9903-3b2301a97d3b','OPPORTUNITY-2026-0009','03e06115-a7d4-4965-9e92-9c37462f5ddc','SYNTHETIC ONLY — Automotive Vehicle Tracker','new','active'),('d79f58c1-bbee-4940-9e67-88f267f5449b','OPPORTUNITY-2026-0010','03e06115-a7d4-4965-9e92-9c37462f5ddc','SYNTHETIC ONLY — Automotive Vehicle Tracker','new','active'),('0f965acc-5f00-4e3d-9000-9176d739a38c','OPPORTUNITY-2026-0001','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','Retained requirement source','qualified','active');"
+q "INSERT INTO public.customer_requirements(id,requirement_number,opportunity_id,customer_id,title,status,current_revision) VALUES ('aaabd18c-5885-45de-9e0e-da70d4ec491f','CUSTOMER-2026-0003','0f965acc-5f00-4e3d-9000-9176d739a38c','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','testcust','draft',1),('36cdc159-57c7-4568-a1b0-ec481f5d3d93','CUSTOMER-2026-0004','0f965acc-5f00-4e3d-9000-9176d739a38c','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','testcust','draft',1),('6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c','CUSTOMER-2026-0005','0f965acc-5f00-4e3d-9000-9176d739a38c','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','testcust','draft',1),('2db48440-5424-4e5e-bb5b-01f203a7662f','CUSTOMER-2026-0006','0f965acc-5f00-4e3d-9000-9176d739a38c','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','testcust','draft',1),('e829dd82-381d-42ab-a808-62979e9156f4','CUSTOMER-2026-0007','0f965acc-5f00-4e3d-9000-9176d739a38c','a2f299d4-f8ba-4c5c-8dcf-5437bb21166e','testcust','draft',1);"
+q "INSERT INTO public.customer_requirement_revisions(id,requirement_id,revision_number,status) VALUES ('dc0ccda7-b4ee-4d16-b4d5-a11a9ee8e7c6','aaabd18c-5885-45de-9e0e-da70d4ec491f',1,'working'),('23e2a05a-d8b3-421c-b760-e0273143d766','36cdc159-57c7-4568-a1b0-ec481f5d3d93',1,'working'),('a3c747a3-cb61-43a6-805a-788848143680','6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c',1,'working'),('1bced975-c1c6-445c-be44-fa988c01e434','2db48440-5424-4e5e-bb5b-01f203a7662f',1,'working'),('2a238167-050c-4e31-92a3-6d0ab0e611d9','e829dd82-381d-42ab-a808-62979e9156f4',1,'working');"
+q "INSERT INTO public.activity_log(id,entity_id,module_key,entity_type,action,summary,actor_user_id) VALUES ('a8dfcdd9-213b-4bf7-996a-0c3709bf19d9','104fb9e2-7f83-40f9-a295-64b37aa8c7ee','sales','sales_opportunity','created','Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('80c9a8c1-7915-450a-b169-2ca2e4c9d05c','becebb23-e0f2-4264-a78f-fda04275cade','sales','sales_opportunity','created','Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('49a39c8d-d666-499f-bbb4-43cbb6851907','428d7d9e-25bf-4e98-94d5-416ea56155e3','sales','sales_opportunity','created','Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('2a6df3a8-c3c1-45b8-a67d-55ee9656be90','dc101dd9-89a2-4dad-9903-3b2301a97d3b','sales','sales_opportunity','created','Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('bf9b4664-86c5-43da-bf1b-7b5b910e0fb4','d79f58c1-bbee-4940-9e67-88f267f5449b','sales','sales_opportunity','created','Created opportunity: SYNTHETIC ONLY — Automotive Vehicle Tracker','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('c2fe8735-07a9-47ec-8231-839eaa0a418b','aaabd18c-5885-45de-9e0e-da70d4ec491f','sales','customer_requirement','created','Created requirement: CUSTOMER-2026-0003','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('c58df5a6-27dd-4d58-b5f4-d2e729deb519','36cdc159-57c7-4568-a1b0-ec481f5d3d93','sales','customer_requirement','created','Created requirement: CUSTOMER-2026-0004','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('c75f2fb0-75f2-469b-86a2-bc3ea7440bc7','6aa2fc2f-eb75-48c2-a9de-d13008cf1c5c','sales','customer_requirement','created','Created requirement: CUSTOMER-2026-0005','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('3f387569-4b44-49b6-8da3-0aa6f18fc281','2db48440-5424-4e5e-bb5b-01f203a7662f','sales','customer_requirement','created','Created requirement: CUSTOMER-2026-0006','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30'),('7c47d3cb-3102-4b2e-9ffc-ea61044f7bbe','e829dd82-381d-42ab-a808-62979e9156f4','sales','customer_requirement','created','Created requirement: CUSTOMER-2026-0007','e96e4ec3-b3da-4437-aa5f-b5d0b4469d30');"
 
-# The writer uses the same archive advisory key. A future downstream writer must
-# take this established root lock before a linked record can be committed.
-PGOPTIONS="-c request.jwt.claim.sub=00000000-0000-4000-8000-000000000001" psql "${psql_args[@]}" -Atqc "BEGIN; SELECT pg_advisory_xact_lock(hashtextextended('reviewed-sales-sample-archive',0)); SELECT pg_sleep(1.1); INSERT INTO public.sales_opportunity_structured_docx_assignments(id,opportunity_id) VALUES ('00000000-0000-4000-8000-000000000031','104fb9e2-7f83-40f9-a295-64b37aa8c7ee'); COMMIT;" >"$work_dir/writer.out" 2>"$work_dir/writer.err" & writer_pid=$!
-sleep 0.2
+# Writer-first: an unmodified direct child-table writer takes no archive advisory
+# lock. It commits first; the archive sees the new lineage and rolls back fully.
+psql "${psql_args[@]}" -Atqc "INSERT INTO public.sales_opportunity_structured_docx_assignments(id,opportunity_id) VALUES ('00000000-0000-4000-8000-000000000031','104fb9e2-7f83-40f9-a295-64b37aa8c7ee');"
 archive_status=0
-PGOPTIONS="-c request.jwt.claim.sub=00000000-0000-4000-8000-000000000001" psql "${psql_args[@]}" -Atqc "SELECT * FROM public.archive_reviewed_sales_samples('$roots'::jsonb,'concurrent downstream writer','00000000-0000-4000-8000-000000000032');" >"$work_dir/archive.out" 2>"$work_dir/archive.err" || archive_status=$?
-wait "$writer_pid"
-[[ $archive_status -ne 0 ]] || { echo 'ASSERT_FAIL downstream writer race unexpectedly archived roots' >&2; exit 1; }
-if ! grep -Eq 'Reviewed opportunity is missing, changed, or already archived|Archive is blocked by a live business dependency' "$work_dir/archive.err"; then
-  cat "$work_dir/archive.err" >&2
-  exit 1
-fi
+PGOPTIONS="-c request.jwt.claim.sub=00000000-0000-4000-8000-000000000001" psql "${psql_args[@]}" -Atqc "SELECT * FROM public.archive_reviewed_sales_samples('$roots'::jsonb,'writer first downstream lineage','00000000-0000-4000-8000-000000000032');" >"$work_dir/archive-writer-first.out" 2>"$work_dir/archive-writer-first.err" || archive_status=$?
+[[ $archive_status -ne 0 ]] || { echo 'ASSERT_FAIL writer-first downstream lineage unexpectedly archived roots' >&2; exit 1; }
+grep -Eq 'Archive is blocked by a live business dependency' "$work_dir/archive-writer-first.err" || { cat "$work_dir/archive-writer-first.err" >&2; exit 1; }
 assert_eq "$(q "SELECT count(*) FROM public.sales_opportunities WHERE archived_at IS NOT NULL")" 0 'writer race leaves opportunity roots active'
 assert_eq "$(q "SELECT count(*) FROM public.customer_requirements WHERE archived_at IS NOT NULL")" 0 'writer race leaves requirement roots active'
 assert_eq "$(q "SELECT count(*) FROM public.sales_sample_archive_manifests")" 0 'writer race rolls back manifest'
 assert_eq "$(q "SELECT count(*) FROM public.sales_sample_archive_manifest_items")" 0 'writer race rolls back manifest items'
 assert_eq "$(q "SELECT count(*) FROM public.sales_sample_archive_audit_events")" 0 'writer race writes no audit'
 assert_eq "$(q "SELECT count(*) FROM public.sales_opportunity_structured_docx_assignments WHERE id='00000000-0000-4000-8000-000000000031'")" 1 'writer committed a new downstream lineage record'
-printf 'DOWNSTREAM_WRITER_VS_ARCHIVE_ATOMIC_REJECT_PASS=true\n'
+psql "${psql_args[@]}" -Atqc "DELETE FROM public.sales_opportunity_structured_docx_assignments WHERE id='00000000-0000-4000-8000-000000000031';"
+
+# Archive-first: hold the candidate opportunity row FOR UPDATE without the
+# archive advisory lock, then run the unmodified writer. Its trigger asks for a
+# KEY SHARE lock, waits for the archive-side root state, and rejects after the
+# archive commits. No writer-side archive-lock cooperation is involved.
+psql "${psql_args[@]}" -Atqc "BEGIN; SELECT 1 FROM public.sales_opportunities WHERE id='104fb9e2-7f83-40f9-a295-64b37aa8c7ee' FOR UPDATE; SELECT pg_sleep(1.1); UPDATE public.sales_opportunities SET archived_at=now() WHERE id='104fb9e2-7f83-40f9-a295-64b37aa8c7ee'; COMMIT;" >"$work_dir/archive-first.out" 2>"$work_dir/archive-first.err" & archive_pid=$!
+sleep 0.2
+writer_status=0
+psql "${psql_args[@]}" -Atqc "INSERT INTO public.sales_opportunity_structured_docx_assignments(id,opportunity_id) VALUES ('00000000-0000-4000-8000-000000000033','104fb9e2-7f83-40f9-a295-64b37aa8c7ee');" >"$work_dir/writer-archive-first.out" 2>"$work_dir/writer-archive-first.err" || writer_status=$?
+wait "$archive_pid"
+[[ $writer_status -ne 0 ]] || { echo 'ASSERT_FAIL archive-first writer unexpectedly created lineage' >&2; exit 1; }
+grep -Eq 'Archived opportunity cannot receive downstream lineage' "$work_dir/writer-archive-first.err" || { cat "$work_dir/writer-archive-first.err" >&2; exit 1; }
+assert_eq "$(q "SELECT count(*) FROM public.sales_opportunity_structured_docx_assignments WHERE id='00000000-0000-4000-8000-000000000033'")" 0 'archive-first rejects unmodified downstream writer'
+assert_eq "$(q "SELECT count(*) FROM public.sales_sample_archive_manifests")" 0 'archive-first test creates no manifest'
+assert_eq "$(q "SELECT count(*) FROM public.sales_sample_archive_audit_events")" 0 'archive-first test creates no audit'
+printf 'UNMODIFIED_WRITER_FIRST_ARCHIVE_ATOMIC_REJECT_PASS=true\n'
+printf 'UNMODIFIED_WRITER_ARCHIVE_FIRST_REJECT_PASS=true\n'
 printf 'SALES_SAMPLE_ARCHIVE_RESTORE_LOCAL_CONCURRENCY_ACCEPTANCE_PASS=true\n'
 ===== END CONCURRENCY RUNNER =====
