@@ -40,9 +40,14 @@ need(receipt, "Trusted DOCX receipt is absent, consumed, or conflicts with commi
 need(receipt, "Trusted DOCX commit actor does not match the authenticated caller", "caller-authenticated commit actor binding")
 need(materialization, "assert_sales_structured_docx_trusted_receipt_for_commit", "commit-side protected receipt recheck")
 need(materialization, "An authenticated assigned responsible person is required", "authenticated atomic commit")
+if materialization.index("IF v_actor IS NULL THEN RAISE EXCEPTION 'An authenticated assigned responsible person is required'; END IF;") > materialization.index("SELECT * INTO v_request FROM public.sales_opportunity_structured_docx_requests AS docx_request"):
+    raise SystemExit("MISSING reachable commit null-actor rejection")
+if receipt.index("PERFORM public.assert_sales_structured_docx_trusted_actor_scope") > receipt.index("FOR UPDATE;", receipt.index("CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit")):
+    raise SystemExit("MISSING receipt-last commit lock order")
 for item in ("createContractBoundCurrentPathPrivateDocxReader", "issue_sales_structured_docx_trusted_receipt", "commit_sales_structured_docx_materialization", "assert_sales_structured_docx_current_path_create_only"):
     need(server, item, item)
 need(functions, "lifecycleAcceptanceEnabled", "deployment gate")
 need(acceptance, "issue_sales_structured_docx_trusted_receipt", "receipt acceptance")
+need(acceptance, "LOCAL_DOCX_FAIL null actor commit accepted", "reachable null-actor acceptance")
 need(acceptance, "SALES_STRUCTURED_DOCX_LOCAL_ACCEPTANCE_PASS", "acceptance pass marker")
 print("STRUCTURED_LIFECYCLE_DOCX_TRUSTED_RECEIPT_STATIC_PASS=true")

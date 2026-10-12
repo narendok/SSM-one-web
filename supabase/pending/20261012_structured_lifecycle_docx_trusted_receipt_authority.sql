@@ -59,8 +59,9 @@ FOR EACH ROW EXECUTE FUNCTION public.guard_sales_structured_docx_trusted_receipt
 
 -- Internal shared authority validator. It is never granted to a browser role.
 -- Every verification or caller-authenticated commit first locks the immutable
--- request key, then the source-scoped registry root, then assignment/location,
--- template root/pin/revision, Master/current version, and handover/membership.
+-- request key, then the source-scoped registry root, assignment/location,
+-- template root/pin/revision, Master/current version, handover/membership, and
+-- finally the trusted receipt row.
 -- Registry mutation paths take the same source/template roots before their row
 -- locks, so a revoke or replacement cannot pass between validation and receipt
 -- consumption and no path in this contract reverses that lock order.
@@ -97,7 +98,7 @@ BEGIN
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','sales-structured-docx-assignment',v_request.opportunity_id::text,v_request.document_kind),0));
   SELECT * INTO v_assignment FROM public.sales_opportunity_structured_docx_assignments WHERE id=v_request.assignment_id FOR UPDATE;
   SELECT * INTO v_location FROM public.sales_opportunity_document_locations WHERE id=v_request.location_id FOR UPDATE;
-  IF NOT FOUND OR v_assignment.status <> 'ACTIVE' OR v_location.status <> 'ACTIVE'
+  IF v_assignment.status <> 'ACTIVE' OR v_location.status <> 'ACTIVE'
     OR v_location.private_storage_bucket <> p_storage_bucket
     OR p_storage_path <> v_location.private_storage_prefix || p_request_key::text || '-draft.docx'
     OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE')
@@ -256,9 +257,11 @@ BEGIN
   -- same transaction. It compares the immutable caller subject and never reads
   -- a mutable setting as actor identity.
   PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','sales-structured-docx',p_request_key::text),0));
-  SELECT * INTO v_receipt FROM public.sales_opportunity_structured_docx_trusted_receipts WHERE id=p_receipt_id AND request_key=p_request_key FOR UPDATE;
+  SELECT * INTO v_receipt FROM public.sales_opportunity_structured_docx_trusted_receipts WHERE id=p_receipt_id AND request_key=p_request_key;
   IF NOT FOUND OR v_receipt.consumed_at IS NOT NULL OR v_receipt.actor_user_id<>p_actor_user_id OR v_receipt.assignment_id<>p_assignment_id OR v_receipt.storage_bucket<>p_storage_bucket OR v_receipt.storage_path<>p_storage_path OR v_receipt.object_version<>p_object_version OR v_receipt.sha256_checksum<>p_sha256_checksum OR v_receipt.size_bytes<>p_size_bytes THEN RAISE EXCEPTION 'Trusted DOCX receipt is absent, consumed, or conflicts with commit facts'; END IF;
   PERFORM public.assert_sales_structured_docx_trusted_actor_scope(v_receipt.actor_user_id,p_request_key,p_assignment_id,p_storage_bucket,p_storage_path,p_object_version,p_sha256_checksum,p_size_bytes,v_receipt.source_fingerprint,v_receipt.template_key,v_receipt.template_version,v_receipt.template_schema_hash);
+  SELECT * INTO v_receipt FROM public.sales_opportunity_structured_docx_trusted_receipts WHERE id=p_receipt_id AND request_key=p_request_key FOR UPDATE;
+  IF NOT FOUND OR v_receipt.consumed_at IS NOT NULL OR v_receipt.actor_user_id<>p_actor_user_id OR v_receipt.assignment_id<>p_assignment_id OR v_receipt.storage_bucket<>p_storage_bucket OR v_receipt.storage_path<>p_storage_path OR v_receipt.object_version<>p_object_version OR v_receipt.sha256_checksum<>p_sha256_checksum OR v_receipt.size_bytes<>p_size_bytes THEN RAISE EXCEPTION 'Trusted DOCX receipt is absent, consumed, or conflicts with commit facts'; END IF;
 END;
 $$;
 
