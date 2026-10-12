@@ -315,6 +315,61 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     ).rejects.toThrow("timed out");
   });
 
+  it("hydrates authorized legacy HTML history when future private-location discovery is unavailable", async () => {
+    previewSource.mockResolvedValue(source);
+    discoverStructuredSalesDraftCapabilityMock.mockResolvedValue(null);
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === "sales_opportunity_structured_drafts") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    eq: () => Promise.resolve({ data: [{ id: "draft-id" }], error: null }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        } as never;
+      }
+      if (table === "sales_opportunity_structured_draft_revisions") {
+        return {
+          select: () => ({
+            in: () => ({
+              order: () =>
+                Promise.resolve({
+                  data: [{ id: "revision-id", revision_number: 1, created_at: "2026-10-05T18:37:27.589Z", draft_id: "draft-id", canonical_payload: { SCOPE_STATEMENT: "Hydrated historical HTML text" } }],
+                  error: null,
+                }),
+            }),
+          }),
+        } as never;
+      }
+      if (table === "sales_opportunity_structured_draft_requests") {
+        return {
+          select: () => ({
+            in: () => Promise.resolve({ data: [{ request_key: "request-id", revision_id: "revision-id" }], error: null }),
+          }),
+        } as never;
+      }
+      if (table === "sales_opportunity_structured_draft_materializations") {
+        return {
+          select: () => ({ in: () => Promise.resolve({ data: [], error: null }) }),
+        } as never;
+      }
+      throw new Error(`Unexpected table ${table}`);
+    });
+    renderPreview();
+
+    expect(await screen.findByText("Persisted unissued revision 1 is available for this exact pinned source.")).toBeTruthy();
+    expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Hydrated historical HTML text");
+    expect(screen.getByRole("button", { name: "Refresh history" })).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Save unavailable" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(discoverStructuredSalesDraftCapabilityMock).toHaveBeenCalledTimes(1);
+  });
+
   it("isolates authorized source and local edits when the mounted actor changes or signs out", async () => {
     previewSource.mockResolvedValue(source);
     const user = userEvent.setup();
