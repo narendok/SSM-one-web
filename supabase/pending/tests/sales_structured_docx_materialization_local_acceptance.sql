@@ -111,6 +111,9 @@ SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001'
 SELECT public.assert_sales_structured_docx_current_path_create_only('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM docx_storage_path),'fixture-v1');
 RESET ROLE;
 SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
+-- The trusted service issuer runs without a browser subject. The atomic
+-- materialization then runs as the real assigned authenticated caller; its
+-- internal receipt recheck must accept (and compare) that subject, not reject it.
 CREATE TEMP TABLE committed AS SELECT * FROM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sor-draft.docx','project-drive',(SELECT storage_path FROM requested),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,(SELECT receipt_id FROM docx_receipt));
 DO $assert$
 DECLARE v_before integer;

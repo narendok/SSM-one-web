@@ -35,7 +35,7 @@ need(sql, 'stored_object.version = p_object_version', 'immutable object version 
 need(sql, 'p_ooxml_content_types', 'OOXML content types verification')
 need(sql, 'p_ooxml_word_document', 'OOXML Word document verification')
 need(sql, 'p_html_detected', 'renamed HTML rejection')
-need(sql, 'current_specification.current_version_id = v_request.master_specification_version_id', 'current Master version recheck')
+need(sql, 'current_version.version_number=current_specification.current_version', 'current Master version recheck')
 need(sql, "document_kind IN ('SOR','CONTRACT_REVIEW')", 'Sales category boundary')
 forbidden_kinds = ("'PRS'", "'BOM'", "'DFMEA'")
 for value in forbidden_kinds:

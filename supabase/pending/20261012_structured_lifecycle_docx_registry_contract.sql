@@ -313,7 +313,12 @@ BEGIN
   IF p_assignment_id IS NULL OR p_request_key IS NULL THEN RAISE EXCEPTION 'Assignment and request key are required'; END IF;
   SELECT * INTO v_assignment FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=p_assignment_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Structured DOCX responsibility assignment is unavailable'; END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',coalesce(v_assignment.project_id::text,v_assignment.opportunity_id::text),v_assignment.document_kind), 0));
+  -- Match trusted validation's source root before locking the assignment row.
+  IF v_assignment.scope_type='SALES_OPPORTUNITY' THEN
+    PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','sales-structured-docx-assignment',v_assignment.opportunity_id::text,v_assignment.document_kind),0));
+  ELSE
+    PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',v_assignment.project_id::text,v_assignment.document_kind),0));
+  END IF;
   SELECT * INTO v_assignment FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=p_assignment_id FOR UPDATE;
   IF v_assignment.scope_type='PROJECT' THEN
     v_actor := public.assert_structured_lifecycle_docx_registry_manager(v_assignment.project_id, v_assignment.department_id);
