@@ -27,10 +27,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.drive_nodes, public.drive_node_re
 CREATE POLICY legacy_drive_nodes_permissive ON public.drive_nodes FOR SELECT TO authenticated USING (true);
 CREATE POLICY legacy_drive_revisions_permissive ON public.drive_node_revisions FOR SELECT TO authenticated USING (true);
 CREATE POLICY legacy_registers_permissive ON public.document_control_registers FOR SELECT TO authenticated USING (true);
+CREATE TEMP TABLE docx_storage_path AS SELECT storage_path FROM requested;
+GRANT SELECT ON docx_storage_path TO authenticated;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 DO $storage_policy$
-DECLARE v_path text := (SELECT storage_path FROM requested);
+DECLARE v_path text := (SELECT storage_path FROM docx_storage_path);
 BEGIN
   BEGIN INSERT INTO storage.objects(bucket_id,name,version) VALUES ('project-drive',v_path,'fixture-v2'); RAISE EXCEPTION 'LOCAL_DOCX_FAIL replacement accepted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   BEGIN UPDATE storage.objects SET version='fixture-v2' WHERE bucket_id='project-drive' AND name=v_path; RAISE EXCEPTION 'LOCAL_DOCX_FAIL update accepted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
@@ -39,17 +41,17 @@ END;
 $storage_policy$;
 RESET ROLE;
 SELECT set_config('request.jwt.claim.sub', NULL, true);
-SELECT public.assert_sales_structured_docx_uploaded_object('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM requested),'fixture-v1');
+SELECT public.assert_sales_structured_docx_uploaded_object('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM docx_storage_path),'fixture-v1');
 DO $stale_object$
 BEGIN
-  BEGIN PERFORM public.assert_sales_structured_docx_uploaded_object('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM requested),'fixture-stale'); RAISE EXCEPTION 'LOCAL_DOCX_FAIL stale object accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Uploaded DOCX object version is absent or replaced%' THEN RAISE; END IF; END;
+  BEGIN PERFORM public.assert_sales_structured_docx_uploaded_object('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM docx_storage_path),'fixture-stale'); RAISE EXCEPTION 'LOCAL_DOCX_FAIL stale object accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Uploaded DOCX object version is absent or replaced%' THEN RAISE; END IF; END;
 END;
 $stale_object$;
 SELECT set_config('request.jwt.claim.sub', NULL, true);
-SELECT public.record_sales_structured_docx_object_verification('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM requested),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,true,true,false,'local-ooxml-verifier');
+SELECT public.record_sales_structured_docx_object_verification('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM docx_storage_path),'fixture-v1','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512,true,true,false,'local-ooxml-verifier');
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
-SELECT public.assert_sales_structured_docx_current_path_create_only('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM requested),'fixture-v1');
+SELECT public.assert_sales_structured_docx_current_path_create_only('00000000-0000-4000-8000-000000000902','project-drive',(SELECT storage_path FROM docx_storage_path),'fixture-v1');
 RESET ROLE;
 SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
 CREATE TEMP TABLE committed AS SELECT * FROM public.commit_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','sor-draft.docx','project-drive',(SELECT storage_path FROM requested),'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',512);
