@@ -13,7 +13,10 @@ export type StructuredDocxRegistryScope = {
   actorId: string;
   assignmentId: string;
   requestKey: string;
-  projectId: string;
+  scopeType: "SALES_OPPORTUNITY" | "PROJECT";
+  opportunityId: string;
+  customerId: string;
+  projectId: string | null;
   documentKind: StructuredLifecycleDocumentKind;
   departmentId: string;
   responsibleEmployeeId: string;
@@ -32,7 +35,8 @@ export type StructuredDocxRegistryScope = {
 /** This port is server-only in use; its shared type keeps browser calls inactive. */
 export type PrivateDocxRegistryAuthorizationPort = {
   resolveCurrentRegistryAssignment(input: {
-    projectId: string;
+    opportunityId: string;
+    customerId: string;
     documentKind: StructuredLifecycleDocumentKind;
     assignmentId: string;
     requestKey: string;
@@ -50,7 +54,10 @@ export type StructuredDocxRegistryReceipt = {
   requestKey: string;
   assignmentId: string;
   actorId: string;
-  projectId: string;
+  scopeType: "SALES_OPPORTUNITY" | "PROJECT";
+  opportunityId: string;
+  customerId: string;
+  projectId: string | null;
   documentKind: StructuredLifecycleDocumentKind;
   departmentId: string;
   templateId: string;
