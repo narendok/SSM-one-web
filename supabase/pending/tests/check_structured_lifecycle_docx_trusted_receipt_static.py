@@ -25,12 +25,14 @@ for item in (
     "consumed_at",
     "pg_advisory_xact_lock",
     "storage.objects",
-    "resolve_structured_lifecycle_docx_registry_scope",
+    "structured_lifecycle_docx_responsibility_assignments",
+    "Trusted DOCX receipt registry responsibility or template pin changed",
     "Only the trusted server DOCX verifier may issue a receipt",
     "REVOKE ALL ON FUNCTION public.issue_sales_structured_docx_trusted_receipt",
     "GRANT EXECUTE ON FUNCTION public.issue_sales_structured_docx_trusted_receipt",
 ): need(receipt, item, item)
 forbid(receipt, "TO authenticated;", "authenticated receipt issuer grant")
+forbid(receipt, "set_config('structured_docx.trusted_actor'", "caller-controlled trusted actor setting")
 for item in ("p_trusted_receipt_id uuid", "object_version text NOT NULL", "Trusted DOCX receipt is absent, consumed, or conflicts with commit facts", "SET consumed_at=now()"):
     need(materialization, item, item)
 for item in ("createContractBoundCurrentPathPrivateDocxReader", "issue_sales_structured_docx_trusted_receipt", "commit_sales_structured_docx_materialization", "assert_sales_structured_docx_current_path_create_only"):
