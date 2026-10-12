@@ -44,6 +44,7 @@ need(sql, 'DOCX request key conflicts', 'replay conflict')
 need(sql, 'Structured Sales DOCX history is append-only', 'append-only mutation guard')
 for signature in (
   'public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid)',
+  'public.authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,bigint)',
   'public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text)',
   'public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,bigint)',
   'public.read_sales_structured_docx_materializations(uuid,uuid,uuid)',
@@ -59,7 +60,7 @@ need(folder, 'target_folder_node_id', 'narrow folder identifier')
 need(folder, 'REVOKE ALL ON FUNCTION public.discover_sales_opportunity_structured_draft_folder', 'folder transport revoke')
 for value in ('storage_bucket', 'storage_path_prefix'):
     forbid(folder, f'RETURNS TABLE(location_id uuid, department_id uuid, target_folder_node_id uuid, {value}', f'folder read does not expose {value}')
-for expected in ('LOCAL_DOCX_FAIL unassigned reader accepted', 'LOCAL_DOCX_FAIL cross-department/source accepted', 'LOCAL_DOCX_FAIL changed replay accepted', 'LOCAL_DOCX_FAIL revoked assignment accepted', 'SALES_STRUCTURED_DOCX_LOCAL_ACCEPTANCE_PASS'):
+for expected in ('LOCAL_DOCX_FAIL exact protected upload authority missing', 'LOCAL_DOCX_FAIL non-DOCX upload accepted', 'LOCAL_DOCX_FAIL unassigned actor read the DOCX object past restrictive policy', 'LOCAL_DOCX_FAIL unassigned reader accepted', 'LOCAL_DOCX_FAIL cross-department/source accepted', 'LOCAL_DOCX_FAIL changed replay accepted', 'LOCAL_DOCX_FAIL revoked assignment accepted', 'SALES_STRUCTURED_DOCX_LOCAL_ACCEPTANCE_PASS'):
     need(acceptance, expected, expected)
 need(runner, 'LOCAL_SALES_STRUCTURED_DOCX_DISPOSABLE=yes', 'explicit disposable opt-in')
 need(runner, 'CLEANUP_VERIFIED docx_fixture_removed=true', 'fixture cleanup')

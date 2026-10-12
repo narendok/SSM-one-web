@@ -23,11 +23,12 @@ Only the current explicit responsible employee may stage, read, verify, save, hi
 - `src/lib/structured-lifecycle-docx-private-object-reader.server.ts`: current-path bytes only after pre/post exact object-version checks.
 - `src/lib/structured-lifecycle-docx-private-object-bridge.server.ts`: bounded OOXML verifier binds bytes, checksum, size, actor, source/template and assignment.
 - `src/lib/structured-lifecycle-docx-sales-orchestration.server.ts`: service-only scope, receipt, recheck, atomic commit adapter.
-- `src/lib/structured-lifecycle-docx-private-object-bridge.functions.ts`: authenticated `verifyPrivateStructuredDocxObject` and `commitPrivateStructuredDocxMaterialization`, both hard-disabled by `lifecycleAcceptanceEnabled` until a separately reviewed activation.
-- `src/components/lifecycle/StructuredTemplatePreview.tsx`: keeps `exportLocalDocx` unchanged. No private DOCX Save control is enabled until an accepted upload/request function exists; the server commit function is therefore not client-wired.
+- `src/lib/structured-lifecycle-docx-private-object-bridge.functions.ts`: authenticated `authorizePrivateStructuredDocxUpload`, `verifyPrivateStructuredDocxObject`, and `commitPrivateStructuredDocxMaterialization`; all are hard-disabled by `lifecycleAcceptanceEnabled` until separately reviewed activation. The upload authorization accepts only source/actor-bound identifiers plus DOCX MIME/size; SQL derives the exact private bucket/path.
+- `src/components/lifecycle/StructuredTemplatePreview.tsx`: keeps `exportLocalDocx` unchanged. No private DOCX Save control is enabled. The accepted direct Project/Drive handler will invoke only the gated sequence: protected request -> server-derived path authorization -> create-only upload -> verification/receipt -> atomic commit.
 
 ## Function/grant boundary
 
+- `authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,bigint)` is caller-authenticated only after review; it derives current assignment, source, active location, bucket, and request-key path and rejects arbitrary folder/path/template authority, non-DOCX MIME, values above 10 MB, stale source, conflicting replay, or a pre-existing unreceipted object. Its default ACL is revoked from every runtime role.
 - `resolve_sales_structured_docx_server_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text)`, `issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text)`, `assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint)`, and `consume_sales_structured_docx_trusted_receipt(uuid,uuid)` are revoked from PUBLIC/anon/authenticated and granted only to `service_role`.
 - Storage policy helper functions have minimal `authenticated` EXECUTE only where PostgreSQL policy evaluation needs it; byte-upload assertion is service-only.
 - The materialization commit remains caller-authenticated but rejects missing, altered, cross-actor, consumed, or mismatched receipts and consumes the receipt in the same transaction as Drive/revision/register/audit work.
@@ -46,9 +47,8 @@ Before activation, capture function/policy/grant/schema snapshots and the pendin
 
 ## Outstanding prerequisites
 
-1. An accepted protected create-only upload/request endpoint that writes the exact request path before the current-path verifier can run.
-2. Managed preflight evidence that the inspected Storage object-version columns, resolver schema, helper bodies, restrictive policy behavior, roles, active pins, and exact folder binding match this package.
-3. Root review of the registry's project-scoped authority mapping to Sales opportunity/Master provenance; current isolated acceptance represents the mapping with an ephemeral project row only.
-4. A managed, non-owner authenticated acceptance run covering assigned, unassigned, cross-department, revoked, stale, replay, replacement, and rollback cases.
+1. Managed preflight evidence that the inspected Storage object-version columns, resolver schema, helper bodies, restrictive policy behavior, roles, active pins, and exact folder binding match this package.
+2. Root review of the registry's project-scoped authority mapping to Sales opportunity/Master provenance; current isolated acceptance represents the mapping with an ephemeral project row only.
+3. A managed, non-owner authenticated acceptance run covering assigned, unassigned, cross-department, revoked, stale, replay, replacement, and rollback cases.
 
 Procurement review and sample archive/restore remain separate, unaccepted work.

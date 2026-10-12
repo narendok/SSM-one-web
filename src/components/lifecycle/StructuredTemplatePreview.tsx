@@ -63,7 +63,6 @@ import {
 } from "@/lib/structured-sales-local-payload";
 import { renderStructuredLifecycleDocx } from "@/lib/structured-lifecycle-docx-renderer";
 import { isStructuredDocumentInCatalog, type StructuredDocumentCatalogScope } from "@/lib/structured-lifecycle-document-access";
-import { authorizePrivateStructuredDocxUpload, commitPrivateStructuredDocxMaterialization, verifyPrivateStructuredDocxObject } from "@/lib/structured-lifecycle-docx-private-object-bridge.functions";
 
 export type StructuredTemplatePreviewSourcePin = {
   opportunityNumber: string;
@@ -284,9 +283,6 @@ export function StructuredTemplatePreview({
   const listBoms = useServerFn(fetchProjectBoms);
   const getBomItems = useServerFn(fetchProjectBomItems);
   const discoverCapability = useServerFn(discoverStructuredSalesDraftCapability);
-  const authorizeDocxUpload = useServerFn(authorizePrivateStructuredDocxUpload);
-  const verifyDocxObject = useServerFn(verifyPrivateStructuredDocxObject);
-  const commitDocxMaterialization = useServerFn(commitPrivateStructuredDocxMaterialization);
   const linkedProject = project ?? source.data?.project ?? null;
   const effectiveProjectId = projectId ?? linkedProject?.id;
   const projectBoms = useQuery({
@@ -636,15 +632,6 @@ export function StructuredTemplatePreview({
   // not expose a Save DOCX control, but this is the single direct handler that
   // will perform request -> exact upload -> verification -> receipt -> commit
   // after reviewed deployment acceptance; local export remains independent.
-  const saveVerifiedDocxWhenAccepted = async () => {
-    // Deliberately unreachable until the accepted registry exposes a
-    // server-derived assigned-person/template/source-pin resolver to this
-    // direct path. Local export above remains the only visible DOCX action.
-    void authorizeDocxUpload;
-    void verifyDocxObject;
-    void commitDocxMaterialization;
-    throw new Error("Verified DOCX Save remains unavailable until reviewed deployment acceptance supplies server-derived responsibility and source pins.");
-  };
   return (
     <Card>
       <CardHeader>

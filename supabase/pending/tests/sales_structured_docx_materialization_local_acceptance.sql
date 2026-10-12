@@ -24,7 +24,19 @@ INSERT INTO public.structured_lifecycle_docx_template_pins(id,department_id,docu
 UPDATE public.master_specifications SET current_version_id='00000000-0000-4000-8000-000000000401' WHERE id='00000000-0000-4000-8000-000000000301';
 CREATE TEMP TABLE requested AS SELECT * FROM public.request_sales_structured_docx_materialization(
  '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000901','sales-sor-local',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','00000000-0000-4000-8000-000000000902');
-INSERT INTO storage.objects(bucket_id,name,version) SELECT storage_bucket,storage_path,'fixture-v1' FROM requested;
+CREATE TEMP TABLE authorized_upload AS SELECT * FROM public.authorize_sales_structured_docx_upload(
+ '00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','application/vnd.openxmlformats-officedocument.wordprocessingml.document',512);
+DO $upload_authority$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM authorized_upload a JOIN requested r USING (request_key) WHERE a.storage_bucket=r.storage_bucket AND a.storage_path=r.storage_path AND a.max_size_bytes=10485760 AND NOT a.replayed) THEN
+    RAISE EXCEPTION 'LOCAL_DOCX_FAIL exact protected upload authority missing';
+  END IF;
+  BEGIN
+    PERFORM public.authorize_sales_structured_docx_upload('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','text/html',512);
+    RAISE EXCEPTION 'LOCAL_DOCX_FAIL non-DOCX upload accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Invalid protected DOCX upload request' THEN RAISE; END IF; END;
+END;
+$upload_authority$;
 -- Exercise real authenticated Storage RLS beside a representative broad
 -- permissive project-drive policy. Restrictive DOCX policies must dominate.
 CREATE POLICY legacy_project_drive_permissive ON storage.objects FOR ALL TO authenticated
@@ -40,6 +52,7 @@ SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001'
 DO $storage_policy$
 DECLARE v_path text := (SELECT storage_path FROM docx_storage_path);
 BEGIN
+  INSERT INTO storage.objects(bucket_id,name,version,metadata) VALUES ('project-drive',v_path,'fixture-v1','{"mimetype":"application/vnd.openxmlformats-officedocument.wordprocessingml.document","size":512}'::jsonb);
   BEGIN INSERT INTO storage.objects(bucket_id,name,version) VALUES ('project-drive',v_path,'fixture-v2'); RAISE EXCEPTION 'LOCAL_DOCX_FAIL replacement accepted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   UPDATE storage.objects SET version='fixture-v2' WHERE bucket_id='project-drive' AND name=v_path;
   IF FOUND THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL update accepted'; END IF;
@@ -82,11 +95,19 @@ BEGIN
  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'DOCX request key conflicts with a different materialization payload' THEN RAISE; END IF; END;
  IF (SELECT count(*) FROM public.sales_opportunity_structured_docx_materializations) <> v_before THEN RAISE EXCEPTION 'LOCAL_DOCX_FAIL conflict changed graph'; END IF;
  SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000002';
+ SET ROLE authenticated;
+ PERFORM set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
+ IF EXISTS (SELECT 1 FROM storage.objects WHERE bucket_id='project-drive' AND name=(SELECT storage_path FROM docx_storage_path)) THEN
+   RAISE EXCEPTION 'LOCAL_DOCX_FAIL unassigned actor read the DOCX object past restrictive policy';
+ END IF;
+ RESET ROLE;
+ SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000002';
  BEGIN
   PERFORM public.read_sales_structured_docx_materializations('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901');
   RAISE EXCEPTION 'LOCAL_DOCX_FAIL unassigned reader accepted';
  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'The current actor is not the assigned active responsible person' THEN RAISE; END IF; END;
  SET LOCAL request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
+ PERFORM public.authorize_sales_structured_docx_upload('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000901','00000000-0000-4000-8000-000000000902','application/vnd.openxmlformats-officedocument.wordprocessingml.document',512);
  BEGIN
   PERFORM public.request_sales_structured_docx_materialization('00000000-0000-4000-8000-000000000202','00000000-0000-4000-8000-000000000102','00000000-0000-4000-8000-000000000720','00000000-0000-4000-8000-000000000901','sales-sor-local',1,'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','00000000-0000-4000-8000-000000000903');
   RAISE EXCEPTION 'LOCAL_DOCX_FAIL cross-department/source accepted';
