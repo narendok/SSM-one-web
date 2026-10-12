@@ -34,6 +34,7 @@ import {
   type EditableField,
   type LocalTableKey,
   type QuoteLineRow,
+  type SpecializedLocalPreviewKind,
   type StructuredLifecycleTemplateKind,
   type StructuredTemplateSource,
   type TableValidationIssue,
@@ -92,7 +93,7 @@ export function requestStructuredPreviewExit(
   }
   exit();
 }
-type StructuredSalesPreviewKind = "SOR" | "CONTRACT_REVIEW" | "PRS";
+type StructuredSalesPreviewKind = "SOR" | "CONTRACT_REVIEW";
 
 type StructuredSalesDraftHistoryItem = {
   requestKey: string;
@@ -162,7 +163,13 @@ function newRequestKey() {
 function isStructuredSalesPreviewKind(
   kind: StructuredLifecycleTemplateKind,
 ): kind is StructuredSalesPreviewKind {
-  return kind === "SOR" || kind === "CONTRACT_REVIEW" || kind === "PRS";
+  return kind === "SOR" || kind === "CONTRACT_REVIEW";
+}
+
+function isSpecializedLocalPreviewKind(
+  kind: StructuredLifecycleTemplateKind,
+): kind is SpecializedLocalPreviewKind {
+  return kind !== "SOR" && kind !== "CONTRACT_REVIEW" && kind !== "PRS";
 }
 
 export function localEditsForStructuredPreview(
@@ -183,7 +190,7 @@ export function buildStructuredPreviewContent(
 ) {
   try {
     const edits = localEditsForStructuredPreview(kind, userEdits);
-    if (!isStructuredSalesPreviewKind(kind)) {
+    if (isSpecializedLocalPreviewKind(kind)) {
       const validation = validateSpecializedLocalPreviewPayload(kind, edits);
       if (!validation.ok) {
         return { content: "", error: validation.errors.map((issue) => `${issue.path}: ${issue.message}`).join(" ") };
@@ -191,7 +198,9 @@ export function buildStructuredPreviewContent(
     }
     const content = isStructuredSalesPreviewKind(kind)
       ? renderStructuredSalesLocalDraftHtml(kind, source, edits)
-      : `${renderStructuredLifecycleTemplatePreview(kind, source, edits).content}\n\n${renderSpecializedLocalTraceabilityHtml(kind, source)}`;
+      : isSpecializedLocalPreviewKind(kind)
+        ? `${renderStructuredLifecycleTemplatePreview(kind, source, edits).content}\n\n${renderSpecializedLocalTraceabilityHtml(kind, source)}`
+        : renderStructuredLifecycleTemplatePreview(kind, source, edits).content;
     return { content, error: null };
   } catch (error) {
     return { content: "", error: error instanceof Error ? error.message : "Preview unavailable." };
@@ -1482,7 +1491,7 @@ export function FormattedPreview({
   const value = (field: string) =>
     userEdits[editKey(item.kind, field)] ?? userEdits[field] ?? "TBC";
   const sourceValue = (field: string) => source?.sourceFields[field] ?? "TBC";
-  const specializedTraceability = !isStructuredSalesPreviewKind(item.kind)
+  const specializedTraceability = isSpecializedLocalPreviewKind(item.kind)
     ? renderSpecializedLocalTraceabilityHtml(item.kind, source)
     : null;
   const contextRows =
