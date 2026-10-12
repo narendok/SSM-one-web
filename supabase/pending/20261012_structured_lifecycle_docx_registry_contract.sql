@@ -327,7 +327,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.resolve_structured_lifecycle_docx_registry_scope(uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.resolve_structured_lifecycle_docx_registry_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.assign_structured_lifecycle_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.revoke_structured_lifecycle_docx_responsibility(uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.approve_structured_lifecycle_docx_template_pin(uuid,text,uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;

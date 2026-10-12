@@ -136,6 +136,7 @@ BEGIN
     OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
     OR NEW.department_id IS DISTINCT FROM OLD.department_id
     OR NEW.document_kind IS DISTINCT FROM OLD.document_kind
+    OR NEW.registry_assignment_id IS DISTINCT FROM OLD.registry_assignment_id
     OR NEW.responsible_employee_id IS DISTINCT FROM OLD.responsible_employee_id
     OR (OLD.status <> 'ACTIVE' AND NEW.status IS DISTINCT FROM OLD.status)
     OR (OLD.status = 'ACTIVE' AND (NEW.status <> 'REVOKED' OR NEW.revoked_by IS NULL OR NEW.revoked_at IS NULL))
