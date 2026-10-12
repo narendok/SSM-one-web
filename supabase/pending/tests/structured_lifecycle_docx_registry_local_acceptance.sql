@@ -31,15 +31,15 @@ DO $$ BEGIN
   BEGIN PERFORM public.assign_structured_lifecycle_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000011','SOR','00000000-0000-4000-8000-000000000002',NULL,'00000000-0000-4000-8000-000000000051'); RAISE EXCEPTION 'Cross-department assignment accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Scoped department document-management authority%' THEN RAISE; END IF; END;
   BEGIN PERFORM public.assign_structured_lifecycle_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000004',NULL,'00000000-0000-4000-8000-000000000052'); RAISE EXCEPTION 'Inactive employee assigned'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Assigned responsible%' THEN RAISE; END IF; END;
 END $$;
-CREATE TEMP TABLE assignment_first AS SELECT public.assign_structured_lifecycle_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000060') AS id;
+CREATE TEMP TABLE assignment_first AS SELECT public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000060') AS id;
 DO $$ BEGIN
   IF (SELECT count(*) FROM assignment_first)<>1 OR (SELECT count(*) FROM public.structured_lifecycle_docx_responsibility_assignments)<>1 OR (SELECT count(*) FROM public.structured_lifecycle_docx_registry_audit_events)<>1 THEN RAISE EXCEPTION 'Atomic assignment/audit persistence failed'; END IF;
-  IF (SELECT public.assign_structured_lifecycle_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000060'))<>(SELECT id FROM assignment_first) THEN RAISE EXCEPTION 'Exact assignment replay failed'; END IF;
-  BEGIN PERFORM public.assign_structured_lifecycle_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000003',NULL,'00000000-0000-4000-8000-000000000060'); RAISE EXCEPTION 'Assignment replay conflict accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Registry request key conflicts%' THEN RAISE; END IF; END;
+  IF (SELECT public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000060'))<>(SELECT id FROM assignment_first) THEN RAISE EXCEPTION 'Exact assignment replay failed'; END IF;
+  BEGIN PERFORM public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000003',NULL,'00000000-0000-4000-8000-000000000060'); RAISE EXCEPTION 'Assignment replay conflict accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Registry request key conflicts%' THEN RAISE; END IF; END;
 END $$;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 DO $$ BEGIN
-  BEGIN PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000020','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000061','HW-SOR',2,repeat('c',64),repeat('d',64)); RAISE EXCEPTION 'Stale template version accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Current immutable approved template pin%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000020','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000061','HW-SOR',2,repeat('c',64),repeat('d',64)); RAISE EXCEPTION 'Stale template version accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Current immutable approved template pin%' THEN RAISE; END IF; END;
   BEGIN PERFORM public.approve_structured_lifecycle_docx_template_pin('00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000030','00000000-0000-4000-8000-000000000041',repeat('c',64),'00000000-0000-4000-8000-000000000062'); RAISE EXCEPTION 'Foreign template revision accepted'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Template approval requires%' THEN RAISE; END IF; END;
 END $$;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
@@ -47,10 +47,18 @@ CREATE TEMP TABLE template_first AS SELECT public.approve_structured_lifecycle_d
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 DO $$ BEGIN
   IF (SELECT count(*) FROM public.structured_lifecycle_docx_template_pins)<>1 THEN RAISE EXCEPTION 'Template pin was not created'; END IF;
-  PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000020','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000064','HW-SOR',1,repeat('c',64),repeat('d',64));
+  BEGIN PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000020','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000064','HW-SOR',1,repeat('c',64),repeat('d',64)); RAISE EXCEPTION 'Reviewer obtained save authority'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Current actor is not the active assigned responsible person%' THEN RAISE; END IF; END;
+  SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
+  UPDATE public.structured_lifecycle_docx_responsibility_assignments SET reviewer_employee_id=NULL WHERE id=(SELECT id FROM assignment_first);
+  RAISE EXCEPTION 'Reviewer field mutability accepted';
+EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM <> 'Structured lifecycle DOCX assignment is immutable except one revocation' THEN RAISE; END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
+DO $$ BEGIN
   PERFORM public.revoke_structured_lifecycle_docx_responsibility((SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000065');
   IF (SELECT status FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=(SELECT id FROM assignment_first)) <> 'REVOKED' OR (SELECT count(*) FROM public.structured_lifecycle_docx_registry_audit_events)<>3 THEN RAISE EXCEPTION 'Revocation did not preserve assignment history/audit'; END IF;
-  BEGIN PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000020','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000066','HW-SOR',1,repeat('c',64),repeat('d',64)); RAISE EXCEPTION 'Revoked assignment resolved'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Current assigned-person%' THEN RAISE; END IF; END;
+  BEGIN PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000020','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000066','HW-SOR',1,repeat('c',64),repeat('d',64)); RAISE EXCEPTION 'Revoked assignment resolved'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Current assigned-person%' THEN RAISE; END IF; END;
 END $$;
 DO $$ BEGIN
   BEGIN

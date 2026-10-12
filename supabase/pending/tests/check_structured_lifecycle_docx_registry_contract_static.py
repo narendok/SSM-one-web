@@ -30,8 +30,18 @@ for primitive in (
     "employees", "employee_departments", "project_team_members",
     "responsible_employee_id", "reviewer_employee_id", "active_document_revision_id",
     "FOR UPDATE", "Current immutable approved template pin", "extensions.gen_random_uuid()",
+    "baseline.requirement_id", "structured_lifecycle_docx_one_active_sales_assignment",
+    "structured_lifecycle_docx_one_active_project_assignment",
 ):
     need(primitive, primitive)
+
+for forbidden in (
+    "baseline.customer_requirement_id",
+    "current_setting('structured_docx.trusted_actor'",
+    "coalesce(v_actor, NULLIF(current_setting('structured_docx.trusted_actor'",
+    "e.id IN (v_assignment.responsible_employee_id, v_assignment.reviewer_employee_id)",
+):
+    forbid(forbidden, forbidden)
 
 for kind in ("'SOR'", "'NDA'", "'PRS'", "'BOM'", "'DFMEA'", "'ANNUAL_SKILL_MATRIX'"):
     need(kind, kind)
