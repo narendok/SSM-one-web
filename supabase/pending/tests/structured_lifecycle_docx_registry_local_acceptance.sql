@@ -76,7 +76,7 @@ DO $$ BEGIN
 END $$;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 CREATE TEMP TABLE template_first AS SELECT public.approve_structured_lifecycle_docx_template_pin('00000000-0000-4000-8000-000000000010','SOR','00000000-0000-4000-8000-000000000030','00000000-0000-4000-8000-000000000040',repeat('c',64),'00000000-0000-4000-8000-000000000063') AS id;
-SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',false);
 DO $$ BEGIN
   IF (SELECT count(*) FROM public.structured_lifecycle_docx_template_pins)<>1 THEN RAISE EXCEPTION 'Template pin was not created'; END IF;
   BEGIN PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope('00000000-0000-4000-8000-000000000090','00000000-0000-4000-8000-000000000091','SOR',(SELECT id FROM assignment_first),'00000000-0000-4000-8000-000000000064','HW-SOR',1,repeat('c',64),repeat('d',64)); RAISE EXCEPTION 'Reviewer obtained save authority'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Current actor is not the active assigned responsible person%' THEN RAISE; END IF; END;
