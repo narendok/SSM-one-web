@@ -195,6 +195,65 @@ BEGIN
 END;
 $$;
 
+-- Existing document and downstream writers reference the root opportunity or
+-- requirement. These narrowly scoped guards take the same root-row lock as the
+-- archive transaction, then reject a new lineage record once that root is
+-- archived. They do not use the archive advisory lock, take no table lock, and
+-- do not relax any existing RLS policy. The child tables below are the only
+-- direct root-reference writer surfaces in the reviewed HTML/DOCX contracts.
+CREATE OR REPLACE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
+DECLARE v_archived_at timestamptz;
+BEGIN
+  SELECT archived_at INTO v_archived_at
+  FROM public.sales_opportunities
+  WHERE id = NEW.opportunity_id
+  FOR KEY SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Opportunity lineage root is missing'; END IF;
+  IF v_archived_at IS NOT NULL THEN RAISE EXCEPTION 'Archived opportunity cannot receive downstream lineage'; END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.sales_sample_archive_reject_archived_requirement_lineage()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
+DECLARE v_archived_at timestamptz;
+BEGIN
+  SELECT archived_at INTO v_archived_at
+  FROM public.customer_requirements
+  WHERE id = NEW.requirement_id
+  FOR KEY SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Requirement lineage root is missing'; END IF;
+  IF v_archived_at IS NOT NULL THEN RAISE EXCEPTION 'Archived requirement cannot receive downstream lineage'; END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER sales_sample_archive_guard_document_locations
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_document_locations
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_structured_drafts
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_drafts
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_structured_requests
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_draft_requests
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_structured_materializations
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_draft_materializations
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_docx_assignments
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_docx_assignments
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_docx_requests
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_docx_requests
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_docx_materializations
+BEFORE INSERT OR UPDATE OF opportunity_id ON public.sales_opportunity_structured_docx_materializations
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_opportunity_lineage();
+CREATE TRIGGER sales_sample_archive_guard_requirements
+BEFORE INSERT OR UPDATE OF requirement_id ON public.customer_requirement_revisions
+FOR EACH ROW EXECUTE FUNCTION public.sales_sample_archive_reject_archived_requirement_lineage();
+
 CREATE OR REPLACE FUNCTION public.archive_reviewed_sales_samples(p_roots jsonb, p_reason text, p_request_key uuid)
 RETURNS TABLE(manifest_id uuid, replayed boolean)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions, pg_temp AS $$
