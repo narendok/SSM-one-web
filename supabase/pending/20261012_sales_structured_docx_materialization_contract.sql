@@ -241,13 +241,9 @@ BEGIN
   SELECT * INTO v_revision FROM public.sales_opportunity_structured_draft_revisions WHERE id = v_html_request.revision_id FOR UPDATE;
   SELECT * INTO v_draft FROM public.sales_opportunity_structured_drafts WHERE id = v_html_request.draft_id FOR UPDATE;
   IF NOT FOUND OR v_revision.source_fingerprint <> v_html_request.source_fingerprint OR v_draft.master_specification_version_id <> v_html_request.master_specification_version_id OR NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_html_request.master_specification_id AND current_specification.current_version_id = v_html_request.master_specification_version_id) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
-  -- Activation must resolve the immutable registry pin before the request is
-  -- created; until this pending registry is installed, the caller-facing grant
-  -- remains revoked. The stored pins are later rechecked by issuer and commit.
-  PERFORM public.resolve_structured_lifecycle_docx_registry_scope(
-    p_opportunity_id, v_html_request.document_kind, p_assignment_id, p_request_key,
-    p_template_key, p_template_version, p_template_schema_hash, v_revision.source_fingerprint
-  );
+  -- The trusted issuer and commit recheck the immutable registry pin after
+  -- upload. Request staging preserves only existing Sales source/assignment
+  -- provenance, avoiding a registry call before the receipt authority runs.
   INSERT INTO public.sales_opportunity_structured_docx_requests(request_key,requested_by,assignment_id,structured_draft_request_key,structured_draft_revision_id,location_id,opportunity_id,customer_id,master_specification_id,master_specification_version_id,document_kind,editable_schema_key,editable_schema_hash,source_fingerprint,payload_hash,template_key,template_version,template_schema_hash)
   VALUES(p_request_key,v_actor,p_assignment_id,p_structured_draft_request_key,v_revision.id,v_scope.location_id,p_opportunity_id,p_customer_id,v_html_request.master_specification_id,v_html_request.master_specification_version_id,v_html_request.document_kind,v_html_request.editable_schema_key,v_html_request.editable_schema_hash,v_revision.source_fingerprint,v_revision.payload_hash,p_template_key,p_template_version,p_template_schema_hash);
   RETURN QUERY SELECT p_request_key, v_scope.storage_bucket, v_scope.storage_path_prefix || p_request_key::text || '-draft.docx', false;
