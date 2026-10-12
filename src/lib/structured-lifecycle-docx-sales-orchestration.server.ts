@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { createContractBoundCurrentPathPrivateDocxReader } from "./structured-lifecycle-docx-private-object-reader.server";
 import {
   assertCurrentStructuredDocxReceipt,
@@ -11,7 +12,7 @@ import type { StructuredDocxRegistryScope } from "./structured-lifecycle-docx-re
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document" as const;
 
-type RpcClient = Pick<SupabaseClient, "rpc" | "storage" | "from">;
+type RpcClient = Pick<SupabaseClient<Database>, "rpc" | "storage" | "from">;
 
 function requireRpc<T>(result: { data: T | null; error: { message: string } | null }, fallback: string): T {
   if (result.error || result.data === null) throw new Error(result.error?.message ?? fallback);
