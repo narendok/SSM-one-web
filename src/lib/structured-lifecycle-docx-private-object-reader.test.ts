@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createContractBoundCurrentPathPrivateDocxReader, createPendingVersionedPrivateDocxReader, type PrivateDocxCreateOnlyAuthority } from "./structured-lifecycle-docx-private-object-reader.server";
 
-const input = { storageBucket: "project-drive" as const, storagePath: "private/one.docx", objectVersion: "v1" };
+const input = { storageBucket: "project-drive" as const, storagePath: "private/one.docx", objectVersion: "v1", requestKey: "00000000-0000-4000-8000-000000000001" };
 function admin(result: { data: unknown; error: { message: string } | null }) {
   const chain = { is: async () => result };
   const archived = { is: () => ({ maybeSingle: async () => result }) };
@@ -17,7 +17,7 @@ function contractAdmin(records: Array<{ data: unknown; error: { message: string 
   };
   return {
     from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ eq: () => chain }) }) }) }),
-    storage: { from: () => ({ download: async () => ({ data: new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)]), error: null }) }) },
+    storage: { from: () => ({ download: async () => ({ data: new Blob([Array.from(bytes)]), error: null }) }) },
   } as never;
 }
 
