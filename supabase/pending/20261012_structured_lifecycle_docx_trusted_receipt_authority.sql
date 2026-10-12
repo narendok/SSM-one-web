@@ -120,6 +120,37 @@ BEGIN
 END;
 $$;
 
+
+-- Server-only scope resolver. It never returns authority to a browser role;
+-- its only caller is the authenticated server bridge using service-role DB
+-- transport after requireSupabaseAuth has established p_actor_user_id.
+CREATE OR REPLACE FUNCTION public.resolve_sales_structured_docx_server_scope(
+  p_actor_user_id uuid, p_project_id uuid, p_document_kind text, p_assignment_id uuid,
+  p_request_key uuid, p_template_key text, p_template_version integer,
+  p_template_schema_hash text, p_source_fingerprint text
+) RETURNS TABLE(
+  actor_id uuid, assignment_id uuid, request_key uuid, project_id uuid,
+  document_kind text, department_id uuid, responsible_employee_id uuid,
+  reviewer_employee_id uuid, template_id uuid, template_key text,
+  template_version integer, template_document_revision_id uuid,
+  template_schema_hash text, source_fingerprint text, storage_bucket text,
+  storage_path text, object_version text
+) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_assignment public.sales_opportunity_structured_docx_assignments%ROWTYPE; v_location public.sales_opportunity_document_locations%ROWTYPE; v_attempt public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE; v_registry record;
+BEGIN
+  IF nullif(current_setting('request.jwt.claim.sub', true), '') IS NOT NULL THEN RAISE EXCEPTION 'Only the authenticated server DOCX bridge may resolve a trusted scope'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','sales-structured-docx',p_request_key::text),0));
+  SELECT * INTO v_request FROM public.sales_opportunity_structured_docx_requests WHERE request_key=p_request_key FOR UPDATE;
+  IF NOT FOUND OR v_request.requested_by<>p_actor_user_id OR v_request.assignment_id<>p_assignment_id OR v_request.opportunity_id<>p_project_id OR v_request.document_kind<>p_document_kind OR v_request.template_key<>p_template_key OR v_request.template_version<>p_template_version OR v_request.template_schema_hash<>p_template_schema_hash OR v_request.source_fingerprint<>p_source_fingerprint THEN RAISE EXCEPTION 'Trusted DOCX server scope does not match the authenticated request'; END IF;
+  SELECT * INTO v_assignment FROM public.sales_opportunity_structured_docx_assignments WHERE id=v_request.assignment_id FOR UPDATE;
+  SELECT * INTO v_location FROM public.sales_opportunity_document_locations WHERE id=v_request.location_id FOR UPDATE;
+  SELECT * INTO v_attempt FROM public.sales_opportunity_structured_docx_storage_attempts WHERE request_key=p_request_key AND consumed_at IS NULL FOR SHARE;
+  IF NOT FOUND OR v_assignment.status<>'ACTIVE' OR v_location.status<>'ACTIVE' OR v_location.private_storage_bucket<>v_attempt.storage_bucket OR v_attempt.storage_path<>v_location.private_storage_prefix||p_request_key::text||'-draft.docx' OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Trusted DOCX server scope has no active assigned-person request/object'; END IF;
+  SELECT * INTO v_registry FROM public.resolve_structured_lifecycle_docx_registry_scope(p_project_id,p_document_kind,p_assignment_id,p_request_key,p_template_key,p_template_version,p_template_schema_hash,p_source_fingerprint);
+  RETURN QUERY SELECT p_actor_user_id,v_assignment.id,v_request.request_key,p_project_id,v_request.document_kind,v_assignment.department_id,v_assignment.responsible_employee_id,NULL::uuid,v_registry.template_id,v_request.template_key,v_request.template_version,v_registry.template_document_revision_id,v_request.template_schema_hash,v_request.source_fingerprint,v_attempt.storage_bucket,v_attempt.storage_path,v_attempt.object_version;
+END;
+$$;
+
 -- Commit is service-only at this layer: the authenticated server function
 -- validates actor identity then calls this after it has rechecked the receipt.
 CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(
@@ -145,11 +176,13 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_server_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_trusted_receipt() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_trusted_issue_scope(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.consume_sales_structured_docx_trusted_receipt(uuid,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_sales_structured_docx_server_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_trusted_issue_scope(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint) TO service_role;
