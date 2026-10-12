@@ -394,7 +394,8 @@ BEGIN
   SELECT revision, updated_at INTO v_current_revision, v_current_updated_at FROM public.project_boms WHERE id=v_scope.project_bom_id FOR UPDATE;
   IF v_current_revision IS DISTINCT FROM v_scope.pinned_bom_revision OR v_current_revision IS DISTINCT FROM p_expected_bom_revision OR v_current_updated_at IS DISTINCT FROM p_expected_bom_updated_at THEN RAISE EXCEPTION 'The project BOM source is stale'; END IF;
   IF v_scope.request_status <> 'PENDING_PROCUREMENT_ANALYSIS' THEN RAISE EXCEPTION 'Procurement request is no longer pending analysis'; END IF;
-  SELECT count(*) INTO v_line_count FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id FOR UPDATE;
+  PERFORM 1 FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id FOR UPDATE;
+  SELECT count(*) INTO v_line_count FROM public.project_bom_procurement_review_request_lines line WHERE line.request_id=p_request_id;
   SELECT count(*) INTO v_reviewed_count FROM jsonb_array_elements(v_reviewed);
   IF v_decision='ALLOW' AND v_reviewed_count <> v_line_count THEN RAISE EXCEPTION 'Allow requires an exact reviewed analysis revision for every submitted line'; END IF;
   IF v_decision='ALLOW' THEN
