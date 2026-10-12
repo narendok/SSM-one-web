@@ -41,7 +41,8 @@ export function createSalesStructuredDocxAuthorization(admin: RpcClient): Privat
     async resolveCurrentRegistryAssignment(input, actorId): Promise<StructuredDocxRegistryScope> {
       const rawScope = requireRpc(await admin.rpc("resolve_sales_structured_docx_server_scope" as never, {
         p_actor_user_id: actorId,
-        p_project_id: input.projectId,
+        p_opportunity_id: input.projectId,
+        p_customer_id: input.customerId,
         p_document_kind: input.documentKind,
         p_assignment_id: input.assignmentId,
         p_request_key: input.requestKey,
@@ -57,7 +58,7 @@ export function createSalesStructuredDocxAuthorization(admin: RpcClient): Privat
         actorId: rawScope.actor_id as string,
         assignmentId: rawScope.assignment_id as string,
         requestKey: rawScope.request_key as string,
-        projectId: rawScope.project_id as string,
+        projectId: rawScope.project_id as string | null,
         documentKind: rawScope.document_kind as StructuredDocxRegistryScope["documentKind"],
         departmentId: rawScope.department_id as string,
         responsibleEmployeeId: rawScope.responsible_employee_id as string,
