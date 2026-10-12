@@ -368,6 +368,14 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'DOCX request is not owned by this actor and source'; END IF;
   IF v_actor IS NULL THEN RAISE EXCEPTION 'An authenticated assigned responsible person is required'; END IF;
   IF v_request.assignment_id <> p_assignment_id OR btrim(coalesce(p_object_version,'')) = '' OR btrim(coalesce(p_file_name,'')) = '' OR p_file_name !~ '\.docx$' THEN RAISE EXCEPTION 'Invalid DOCX materialization payload'; END IF;
+  -- The shared receipt validator repeats this check under its source locks; keep
+  -- the caller-side predicate explicit so a stale Master is rejected before any
+  -- materialization replay or record write.
+  IF NOT EXISTS (SELECT 1 FROM public.master_specifications AS current_specification WHERE current_specification.id = v_request.master_specification_id
+    AND EXISTS (SELECT 1 FROM public.master_specification_versions current_version
+                WHERE current_version.id=v_request.master_specification_version_id
+                  AND current_version.specification_id=current_specification.id
+                  AND current_version.version_number=current_specification.current_version)) THEN RAISE EXCEPTION 'Pinned structured Sales source is no longer current'; END IF;
   SELECT * INTO v_prior FROM public.sales_opportunity_structured_docx_materializations AS prior_materialization WHERE prior_materialization.request_key = p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_prior.requested_by = v_actor AND v_prior.assignment_id = p_assignment_id AND v_prior.docx_sha256_checksum = p_sha256_checksum AND v_prior.storage_bucket = p_storage_bucket AND v_prior.storage_path = p_storage_path AND v_prior.object_version = p_object_version AND v_prior.size_bytes = p_size_bytes AND p_file_name = (SELECT name FROM public.drive_nodes WHERE id = v_prior.drive_node_id) THEN RETURN QUERY SELECT v_prior.id,v_prior.drive_node_id,v_prior.drive_revision_id,v_prior.document_control_register_id,true; RETURN; END IF;
