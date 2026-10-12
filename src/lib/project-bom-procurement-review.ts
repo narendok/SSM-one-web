@@ -1,5 +1,8 @@
 export type ProposedBomPart = {
-  lineId: string;
+  /** Local-only row identity. It must never be sent as a saved BOM-item ID. */
+  localRowId: string;
+  /** Present only when the row was loaded from the exact pinned saved BOM. */
+  sourceBomItemId?: string;
   reference: string;
   quantity: string;
   manualNote: string;
@@ -53,7 +56,7 @@ export function procurementSubmissionAdapter(input: {
     if (row.kind === "existing") {
       return {
         kind: "existing" as const,
-        sourceBomItemId: row.lineId || undefined,
+        sourceBomItemId: row.sourceBomItemId?.trim() || undefined,
         componentId: row.componentId,
         referenceDesignators: row.reference.trim(),
         quantity,
