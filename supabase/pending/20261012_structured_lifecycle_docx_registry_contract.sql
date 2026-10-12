@@ -39,9 +39,14 @@ CREATE TABLE public.structured_lifecycle_docx_responsibility_assignments (
 );
 GRANT ALL ON public.structured_lifecycle_docx_responsibility_assignments TO service_role;
 ALTER TABLE public.structured_lifecycle_docx_responsibility_assignments ENABLE ROW LEVEL SECURITY;
-CREATE UNIQUE INDEX structured_lifecycle_docx_one_active_assignment
-  ON public.structured_lifecycle_docx_responsibility_assignments(scope_type, opportunity_id, project_id, document_kind)
-  WHERE status = 'ACTIVE';
+-- PostgreSQL UNIQUE treats NULL keys as distinct. Separate partial indexes make
+-- the active root unique for both mutually-exclusive scope shapes.
+CREATE UNIQUE INDEX structured_lifecycle_docx_one_active_sales_assignment
+  ON public.structured_lifecycle_docx_responsibility_assignments(opportunity_id, document_kind)
+  WHERE status = 'ACTIVE' AND scope_type = 'SALES_OPPORTUNITY';
+CREATE UNIQUE INDEX structured_lifecycle_docx_one_active_project_assignment
+  ON public.structured_lifecycle_docx_responsibility_assignments(project_id, document_kind)
+  WHERE status = 'ACTIVE' AND scope_type = 'PROJECT';
 
 CREATE TABLE public.structured_lifecycle_docx_template_pins (
   id uuid PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
@@ -156,8 +161,10 @@ CREATE OR REPLACE FUNCTION public.resolve_structured_lifecycle_docx_registry_sco
 ) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_assignment public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE; v_template public.structured_lifecycle_docx_template_pins%ROWTYPE;
 BEGIN
-  IF (v_actor IS NULL AND NULLIF(current_setting('structured_docx.trusted_actor', true), '') IS NULL) OR p_request_key IS NULL OR p_template_schema_hash !~ '^[a-f0-9]{64}$' OR p_source_fingerprint !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Authenticated pinned DOCX registry lookup is required'; END IF;
-  v_actor := coalesce(v_actor, NULLIF(current_setting('structured_docx.trusted_actor', true), '')::uuid);
+  -- This resolver never accepts an ambient custom setting as actor identity.
+  -- Service-only receipt routines pass a trusted actor as an explicit argument
+  -- and verify it independently before this authenticated authority check.
+  IF v_actor IS NULL OR p_request_key IS NULL OR p_template_schema_hash !~ '^[a-f0-9]{64}$' OR p_source_fingerprint !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Authenticated pinned DOCX registry lookup is required'; END IF;
   SELECT * INTO v_assignment
   FROM public.structured_lifecycle_docx_responsibility_assignments assignment
   WHERE assignment.id=p_assignment_id AND assignment.document_kind=p_document_kind AND assignment.status='ACTIVE'
@@ -169,7 +176,7 @@ BEGIN
           SELECT 1
           FROM public.sales_project_handovers handover
           JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
-          JOIN public.customer_requirements requirement ON requirement.id=baseline.customer_requirement_id
+          JOIN public.customer_requirements requirement ON requirement.id=baseline.requirement_id
           WHERE handover.project_id=assignment.project_id
             AND handover.status IN ('initiated','completed')
             AND requirement.opportunity_id=p_opportunity_id
@@ -179,7 +186,7 @@ BEGIN
     )
   FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Current assigned-person DOCX authority is unavailable'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id IN (v_assignment.responsible_employee_id, v_assignment.reviewer_employee_id) AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Current actor is not an active assigned responsible person'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Current actor is not the active assigned responsible person'; END IF;
   IF v_assignment.scope_type='PROJECT' AND NOT EXISTS (SELECT 1 FROM public.project_team_members ptm JOIN public.employees e ON e.id=ptm.employee_id WHERE ptm.project_id=v_assignment.project_id AND e.user_id=v_actor AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Project membership is required after handover in addition to assigned-person authority'; END IF;
   SELECT * INTO v_template FROM public.structured_lifecycle_docx_template_pins template_pin WHERE template_pin.department_id=v_assignment.department_id AND template_pin.document_kind=v_assignment.document_kind AND template_pin.template_key=p_template_key AND template_pin.template_version=p_template_version AND template_pin.template_schema_hash=p_template_schema_hash AND template_pin.status='APPROVED' FOR UPDATE;
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.department_process_templates t JOIN public.department_process_template_document_revisions r ON r.id=v_template.template_document_revision_id AND r.template_id=t.id WHERE t.id=v_template.template_id AND t.department_id=v_assignment.department_id AND t.template_key=v_template.template_key AND t.version=v_template.template_version AND t.status='ACTIVE' AND t.active_document_revision_id=v_template.template_document_revision_id) THEN RAISE EXCEPTION 'Current immutable approved template pin is unavailable'; END IF;

@@ -225,7 +225,7 @@ BEGIN
           AND EXISTS (
             SELECT 1 FROM public.sales_project_handovers handover
             JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
-            JOIN public.customer_requirements requirement ON requirement.id=baseline.customer_requirement_id
+            JOIN public.customer_requirements requirement ON requirement.id=baseline.requirement_id
             WHERE handover.project_id=registry_assignment.project_id
               AND handover.status IN ('initiated','completed')
               AND requirement.opportunity_id=p_opportunity_id

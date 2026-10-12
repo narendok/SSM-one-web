@@ -40,7 +40,7 @@ BEGIN
   INSERT INTO public.projects(id,status) VALUES ('00000000-0000-4000-8000-000000000211','active');
   INSERT INTO public.project_team_members(project_id,employee_id) VALUES ('00000000-0000-4000-8000-000000000211','00000000-0000-4000-8000-000000000801');
   INSERT INTO public.customer_requirements(id,opportunity_id,customer_id) VALUES ('00000000-0000-4000-8000-000000000821','00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000101');
-  INSERT INTO public.requirement_baselines(id,customer_requirement_id) VALUES ('00000000-0000-4000-8000-000000000822','00000000-0000-4000-8000-000000000821');
+  INSERT INTO public.requirement_baselines(id,requirement_id) VALUES ('00000000-0000-4000-8000-000000000822','00000000-0000-4000-8000-000000000821');
   INSERT INTO public.sales_project_handovers(id,baseline_id,project_id,status) VALUES ('00000000-0000-4000-8000-000000000823','00000000-0000-4000-8000-000000000822','00000000-0000-4000-8000-000000000211','completed');
   INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(id,scope_type,project_id,department_id,document_kind,responsible_employee_id,assigned_by,created_by)
   VALUES(v_project_assignment,'PROJECT','00000000-0000-4000-8000-000000000211','00000000-0000-4000-8000-000000000501','SOR','00000000-0000-4000-8000-000000000801','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001');

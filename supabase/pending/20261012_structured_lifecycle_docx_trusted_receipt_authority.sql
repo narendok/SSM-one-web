@@ -91,8 +91,51 @@ BEGIN
     OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE')
   THEN RAISE EXCEPTION 'Trusted DOCX receipt no longer has an active assigned-person location scope'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.master_specifications s WHERE s.id=v_request.master_specification_id AND s.current_version_id=v_request.master_specification_version_id) THEN RAISE EXCEPTION 'Trusted DOCX receipt source is no longer current'; END IF;
-  PERFORM set_config('structured_docx.trusted_actor', p_actor_user_id::text, true);
-  PERFORM public.resolve_structured_lifecycle_docx_registry_scope(v_request.opportunity_id, v_request.customer_id, v_request.document_kind, v_assignment.registry_assignment_id, v_request.request_key, v_request.template_key, v_request.template_version, v_request.template_schema_hash, v_request.source_fingerprint);
+  -- The registry resolver only trusts auth.uid(). This service-only function
+  -- has already proven p_actor_user_id against the request and responsibility;
+  -- it therefore repeats the registry pin/source checks locally rather than
+  -- smuggling an identity through a caller-controlled custom setting.
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.structured_lifecycle_docx_responsibility_assignments registry_assignment
+    JOIN public.structured_lifecycle_docx_template_pins template_pin
+      ON template_pin.department_id=registry_assignment.department_id
+     AND template_pin.document_kind=registry_assignment.document_kind
+     AND template_pin.template_key=v_request.template_key
+     AND template_pin.template_version=v_request.template_version
+     AND template_pin.template_schema_hash=v_request.template_schema_hash
+     AND template_pin.status='APPROVED'
+    JOIN public.department_process_templates template
+      ON template.id=template_pin.template_id
+     AND template.department_id=registry_assignment.department_id
+     AND template.template_key=template_pin.template_key
+     AND template.version=template_pin.template_version
+     AND template.status='ACTIVE'
+     AND template.active_document_revision_id=template_pin.template_document_revision_id
+    JOIN public.department_process_template_document_revisions template_revision
+      ON template_revision.id=template_pin.template_document_revision_id
+     AND template_revision.template_id=template.id
+    WHERE registry_assignment.id=v_assignment.registry_assignment_id
+      AND registry_assignment.status='ACTIVE'
+      AND registry_assignment.responsible_employee_id=v_assignment.responsible_employee_id
+      AND registry_assignment.department_id=v_assignment.department_id
+      AND registry_assignment.document_kind=v_request.document_kind
+      AND (
+        (registry_assignment.scope_type='SALES_OPPORTUNITY'
+          AND registry_assignment.opportunity_id=v_request.opportunity_id
+          AND registry_assignment.customer_id=v_request.customer_id)
+        OR (registry_assignment.scope_type='PROJECT' AND EXISTS (
+          SELECT 1
+          FROM public.sales_project_handovers handover
+          JOIN public.requirement_baselines baseline ON baseline.id=handover.baseline_id
+          JOIN public.customer_requirements requirement ON requirement.id=baseline.requirement_id
+          WHERE handover.project_id=registry_assignment.project_id
+            AND handover.status IN ('initiated','completed')
+            AND requirement.opportunity_id=v_request.opportunity_id
+            AND requirement.customer_id=v_request.customer_id
+        ))
+      )
+  ) THEN RAISE EXCEPTION 'Trusted DOCX receipt registry responsibility or template pin changed'; END IF;
   IF NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.bucket_id=p_storage_bucket AND o.name=p_storage_path AND o.version=p_object_version AND o.archived_at IS NULL AND coalesce(o.is_delete_marker,false)=false) THEN RAISE EXCEPTION 'Trusted DOCX receipt object version is absent or replaced'; END IF;
 END;
 $$;
@@ -147,8 +190,31 @@ BEGIN
   SELECT * INTO v_location FROM public.sales_opportunity_document_locations WHERE id=v_request.location_id FOR UPDATE;
   SELECT * INTO v_attempt FROM public.sales_opportunity_structured_docx_storage_attempts WHERE request_key=p_request_key FOR SHARE;
   IF NOT FOUND OR v_assignment.status<>'ACTIVE' OR v_location.status<>'ACTIVE' OR v_location.private_storage_bucket<>v_attempt.storage_bucket OR v_attempt.storage_path<>v_location.private_storage_prefix||p_request_key::text||'-draft.docx' OR v_attempt.object_version IS NULL OR NOT EXISTS (SELECT 1 FROM public.employees e JOIN public.employee_departments ed ON ed.employee_id=e.id AND ed.department_id=v_assignment.department_id WHERE e.id=v_assignment.responsible_employee_id AND e.user_id=p_actor_user_id AND e.employment_status='ACTIVE') THEN RAISE EXCEPTION 'Trusted DOCX server scope has no active assigned-person request/object'; END IF;
-  SELECT * INTO v_registry FROM public.resolve_structured_lifecycle_docx_registry_scope(p_opportunity_id,p_customer_id,p_document_kind,v_assignment.registry_assignment_id,p_request_key,p_template_key,p_template_version,p_template_schema_hash,p_source_fingerprint);
-  RETURN QUERY SELECT p_actor_user_id,v_assignment.id,v_request.request_key,v_registry.scope_type,p_opportunity_id,p_customer_id,v_registry.project_id,v_request.document_kind,v_assignment.department_id,v_assignment.responsible_employee_id,NULL::uuid,v_registry.template_id,v_request.template_key,v_request.template_version,v_registry.template_document_revision_id,v_request.template_schema_hash,v_request.source_fingerprint,v_attempt.storage_bucket,v_attempt.storage_path,v_attempt.object_version;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.structured_lifecycle_docx_responsibility_assignments registry_assignment
+    JOIN public.structured_lifecycle_docx_template_pins template_pin
+      ON template_pin.department_id=registry_assignment.department_id
+     AND template_pin.document_kind=registry_assignment.document_kind
+     AND template_pin.template_key=v_request.template_key
+     AND template_pin.template_version=v_request.template_version
+     AND template_pin.template_schema_hash=v_request.template_schema_hash
+     AND template_pin.status='APPROVED'
+    WHERE registry_assignment.id=v_assignment.registry_assignment_id
+      AND registry_assignment.status='ACTIVE'
+      AND registry_assignment.responsible_employee_id=v_assignment.responsible_employee_id
+      AND registry_assignment.department_id=v_assignment.department_id
+      AND registry_assignment.document_kind=v_request.document_kind
+  ) THEN RAISE EXCEPTION 'Trusted DOCX server scope registry responsibility or template pin changed'; END IF;
+  RETURN QUERY SELECT p_actor_user_id,v_assignment.id,v_request.request_key,
+    (SELECT scope_type FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=v_assignment.registry_assignment_id),
+    p_opportunity_id,p_customer_id,
+    (SELECT project_id FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=v_assignment.registry_assignment_id),
+    v_request.document_kind,v_assignment.department_id,v_assignment.responsible_employee_id,NULL::uuid,
+    (SELECT template_id FROM public.structured_lifecycle_docx_template_pins WHERE department_id=v_assignment.department_id AND document_kind=v_request.document_kind AND template_key=v_request.template_key AND template_version=v_request.template_version AND template_schema_hash=v_request.template_schema_hash AND status='APPROVED'),
+    v_request.template_key,v_request.template_version,
+    (SELECT template_document_revision_id FROM public.structured_lifecycle_docx_template_pins WHERE department_id=v_assignment.department_id AND document_kind=v_request.document_kind AND template_key=v_request.template_key AND template_version=v_request.template_version AND template_schema_hash=v_request.template_schema_hash AND status='APPROVED'),
+    v_request.template_schema_hash,v_request.source_fingerprint,v_attempt.storage_bucket,v_attempt.storage_path,v_attempt.object_version;
 END;
 $$;
 

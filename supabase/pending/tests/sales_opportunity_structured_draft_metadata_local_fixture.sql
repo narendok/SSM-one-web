@@ -52,7 +52,7 @@ CREATE TABLE public.customer_requirements (
 );
 CREATE TABLE public.requirement_baselines (
   id uuid PRIMARY KEY,
-  customer_requirement_id uuid NOT NULL REFERENCES public.customer_requirements(id)
+  requirement_id uuid NOT NULL REFERENCES public.customer_requirements(id)
 );
 CREATE TABLE public.sales_project_handovers (
   id uuid PRIMARY KEY,
