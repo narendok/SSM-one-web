@@ -34,7 +34,7 @@ export function isStructuredDocumentInCatalog(
   departmentCode: string | null | undefined,
 ) {
   if (scope === "all") return true;
-  if (scope === "sales-proposal") return ["SOR", "NDA", "COMMERCIAL_QUOTATION", "CONTRACT_REVIEW"].includes(kind);
+  if (scope === "sales-proposal") return ["SOR", "CONTRACT_REVIEW"].includes(kind);
   const category = structuredDocumentCategory(kind);
   return Boolean(category && departmentCode && category.departmentScopes.includes(departmentCode as StructuredDocumentDepartment));
 }

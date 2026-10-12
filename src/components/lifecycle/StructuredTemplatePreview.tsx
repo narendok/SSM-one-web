@@ -92,7 +92,7 @@ export function requestStructuredPreviewExit(
   }
   exit();
 }
-type StructuredSalesPreviewKind = "SOR" | "CONTRACT_REVIEW" | "PRS";
+type StructuredSalesPreviewKind = "SOR" | "CONTRACT_REVIEW";
 
 type StructuredSalesDraftHistoryItem = {
   requestKey: string;
@@ -162,7 +162,7 @@ function newRequestKey() {
 function isStructuredSalesPreviewKind(
   kind: StructuredLifecycleTemplateKind,
 ): kind is StructuredSalesPreviewKind {
-  return kind === "SOR" || kind === "CONTRACT_REVIEW" || kind === "PRS";
+  return kind === "SOR" || kind === "CONTRACT_REVIEW";
 }
 
 export function localEditsForStructuredPreview(
