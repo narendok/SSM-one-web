@@ -18,7 +18,12 @@ for case_name in revoke template source; do
   psql "${args[@]}" -v case_name="$case_name" -v request_key="$request_key" -v source_fingerprint="$source_fingerprint" -f "$root/supabase/pending/tests/structured_docx_trusted_receipt_local_race_verifier.sql" >"$work_dir/$case_name-verifier.out" 2>&1 & verifier=$!
   psql "${args[@]}" -v case_name="$case_name" -f "$root/supabase/pending/tests/structured_docx_trusted_receipt_local_race_mutator.sql" >"$work_dir/$case_name-mutator.out" 2>&1 & mutator=$!
   set +e; wait "$verifier"; verifier_status=$?; wait "$mutator"; mutator_status=$?; set -e
-  [[ $verifier_status -ne 0 && $mutator_status -eq 0 ]] || { echo "Expected $case_name mutation to succeed and stale issuer to fail" >&2; exit 1; }
+  if [[ $verifier_status -eq 0 || $mutator_status -ne 0 ]]; then
+    echo "Expected $case_name mutation to succeed and stale issuer to fail (verifier=$verifier_status mutator=$mutator_status)" >&2
+    cat "$work_dir/$case_name-verifier.out" >&2 || true
+    cat "$work_dir/$case_name-mutator.out" >&2 || true
+    exit 1
+  fi
   [[ "$(psql "${args[@]}" -Atqc "SELECT count(*) FROM public.sales_opportunity_structured_docx_trusted_receipts WHERE request_key='$request_key'")" == 0 ]] || { echo "Stale $case_name race minted a receipt" >&2; exit 1; }
 done
 printf 'STRUCTURED_DOCX_TRUSTED_RECEIPT_RACES_PASS=true\n'
