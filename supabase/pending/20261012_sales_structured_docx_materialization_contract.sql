@@ -255,7 +255,7 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.commit_sales_structured_docx_materialization(
-  p_opportunity_id uuid, p_customer_id uuid, p_assignment_id uuid, p_request_key uuid, p_file_name text, p_storage_bucket text, p_storage_path text, p_object_version text, p_sha256_checksum text, p_size_bytes bigint
+  p_opportunity_id uuid, p_customer_id uuid, p_assignment_id uuid, p_request_key uuid, p_file_name text, p_storage_bucket text, p_storage_path text, p_object_version text, p_sha256_checksum text, p_size_bytes bigint, p_trusted_receipt_id uuid
 ) RETURNS TABLE(materialization_id uuid, drive_node_id uuid, drive_revision_id uuid, document_control_register_id uuid, replayed boolean)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_actor uuid := auth.uid(); v_request public.sales_opportunity_structured_docx_requests%ROWTYPE; v_scope record; v_attempt public.sales_opportunity_structured_docx_storage_attempts%ROWTYPE; v_prior public.sales_opportunity_structured_docx_materializations%ROWTYPE; v_node uuid; v_drive_revision uuid; v_register uuid; v_materialization uuid;
@@ -271,6 +271,7 @@ BEGIN
     IF v_prior.requested_by = v_actor AND v_prior.assignment_id = p_assignment_id AND v_prior.docx_sha256_checksum = p_sha256_checksum AND v_prior.storage_bucket = p_storage_bucket AND v_prior.storage_path = p_storage_path AND v_prior.object_version = p_object_version AND v_prior.size_bytes = p_size_bytes AND p_file_name = (SELECT name FROM public.drive_nodes WHERE id = v_prior.drive_node_id) THEN RETURN QUERY SELECT v_prior.id,v_prior.drive_node_id,v_prior.drive_revision_id,v_prior.document_control_register_id,true; RETURN; END IF;
     RAISE EXCEPTION 'DOCX request key conflicts with a different materialization payload';
   END IF;
+  PERFORM public.assert_sales_structured_docx_trusted_receipt_for_commit(v_actor,p_trusted_receipt_id,p_request_key,p_assignment_id,p_storage_bucket,p_storage_path,p_object_version,p_sha256_checksum,p_size_bytes);
   SELECT * INTO v_attempt FROM public.sales_opportunity_structured_docx_storage_attempts AS staged_attempt WHERE staged_attempt.request_key = p_request_key AND staged_attempt.location_id = v_scope.location_id AND staged_attempt.staged_by = v_actor AND staged_attempt.consumed_at IS NULL FOR UPDATE;
   IF NOT FOUND OR v_attempt.storage_bucket <> p_storage_bucket OR v_attempt.storage_path <> p_storage_path OR v_attempt.sha256_checksum <> p_sha256_checksum OR v_attempt.object_version <> p_object_version OR v_attempt.size_bytes <> p_size_bytes OR v_attempt.ooxml_verified_at IS NULL THEN RAISE EXCEPTION 'Staged DOCX object lacks an immutable trusted verifier receipt'; END IF;
   INSERT INTO public.drive_nodes(department_id,project_id,parent_id,name,slug,node_type,file_type,mime_type,file_size_bytes,storage_bucket,storage_path,sha256_checksum,current_version,is_locked,created_by,metadata)
@@ -281,6 +282,7 @@ BEGIN
   VALUES(p_request_key,p_assignment_id,v_request.structured_draft_revision_id,v_scope.location_id,v_node,v_drive_revision,v_register,p_opportunity_id,p_customer_id,v_request.master_specification_id,v_request.master_specification_version_id,v_request.document_kind,v_request.template_key,v_request.template_version,v_request.template_schema_hash,v_request.source_fingerprint,v_request.payload_hash,p_sha256_checksum,'application/vnd.openxmlformats-officedocument.wordprocessingml.document',p_storage_bucket,p_storage_path,p_object_version,p_size_bytes,v_actor) RETURNING id INTO v_materialization;
   INSERT INTO public.sales_opportunity_structured_docx_audit_events(materialization_id,request_key,actor_user_id,action,source_fingerprint,docx_sha256_checksum) VALUES(v_materialization,p_request_key,v_actor,'MATERIALIZED_UNISSUED_DOCX',v_request.source_fingerprint,p_sha256_checksum);
   UPDATE public.sales_opportunity_structured_docx_storage_attempts SET consumed_at = now() WHERE id = v_attempt.id;
+  PERFORM public.consume_sales_structured_docx_trusted_receipt(p_trusted_receipt_id,p_request_key);
   RETURN QUERY SELECT v_materialization,v_node,v_drive_revision,v_register,false;
 END;
 $$;
@@ -301,5 +303,5 @@ REVOKE ALL ON FUNCTION public.guard_sales_structured_docx_storage_attempt() FROM
 REVOKE ALL ON FUNCTION public.resolve_sales_structured_docx_assignment(uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.request_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,integer,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.record_sales_structured_docx_object_verification(uuid,text,text,text,text,bigint,boolean,boolean,boolean,text) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,text,bigint) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.commit_sales_structured_docx_materialization(uuid,uuid,uuid,uuid,text,text,text,text,text,bigint,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.read_sales_structured_docx_materializations(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
