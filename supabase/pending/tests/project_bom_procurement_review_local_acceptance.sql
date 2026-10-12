@@ -80,7 +80,7 @@ DO $$ DECLARE v_request uuid:=(SELECT request_id FROM first_submit); v_existing_
   PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_existing_line,0,'{"availabilityState":"AVAILABLE","costState":"TBC","sourcingState":"PENDING","observedUnitCost":12.5,"currency":"INR","leadTimeDays":14,"analysisNote":"Supplier response pending"}'::jsonb,'00000000-0000-4000-8000-000000000062');
   PERFORM * FROM public.analyze_project_bom_procurement_review(v_request,v_new_line,0,'{"availabilityState":"TBC","costState":"TBC","sourcingState":"UNAVAILABLE","analysisNote":"No verified source yet"}'::jsonb,'00000000-0000-4000-8000-000000000063');
  PERFORM * FROM public.decide_project_bom_procurement_review(v_request,'7','ALLOW','analysis complete; Hardware selection remains separate','00000000-0000-4000-8000-000000000061');
-  IF (SELECT status FROM first_submit_state WHERE id=v_request) <> 'ALLOWED_PENDING_HARDWARE_SELECTION' THEN RAISE EXCEPTION 'Allow did not remain handoff-only'; END IF;
+  IF (SELECT status FROM public.read_project_bom_procurement_review(v_request) ->> 'status') <> 'ALLOWED_PENDING_HARDWARE_SELECTION' THEN RAISE EXCEPTION 'Allow did not remain handoff-only'; END IF;
 END $$;
 RESET ROLE;
 SET ROLE procurement_other_department_test;
