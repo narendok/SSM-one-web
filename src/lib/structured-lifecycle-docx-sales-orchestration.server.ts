@@ -19,6 +19,10 @@ function requireRpc<T>(result: { data: T | null; error: { message: string } | nu
   return result.data;
 }
 
+function requireVoidRpc(result: { error: { message: string } | null }, fallback: string) {
+  if (result.error) throw new Error(result.error.message ?? fallback);
+}
+
 /**
  * Server-only adapter for the pending Sales DOCX contracts. It is deliberately
  * called only after requireSupabaseAuth supplied actorId. The deployment gate
@@ -77,7 +81,7 @@ export function createSalesStructuredDocxAuthorization(admin: RpcClient): Privat
       return { receiptId };
     },
     async recheckRegistryReceiptForCommit(receipt, actorId) {
-      requireRpc(await admin.rpc("assert_sales_structured_docx_trusted_receipt_for_commit" as never, {
+      requireVoidRpc(await admin.rpc("assert_sales_structured_docx_trusted_receipt_for_commit" as never, {
         p_actor_user_id: actorId,
         p_receipt_id: receipt.receiptId,
         p_request_key: receipt.requestKey,
@@ -95,7 +99,7 @@ export function createSalesStructuredDocxAuthorization(admin: RpcClient): Privat
 export function createSalesStructuredDocxReader(admin: RpcClient) {
   return createContractBoundCurrentPathPrivateDocxReader(admin as never, {
     async assertCurrentCreateOnlyPath(input) {
-      requireRpc(await admin.rpc("assert_sales_structured_docx_current_path_create_only" as never, {
+      requireVoidRpc(await admin.rpc("assert_sales_structured_docx_current_path_create_only" as never, {
         p_request_key: input.requestKey,
         p_bucket: input.bucket,
         p_path: input.path,
