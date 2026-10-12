@@ -306,9 +306,13 @@ BEGIN
   IF p_assignment_id IS NULL OR p_request_key IS NULL THEN RAISE EXCEPTION 'Assignment and request key are required'; END IF;
   SELECT * INTO v_assignment FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=p_assignment_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Structured DOCX responsibility assignment is unavailable'; END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',v_assignment.project_id::text,v_assignment.document_kind), 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',coalesce(v_assignment.project_id::text,v_assignment.opportunity_id::text),v_assignment.document_kind), 0));
   SELECT * INTO v_assignment FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=p_assignment_id FOR UPDATE;
-  v_actor := public.assert_structured_lifecycle_docx_registry_manager(v_assignment.project_id, v_assignment.department_id);
+  IF v_assignment.scope_type='PROJECT' THEN
+    v_actor := public.assert_structured_lifecycle_docx_registry_manager(v_assignment.project_id, v_assignment.department_id);
+  ELSE
+    v_actor := public.assert_sales_structured_docx_registry_manager(v_assignment.opportunity_id, v_assignment.customer_id, v_assignment.department_id);
+  END IF;
   v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object('assignment_id',p_assignment_id,'action','REVOKED')::text, 'UTF8'), 'sha256'), 'hex');
   SELECT * INTO v_existing_audit FROM public.structured_lifecycle_docx_registry_audit_events WHERE actor_user_id=v_actor AND request_key=p_request_key FOR UPDATE;
   IF FOUND THEN

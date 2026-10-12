@@ -8,7 +8,7 @@ Apply only after the managed preflight reports every prerequisite exactly and a 
 
 1. `20261012_structured_lifecycle_docx_registry_contract.sql` — immutable template pins and explicit assignments with two non-interchangeable scopes: `SALES_OPPORTUNITY` before handover and `PROJECT` only through an existing completed/initiated handover baseline.
 2. `20261012_sales_structured_docx_folder_discovery.sql` — exact active, locked, non-trashed Sales location from pinned source.
-3. `20261012_sales_structured_docx_materialization_contract.sql` — assignment/request/attempt/materialization/audit and atomic Drive/register/revision commit.
+3. `20261012_sales_structured_docx_materialization_contract.sql` — assignment/request/attempt/materialization/audit and atomic Drive/register/revision commit. It depends on the folder resolver, so its order intentionally follows folder discovery.
 4. `20261012_structured_lifecycle_docx_private_object_enforcement.sql` — reserved request paths and restrictive Storage/Drive/register read overlays.
 5. `20261012_structured_lifecycle_docx_trusted_receipt_authority.sql` — service-only verified-byte receipt, recheck, and one-time consume.
 
@@ -30,7 +30,7 @@ Only the current explicit responsible employee may stage, read, verify, save, hi
 
 - `authorize_sales_structured_docx_upload(uuid,uuid,uuid,uuid,text,bigint)` is caller-authenticated only after review; it derives current assignment, source, active location, bucket, and request-key path and rejects arbitrary folder/path/template authority, non-DOCX MIME, values above 10 MB, stale source, conflicting replay, or a pre-existing unreceipted object. Its default ACL is revoked from every runtime role.
 - `resolve_sales_structured_docx_server_scope(uuid,uuid,uuid,text,uuid,uuid,text,integer,text,text)`, `issue_sales_structured_docx_trusted_receipt(uuid,uuid,uuid,text,text,text,text,bigint,text,text,integer,text,text)`, `assert_sales_structured_docx_trusted_receipt_for_commit(uuid,uuid,uuid,uuid,text,text,text,text,bigint)`, and `consume_sales_structured_docx_trusted_receipt(uuid,uuid)` are revoked from PUBLIC/anon/authenticated and granted only to `service_role`.
-- `resolve_structured_lifecycle_docx_registry_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text)`, `assign_sales_structured_docx_responsibility(uuid,uuid,uuid,text,uuid,uuid,uuid)`, and `assign_project_structured_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid)` are revoked from every runtime role. They are review-only management primitives; no assignment or template pin is a pre-install requirement.
+- `resolve_structured_lifecycle_docx_registry_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text)`, `assign_sales_structured_docx_responsibility(uuid,uuid,uuid,text,uuid,uuid,uuid)`, `assign_project_structured_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid)`, and `revoke_structured_lifecycle_docx_responsibility(uuid,uuid)` are revoked from every runtime role. They are review-only management primitives; no assignment or template pin is a pre-install prerequisite.
 - Storage policy helper functions have minimal `authenticated` EXECUTE only where PostgreSQL policy evaluation needs it; byte-upload assertion is service-only.
 - The materialization commit remains caller-authenticated but rejects missing, altered, cross-actor, consumed, or mismatched receipts and consumes the receipt in the same transaction as Drive/revision/register/audit work.
 
