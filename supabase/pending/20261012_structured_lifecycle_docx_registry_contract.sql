@@ -212,6 +212,58 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.assert_sales_structured_docx_registry_manager(
+  p_opportunity_id uuid, p_customer_id uuid, p_department_id uuid
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_actor uuid := public.lifecycle_actor();
+BEGIN
+  IF v_actor IS NULL OR NOT public.has_permission(v_actor, 'sales.manage') THEN
+    RAISE EXCEPTION 'Sales management permission is required for pre-handover DOCX registry management';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.sales_opportunities opportunity
+    WHERE opportunity.id=p_opportunity_id AND opportunity.customer_id=p_customer_id
+  ) OR NOT public.lifecycle_can_manage_department(v_actor,p_department_id)
+    OR NOT public.can_access_department_drive(v_actor,p_department_id,NULL) THEN
+    RAISE EXCEPTION 'Scoped Sales source and department document-management authority is required';
+  END IF;
+  RETURN v_actor;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.assign_sales_structured_docx_responsibility(
+  p_opportunity_id uuid, p_customer_id uuid, p_department_id uuid, p_document_kind text,
+  p_responsible_employee_id uuid, p_reviewer_employee_id uuid, p_request_key uuid
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_actor uuid; v_existing_audit public.structured_lifecycle_docx_registry_audit_events%ROWTYPE;
+  v_existing public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE; v_assignment uuid; v_payload_hash text;
+BEGIN
+  IF p_request_key IS NULL OR p_document_kind NOT IN ('SOR','CONTRACT_REVIEW')
+    OR p_responsible_employee_id IS NULL OR (p_reviewer_employee_id IS NOT NULL AND p_reviewer_employee_id=p_responsible_employee_id) THEN
+    RAISE EXCEPTION 'Invalid pre-handover Sales DOCX responsibility assignment payload';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','sales-structured-docx-assignment',p_opportunity_id::text,p_document_kind),0));
+  v_actor := public.assert_sales_structured_docx_registry_manager(p_opportunity_id,p_customer_id,p_department_id);
+  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object('scope_type','SALES_OPPORTUNITY','opportunity_id',p_opportunity_id,'customer_id',p_customer_id,'department_id',p_department_id,'document_kind',p_document_kind,'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id)::text,'UTF8'),'sha256'),'hex');
+  SELECT * INTO v_existing_audit FROM public.structured_lifecycle_docx_registry_audit_events WHERE actor_user_id=v_actor AND request_key=p_request_key FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing_audit.action='ASSIGNED' AND v_existing_audit.payload_hash=v_payload_hash THEN RETURN v_existing_audit.assignment_id; END IF;
+    RAISE EXCEPTION 'Registry request key conflicts with a different Sales assignment payload';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_departments membership ON membership.employee_id=employee.id AND membership.department_id=p_department_id WHERE employee.id=p_responsible_employee_id AND employee.employment_status='ACTIVE')
+    OR (p_reviewer_employee_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.employees employee JOIN public.employee_departments membership ON membership.employee_id=employee.id AND membership.department_id=p_department_id WHERE employee.id=p_reviewer_employee_id AND employee.employment_status='ACTIVE')) THEN
+    RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department members';
+  END IF;
+  SELECT * INTO v_existing FROM public.structured_lifecycle_docx_responsibility_assignments WHERE scope_type='SALES_OPPORTUNITY' AND opportunity_id=p_opportunity_id AND customer_id=p_customer_id AND document_kind=p_document_kind AND status='ACTIVE' FOR UPDATE;
+  IF FOUND THEN RAISE EXCEPTION 'An active pre-handover Sales DOCX responsibility assignment already exists'; END IF;
+  INSERT INTO public.structured_lifecycle_docx_responsibility_assignments(scope_type,opportunity_id,customer_id,department_id,document_kind,responsible_employee_id,reviewer_employee_id,assigned_by,created_by)
+  VALUES('SALES_OPPORTUNITY',p_opportunity_id,p_customer_id,p_department_id,p_document_kind,p_responsible_employee_id,p_reviewer_employee_id,v_actor,v_actor) RETURNING id INTO v_assignment;
+  INSERT INTO public.structured_lifecycle_docx_registry_audit_events(request_key,actor_user_id,action,assignment_id,payload_hash,after_data)
+  VALUES(p_request_key,v_actor,'ASSIGNED',v_assignment,v_payload_hash,jsonb_build_object('assignment_id',v_assignment,'scope_type','SALES_OPPORTUNITY','opportunity_id',p_opportunity_id,'customer_id',p_customer_id,'department_id',p_department_id,'document_kind',p_document_kind));
+  RETURN v_assignment;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.assign_structured_lifecycle_docx_responsibility(
   p_project_id uuid, p_department_id uuid, p_document_kind text, p_responsible_employee_id uuid,
   p_reviewer_employee_id uuid, p_request_key uuid
@@ -328,6 +380,8 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.resolve_structured_lifecycle_docx_registry_scope(uuid,uuid,text,uuid,uuid,text,integer,text,text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.assert_sales_structured_docx_registry_manager(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.assign_sales_structured_docx_responsibility(uuid,uuid,uuid,text,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.assign_structured_lifecycle_docx_responsibility(uuid,uuid,text,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.revoke_structured_lifecycle_docx_responsibility(uuid,uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.approve_structured_lifecycle_docx_template_pin(uuid,text,uuid,uuid,text,uuid) FROM PUBLIC, anon, authenticated, service_role;
