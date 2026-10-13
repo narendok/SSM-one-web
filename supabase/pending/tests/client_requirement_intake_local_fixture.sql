@@ -20,6 +20,7 @@ GRANT authenticated TO CURRENT_USER;
 GRANT USAGE ON SCHEMA public, auth TO authenticated;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 CREATE TABLE public.customers (id uuid PRIMARY KEY, name text NOT NULL);
+CREATE TABLE public.sales_enquiries (id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id), contact_id uuid, status text NOT NULL DEFAULT 'draft', updated_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE public.sales_opportunities (id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id), enquiry_id uuid REFERENCES public.sales_enquiries(id));
 CREATE TABLE public.external_parties (id uuid PRIMARY KEY, customer_id uuid NOT NULL REFERENCES public.customers(id), active boolean NOT NULL DEFAULT true);
 CREATE TABLE public.external_contacts (id uuid PRIMARY KEY, external_party_id uuid NOT NULL REFERENCES public.external_parties(id), user_id uuid NOT NULL UNIQUE, active boolean NOT NULL DEFAULT true, portal_enabled boolean NOT NULL DEFAULT true);
