@@ -34,7 +34,7 @@ import { canPresentProjectBoms, shouldRequestProjectBoms } from "@/lib/drive-pre
 import { fetchCanonicalDepartments } from "@/lib/tasks";
 import { Switch } from "@/components/ui/switch";
 
-type Filter = "all" | "common" | "internal" | "client" | "other" | "starred" | "ppap" | "boms";
+type Filter = "all" | "common" | "internal" | "client" | "other" | "starred" | "boms";
 
 function iconFor(node: DriveNode) {
   if (node.node_type === "FOLDER") return Folder;
@@ -57,7 +57,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   const isRestrictedFolder = Boolean(restrictedFolderId);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [fileType, setFileType] = useState<"all" | Exclude<DriveNode["file_type"], null>>("all");
+  const [fileType, setFileType] = useState<"all" | Exclude<DriveNode["file_type"], null> | "ppap">("all");
   const [acrossProjects, setAcrossProjects] = useState(false);
   const [view, setView] = useState<"grid" | "list">("list");
   const [busy, setBusy] = useState<string | null>(null);
@@ -163,7 +163,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }, [folderId, restrictedFolderId]);
 
   useEffect(() => {
-    if (!activeDepartmentId || projectId || folderId || filter === "all" || filter === "other" || filter === "starred" || filter === "ppap" || filter === "boms") return;
+    if (!activeDepartmentId || projectId || folderId || filter === "all" || filter === "other" || filter === "starred" || filter === "boms") return;
     const folderKind = filter === "common" ? "DEPARTMENT_STANDARDS" : filter === "internal" ? "INTERNAL_PROJECTS" : "CLIENT_PROJECTS";
     const target = departmentRoots.find((root) => root.folder_kind === folderKind);
     if (target) setFolderId(target.id);
@@ -180,9 +180,9 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
     return activeNodes.filter((n) => {
       if (q && !n.name.toLowerCase().includes(q)) return false;
       if (filter === "starred" && !(n.is_starred || favorites.has(n.id))) return false;
-      if (filter === "ppap" && !n.slug.startsWith("ppap") && !n.name.includes("PPAP")) return false;
+      if (fileType === "ppap" && !n.slug.startsWith("ppap") && !n.name.includes("PPAP") && n.file_type !== "PPAP_DOC") return false;
       if (filter === "other") return false;
-      if (fileType !== "all" && n.file_type !== fileType) return false;
+      if (fileType !== "all" && fileType !== "ppap" && n.file_type !== fileType) return false;
       return true;
     });
   }, [activeNodes, search, filter, fileType, favorites]);
@@ -373,25 +373,32 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={filter === "boms" ? "Search BOM number, name, or project…" : acrossProjects ? "Search authorized project folders…" : "Search this folder…"}
-            className="pl-8"
-          />
+        <div className="relative flex-1 min-w-[180px] flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={acrossProjects ? "Search authorized project folders…" : "Search this folder…"}
+              className="pl-8"
+            />
+          </div>
+          <Button
+            variant={filter === "starred" ? "default" : "outline"}
+            size="icon"
+            onClick={() => setFilter(filter === "starred" ? "all" : "starred")}
+            className="shrink-0"
+            title="Starred items"
+          >
+            <Star className={cn("h-4 w-4", filter === "starred" && "fill-current")} />
+          </Button>
         </div>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
-            {!projectId && activeDepartmentId && <TabsTrigger value="common">Common documents</TabsTrigger>}
-            {!projectId && activeDepartmentId && <TabsTrigger value="internal">Internal projects</TabsTrigger>}
-            {!projectId && activeDepartmentId && <TabsTrigger value="client">Client projects</TabsTrigger>}
-            {!projectId && activeDepartmentId && <TabsTrigger value="other">Other department work</TabsTrigger>}
-            <TabsTrigger value="ppap">PPAP</TabsTrigger>
-            <TabsTrigger value="starred">Starred</TabsTrigger>
-            {canBrowseProjectBoms && <TabsTrigger value="boms">Project BOMs</TabsTrigger>}
+            {!projectId && activeDepartmentId && <TabsTrigger value="common">Common</TabsTrigger>}
+            {!projectId && activeDepartmentId && <TabsTrigger value="internal">Internal</TabsTrigger>}
+            {!projectId && activeDepartmentId && <TabsTrigger value="client">Client</TabsTrigger>}
           </TabsList>
         </Tabs>
         <Select value={fileType} onValueChange={(value) => setFileType(value as typeof fileType)} disabled={filter === "boms" || availableFileTypes.length === 0}>
@@ -400,7 +407,8 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All document types</SelectItem>
-            {availableFileTypes.map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}
+            <SelectItem value="ppap">PPAP documents</SelectItem>
+            {availableFileTypes.filter((type) => type !== "PPAP_DOC").map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}
           </SelectContent>
         </Select>
         {!projectId && activeDepartmentId && (

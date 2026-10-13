@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { fetchWorkspacePreference, saveWorkspacePreference } from "@/lib/department-workspace";
 import { useAuth } from "@/hooks/useAuth";
 
-const filters = [{ value: "all", label: "All files" }, { value: "common", label: "Common documents" }, { value: "internal", label: "Internal projects" }, { value: "client", label: "Client projects" }, { value: "other", label: "Other department work" }, { value: "ppap", label: "PPAP" }, { value: "starred", label: "Starred" }, { value: "boms", label: "Project BOMs" }];
+const filters = [{ value: "all", label: "All files" }, { value: "common", label: "Common documents" }, { value: "internal", label: "Internal projects" }, { value: "client", label: "Client projects" }];
 
 export function DepartmentWorkspacePreferences({ departmentId }: { departmentId: string }) {
   const { role } = useAuth();
