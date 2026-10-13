@@ -14,6 +14,8 @@ INSERT INTO public.employee_departments VALUES
  ('00000000-0000-4000-8000-000000000203','00000000-0000-4000-8000-000000000210'),
  ('00000000-0000-4000-8000-000000000204','00000000-0000-4000-8000-000000000210'),
  ('00000000-0000-4000-8000-000000000205','00000000-0000-4000-8000-000000000210');
+INSERT INTO public.departments VALUES ('00000000-0000-4000-8000-000000000211','QA',true);
+INSERT INTO public.employee_departments VALUES ('00000000-0000-4000-8000-000000000206','00000000-0000-4000-8000-000000000211');
 INSERT INTO public.projects VALUES ('00000000-0000-4000-8000-000000000220','active');
 INSERT INTO public.project_team_members VALUES
  ('00000000-0000-4000-8000-000000000220','00000000-0000-4000-8000-000000000201'),
@@ -140,6 +142,30 @@ DO $$ BEGIN
      OR (SELECT count(*) FROM public.structured_lifecycle_docx_responsibility_assignments WHERE scope_type='PROJECT' AND project_id='00000000-0000-4000-8000-000000000220' AND document_kind='BOM' AND status='ACTIVE') <> 1 THEN
     RAISE EXCEPTION 'Denied stale reassignment left mutable residue';
   END IF;
+END $$;
+CREATE TEMP TABLE preserved_revision AS
+SELECT responsibility_revision, responsible_employee_id, reviewer_employee_id
+FROM public.structured_lifecycle_docx_responsibility_assignments
+WHERE id = (SELECT id FROM reassigned);
+SELECT public.revoke_structured_lifecycle_docx_responsibility(
+  (SELECT id FROM reassigned),'00000000-0000-4000-8000-000000000249'
+);
+DO $$ BEGIN
+  IF (SELECT status FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=(SELECT id FROM reassigned)) <> 'REVOKED'
+     OR (SELECT responsibility_revision FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=(SELECT id FROM reassigned)) <> (SELECT responsibility_revision FROM preserved_revision)
+     OR (SELECT responsible_employee_id FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=(SELECT id FROM reassigned)) <> (SELECT responsible_employee_id FROM preserved_revision)
+     OR (SELECT reviewer_employee_id FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=(SELECT id FROM reassigned)) <> (SELECT reviewer_employee_id FROM preserved_revision) THEN
+    RAISE EXCEPTION 'Revocation did not preserve immutable historical assignment revision';
+  END IF;
+  BEGIN
+    PERFORM * FROM public.resolve_structured_lifecycle_docx_registry_scope(
+      '00000000-0000-4000-8000-000000000250','00000000-0000-4000-8000-000000000251','BOM',
+      (SELECT id FROM reassigned),'00000000-0000-4000-8000-000000000252','HW-BOM',1,repeat('e',64),repeat('f',64)
+    );
+    RAISE EXCEPTION 'Revoked responsibility assignment permitted read or download scope';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE 'Current assigned-person DOCX authority is unavailable%' THEN RAISE; END IF;
+  END;
 END $$;
 ROLLBACK;
 \echo STRUCTURED_LIFECYCLE_DOCX_PROJECT_RESPONSIBILITY_UPDATE_LOCAL_ASSERTIONS_PASS
