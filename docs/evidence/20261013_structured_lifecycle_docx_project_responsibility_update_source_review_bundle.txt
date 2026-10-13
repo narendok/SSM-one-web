@@ -1,0 +1,40 @@
+STRUCTURED LIFECYCLE DOCX PROJECT RESPONSIBILITY UPDATE — SOURCE-ONLY REVIEW BUNDLE
+UTC date: 2026-10-13
+
+STATUS: UNDEPLOYED. LOCAL DISPOSABLE ACCEPTANCE ONLY.
+
+Scope
+- Exact reviewed contract: `supabase/pending/20261013_structured_lifecycle_docx_project_responsibility_update_contract.sql`
+- Exact SHA-256: `8466fac60ce19b1f6c8be26d379b078e7ab7aaa65f799f34d4214f4544698936`
+- The contract remains an additive extension of the frozen registry contract.
+- No installation, production grants, RLS policy change, data change, user creation, storage operation, UI wiring, or Publish action occurred.
+
+Acceptance sources
+- Disposable baseline fixture: `supabase/pending/tests/structured_lifecycle_docx_registry_local_fixture.sql`
+- Single-session acceptance: `supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_local_acceptance.sql`
+- Single-session runner: `supabase/pending/tests/run_structured_lifecycle_docx_project_responsibility_update_local_acceptance.sh`
+- Two-session reassignment race setup/worker/assertions:
+  - `supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_setup.sql`
+  - `supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_worker.sql`
+  - `supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_assertions.sql`
+  - `supabase/pending/tests/run_structured_lifecycle_docx_project_responsibility_update_local_concurrency.sh`
+- Exact-source static guard: `supabase/pending/tests/check_structured_lifecycle_docx_project_responsibility_update_contract_static.py`
+
+Covered boundaries
+1. Authorized manager reassigns by revoking the old immutable row and appending exactly one revision-2 active row, receipt, and audit event.
+2. Exact same manager/request key/payload replays the original replacement ID; a different payload with that key rejects.
+3. NULL assignment target, expected revision, and actor reject before mutation.
+4. Inactive, wrong-department, and non-project-team responsible/reviewer targets reject.
+5. A manager without scoped document-management authority rejects.
+6. Stale expected revision rejects with no extra receipt, audit, or active assignment.
+7. Revoked assignments fail the frozen current-scope resolver, covering current read/download authority rejection; the historical revision fields remain preserved.
+8. Two simultaneous same-expected-revision reassignments yield one success, one stale rejection, one active revision-2 assignment, one update receipt, and one update audit event.
+
+Known limitation
+- The frozen current-scope helper validates only current assignment authority. It is not a deployed document-history/download API, and this source-only fixture does not create DOCX objects, Drive/register revisions, Storage paths, or real caller/RLS transport. Consequently, this is local contract evidence only and not installation acceptance.
+- The primitive set provides serial reassignment and separate revocation functions, but no revision-bearing revocation API. A manager revocation-vs-update two-session conflict cannot be asserted as an optimistic-revision outcome without inventing a contract; it remains an explicit deployment-review question.
+
+Frozen DOCX status
+- The five frozen DOCX contracts and hashes are unchanged by this review bundle.
+- SOR and Contract Review are the only Sales DOCX categories in scope.
+- All DOCX Save, history, download, receipt, commit, private-storage, Procurement, and archive gates remain OFF.
