@@ -1,7 +1,7 @@
 import type { StructuredLifecycleTemplateKind } from "@/lib/lifecycle-structured-template-previews";
 
 export type StructuredDocumentCatalogScope = "all" | "sales-proposal" | "project-documents";
-export type StructuredDocumentDepartment = "SAL" | "RND" | "PROD" | "FIN" | "HR";
+export type StructuredDocumentDepartment = "SAL" | "OPS" | "RND" | "PROD" | "FIN" | "HR";
 
 export type StructuredDocumentCategory = {
   kind: StructuredLifecycleTemplateKind;
@@ -11,7 +11,7 @@ export type StructuredDocumentCategory = {
 
 export const structuredDocumentCategories: readonly StructuredDocumentCategory[] = [
   { kind: "SOR", departmentScopes: ["SAL"] },
-  { kind: "NDA", departmentScopes: ["SAL"] },
+  { kind: "NDA", departmentScopes: ["OPS"], requiresExplicitResponsibility: true },
   { kind: "COMMERCIAL_QUOTATION", departmentScopes: ["SAL"] },
   { kind: "CONTRACT_REVIEW", departmentScopes: ["SAL", "RND"], requiresExplicitResponsibility: true },
   { kind: "PRS", departmentScopes: ["RND"], requiresExplicitResponsibility: true },
