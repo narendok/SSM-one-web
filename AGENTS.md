@@ -19,3 +19,4 @@
 - Keep project DOCX reassignment source-only and require every named responsible or reviewer to remain active in the assigned department and exact project team; this prevents unscoped authority.
 - Serialize project DOCX updates by actor/request key before the assignment root, then recheck manager authority and lock mutable target prerequisites; this preserves replay without stale authority or membership races.
 - Keep Sales feasibility handover behind one pending atomic source-bound requirement-and-routing contract; separate client calls must not create partial requirements, assignments, or notifications.
+- Keep Sales feasibility routing receipts private, replay-bound to the Sales actor and immutable enquiry/opportunity/Master source tuple; reviewer notifications must be generated inside the protected transaction, never by the client.

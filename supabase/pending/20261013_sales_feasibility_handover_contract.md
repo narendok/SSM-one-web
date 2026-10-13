@@ -1,6 +1,8 @@
 # Pending Sales feasibility handover contract
 
-Status: **source-only review**. This is not installed SQL and authorizes no application write.
+Status: **source-only review**. The proposed executable source is
+`supabase/pending/20261013_sales_feasibility_handover.sql`; it is not installed
+and authorizes no application write.
 
 ## Verified reusable primitives
 
@@ -25,6 +27,7 @@ title TEXT
 summary TEXT NULL
 customer_reference TEXT NULL
 department_ids UUID[]
+reviewer_user_ids UUID[]
 expected_enquiry_updated_at TIMESTAMPTZ
 request_key UUID
 ```
@@ -34,13 +37,13 @@ request_key UUID
 1. Authenticate the caller and verify scoped Sales authority before and after serialization.
 2. Lock the actor-bound request key, then the exact enquiry and opportunity. Verify their authoritative customer, exact enquiry link, current status, and inspected `updated_at`; reject missing, archived, mismatched, or stale source facts.
 3. Lock and verify the immutable Master Specification version belongs to that opportunity/customer and is eligible for source pinning.
-4. Canonicalize and lock each requested active department. Resolve and lock one current active responsible employee with active membership in that exact department; reject empty, duplicate, inactive, or unresolvable selections.
+4. Canonicalize and lock each requested active department and selected reviewer. Verify active employee status and active membership in that exact department; reject empty, duplicate, inactive, cross-department, or unresolvable selections.
 5. Create or exact-replay one customer requirement, immutable revision 1, source/audit receipt, and one pending feasibility review per selected department. Each review must pin the requirement revision and Master Specification version.
-6. Use the existing private inbox helper internally to create one recipient-owned notification per review with a deterministic event key. The routine, not the client, supplies the recipient and target facts.
+6. Use the existing private inbox helper internally to create one recipient-owned notification per review with a deterministic event key. The routine, not the client, supplies recipient and target facts. The deployed review table has no due-date field; a due date must not be accepted or displayed as saved until a separately accepted schema and protected contract exists.
 7. Advance only a dedicated server-owned handover/read-model status. Do not overload `sales_enquiries.status` or infer an opportunity/project conversion.
 8. Return the exact persisted requirement/review identifiers on an identical request-key replay; reject a changed canonical payload under the same key. Recheck caller authority and recipient scope before returning a replay.
 9. Roll back every requirement, revision, review, notification, audit, and receipt if any later step fails. Direct writes and direct notification-helper execution remain denied.
 
 ## Minimum acceptance before UI enablement
 
-Disposable ordinary-caller evidence must cover Sales denial; enquiry/opportunity/customer and Master-version mismatch; stale enquiry timestamp; inactive/duplicate department; missing/inactive/wrong-department responsible employee; no partial graph after notification failure; exact replay and changed-payload conflict; concurrent same-key and competing-department requests; direct table/helper denial; and non-owner RLS reads. It must prove that no verdict or project conversion occurs during handover.
+Disposable ordinary-caller evidence must cover Sales denial; enquiry/opportunity/customer and Master-version mismatch; stale enquiry timestamp; inactive/duplicate department; missing/inactive/wrong-department reviewer; no partial graph after notification failure; exact replay and changed-payload conflict; concurrent same-key and competing-department requests; direct table/helper denial; and non-owner RLS reads. It must prove that no verdict, baseline, or project conversion occurs during handover.
