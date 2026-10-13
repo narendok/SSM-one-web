@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, ArrowRight, CircleAlert, ClipboardList, Headset, Layers3, Users } from "lucide-react";
+import type { Project } from "@/lib/projects";
 import type { ProjectTask } from "@/lib/tasks";
 import type { SalesCustomer, SalesEnquiry, SalesOpportunity } from "@/lib/sales";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ type Props = {
   customers: SalesCustomer[];
   enquiries: SalesEnquiry[];
   opportunities: SalesOpportunity[];
+  clientProjects: Project[] | null;
   tickets: SupportTicket[] | null;
   tasks: ProjectTask[] | null;
   onOpenEnquiry: (enquiry: SalesEnquiry) => void;
@@ -41,9 +43,9 @@ function dueLabel(date: string | null) {
   return `Due ${date}`;
 }
 
-export function SalesDashboard({ customers, enquiries, opportunities, tickets, tasks, onOpenEnquiry }: Props) {
+export function SalesDashboard({ customers, enquiries, opportunities, clientProjects, tickets, tasks, onOpenEnquiry }: Props) {
   const ongoingEnquiries = enquiries.filter((enquiry) => openEnquiryStatuses.has(enquiry.status.toLowerCase()));
-  const activeProjects = opportunities.filter((opportunity) => opportunity.status.toLowerCase() === "active");
+  const activeOpportunities = opportunities.filter((opportunity) => opportunity.status.toLowerCase() === "active");
   const openTickets = tickets?.filter((ticket) => !["closed", "resolved", "cancelled"].includes(ticket.status.toLowerCase())) ?? [];
   const salesTasks = tasks?.filter((task) => task.department === "executive" && openTaskStatuses.has(task.status)) ?? [];
   const overdueTasks = salesTasks.filter((task) => Boolean(task.due_date && task.due_date < new Date().toISOString().slice(0, 10)));
@@ -51,7 +53,8 @@ export function SalesDashboard({ customers, enquiries, opportunities, tickets, t
   const metrics = [
     { label: "Total customers", value: customers.length, detail: "Active customer master records" },
     { label: "Ongoing enquiries", value: ongoingEnquiries.length, detail: "Saved enquiries still in progress" },
-    { label: "Active client projects", value: activeProjects.length, detail: "Active sales opportunities" },
+    { label: "Active client projects", value: clientProjects === null ? "Not recorded" : clientProjects.length, detail: clientProjects === null ? "The client-project read model is not available to this view" : "Active committed client projects" },
+    { label: "Active opportunities", value: activeOpportunities.length, detail: "Active sales opportunities" },
     { label: "Deployed devices", value: "Not recorded", detail: "No deployed-device read model is available" },
     { label: "Open customer tickets", value: tickets === null ? "Unavailable" : openTickets.length, detail: tickets === null ? "Customer-support records are not available to this view" : "Open customer-support records" },
     { label: "Overdue sales tasks", value: tasks === null ? "Unavailable" : overdueTasks.length, detail: tasks === null ? "Sales team tasks are not available to this view" : "Past-due sales work" },
