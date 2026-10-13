@@ -34,7 +34,7 @@ import { canPresentProjectBoms, shouldRequestProjectBoms } from "@/lib/drive-pre
 import { fetchCanonicalDepartments } from "@/lib/tasks";
 import { Switch } from "@/components/ui/switch";
 
-type Filter = "all" | "common" | "internal" | "client" | "other" | "starred" | "ppap" | "boms";
+type Filter = "all" | "common" | "internal" | "client" | "other" | "starred" | "boms";
 
 function iconFor(node: DriveNode) {
   if (node.node_type === "FOLDER") return Folder;
@@ -163,7 +163,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }, [folderId, restrictedFolderId]);
 
   useEffect(() => {
-    if (!activeDepartmentId || projectId || folderId || filter === "all" || filter === "other" || filter === "starred" || filter === "ppap" || filter === "boms") return;
+    if (!activeDepartmentId || projectId || folderId || filter === "all" || filter === "other" || filter === "starred" || filter === "boms") return;
     const folderKind = filter === "common" ? "DEPARTMENT_STANDARDS" : filter === "internal" ? "INTERNAL_PROJECTS" : "CLIENT_PROJECTS";
     const target = departmentRoots.find((root) => root.folder_kind === folderKind);
     if (target) setFolderId(target.id);
@@ -398,17 +398,17 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
             <TabsTrigger value="all">All</TabsTrigger>
             {!projectId && activeDepartmentId && <TabsTrigger value="common">Common</TabsTrigger>}
             {!projectId && activeDepartmentId && <TabsTrigger value="internal">Internal</TabsTrigger>}
-          <SelectContent>
-            <SelectItem value="all">All document types</SelectItem>
-            <SelectItem value="ppap">PPAP documents</SelectItem>
-            {availableFileTypes.filter(t => t !== "PPAP_DOC").map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}
-          </SelectContent>
+            {!projectId && activeDepartmentId && <TabsTrigger value="client">Client</TabsTrigger>}
+          </TabsList>
+        </Tabs>
+        <Select value={fileType} onValueChange={(value) => setFileType(value as typeof fileType)} disabled={filter === "boms" || availableFileTypes.length === 0}>
           <SelectTrigger className="w-[160px]" aria-label="Document type filter">
             <SelectValue placeholder="Document type" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All document types</SelectItem>
-            {availableFileTypes.map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}
+            <SelectItem value="ppap">PPAP documents</SelectItem>
+            {availableFileTypes.filter((type) => type !== "PPAP_DOC").map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}
           </SelectContent>
         </Select>
         {!projectId && activeDepartmentId && (
