@@ -76,15 +76,15 @@ describe("DriveBrowser project reads", () => {
     initialFolder.mockResolvedValue({ data: { id: "locked-folder", node_type: "FOLDER", is_locked: true, department_id: null, project_id: "project-123" }, error: null });
     renderBrowser(() => fetchChildren.mockResolvedValue([]), "locked-folder");
 
-    expect((await screen.findByRole("button", { name: "Folder" }))).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Upload" })).toBeDisabled();
+    expect((await screen.findByRole("button", { name: "Folder" })).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("keeps upload and folder creation available for a loaded unlocked folder", async () => {
     initialFolder.mockResolvedValue({ data: { id: "unlocked-folder", node_type: "FOLDER", is_locked: false, department_id: null, project_id: "project-123" }, error: null });
     renderBrowser(() => fetchChildren.mockResolvedValue([]), "unlocked-folder");
 
-    expect((await screen.findByRole("button", { name: "Folder" }))).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: "Upload" })).not.toBeDisabled();
+    expect((await screen.findByRole("button", { name: "Folder" })).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled")).toBe(false);
   });
 });
