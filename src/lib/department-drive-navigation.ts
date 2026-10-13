@@ -65,6 +65,6 @@ export function buildDepartmentDriveTaxonomy(
   });
 }
 
-export function isAllowedDepartmentDriveRoot(kind: string): kind is DepartmentDriveTaxonomyEntry["rootFolderKind"] | "CLIENT_PROJECTS" {
+export function isAllowedDepartmentDriveRoot(kind: string): kind is Exclude<DepartmentDriveTaxonomyEntry["rootFolderKind"], null> {
   return ["DEPARTMENT_STANDARDS", "INTERNAL_PROJECTS", "CLIENT_PROJECTS"].includes(kind);
 }
