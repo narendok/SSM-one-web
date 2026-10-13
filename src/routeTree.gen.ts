@@ -101,6 +101,7 @@ import { Route as AuthenticatedQmsObjectivesRouteImport } from './routes/_authen
 import { Route as AuthenticatedQmsRecordsRouteImport } from './routes/_authenticated/qms.records'
 import { Route as AuthenticatedQmsRisksRouteImport } from './routes/_authenticated/qms.risks'
 import { Route as AuthenticatedQualityIncomingRouteImport } from './routes/_authenticated/quality.incoming'
+import { Route as AuthenticatedSalesEnquiriesRouteImport } from './routes/_authenticated/sales.enquiries'
 import { Route as AuthenticatedSecurityIndexRouteImport } from './routes/_authenticated/security.index'
 import { Route as AuthenticatedSettingsCategoriesRouteImport } from './routes/_authenticated/settings.categories'
 import { Route as AuthenticatedSettingsDriveRouteImport } from './routes/_authenticated/settings.drive'
@@ -629,6 +630,12 @@ const AuthenticatedQualityIncomingRoute =
     path: '/quality/incoming',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSalesEnquiriesRoute =
+  AuthenticatedSalesEnquiriesRouteImport.update({
+    id: '/enquiries',
+    path: '/enquiries',
+    getParentRoute: () => AuthenticatedSalesRoute,
+  } as any)
 const AuthenticatedSecurityIndexRoute =
   AuthenticatedSecurityIndexRouteImport.update({
     id: '/security/',
@@ -727,7 +734,7 @@ export interface FileRoutesByFullPath {
   '/production': typeof AuthenticatedProductionRouteWithChildren
   '/rd-team': typeof AuthenticatedRdTeamRoute
   '/records': typeof AuthenticatedRecordsRoute
-  '/sales': typeof AuthenticatedSalesRoute
+  '/sales': typeof AuthenticatedSalesRouteWithChildren
   '/careers/$slug': typeof CareersSlugRoute
   '/external-portal/$token': typeof ExternalPortalTokenRoute
   '/file/$token': typeof FileTokenRoute
@@ -786,6 +793,7 @@ export interface FileRoutesByFullPath {
   '/qms/records': typeof AuthenticatedQmsRecordsRoute
   '/qms/risks': typeof AuthenticatedQmsRisksRoute
   '/quality/incoming': typeof AuthenticatedQualityIncomingRoute
+  '/sales/enquiries': typeof AuthenticatedSalesEnquiriesRoute
   '/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
   '/settings/drive': typeof AuthenticatedSettingsDriveRoute
   '/settings/lifecycle': typeof AuthenticatedSettingsLifecycleRoute
@@ -829,7 +837,7 @@ export interface FileRoutesByTo {
   '/pcb': typeof AuthenticatedPcbRoute
   '/rd-team': typeof AuthenticatedRdTeamRoute
   '/records': typeof AuthenticatedRecordsRoute
-  '/sales': typeof AuthenticatedSalesRoute
+  '/sales': typeof AuthenticatedSalesRouteWithChildren
   '/careers/$slug': typeof CareersSlugRoute
   '/external-portal/$token': typeof ExternalPortalTokenRoute
   '/file/$token': typeof FileTokenRoute
@@ -889,6 +897,7 @@ export interface FileRoutesByTo {
   '/qms/records': typeof AuthenticatedQmsRecordsRoute
   '/qms/risks': typeof AuthenticatedQmsRisksRoute
   '/quality/incoming': typeof AuthenticatedQualityIncomingRoute
+  '/sales/enquiries': typeof AuthenticatedSalesEnquiriesRoute
   '/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
   '/settings/drive': typeof AuthenticatedSettingsDriveRoute
   '/settings/lifecycle': typeof AuthenticatedSettingsLifecycleRoute
@@ -937,7 +946,7 @@ export interface FileRoutesById {
   '/_authenticated/production': typeof AuthenticatedProductionRouteWithChildren
   '/_authenticated/rd-team': typeof AuthenticatedRdTeamRoute
   '/_authenticated/records': typeof AuthenticatedRecordsRoute
-  '/_authenticated/sales': typeof AuthenticatedSalesRoute
+  '/_authenticated/sales': typeof AuthenticatedSalesRouteWithChildren
   '/careers/$slug': typeof CareersSlugRoute
   '/external-portal/$token': typeof ExternalPortalTokenRoute
   '/file/$token': typeof FileTokenRoute
@@ -997,6 +1006,7 @@ export interface FileRoutesById {
   '/_authenticated/qms/records': typeof AuthenticatedQmsRecordsRoute
   '/_authenticated/qms/risks': typeof AuthenticatedQmsRisksRoute
   '/_authenticated/quality/incoming': typeof AuthenticatedQualityIncomingRoute
+  '/_authenticated/sales/enquiries': typeof AuthenticatedSalesEnquiriesRoute
   '/_authenticated/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
   '/_authenticated/settings/drive': typeof AuthenticatedSettingsDriveRoute
   '/_authenticated/settings/lifecycle': typeof AuthenticatedSettingsLifecycleRoute
@@ -1105,6 +1115,7 @@ export interface FileRouteTypes {
     | '/qms/records'
     | '/qms/risks'
     | '/quality/incoming'
+    | '/sales/enquiries'
     | '/settings/categories'
     | '/settings/drive'
     | '/settings/lifecycle'
@@ -1208,6 +1219,7 @@ export interface FileRouteTypes {
     | '/qms/records'
     | '/qms/risks'
     | '/quality/incoming'
+    | '/sales/enquiries'
     | '/settings/categories'
     | '/settings/drive'
     | '/settings/lifecycle'
@@ -1315,6 +1327,7 @@ export interface FileRouteTypes {
     | '/_authenticated/qms/records'
     | '/_authenticated/qms/risks'
     | '/_authenticated/quality/incoming'
+    | '/_authenticated/sales/enquiries'
     | '/_authenticated/settings/categories'
     | '/_authenticated/settings/drive'
     | '/_authenticated/settings/lifecycle'
@@ -2005,6 +2018,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedQualityIncomingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sales/enquiries': {
+      id: '/_authenticated/sales/enquiries'
+      path: '/enquiries'
+      fullPath: '/sales/enquiries'
+      preLoaderRoute: typeof AuthenticatedSalesEnquiriesRouteImport
+      parentRoute: typeof AuthenticatedSalesRoute
+    }
     '/_authenticated/security/': {
       id: '/_authenticated/security/'
       path: '/security'
@@ -2162,6 +2182,17 @@ const AuthenticatedProductionRouteWithChildren =
     AuthenticatedProductionRouteChildren,
   )
 
+interface AuthenticatedSalesRouteChildren {
+  AuthenticatedSalesEnquiriesRoute: typeof AuthenticatedSalesEnquiriesRoute
+}
+
+const AuthenticatedSalesRouteChildren: AuthenticatedSalesRouteChildren = {
+  AuthenticatedSalesEnquiriesRoute: AuthenticatedSalesEnquiriesRoute,
+}
+
+const AuthenticatedSalesRouteWithChildren =
+  AuthenticatedSalesRoute._addFileChildren(AuthenticatedSalesRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAssignmentsRoute: typeof AuthenticatedAssignmentsRoute
@@ -2176,7 +2207,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProductionRoute: typeof AuthenticatedProductionRouteWithChildren
   AuthenticatedRdTeamRoute: typeof AuthenticatedRdTeamRoute
   AuthenticatedRecordsRoute: typeof AuthenticatedRecordsRoute
-  AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
+  AuthenticatedSalesRoute: typeof AuthenticatedSalesRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedCategorySlugRoute: typeof AuthenticatedCategorySlugRoute
   AuthenticatedCustomerServiceComplaintsRoute: typeof AuthenticatedCustomerServiceComplaintsRoute
@@ -2253,7 +2284,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProductionRoute: AuthenticatedProductionRouteWithChildren,
   AuthenticatedRdTeamRoute: AuthenticatedRdTeamRoute,
   AuthenticatedRecordsRoute: AuthenticatedRecordsRoute,
-  AuthenticatedSalesRoute: AuthenticatedSalesRoute,
+  AuthenticatedSalesRoute: AuthenticatedSalesRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedCategorySlugRoute: AuthenticatedCategorySlugRoute,
   AuthenticatedCustomerServiceComplaintsRoute:
