@@ -9,10 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EnquiryDetail } from "@/components/sales/EnquiryDetail";
 import { StructuredPreviewExitDialog } from "@/components/lifecycle/StructuredPreviewExitBoundary";
 import {
   type CustomerRequirement,
   type MasterSpecificationSummary,
+  type SalesEnquiry,
   type SalesOpportunity,
 } from "@/lib/sales";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +69,8 @@ function toSalesStructuredDocumentEntry(
 function SalesPage() {
   const [dialog, setDialog] = useState<"enquiry" | null>(null);
   const [enquirySearch, setEnquirySearch] = useState("");
+  const [enquiryDetail, setEnquiryDetail] = useState<SalesEnquiry | null>(null);
+  const [showExistingRecords, setShowExistingRecords] = useState(false);
   const [detail, setDetail] = useState<SalesDetail | null>(null);
   const [documentDetail, setDocumentDetail] = useState<SalesDetail | null>(null);
   const { loading: authLoading, user } = useAuth();
@@ -105,8 +109,9 @@ function SalesPage() {
         )}
         <Card>
           <CardHeader><CardTitle>Enquiries</CardTitle><CardDescription>Saved customer needs, newest first. Open a record to continue when its later actions are available.</CardDescription></CardHeader>
-          <CardContent className="space-y-3"><div className="relative max-w-md"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><input value={enquirySearch} onChange={(event) => setEnquirySearch(event.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" placeholder="Search enquiries" /></div>{visibleEnquiries.map((item) => <div key={item.id} className="flex items-start justify-between gap-3 border-l-2 border-primary/30 pl-3"><div><p className="font-medium">{item.enquiry_number ?? "Enquiry"}</p><p className="mt-1 text-sm">{item.requirement_summary}</p><p className="mt-1 text-xs text-muted-foreground">{item.customer?.legal_name ?? "Customer not linked"} · {item.enquiry_date}</p></div><Badge variant="outline">{item.status.replaceAll("_", " ")}</Badge></div>)}{!visibleEnquiries.length && <p className="py-8 text-sm text-muted-foreground">No saved enquiries match this search.</p>}</CardContent>
+          <CardContent className="space-y-3"><div className="relative max-w-md"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><input value={enquirySearch} onChange={(event) => setEnquirySearch(event.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" placeholder="Search enquiries" /></div>{visibleEnquiries.map((item) => <button key={item.id} type="button" onClick={() => setEnquiryDetail(item)} className="flex w-full items-start justify-between gap-3 border-l-2 border-primary/30 pl-3 text-left"><div><p className="font-medium">{item.enquiry_number ?? "Enquiry"}</p><p className="mt-1 text-sm">{item.requirement_summary}</p><p className="mt-1 text-xs text-muted-foreground">{item.customer?.legal_name ?? "Customer not linked"} · {item.enquiry_date}</p></div><Badge variant="outline">{item.status.replaceAll("_", " ")}</Badge></button>)}{!visibleEnquiries.length && <p className="py-8 text-sm text-muted-foreground">No saved enquiries match this search.</p>}</CardContent>
         </Card>
+        <div><Button type="button" variant="outline" onClick={() => setShowExistingRecords((value) => !value)}>{showExistingRecords ? "Hide existing records" : "Existing records"}</Button>{showExistingRecords && <Card className="mt-3"><CardHeader><CardTitle>Opportunities</CardTitle><CardDescription>Existing records remain available here; opening a proposal keeps its established history and document controls.</CardDescription></CardHeader><CardContent className="space-y-3">{sales.data?.opportunities.map((item) => <div key={item.id} className="flex items-start justify-between gap-3 border-l-2 border-primary/30 pl-3"><div><p className="font-medium">{item.opportunity_number} · {item.name}</p><p className="mt-1 text-xs text-muted-foreground">{item.customer?.legal_name ?? "Customer pending"}</p></div><div className="flex items-center gap-2"><Badge variant="outline">{item.stage.replaceAll("_", " ")}</Badge>{sales.data?.masterSpecifications.find((specification) => specification.opportunity_id === item.id) && <Button size="sm" variant="outline" onClick={() => { const specification = sales.data?.masterSpecifications.find((candidate) => candidate.opportunity_id === item.id); if (specification) setDetail({ opportunity: item, specification }); }}>Open</Button>}</div></div>)}</CardContent></Card>}</div>
         <EnquiryDialog
           open={dialog === "enquiry"}
           onOpenChange={(open) => !open && setDialog(null)}
@@ -114,6 +119,7 @@ function SalesPage() {
           contacts={sales.data?.contacts ?? []}
           employees={sales.data?.employees ?? []}
         />
+        <EnquiryDetail enquiry={enquiryDetail} departments={sales.data?.departments ?? []} onOpenChange={(open) => !open && setEnquiryDetail(null)} />
         <ProposalDetail
           detail={detail}
           requirements={sales.data?.requirements ?? []}
