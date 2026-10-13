@@ -14,6 +14,8 @@ required = (
     "JOIN public.project_team_members team_membership",
     "Assigned responsible and reviewer employees must be active department project-team members",
     "structured-docx-reassignment-request",
+    "v_manager_team_membership",
+    "Active project-team membership is required for registry management",
     "FOR KEY SHARE",
     "REVOKE ALL ON FUNCTION public.reassign_project_structured_docx_responsibility",
 )
