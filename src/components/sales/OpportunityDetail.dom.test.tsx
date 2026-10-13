@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { OpportunityDetail } from "./OpportunityDetail";
@@ -24,7 +25,8 @@ const opportunity = {
 
 describe("OpportunityDetail", () => {
   it("shows one tabbed workspace with source pins and no invented feasibility route", () => {
-    render(<OpportunityDetail opportunity={opportunity} specification={{ id: "spec-id", opportunity_id: "opportunity-id", customer_id: "customer-id", specification_number: "MASTER-2026-0001", title: "Tracker", status: "active", current_version: 1 }} requirements={[]} reviews={[]} departments={[]} employees={[]} feasibilityProvenance={{ available: false, error: "Immutable feasibility provenance is unavailable." }} onViewSpecification={() => undefined} onOpenChange={() => undefined} />);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><OpportunityDetail opportunity={opportunity} specification={{ id: "spec-id", opportunity_id: "opportunity-id", customer_id: "customer-id", specification_number: "MASTER-2026-0001", title: "Tracker", status: "active", current_version: 1 }} requirements={[]} reviews={[]} departments={[]} employees={[]} feasibilityProvenance={{ available: false, error: "Immutable feasibility provenance is unavailable." }} onViewSpecification={() => undefined} onOpenChange={() => undefined} /></QueryClientProvider>);
     expect(screen.getByRole("tab", { name: "Overview" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Customer inputs" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Feasibility" })).toBeTruthy();
