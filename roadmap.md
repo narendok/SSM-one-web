@@ -2,7 +2,9 @@
 
 ## Current request
 
-- [ ] **Deferred — Excel workbook sync mapping.** Existing Excel synchronization is requested, not an export-only substitute. Await the user’s workbook and its approved location before mapping sheets, fields, or importing any records; do not invent a sync or data.
+- [ ] **Deferred — Excel workbook sync mapping.** Existing Excel synchronization is requested, not an export-only substitute. Apart from the approved managed Sales Customer Register, await the user’s workbook and its approved location before mapping sheets, fields, or importing any records; do not invent a sync or data.
+
+- [ ] **Sales Customer Register.** Create and synchronize one authoritative, one-way `Sales Customer Register.xlsx` in the existing Sales Common documents / work-register location. Customer and contact sheets must use stable identifiers, safe text values, immutable Drive revisions, and no public sharing or Excel-to-database import. **Pending verification:** the deployed Drive policy does not currently establish a protected Sales-owned server write/revision authority, so do not fabricate the stored sync until that narrow contract is accepted.
 
 - [x] Add an Across projects Drive filter only through the existing authorized Drive-node read. It applies the selected department, visible group root metadata, and documented file types without copying files or inferring ownership; the existing backend row access remains authoritative.
 
