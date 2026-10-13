@@ -71,7 +71,7 @@ export function SalesDashboard({ customers, enquiries, opportunities, tickets, t
         {tickets !== null && openTickets.slice(0, 6).map((ticket) => <div key={ticket.id} className="border-l-2 border-primary/30 py-1 pl-3"><div className="flex items-start justify-between gap-2"><p className="font-medium">{ticket.complaint_code}</p><Badge variant="outline">{label(ticket.status)}</Badge></div><p className="mt-1 text-sm">{ticket.title}</p><p className="mt-1 text-xs text-muted-foreground">{label(ticket.severity)} · {ticket.customer_visible_update ?? "No customer update recorded"}</p></div>)}
         {tickets !== null && !openTickets.length && <EmptyState icon={Headset} text="No open customer-support records are visible." />}
       </WorkColumn>
-      <WorkColumn icon={Users} title="Sales team work" description="Tasks tagged to the existing sales work scope." link={{ to: "/tasks", label: "Open task board" }}>
+      <WorkColumn icon={Users} title="Sales team work" description="Tasks tagged to the existing sales work scope.">
         {tasks === null && <EmptyState icon={CircleAlert} text="Sales team tasks are not available to this view." />}
         {tasks !== null && salesTasks.slice(0, 6).map((task) => <div key={task.id} className="border-l-2 border-primary/30 py-1 pl-3"><div className="flex items-start justify-between gap-2"><p className="font-medium">{task.title}</p><Badge variant="outline">{label(task.status)}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{task.assignee?.name ?? "Owner not assigned"} · {task.project?.code ?? "No project"}</p><p className="mt-1 text-xs text-muted-foreground">{dueLabel(task.due_date)}{task.status === "blocked" ? " · Blocked" : ""}</p></div>)}
         {tasks !== null && !salesTasks.length && <EmptyState icon={Users} text="No open sales team tasks are recorded." />}
@@ -80,8 +80,8 @@ export function SalesDashboard({ customers, enquiries, opportunities, tickets, t
   </div>;
 }
 
-function WorkColumn({ icon: Icon, title, description, link, children }: { icon: typeof ClipboardList; title: string; description: string; link: { to: "/sales/enquiries" | "/customer-service" | "/tasks"; label: string }; children: React.ReactNode }) {
-  return <Card><CardHeader><div className="flex items-center gap-2"><Icon className="size-4 text-primary" /><CardTitle>{title}</CardTitle></div><CardDescription>{description}</CardDescription></CardHeader><CardContent className="space-y-4">{children}<Button asChild variant="ghost" className="w-full justify-between">{link.to === "/sales/enquiries" ? <Link to="/sales/enquiries">{link.label}<ArrowRight className="size-4" /></Link> : link.to === "/customer-service" ? <Link to="/customer-service">{link.label}<ArrowRight className="size-4" /></Link> : <Link to="/tasks" search={{}}>{link.label}<ArrowRight className="size-4" /></Link>}</Button></CardContent></Card>;
+function WorkColumn({ icon: Icon, title, description, link, children }: { icon: typeof ClipboardList; title: string; description: string; link?: { to: "/sales/enquiries" | "/customer-service"; label: string }; children: React.ReactNode }) {
+  return <Card><CardHeader><div className="flex items-center gap-2"><Icon className="size-4 text-primary" /><CardTitle>{title}</CardTitle></div><CardDescription>{description}</CardDescription></CardHeader><CardContent className="space-y-4">{children}{link && <Button asChild variant="ghost" className="w-full justify-between">{link.to === "/sales/enquiries" ? <Link to="/sales/enquiries">{link.label}<ArrowRight className="size-4" /></Link> : <Link to="/customer-service">{link.label}<ArrowRight className="size-4" /></Link>}</Button>}</CardContent></Card>;
 }
 
 function EmptyState({ icon: Icon, text }: { icon: typeof AlertCircle; text: string }) {
