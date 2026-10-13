@@ -1,38 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  BriefcaseBusiness,
-  Building2,
-  CircleAlert,
-  Eye,
-  FileCheck2,
-  FileText,
-  FolderOpen,
-  GanttChartSquare,
-  Handshake,
-  Plus,
-  ShieldCheck,
-  UsersRound,
-} from "lucide-react";
+import { Building2, CircleAlert, Eye, FileText, FolderOpen, Plus, Search } from "lucide-react";
 import { PermissionGate } from "@/components/PermissionGate";
 import { CreateCustomerDialog } from "@/components/sales/CreateCustomerDialog";
-import {
-  AssignedFeasibilityDialog,
-  BaselineDialog,
-  CommercialDialog,
-  FeasibilityDialog,
-  HandoverDialog,
-  NdaDialog,
-  PortalDialog,
-  RequirementDialog,
-} from "@/components/sales/SalesLifecycleDialogs";
 import { StructuredTemplatePreview } from "@/components/lifecycle/StructuredTemplatePreview";
-import { EnquiryDialog, OpportunityDialog } from "@/components/sales/SalesIntakeDialogs";
+import { EnquiryDialog } from "@/components/sales/SalesIntakeDialogs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StructuredPreviewExitDialog } from "@/components/lifecycle/StructuredPreviewExitBoundary";
 import {
   type CustomerRequirement,
@@ -43,7 +19,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { createProposedProjectPlan } from "@/lib/proposed-project-plan";
 import { buildSalesSourceContractAvailability } from "@/lib/feasibility-planning";
 import { draftFromSpecificationData } from "@/lib/master-specification";
-import { getSalesNextStepGuidance } from "@/lib/sales-next-step";
 import { useAuth } from "@/hooks/useAuth";
 import { salesOverviewQueryOptions } from "@/lib/sales-overview-query";
 import { SalesOpportunityPipeline } from "@/components/sales/SalesOpportunityPipeline";
@@ -90,71 +65,17 @@ function toSalesStructuredDocumentEntry(
   };
 }
 function SalesPage() {
-  const [customerOpen, setCustomerOpen] = useState(false);
-  const [dialog, setDialog] = useState<
-    | "enquiry"
-    | "opportunity"
-    | "nda"
-    | "requirement"
-    | "feasibility"
-    | "assigned-feasibility"
-    | "commercial"
-    | "baseline"
-    | "portal"
-    | "handover"
-    | null
-  >(null);
+  const [dialog, setDialog] = useState<"enquiry" | null>(null);
+  const [enquirySearch, setEnquirySearch] = useState("");
   const [detail, setDetail] = useState<SalesDetail | null>(null);
   const [documentDetail, setDocumentDetail] = useState<SalesDetail | null>(null);
   const { loading: authLoading, user } = useAuth();
   const sales = useQuery(salesOverviewQueryOptions(user?.id ?? null));
-  const metrics = useMemo(
-    () => ({
-      active: sales.data?.opportunities.filter((item) => item.status === "active").length ?? 0,
-      nda:
-        sales.data?.opportunities.filter(
-          (item) => item.nda_required && !["approved", "project_initiated"].includes(item.stage),
-        ).length ?? 0,
-      awaiting:
-        sales.data?.opportunities.filter((item) =>
-          [
-            "requirement_pending",
-            "clarification_required",
-            "customer_review",
-            "waiting_customer_authorization",
-          ].includes(item.stage),
-        ).length ?? 0,
-    }),
-    [sales.data],
-  );
-  const specificationByOpportunity = useMemo(
-    () =>
-      new Map(
-        (sales.data?.masterSpecifications ?? []).map((specification) => [
-          specification.opportunity_id,
-          specification,
-        ]),
-      ),
-    [sales.data?.masterSpecifications],
-  );
-  const documentSourceByOpportunity = useMemo(
-    () => new Map((sales.data?.opportunities ?? []).map((opportunity) => [opportunity.id, opportunity])),
-    [sales.data?.opportunities],
-  );
-  const directDocumentDetail = documentDetail
-    ? {
-        opportunity: documentSourceByOpportunity.get(documentDetail.opportunity.id) ?? documentDetail.opportunity,
-        specification: specificationByOpportunity.get(documentDetail.opportunity.id) ?? documentDetail.specification,
-      }
-    : null;
-  const sourceContract = useMemo(
-    () =>
-      buildSalesSourceContractAvailability({
-        feasibilityProvenanceAvailable: sales.data?.feasibilityProvenance.available ?? false,
-        feasibilityProvenanceError: sales.data?.feasibilityProvenance.error,
-      }),
-    [sales.data?.feasibilityProvenance],
-  );
+  const visibleEnquiries = useMemo(() => {
+    const query = enquirySearch.trim().toLowerCase();
+    if (!query) return sales.data?.enquiries ?? [];
+    return (sales.data?.enquiries ?? []).filter((enquiry) => [enquiry.enquiry_number, enquiry.requirement_summary, enquiry.status, enquiry.customer?.legal_name].filter(Boolean).some((value) => value?.toLowerCase().includes(query)));
+  }, [enquirySearch, sales.data?.enquiries]);
   return (
     <PermissionGate permission="sales.view" fallback={<AccessDenied />}>
       <div className="space-y-6">
@@ -163,92 +84,16 @@ function SalesPage() {
             <p className="text-sm font-medium text-primary">Customer development</p>
             <h1 className="mt-1 text-2xl font-semibold">Sales</h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              Manage the controlled lifecycle from enquiry and NDA through approved baseline and
-              project handover.
+              Start with customer enquiries, then continue work from the saved record when the required controls are available.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <PermissionGate permission="sales.manage">
-              <Button onClick={() => setCustomerOpen(true)}>
-                <Plus className="size-4" /> New customer
-              </Button>
-            </PermissionGate>
             <Button asChild variant="outline">
-              <Link to="/customers">Customer master</Link>
+              <Link to="/customers">Customers</Link>
             </Button>
           </div>
         </div>
-        <PermissionGate permission="sales.manage">
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <Button onClick={() => setDialog("enquiry")}>
-              <Plus className="size-4" /> New enquiry
-            </Button>
-            <Button onClick={() => setDialog("opportunity")}>
-              <BriefcaseBusiness className="size-4" /> Proposed project
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("nda")}>
-              <ShieldCheck className="size-4" /> NDA gate
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("requirement")}>
-              <FileText className="size-4" /> Requirement
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("feasibility")}>
-              <GanttChartSquare className="size-4" /> Feasibility assignment
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("assigned-feasibility")}>
-              <GanttChartSquare className="size-4" /> Assigned reviewer
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("commercial")}>
-              <Handshake className="size-4" /> Commercial
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("baseline")}>
-              <FileCheck2 className="size-4" /> Approve baseline
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("portal")}>
-              <UsersRound className="size-4" /> Client portal
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("handover")}>
-              <BriefcaseBusiness className="size-4" /> Handover
-            </Button>
-          </div>
-        </PermissionGate>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Metric
-            icon={<Building2 className="size-4" />}
-            label="Customers"
-            value={sales.data?.customers.length ?? 0}
-          />
-          <Metric
-            icon={<BriefcaseBusiness className="size-4" />}
-            label="Active opportunities"
-            value={metrics.active}
-          />
-          <Metric
-            icon={<FileText className="size-4" />}
-            label="NDA checks pending"
-            value={metrics.nda}
-          />
-          <Metric
-            icon={<CircleAlert className="size-4" />}
-            label="Waiting on customer"
-            value={metrics.awaiting}
-          />
-        </div>
-        {sourceContract.state === "UNAVAILABLE" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Source-bound readiness unavailable</CardTitle>
-              <CardDescription>{sourceContract.message}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                {sourceContract.blockers.map((blocker) => (
-                  <li key={blocker}>{blocker}</li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
+        <PermissionGate permission="sales.manage"><Button onClick={() => setDialog("enquiry")}><Plus className="size-4" /> New enquiry</Button></PermissionGate>
         {sales.isError && (
           <Card>
             <CardContent className="p-4 text-sm text-destructive">
@@ -257,266 +102,16 @@ function SalesPage() {
             </CardContent>
           </Card>
         )}
-        <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Opportunity pipeline</CardTitle>
-              <CardDescription>
-                Customer-facing work, sorted by the most recently updated opportunity.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {sales.data?.opportunities.slice(0, 8).map((item) => {
-                const specification = specificationByOpportunity.get(item.id);
-                const linkedRequirement =
-                  sales.data?.requirements.find(
-                    (requirement) =>
-                      requirement.opportunity_id === item.id &&
-                      requirement.customer_id === specification?.customer_id,
-                  ) ?? null;
-                const guidance = getSalesNextStepGuidance({
-                  nextAction: item.next_action,
-                  masterSpecification: specification
-                    ? {
-                        specificationNumber: specification.specification_number,
-                        currentVersion: specification.current_version,
-                      }
-                    : null,
-                  linkedRequirement: linkedRequirement
-                    ? {
-                        requirementNumber: linkedRequirement.requirement_number,
-                        status: linkedRequirement.status,
-                      }
-                    : null,
-                  readError: sales.isError
-                    ? sales.error instanceof Error
-                      ? sales.error.message
-                      : "Unexpected Sales read error"
-                    : null,
-                  sourceContractAvailable: sourceContract.state === "AVAILABLE",
-                });
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-start justify-between gap-3 border-l-2 border-primary/30 pl-3"
-                  >
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {item.customer?.legal_name ?? "Customer pending"} ·{" "}
-                        {item.opportunity_number}
-                      </p>
-                      {specification && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Master Specification {specification.specification_number} · rev{" "}
-                          {specification.current_version}
-                        </p>
-                      )}
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Next: {guidance.message}
-                        {item.next_action_date && guidance.kind === "SUPPLIED"
-                          ? ` · ${item.next_action_date}`
-                          : ""}
-                      </p>
-                      {guidance.sourceContractNote && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {guidance.sourceContractNote}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge variant="outline">{item.stage.replace(/_/g, " ")}</Badge>
-                      {specification && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setDetail({ opportunity: item, specification })}
-                        >
-                          View proposal
-                        </Button>
-                      )}
-                      {item.nda_required && <Badge variant="secondary">NDA</Badge>}
-                    </div>
-                  </div>
-                );
-              })}
-              <SalesOpportunityPipeline
-                state={{
-                  opportunities: sales.data?.opportunities,
-                  pending: authLoading || sales.isPending,
-                  error: sales.error instanceof Error ? sales.error : sales.isError ? new Error("Unexpected Sales read error") : null,
-                }}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Controlled requirements</CardTitle>
-              <CardDescription>
-                Revisioned customer inputs moving through review and approval.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {sales.data?.requirements.slice(0, 5).map((item) => (
-                <div key={item.id} className="rounded-lg border p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium">{item.requirement_number}</p>
-                    <Badge variant="outline">{item.status.replace(/_/g, " ")}</Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{item.title}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {item.customer?.legal_name ?? "Customer pending"} · rev {item.current_revision}
-                  </p>
-                </div>
-              ))}
-              {!sales.data?.requirements.length && (
-                <p className="py-6 text-sm text-muted-foreground">
-                  No controlled requirements yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Approved baselines</CardTitle>
-              <CardDescription>
-                Frozen requirement and commercial snapshots ready for project delivery.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {sales.data?.baselines.slice(0, 5).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border p-3"
-                >
-                  <div>
-                    <p className="font-medium">{item.baseline_number}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Requirement revision {item.revision_number}
-                    </p>
-                  </div>
-                  <Badge variant="outline">{item.status.replace(/_/g, " ")}</Badge>
-                </div>
-              ))}
-              {!sales.data?.baselines.length && (
-                <p className="py-6 text-sm text-muted-foreground">No approved baselines yet.</p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Client access & handover</CardTitle>
-              <CardDescription>
-                Private client links and controlled transfer into project delivery.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {sales.data?.portalAccess.filter((item) => item.is_active).length ?? 0} active
-                private client links · {sales.data?.handovers.length ?? 0} handover records
-              </p>
-              {sales.data?.handovers.slice(0, 3).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <span className="text-sm font-medium">
-                    {item.baseline?.baseline_number ?? "Baseline"}
-                  </span>
-                  <Badge variant="outline">{item.status}</Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-        <CreateCustomerDialog
-          open={customerOpen}
-          onOpenChange={setCustomerOpen}
-          employees={sales.data?.employees ?? []}
-        />
+        <Card>
+          <CardHeader><CardTitle>Enquiries</CardTitle><CardDescription>Saved customer needs, newest first. Open a record to continue when its later actions are available.</CardDescription></CardHeader>
+          <CardContent className="space-y-3"><div className="relative max-w-md"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><input value={enquirySearch} onChange={(event) => setEnquirySearch(event.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" placeholder="Search enquiries" /></div>{visibleEnquiries.map((item) => <div key={item.id} className="flex items-start justify-between gap-3 border-l-2 border-primary/30 pl-3"><div><p className="font-medium">{item.enquiry_number ?? "Enquiry"}</p><p className="mt-1 text-sm">{item.requirement_summary}</p><p className="mt-1 text-xs text-muted-foreground">{item.customer?.legal_name ?? "Customer not linked"} · {item.enquiry_date}</p></div><Badge variant="outline">{item.status.replaceAll("_", " ")}</Badge></div>)}{!visibleEnquiries.length && <p className="py-8 text-sm text-muted-foreground">No saved enquiries match this search.</p>}</CardContent>
+        </Card>
         <EnquiryDialog
           open={dialog === "enquiry"}
           onOpenChange={(open) => !open && setDialog(null)}
           customers={sales.data?.customers ?? []}
           contacts={sales.data?.contacts ?? []}
-        />
-        <OpportunityDialog
-          open={dialog === "opportunity"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          customers={sales.data?.customers ?? []}
-          contacts={sales.data?.contacts ?? []}
-          enquiries={sales.data?.enquiries ?? []}
-        />
-        <NdaDialog
-          open={dialog === "nda"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          opportunities={sales.data?.opportunities ?? []}
-        />
-        <RequirementDialog
-          open={dialog === "requirement"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          opportunities={sales.data?.opportunities ?? []}
-          masterSpecifications={sales.data?.masterSpecifications ?? []}
-          sourceLoadError={
-            sales.isError
-              ? sales.error instanceof Error
-                ? sales.error.message
-                : "Unexpected source read error"
-              : null
-          }
-          onRetrySources={() => void sales.refetch()}
-        />
-        <FeasibilityDialog
-          open={dialog === "feasibility"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          requirements={sales.data?.requirements ?? []}
-          departments={sales.data?.departments ?? []}
-        />
-        <AssignedFeasibilityDialog
-          open={dialog === "assigned-feasibility"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          reviews={sales.data?.feasibilityReviews ?? []}
-          provenanceError={
-            sales.data?.feasibilityProvenance.error ??
-            (sales.isError
-              ? sales.error instanceof Error
-                ? sales.error.message
-                : "Unexpected source read error"
-              : "Immutable feasibility provenance is not available in the deployed read model.")
-          }
-        />
-        <CommercialDialog
-          open={dialog === "commercial"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          requirements={sales.data?.requirements ?? []}
-        />
-        <BaselineDialog
-          open={dialog === "baseline"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          requirements={sales.data?.requirements ?? []}
-          reviews={sales.data?.feasibilityReviews ?? []}
-          commercialRecords={sales.data?.commercialRecords ?? []}
-          sourceLoadError={
-            sales.data?.feasibilityProvenance.error ??
-            (sales.isError
-              ? sales.error instanceof Error
-                ? sales.error.message
-                : "Unexpected source read error"
-              : "Immutable feasibility provenance is not available in the deployed read model.")
-          }
-        />
-        <PortalDialog
-          open={dialog === "portal"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          customers={sales.data?.customers ?? []}
-          contacts={sales.data?.contacts ?? []}
-        />
-        <HandoverDialog
-          open={dialog === "handover"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          baselines={sales.data?.baselines ?? []}
+          employees={sales.data?.employees ?? []}
         />
         <ProposalDetail
           detail={detail}
