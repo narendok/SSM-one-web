@@ -16,6 +16,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   createFolder, downloadNode, extOf, fetchBreadcrumbs, fetchChildren, fetchDriveCategoryTemplates, fetchFavorites, formatBytes,
@@ -31,7 +32,7 @@ import { buildDepartmentDriveTaxonomy } from "@/lib/department-drive-navigation"
 import { canPresentProjectBoms, shouldRequestProjectBoms } from "@/lib/drive-presentation-policy";
 import { fetchCanonicalDepartments } from "@/lib/tasks";
 
-type Filter = "all" | "common" | "internal" | "client" | "starred" | "ppap" | "boms";
+type Filter = "all" | "common" | "internal" | "client" | "other" | "starred" | "ppap" | "boms";
 
 function iconFor(node: DriveNode) {
   if (node.node_type === "FOLDER") return Folder;
@@ -54,6 +55,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   const isRestrictedFolder = Boolean(restrictedFolderId);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [fileType, setFileType] = useState<"all" | NonNullable<DriveNode["file_type"]>("all");
   const [view, setView] = useState<"grid" | "list">("list");
   const [busy, setBusy] = useState<string | null>(null);
   const [preview, setPreview] = useState<DriveNode | null>(null);
@@ -122,6 +124,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
     setLockedFolderId(null);
     setSearch("");
     setFilter("all");
+    setFileType("all");
     setPreview(null);
     setRevisionsFor(null);
     setShareFor(null);
@@ -149,7 +152,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }, [folderId, restrictedFolderId]);
 
   useEffect(() => {
-    if (!activeDepartmentId || projectId || folderId || filter === "all" || filter === "starred" || filter === "ppap" || filter === "boms") return;
+    if (!activeDepartmentId || projectId || folderId || filter === "all" || filter === "other" || filter === "starred" || filter === "ppap" || filter === "boms") return;
     const folderKind = filter === "common" ? "DEPARTMENT_STANDARDS" : filter === "internal" ? "INTERNAL_PROJECTS" : "CLIENT_PROJECTS";
     const target = departmentRoots.find((root) => root.folder_kind === folderKind);
     if (target) setFolderId(target.id);
@@ -166,9 +169,14 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
       if (q && !n.name.toLowerCase().includes(q)) return false;
       if (filter === "starred" && !(n.is_starred || favorites.has(n.id))) return false;
       if (filter === "ppap" && !n.slug.startsWith("ppap") && !n.name.includes("PPAP")) return false;
+      if (filter === "other") return false;
+      if (fileType !== "all" && n.file_type !== fileType) return false;
       return true;
     });
-  }, [nodes, search, filter, favorites]);
+  }, [nodes, search, filter, fileType, favorites]);
+  const availableFileTypes = useMemo(() => Array.from(new Set(
+    nodes.flatMap((node) => node.file_type ? [node.file_type] : []),
+  )).sort(), [nodes]);
 
   const rootCategories = useMemo(() => {
     if (projectId || folderId) return [];
@@ -367,19 +375,29 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
             <TabsTrigger value="all">All</TabsTrigger>
             {!projectId && activeDepartmentId && <TabsTrigger value="common">Controlled documents</TabsTrigger>}
             {!projectId && activeDepartmentId && <TabsTrigger value="internal">Internal projects</TabsTrigger>}
-             {!projectId && activeDepartmentId && <TabsTrigger value="client">Client projects</TabsTrigger>}
+            {!projectId && activeDepartmentId && <TabsTrigger value="client">Client projects</TabsTrigger>}
+            {!projectId && activeDepartmentId && <TabsTrigger value="other">Other department work</TabsTrigger>}
             <TabsTrigger value="ppap">PPAP</TabsTrigger>
             <TabsTrigger value="starred">Starred</TabsTrigger>
             {canBrowseProjectBoms && <TabsTrigger value="boms">Project BOMs</TabsTrigger>}
           </TabsList>
         </Tabs>
+        <Select value={fileType} onValueChange={(value) => setFileType(value as typeof fileType)} disabled={filter === "boms" || availableFileTypes.length === 0}>
+          <SelectTrigger className="w-[160px]" aria-label="Document type filter">
+            <SelectValue placeholder="Document type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All document types</SelectItem>
+            {availableFileTypes.map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="icon" onClick={() => setView(view === "list" ? "grid" : "list")} disabled={filter === "boms"}>
           {view === "list" ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
         </Button>
-        <Button variant="outline" onClick={handleNewFolder} disabled={isRestrictedFolder || lockedFolderId === folderId || filter === "boms"}>
+        <Button variant="outline" onClick={handleNewFolder} disabled={isRestrictedFolder || lockedFolderId === folderId || filter === "boms" || filter === "other"}>
           <FolderPlus className="h-4 w-4 mr-1" /> Folder
         </Button>
-        <Button onClick={() => fileInput.current?.click()} disabled={isRestrictedFolder || lockedFolderId === folderId || !!busy || filter === "boms"}>
+        <Button onClick={() => fileInput.current?.click()} disabled={isRestrictedFolder || lockedFolderId === folderId || !!busy || filter === "boms" || filter === "other"}>
           {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />} Upload
         </Button>
         <input
@@ -413,13 +431,15 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
       </div>
 
       {!projectId && activeDepartmentId && !folderId && (
-        <div className="grid gap-2 sm:grid-cols-3" aria-label="Department Drive taxonomy">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-label="Department Drive groups">
           {departmentTaxonomy.map((entry) => (
             <Card key={entry.key} className="p-3">
               <p className="text-sm font-medium">{entry.label}</p>
               <p className="mt-1 text-xs text-muted-foreground">{entry.description}</p>
               {entry.mappingState === "mapped" ? (
-                <p className="mt-2 text-xs text-muted-foreground">{entry.categoryCount} configured template{entry.categoryCount === 1 ? "" : "s"}</p>
+                <Button variant="link" size="sm" className="mt-2 h-auto px-0 text-xs" onClick={() => setFilter(entry.key)}>
+                  Open group
+                </Button>
               ) : (
                 <p className="mt-2 text-xs text-destructive">No verified folder mapping</p>
               )}
@@ -467,6 +487,8 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
             ))}
           </Card>
         )
+       ) : filter === "other" ? (
+        <Card className="p-8 text-center text-muted-foreground">Other department work has no verified folder mapping yet.</Card>
        ) : isLoading ? (
         <Card className="p-8 text-center text-muted-foreground">Loading…</Card>
        ) : isError ? (

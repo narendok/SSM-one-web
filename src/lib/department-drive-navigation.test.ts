@@ -8,20 +8,23 @@ const categories = [
   { id: "inactive", placement: "COMMON", is_active: false },
 ] as any;
 
-describe("department Drive final taxonomy", () => {
-  it("maps the final three categories without treating project class as a category", () => {
+describe("department Drive taxonomy", () => {
+  it("maps the four visible groups only to their matching verified roots", () => {
     const result = buildDepartmentDriveTaxonomy([
       { id: "standards", folder_kind: "DEPARTMENT_STANDARDS" },
       { id: "internal-root", folder_kind: "INTERNAL_PROJECTS" },
       { id: "client-root", folder_kind: "CLIENT_PROJECTS" },
     ], categories);
     expect(result.map((entry) => entry.label)).toEqual([
-      "Common Controlled Documents",
-      "Periodic and Conditional Reviews",
-      "Project Deliverables",
+      "Common documents",
+      "Internal projects",
+      "Client projects",
+      "Other department work",
     ]);
-    expect(result[1]).toMatchObject({ mappingState: "unmapped", categoryIds: [] });
-    expect(result[2]).toMatchObject({ mappedFolderId: "internal-root", categoryIds: ["internal", "client"] });
+    expect(result[0]).toMatchObject({ mappedFolderId: "standards", categoryIds: ["common"] });
+    expect(result[1]).toMatchObject({ mappedFolderId: "internal-root", categoryIds: ["internal"] });
+    expect(result[2]).toMatchObject({ mappedFolderId: "client-root", categoryIds: ["client"] });
+    expect(result[3]).toMatchObject({ mappingState: "unmapped", categoryIds: [] });
   });
 
   it("reports missing authoritative roots instead of guessing or moving historical folders", () => {
@@ -29,9 +32,10 @@ describe("department Drive final taxonomy", () => {
     expect(result.every((entry) => entry.mappingState === "unmapped")).toBe(true);
   });
 
-  it("keeps project deliverables mapped for a client-only department without treating client as a taxonomy category", () => {
+  it("keeps a client project group mapped for a client-only department", () => {
     const result = buildDepartmentDriveTaxonomy([{ id: "client-root", folder_kind: "CLIENT_PROJECTS" }], categories);
     expect(result[2]).toMatchObject({ mappedFolderId: "client-root", mappingState: "mapped" });
+    expect(result[1]).toMatchObject({ mappingState: "unmapped" });
   });
 
   it("allows only the verified department/project root keys", () => {

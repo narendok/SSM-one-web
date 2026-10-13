@@ -2,6 +2,10 @@
 
 ## Current request
 
+- [ ] **Deferred — Excel workbook sync mapping.** Existing Excel synchronization is requested, not an export-only substitute. Await the user’s workbook and its approved location before mapping sheets, fields, or importing any records; do not invent a sync or data.
+
+- [x] Align the existing department Drive with four visible groups: Common documents, Internal projects, Client projects, and Other department work. Each opens only its verified existing root; Other department work remains honestly unmapped. A document-type filter uses only existing Drive file-type metadata. No folder, permission, record, or Sales document workflow changed.
+
 - [x] Refine the Project documents area into a concise department workspace with assignment status and the existing project-folder shortcut. Private document details remain withheld without a verified current assignment; no document, access, or project record changed.
 
 - [ ] Complete source-only responsibility reassignment acceptance: exact replay/conflict, null actor/target/revision, active department/project-team responsible/reviewer denials, current-scope rejection after revocation, and actor/request-key, manager-membership, and target-membership concurrent reassignment evidence. **No live installation, grants, policies, data, users, storage, or UI changes are authorized.**

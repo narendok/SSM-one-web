@@ -1,11 +1,11 @@
 import type { DriveCategoryTemplate, DriveNode } from "@/lib/drive";
 
-export type DepartmentDriveTaxonomyKey = "controlled" | "reviews" | "deliverables";
+export type DepartmentDriveTaxonomyKey = "common" | "internal" | "client" | "other";
 export type DepartmentDriveTaxonomyEntry = {
   key: DepartmentDriveTaxonomyKey;
   label: string;
   description: string;
-  rootFolderKind: "DEPARTMENT_STANDARDS" | "INTERNAL_PROJECTS" | "CLIENT_PROJECTS";
+  rootFolderKind: "DEPARTMENT_STANDARDS" | "INTERNAL_PROJECTS" | "CLIENT_PROJECTS" | null;
   categoryCount: number;
   categoryIds: string[];
   mappedFolderId: string | null;
@@ -14,22 +14,28 @@ export type DepartmentDriveTaxonomyEntry = {
 
 const taxonomy: Array<Omit<DepartmentDriveTaxonomyEntry, "categoryCount" | "categoryIds" | "mappedFolderId" | "mappingState">> = [
   {
-    key: "controlled",
-    label: "Common Controlled Documents",
-    description: "Department rules, regulations, standards, and controlled records.",
+    key: "common",
+    label: "Common documents",
+    description: "Department rules, SOPs, KPIs, authority matrices, standards, and controlled records.",
     rootFolderKind: "DEPARTMENT_STANDARDS",
   },
   {
-    key: "reviews",
-    label: "Periodic and Conditional Reviews",
-    description: "Recurring and event-driven review evidence; no authoritative Drive mapping exists yet.",
-    rootFolderKind: "DEPARTMENT_STANDARDS",
-  },
-  {
-    key: "deliverables",
-    label: "Project Deliverables",
-    description: "Project folders; use Internal or Client as a secondary project filter.",
+    key: "internal",
+    label: "Internal projects",
+    description: "Authorized folders for internal project work.",
     rootFolderKind: "INTERNAL_PROJECTS",
+  },
+  {
+    key: "client",
+    label: "Client projects",
+    description: "Authorized folders for client project work.",
+    rootFolderKind: "CLIENT_PROJECTS",
+  },
+  {
+    key: "other",
+    label: "Other department work",
+    description: "No verified folder mapping is available yet.",
+    rootFolderKind: null,
   },
 ];
 
@@ -38,13 +44,17 @@ export function buildDepartmentDriveTaxonomy(
   categories: DriveCategoryTemplate[],
 ): DepartmentDriveTaxonomyEntry[] {
   const common = categories.filter((category) => category.placement === "COMMON" && category.is_active);
-  const project = categories.filter((category) => category.placement === "INTERNAL_PROJECT" || category.placement === "CLIENT_PROJECT");
   return taxonomy.map((entry) => {
-    const scoped = entry.key === "reviews" ? [] : entry.key === "deliverables" ? project.filter((category) => category.is_active) : common;
-    const root = entry.key === "deliverables"
-      ? roots.find((candidate) => candidate.folder_kind === "INTERNAL_PROJECTS") ?? roots.find((candidate) => candidate.folder_kind === "CLIENT_PROJECTS")
-      : roots.find((candidate) => candidate.folder_kind === entry.rootFolderKind);
-    const hasVerifiedMapping = entry.key !== "reviews" && Boolean(root);
+    const scoped = entry.key === "common"
+      ? common
+      : categories.filter((category) => category.is_active && (
+        (entry.key === "internal" && category.placement === "INTERNAL_PROJECT") ||
+        (entry.key === "client" && category.placement === "CLIENT_PROJECT")
+      ));
+    const root = entry.rootFolderKind
+      ? roots.find((candidate) => candidate.folder_kind === entry.rootFolderKind)
+      : null;
+    const hasVerifiedMapping = Boolean(root);
     return {
       ...entry,
       categoryCount: scoped.length,
