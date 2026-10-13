@@ -8,7 +8,8 @@ import { EnquiryDialog } from "@/components/sales/SalesIntakeDialogs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EnquiryDetail } from "@/components/sales/EnquiryDetail";
 import { StructuredPreviewExitDialog } from "@/components/lifecycle/StructuredPreviewExitBoundary";
 import {
   type CustomerRequirement,
