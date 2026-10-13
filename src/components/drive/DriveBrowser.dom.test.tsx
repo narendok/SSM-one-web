@@ -42,10 +42,10 @@ vi.mock("./FilePreviewDialog", () => ({ FilePreviewDialog: () => null }));
 vi.mock("./RevisionsDialog", () => ({ RevisionsDialog: () => null }));
 vi.mock("./ShareNodeDialog", () => ({ ShareNodeDialog: () => null }));
 
-function renderBrowser(setup: () => void, initialNodeId?: string) {
+function renderBrowser(setup: () => void, initialNodeId?: string, restrictedFolderId?: string) {
   setup();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><DriveBrowser projectId="project-123" initialNodeId={initialNodeId} /></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><DriveBrowser projectId="project-123" initialNodeId={initialNodeId} restrictedFolderId={restrictedFolderId} /></QueryClientProvider>);
 }
 
 afterEach(() => {
@@ -78,6 +78,15 @@ describe("DriveBrowser project reads", () => {
 
     expect((await screen.findByRole("button", { name: "Folder" })).hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("keeps a source-bound folder read-only after a reload", async () => {
+    initialFolder.mockResolvedValue({ data: { id: "sales-folder", node_type: "FOLDER", is_locked: false, department_id: "sales-department", project_id: null }, error: null });
+    renderBrowser(() => fetchChildren.mockResolvedValue([]), "sales-folder", "sales-folder");
+
+    expect((await screen.findByRole("button", { name: "Folder" })).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Project files" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("keeps upload and folder creation available for a loaded unlocked folder", async () => {
