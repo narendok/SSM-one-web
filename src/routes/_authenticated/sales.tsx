@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, CircleAlert, Eye, FileText, FolderOpen, Plus } from "lucide-react";
 import { PermissionGate } from "@/components/PermissionGate";
@@ -39,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/sales")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: SalesPage,
+  component: SalesRoute,
 });
 
 type SalesDetail = { opportunity: SalesOpportunity; specification: MasterSpecificationSummary };
@@ -68,7 +68,12 @@ function toSalesStructuredDocumentEntry(
     folderIsTrashed: false,
   };
 }
-function SalesPage() {
+function SalesRoute() {
+  const { pathname } = Route.useLocation();
+  return pathname === "/sales" ? <SalesDashboardPage /> : <Outlet />;
+}
+
+function SalesDashboardPage() {
   const [dialog, setDialog] = useState<"enquiry" | null>(null);
   const [enquiryDetail, setEnquiryDetail] = useState<SalesEnquiry | null>(null);
   const [showExistingRecords, setShowExistingRecords] = useState(false);
