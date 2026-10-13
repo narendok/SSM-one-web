@@ -7,6 +7,7 @@ import {
   Folder, FileText, FileCode2, Box, Image as ImageIcon, FileSpreadsheet, File as FileIcon,
   Star, MoreVertical, Upload, FolderPlus, Search, LayoutGrid, List, Loader2, Download,
   Link2, History, Pencil, Trash2, ChevronRight, Home, Lock, FolderTree, Building2,
+  BriefcaseBusiness, Handshake, UsersRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   const canBrowseAllWorkspaces = role === "admin" && !activeDepartmentId;
   const { data: departments = [] } = useQuery({ queryKey: ["active-departments"], queryFn: fetchCanonicalDepartments });
   const activeDepartment = useMemo(() => departments.find((department) => department.id === activeDepartmentId) ?? null, [departments, activeDepartmentId]);
+  const isSalesDepartment = activeDepartment?.code === "SALES" || activeDepartment?.name.toLowerCase() === "sales";
   const canBrowseProjectBoms = canPresentProjectBoms(activeDepartment);
   const childrenKey = ["drive_children", projectId, activeDepartmentId, folderId];
   const { data: nodes = [], isLoading, isError, error, refetch: refetchChildren } = useQuery({
@@ -454,6 +456,28 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
         </p>
       )}
 
+      {!projectId && activeDepartmentId && !folderId && isSalesDepartment && (
+        <Card className="p-4" aria-label="Sales Work registers">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-base font-semibold">Sales Work registers</p>
+              <p className="text-sm text-muted-foreground">Follow the existing customer-to-handover sequence from this Sales Drive.</p>
+            </div>
+            <Badge variant="outline">Authorized views only</Badge>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            <Button variant="outline" className="justify-start" asChild>
+              <Link to="/customers"><Building2 className="size-4" /> Customer</Link>
+            </Button>
+            <UnavailableSalesRegister icon={<FileText className="size-4" />} label="Enquiry" />
+            <UnavailableSalesRegister icon={<BriefcaseBusiness className="size-4" />} label="Opportunity / proposal" />
+            <UnavailableSalesRegister icon={<Handshake className="size-4" />} label="Quotation / contract" />
+            <UnavailableSalesRegister icon={<UsersRound className="size-4" />} label="Orders / handover" />
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">Customer records open in their existing list. The remaining register views are unavailable until dedicated authorized read views exist; proposal actions remain on the Sales page.</p>
+        </Card>
+      )}
+
       {!projectId && !activeDepartmentId && !canBrowseAllWorkspaces ? <Card className="p-8 text-center text-muted-foreground">Select a department workspace to open its Drive.</Card> : <>
       {busy && <p className="text-xs text-muted-foreground">{busy}</p>}
 
@@ -537,4 +561,8 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
        </>}
     </div>
   );
+}
+
+function UnavailableSalesRegister({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return <Button variant="outline" className="justify-start" disabled title="No authorized register view is available yet">{icon} {label}</Button>;
 }
