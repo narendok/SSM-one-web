@@ -43,6 +43,18 @@ export function documentAccessBoundaryMessage() {
   return "Project overview access does not grant document access. This catalog stays unavailable until the assigned-person document access contract is accepted.";
 }
 
+/**
+ * Project document discovery must not turn department membership or cached
+ * client roles into document visibility. Until the protected resolver is
+ * installed, no project template title, content, or export entry is exposed.
+ */
+export function projectStructuredDocumentAvailability() {
+  return {
+    available: false,
+    reason: "Project document titles, contents, and local export remain unavailable until the backend verifies a current responsible-person assignment.",
+  } as const;
+}
+
 export type SalesStructuredDocumentEntry = {
   opportunityId: string;
   opportunityNumber: string;
