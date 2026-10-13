@@ -84,7 +84,11 @@ describe("DriveBrowser project reads", () => {
     initialFolder.mockResolvedValue({ data: { id: "unlocked-folder", node_type: "FOLDER", is_locked: false, department_id: null, project_id: "project-123" }, error: null });
     renderBrowser(() => fetchChildren.mockResolvedValue([]), "unlocked-folder");
 
-    expect((await screen.findByRole("button", { name: "Folder" })).hasAttribute("disabled")).toBe(false);
-    expect(screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled")).toBe(false);
+    const folderButton = await screen.findByRole("button", { name: "Folder" });
+    const uploadButton = screen.getByRole("button", { name: "Upload" });
+    await vi.waitFor(() => {
+      expect(folderButton.hasAttribute("disabled")).toBe(false);
+      expect(uploadButton.hasAttribute("disabled")).toBe(false);
+    });
   });
 });
