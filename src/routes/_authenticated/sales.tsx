@@ -76,7 +76,7 @@ function SalesPage() {
   const [documentDetail, setDocumentDetail] = useState<SalesDetail | null>(null);
   const { loading: authLoading, user } = useAuth();
   const sales = useQuery(salesOverviewQueryOptions(user?.id ?? null));
-  const salesTasks = useQuery({ queryKey: ["project_tasks", "sales-overview"], queryFn: fetchTasks, enabled: Boolean(user?.id), retry: false });
+  const salesTasks = useQuery({ queryKey: ["project_tasks", "sales-overview"], queryFn: () => fetchTasks(), enabled: Boolean(user?.id), retry: false });
   const directDocumentDetail = documentDetail;
   return (
     <PermissionGate permission="sales.view" fallback={<AccessDenied />}>
