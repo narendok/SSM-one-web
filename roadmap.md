@@ -4,6 +4,8 @@
 
 - [ ] **Deferred — Excel workbook sync mapping.** Existing Excel synchronization is requested, not an export-only substitute. Await the user’s workbook and its approved location before mapping sheets, fields, or importing any records; do not invent a sync or data.
 
+- [x] Add an Across projects Drive filter only through the existing authorized Drive-node read. It applies the selected department, visible group root metadata, and documented file types without copying files or inferring ownership; the existing backend row access remains authoritative.
+
 - [x] Add Sales Work registers to the Sales Drive in customer-to-handover order. Customer opens the existing authorized list; Enquiry, Opportunity / proposal, Quotation / contract, and Orders / handover are clearly unavailable until dedicated authorized read views exist, rather than opening creation forms. Proposal actions and history remain on the Sales page. Document-type filtering remains limited to metadata in the currently open authorized folder.
 
 - [x] Align the existing department Drive with four visible groups: Common documents, Internal projects, Client projects, and Other department work. Each opens only its verified existing root; Other department work remains honestly unmapped. A document-type filter uses only existing Drive file-type metadata. No folder, permission, record, or Sales document workflow changed.

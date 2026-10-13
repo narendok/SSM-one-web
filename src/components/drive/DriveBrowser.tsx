@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import {
   createFolder, downloadNode, extOf, fetchBreadcrumbs, fetchChildren, fetchDriveCategoryTemplates, fetchFavorites, formatBytes,
-  fetchDepartmentDriveRoots, renameNode, toggleStar, trashNode, uploadFile, FOLDER_COLOR, type DriveNode,
+  fetchDepartmentDriveRoots, renameNode, searchDepartmentDriveNodes, toggleStar, trashNode, uploadFile, FOLDER_COLOR, type DriveNode,
 } from "@/lib/drive";
 import { FilePreviewDialog } from "./FilePreviewDialog";
 import { RevisionsDialog } from "./RevisionsDialog";
@@ -32,6 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { buildDepartmentDriveTaxonomy } from "@/lib/department-drive-navigation";
 import { canPresentProjectBoms, shouldRequestProjectBoms } from "@/lib/drive-presentation-policy";
 import { fetchCanonicalDepartments } from "@/lib/tasks";
+import { Switch } from "@/components/ui/switch";
 
 type Filter = "all" | "common" | "internal" | "client" | "other" | "starred" | "ppap" | "boms";
 
@@ -57,6 +58,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [fileType, setFileType] = useState<"all" | Exclude<DriveNode["file_type"], null>>("all");
+  const [acrossProjects, setAcrossProjects] = useState(false);
   const [view, setView] = useState<"grid" | "list">("list");
   const [busy, setBusy] = useState<string | null>(null);
   const [preview, setPreview] = useState<DriveNode | null>(null);
@@ -84,6 +86,12 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
     queryKey: childrenKey,
     queryFn: () => fetchChildren(folderId, projectId, activeDepartmentId),
     enabled: Boolean(projectId || activeDepartmentId || canBrowseAllWorkspaces),
+    retry: false,
+  });
+  const { data: departmentNodes = [], isLoading: isSearchingAcrossProjects, isError: isAcrossProjectsError, error: acrossProjectsError, refetch: refetchAcrossProjects } = useQuery({
+    queryKey: ["department_drive_nodes", activeDepartmentId],
+    queryFn: () => searchDepartmentDriveNodes(activeDepartmentId ?? ""),
+    enabled: Boolean(acrossProjects && activeDepartmentId && !projectId),
     retry: false,
   });
   const { data: crumbs = [] } = useQuery({
@@ -127,6 +135,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
     setSearch("");
     setFilter("all");
     setFileType("all");
+    setAcrossProjects(false);
     setPreview(null);
     setRevisionsFor(null);
     setShareFor(null);
@@ -165,9 +174,10 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
     qc.invalidateQueries({ queryKey: ["drive_favorites"] });
   };
 
+  const activeNodes = acrossProjects ? departmentNodes : nodes;
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return nodes.filter((n) => {
+    return activeNodes.filter((n) => {
       if (q && !n.name.toLowerCase().includes(q)) return false;
       if (filter === "starred" && !(n.is_starred || favorites.has(n.id))) return false;
       if (filter === "ppap" && !n.slug.startsWith("ppap") && !n.name.includes("PPAP")) return false;
@@ -175,10 +185,10 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
       if (fileType !== "all" && n.file_type !== fileType) return false;
       return true;
     });
-  }, [nodes, search, filter, fileType, favorites]);
+  }, [activeNodes, search, filter, fileType, favorites]);
   const availableFileTypes = useMemo(() => Array.from(new Set(
-    nodes.flatMap((node) => node.file_type ? [node.file_type] : []),
-  )).sort(), [nodes]);
+    activeNodes.flatMap((node) => node.file_type ? [node.file_type] : []),
+  )).sort(), [activeNodes]);
 
   const rootCategories = useMemo(() => {
     if (projectId || folderId) return [];
@@ -368,7 +378,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={filter === "boms" ? "Search BOM number, name, or project…" : "Search this folder…"}
+            placeholder={filter === "boms" ? "Search BOM number, name, or project…" : acrossProjects ? "Search authorized project folders…" : "Search this folder…"}
             className="pl-8"
           />
         </div>
@@ -393,6 +403,17 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
             {availableFileTypes.map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}
           </SelectContent>
         </Select>
+        {!projectId && activeDepartmentId && (
+          <div className="flex items-center gap-2 text-sm">
+            <Switch
+              id="across-projects"
+              checked={acrossProjects}
+              onCheckedChange={setAcrossProjects}
+              disabled={filter === "boms" || filter === "other"}
+            />
+            <label htmlFor="across-projects" className="cursor-pointer whitespace-nowrap">Across projects</label>
+          </div>
+        )}
         <Button variant="outline" size="icon" onClick={() => setView(view === "list" ? "grid" : "list")} disabled={filter === "boms"}>
           {view === "list" ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
         </Button>
@@ -452,7 +473,9 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
 
       {!projectId && activeDepartmentId && !folderId && (
         <p className="text-xs text-muted-foreground">
-          Document type filtering becomes available inside an authorized folder and uses the file metadata in that folder.
+          {acrossProjects
+            ? "Across projects uses the existing authorized Drive records for this department. Group and document-type filters use the same folder and file metadata; no files are copied."
+            : "Document type filtering becomes available inside an authorized folder and uses the file metadata in that folder."}
         </p>
       )}
 
@@ -519,13 +542,17 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
         )
        ) : filter === "other" ? (
         <Card className="p-8 text-center text-muted-foreground">Other department work has no verified folder mapping yet.</Card>
+       ) : acrossProjects && isSearchingAcrossProjects ? (
+        <Card className="p-8 text-center text-muted-foreground">Searching authorized project folders…</Card>
+       ) : acrossProjects && isAcrossProjectsError ? (
+        <Card role="alert" className="border-destructive/40 bg-destructive/5 p-8 text-center text-sm text-destructive"><p>{acrossProjectsError instanceof Error ? `Project files could not be loaded. ${acrossProjectsError.message}` : "Project files could not be loaded with your current access."}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => void refetchAcrossProjects()}>Retry</Button></Card>
        ) : isLoading ? (
         <Card className="p-8 text-center text-muted-foreground">Loading…</Card>
        ) : isError ? (
         <Card role="alert" className="border-destructive/40 bg-destructive/5 p-8 text-center text-sm text-destructive"><p>{error instanceof Error ? `Project files could not be loaded. ${error.message}` : "Project files could not be loaded with your current access."}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => void refetchChildren()}>Retry</Button></Card>
        ) : visible.length === 0 ? (
         <Card className="p-8 text-center text-muted-foreground">
-          No accessible items are stored in this folder.
+          {acrossProjects ? "No accessible items match these department and document-type filters." : "No accessible items are stored in this folder."}
         </Card>
       ) : view === "grid" ? (
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">

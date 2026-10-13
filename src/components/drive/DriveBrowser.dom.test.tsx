@@ -8,6 +8,7 @@ import { DriveBrowser } from "./DriveBrowser";
 
 const fetchChildren = vi.fn();
 const initialFolder = vi.fn();
+const searchDepartmentDriveNodes = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -26,6 +27,7 @@ vi.mock("@/lib/drive", async () => {
   return {
     ...actual,
     fetchChildren: (...args: unknown[]) => fetchChildren(...args),
+    searchDepartmentDriveNodes: (...args: unknown[]) => searchDepartmentDriveNodes(...args),
     fetchCanonicalDepartments: vi.fn().mockResolvedValue([]),
   };
 });
@@ -42,16 +44,17 @@ vi.mock("./FilePreviewDialog", () => ({ FilePreviewDialog: () => null }));
 vi.mock("./RevisionsDialog", () => ({ RevisionsDialog: () => null }));
 vi.mock("./ShareNodeDialog", () => ({ ShareNodeDialog: () => null }));
 
-function renderBrowser(setup: () => void, initialNodeId?: string, restrictedFolderId?: string) {
+function renderBrowser(setup: () => void, initialNodeId?: string, restrictedFolderId?: string, departmentId?: string) {
   setup();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><DriveBrowser projectId="project-123" initialNodeId={initialNodeId} restrictedFolderId={restrictedFolderId} /></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><DriveBrowser projectId={departmentId ? undefined : "project-123"} departmentId={departmentId} initialNodeId={initialNodeId} restrictedFolderId={restrictedFolderId} /></QueryClientProvider>);
 }
 
 afterEach(() => {
   cleanup();
   fetchChildren.mockReset();
   initialFolder.mockReset();
+  searchDepartmentDriveNodes.mockReset();
 });
 
 describe("DriveBrowser project reads", () => {
@@ -99,5 +102,19 @@ describe("DriveBrowser project reads", () => {
       expect(folderButton.hasAttribute("disabled")).toBe(false);
       expect(uploadButton.hasAttribute("disabled")).toBe(false);
     });
+  });
+
+  it("uses the existing authorized department read for an across-project search", async () => {
+    const user = userEvent.setup();
+    renderBrowser(() => {
+      fetchChildren.mockResolvedValue([]);
+      searchDepartmentDriveNodes.mockResolvedValue([]);
+    }, undefined, undefined, "department-123");
+
+    const toggle = await screen.findByRole("switch", { name: "Across projects" });
+    expect(searchDepartmentDriveNodes).not.toHaveBeenCalled();
+    await user.click(toggle);
+    await vi.waitFor(() => expect(searchDepartmentDriveNodes).toHaveBeenCalledWith("department-123"));
+    expect(await screen.findByText("Across projects uses the existing authorized Drive records for this department. Group and document-type filters use the same folder and file metadata; no files are copied.")).toBeTruthy();
   });
 });

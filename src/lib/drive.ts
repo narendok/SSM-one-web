@@ -172,6 +172,21 @@ export async function fetchAllNodes(projectId?: string | null): Promise<DriveNod
   return (data ?? []) as DriveNode[];
 }
 
+/**
+ * Finds existing Drive nodes visible to the current user across the selected department.
+ * Row-level access remains enforced by the existing Drive read policy.
+ */
+export async function searchDepartmentDriveNodes(departmentId: string): Promise<DriveNode[]> {
+  const { data, error } = await sb
+    .from("drive_nodes")
+    .select("*")
+    .eq("department_id", departmentId)
+    .eq("is_trashed", false)
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as DriveNode[];
+}
+
 export async function fetchDepartmentDriveRoots(departmentId: string): Promise<DriveNode[]> {
   const { data, error } = await sb
     .from("drive_nodes")
