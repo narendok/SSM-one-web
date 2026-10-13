@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, CircleAlert, Eye, FileText, FolderOpen, Plus } from "lucide-react";
 import { PermissionGate } from "@/components/PermissionGate";
@@ -69,7 +69,7 @@ function toSalesStructuredDocumentEntry(
   };
 }
 function SalesRoute() {
-  const { pathname } = Route.useLocation();
+  const { pathname } = useLocation();
   return pathname === "/sales" ? <SalesDashboardPage /> : <Outlet />;
 }
 
