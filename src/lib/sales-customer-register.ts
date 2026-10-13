@@ -106,8 +106,9 @@ export function buildSalesCustomerRegister(customers: CustomerRegisterCustomer[]
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(contactRows.map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])))), "Contacts");
   for (const name of ["Customers", "Contacts"]) {
     const worksheet = workbook.Sheets[name];
-    const headers = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { header: 1 })[0] as string[] | undefined;
-    if (headers) {
+    const firstRow = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0];
+    const headers = Array.isArray(firstRow) ? firstRow.map(String) : [];
+    if (headers.length) {
       worksheet["!freeze"] = { xSplit: 0, ySplit: 1 } as any;
       worksheet["!cols"] = headers.map((header) => ({ wch: Math.min(52, Math.max(String(header).length + 2, 14)) }));
     }
