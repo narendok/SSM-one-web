@@ -410,7 +410,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     );
 
     expect(await screen.findByText("Sales documents")).toBeTruthy();
-    expect(await screen.findByTestId("pinned-authorized-source")).toHaveTextContent(
+    expect((await screen.findByTestId("pinned-authorized-source")).textContent).toContain(
       "OPPORTUNITY-2026-0013",
     );
     expect(screen.getByRole("tab", { name: "Statement of Requirements" })).toBeTruthy();
