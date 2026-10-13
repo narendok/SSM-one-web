@@ -7,6 +7,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DriveBrowser } from "./DriveBrowser";
 
 const fetchChildren = vi.fn();
+const initialFolder = vi.fn();
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: () => initialFolder(),
+        }),
+      }),
+    }),
+  },
+}));
 
 vi.mock("@/lib/drive", async () => {
   const actual = await vi.importActual<typeof import("@/lib/drive")>("@/lib/drive");
@@ -29,15 +42,16 @@ vi.mock("./FilePreviewDialog", () => ({ FilePreviewDialog: () => null }));
 vi.mock("./RevisionsDialog", () => ({ RevisionsDialog: () => null }));
 vi.mock("./ShareNodeDialog", () => ({ ShareNodeDialog: () => null }));
 
-function renderBrowser(setup: () => void) {
+function renderBrowser(setup: () => void, initialNodeId?: string) {
   setup();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><DriveBrowser projectId="project-123" /></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><DriveBrowser projectId="project-123" initialNodeId={initialNodeId} /></QueryClientProvider>);
 }
 
 afterEach(() => {
   cleanup();
   fetchChildren.mockReset();
+  initialFolder.mockReset();
 });
 
 describe("DriveBrowser project reads", () => {
@@ -56,5 +70,25 @@ describe("DriveBrowser project reads", () => {
 
     expect(await screen.findByText("No accessible items are stored in this folder.")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("disables upload and folder creation for a loaded locked folder", async () => {
+    initialFolder.mockResolvedValue({ data: { id: "locked-folder", node_type: "FOLDER", is_locked: true, department_id: null, project_id: "project-123" }, error: null });
+    renderBrowser(() => fetchChildren.mockResolvedValue([]), "locked-folder");
+
+    expect((await screen.findByRole("button", { name: "Folder" })).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("keeps upload and folder creation available for a loaded unlocked folder", async () => {
+    initialFolder.mockResolvedValue({ data: { id: "unlocked-folder", node_type: "FOLDER", is_locked: false, department_id: null, project_id: "project-123" }, error: null });
+    renderBrowser(() => fetchChildren.mockResolvedValue([]), "unlocked-folder");
+
+    const folderButton = await screen.findByRole("button", { name: "Folder" });
+    const uploadButton = screen.getByRole("button", { name: "Upload" });
+    await vi.waitFor(() => {
+      expect(folderButton.hasAttribute("disabled")).toBe(false);
+      expect(uploadButton.hasAttribute("disabled")).toBe(false);
+    });
   });
 });

@@ -50,6 +50,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   const fetchBoms = useServerFn(fetchDriveProjectBoms);
   const [workspaceDepartmentId, setWorkspaceDepartmentId] = useState<string | null>(() => readWorkspaceDepartmentId());
   const [folderId, setFolderId] = useState<string | null>(null);
+  const [lockedFolderId, setLockedFolderId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<"grid" | "list">("list");
@@ -117,6 +118,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
 
   useEffect(() => {
     setFolderId(null);
+    setLockedFolderId(null);
     setSearch("");
     setFilter("all");
     setPreview(null);
@@ -130,7 +132,10 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
 
   useEffect(() => {
     if (!initialNode) return;
-    if (initialNode.node_type === "FOLDER") setFolderId(initialNode.id);
+    if (initialNode.node_type === "FOLDER") {
+      setFolderId(initialNode.id);
+      setLockedFolderId(initialNode.is_locked ? initialNode.id : null);
+    }
     else setPreview(initialNode);
   }, [initialNode, departmentId]);
 
@@ -173,7 +178,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }, [projectBoms, search]);
 
   async function handleUpload(files: FileList | null) {
-    if (!files?.length) return;
+    if (lockedFolderId === folderId || !files?.length) return;
     for (const file of Array.from(files)) {
       try {
         setBusy(`Uploading ${file.name}…`);
@@ -188,6 +193,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }
 
   async function handleNewFolder() {
+    if (lockedFolderId === folderId) return;
     const name = window.prompt("Folder name");
     if (!name?.trim()) return;
     try {
@@ -238,6 +244,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   function openNode(node: DriveNode) {
     if (node.node_type === "FOLDER") {
       setFolderId(node.id);
+      setLockedFolderId(node.is_locked ? node.id : null);
       setSearch("");
     } else {
       setPreview(node);
@@ -356,10 +363,10 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
         <Button variant="outline" size="icon" onClick={() => setView(view === "list" ? "grid" : "list")} disabled={filter === "boms"}>
           {view === "list" ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
         </Button>
-        <Button variant="outline" onClick={handleNewFolder} disabled={filter === "boms"}>
+        <Button variant="outline" onClick={handleNewFolder} disabled={lockedFolderId === folderId || filter === "boms"}>
           <FolderPlus className="h-4 w-4 mr-1" /> Folder
         </Button>
-        <Button onClick={() => fileInput.current?.click()} disabled={!!busy || filter === "boms"}>
+        <Button onClick={() => fileInput.current?.click()} disabled={lockedFolderId === folderId || !!busy || filter === "boms"}>
           {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />} Upload
         </Button>
         <input
@@ -375,7 +382,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
       </div>
 
       <div className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
-        <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => { setFilter("all"); setFolderId(null); }}>
+        <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => { setFilter("all"); setFolderId(null); setLockedFolderId(null); }}>
           <Home className="h-3.5 w-3.5" /> {projectId ? "Project files" : "Drive"}
         </button>
         {crumbs.map((c) => (
@@ -383,7 +390,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
             <ChevronRight className="h-3.5 w-3.5" />
             <button
               className={cn("hover:text-foreground", c.id === folderId && "text-foreground font-medium")}
-              onClick={() => setFolderId(c.id)}
+              onClick={() => { setFolderId(c.id); setLockedFolderId(null); }}
             >
               {c.name}
             </button>
