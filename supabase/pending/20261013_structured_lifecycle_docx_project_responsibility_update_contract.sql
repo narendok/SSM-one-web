@@ -65,21 +65,11 @@ BEGIN
     RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
   END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',v_previous.project_id::text,v_previous.document_kind),0));
-  SELECT * INTO v_previous
-  FROM public.structured_lifecycle_docx_responsibility_assignments
-  WHERE id = p_assignment_id
-  FOR UPDATE;
-  IF NOT FOUND OR v_previous.scope_type <> 'PROJECT' OR v_previous.status <> 'ACTIVE' THEN
-    RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
-  END IF;
-
   v_actor := public.assert_structured_lifecycle_docx_registry_manager(v_previous.project_id, v_previous.department_id);
   v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object(
     'assignment_id',p_assignment_id,'expected_revision',p_expected_revision,
     'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id
   )::text,'UTF8'),'sha256'),'hex');
-
   SELECT * INTO v_receipt
   FROM public.structured_lifecycle_docx_responsibility_update_receipts
   WHERE actor_user_id = v_actor AND request_key = p_request_key
@@ -87,6 +77,18 @@ BEGIN
   IF FOUND THEN
     IF v_receipt.payload_hash = v_payload_hash THEN RETURN v_receipt.replacement_assignment_id; END IF;
     RAISE EXCEPTION 'Responsibility reassignment request key conflicts with a different payload';
+  END IF;
+
+  SELECT * INTO v_previous
+  FROM public.structured_lifecycle_docx_responsibility_assignments
+  WHERE id = p_assignment_id;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',v_previous.project_id::text,v_previous.document_kind),0));
+  SELECT * INTO v_previous
+  FROM public.structured_lifecycle_docx_responsibility_assignments
+  WHERE id = p_assignment_id
+  FOR UPDATE;
+  IF NOT FOUND OR v_previous.scope_type <> 'PROJECT' OR v_previous.status <> 'ACTIVE' THEN
+    RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
   END IF;
 
   IF v_previous.responsibility_revision <> p_expected_revision THEN
