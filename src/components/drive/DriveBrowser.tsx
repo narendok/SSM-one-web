@@ -55,7 +55,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   const isRestrictedFolder = Boolean(restrictedFolderId);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [fileType, setFileType] = useState<"all" | NonNullable<DriveNode["file_type"]>("all");
+  const [fileType, setFileType] = useState<"all" | Exclude<DriveNode["file_type"], null>>("all");
   const [view, setView] = useState<"grid" | "list">("list");
   const [busy, setBusy] = useState<string | null>(null);
   const [preview, setPreview] = useState<DriveNode | null>(null);
