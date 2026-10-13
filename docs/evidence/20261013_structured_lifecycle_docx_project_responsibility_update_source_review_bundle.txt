@@ -19,6 +19,15 @@ Acceptance sources
   - `supabase/pending/tests/run_structured_lifecycle_docx_project_responsibility_update_local_concurrency.sh`
 - Exact-source static guard: `supabase/pending/tests/check_structured_lifecycle_docx_project_responsibility_update_contract_static.py`
 
+Executed local evidence
+- Single-session disposable acceptance: PASS — `LOCAL_STRUCTURED_LIFECYCLE_DOCX_REGISTRY_DISPOSABLE=yes bash supabase/pending/tests/run_structured_lifecycle_docx_project_responsibility_update_local_acceptance.sh` (exit 0).
+- Two-session disposable concurrency: PASS — `LOCAL_STRUCTURED_LIFECYCLE_DOCX_REGISTRY_DISPOSABLE=yes bash supabase/pending/tests/run_structured_lifecycle_docx_project_responsibility_update_local_concurrency.sh` (exit 0).
+- Exact-source static guard: PASS — `python3 supabase/pending/tests/check_structured_lifecycle_docx_project_responsibility_update_contract_static.py` (exit 0).
+- Same-key replay: receipts/audits/active assignment = `1/1/1`.
+- Conflicting same-key payload: receipts/audits/active BOM assignment = `2/2/1`; one worker succeeds and one rejects with the request-key conflict.
+- Manager membership revocation race: `0` new receipts, `0` new audits, `1` active assignment; the waiting request rejects after recheck.
+- Target department-membership revocation race: `0` new receipts, `0` new audits, `1` active assignment; the waiting request rejects after recheck.
+
 Covered boundaries
 1. Authorized manager reassigns by revoking the old immutable row and appending exactly one revision-2 active row, receipt, and audit event.
 2. Exact same manager/request key/payload replays the original replacement ID; a different payload with that key rejects.

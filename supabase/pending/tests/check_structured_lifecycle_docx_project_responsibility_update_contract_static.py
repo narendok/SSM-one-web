@@ -11,7 +11,7 @@ expected_hash = "7cb0b6ddde5f35fa20b2ed1898ebbeb41c36c24a69355d76809570a58eb1ef6
 actual_hash = hashlib.sha256(contract.read_bytes()).hexdigest()
 required = (
     "responsibility_revision integer NOT NULL DEFAULT 1",
-    "JOIN public.project_team_members team_membership",
+    "FROM public.project_team_members",
     "Assigned responsible and reviewer employees must be active department project-team members",
     "structured-docx-reassignment-request",
     "v_manager_team_membership",
