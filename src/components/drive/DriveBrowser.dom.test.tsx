@@ -44,10 +44,10 @@ vi.mock("./FilePreviewDialog", () => ({ FilePreviewDialog: () => null }));
 vi.mock("./RevisionsDialog", () => ({ RevisionsDialog: () => null }));
 vi.mock("./ShareNodeDialog", () => ({ ShareNodeDialog: () => null }));
 
-function renderBrowser(setup: () => void, initialNodeId?: string, restrictedFolderId?: string) {
+function renderBrowser(setup: () => void, initialNodeId?: string, restrictedFolderId?: string, departmentId?: string) {
   setup();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><DriveBrowser projectId="project-123" initialNodeId={initialNodeId} restrictedFolderId={restrictedFolderId} /></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><DriveBrowser projectId={departmentId ? undefined : "project-123"} departmentId={departmentId} initialNodeId={initialNodeId} restrictedFolderId={restrictedFolderId} /></QueryClientProvider>);
 }
 
 afterEach(() => {
@@ -104,13 +104,17 @@ describe("DriveBrowser project reads", () => {
     });
   });
 
-  it("does not load cross-project Drive records outside a selected department", async () => {
+  it("uses the existing authorized department read for an across-project search", async () => {
     const user = userEvent.setup();
-    renderBrowser(() => fetchChildren.mockResolvedValue([]));
+    renderBrowser(() => {
+      fetchChildren.mockResolvedValue([]);
+      searchDepartmentDriveNodes.mockResolvedValue([]);
+    }, undefined, undefined, "department-123");
 
-    expect(screen.queryByLabelText("Across projects")).toBeNull();
+    const toggle = await screen.findByRole("switch", { name: "Across projects" });
     expect(searchDepartmentDriveNodes).not.toHaveBeenCalled();
-    await user.click(await screen.findByRole("button", { name: "Upload" }));
-    expect(searchDepartmentDriveNodes).not.toHaveBeenCalled();
+    await user.click(toggle);
+    await vi.waitFor(() => expect(searchDepartmentDriveNodes).toHaveBeenCalledWith("department-123"));
+    expect(await screen.findByText("Across projects uses the existing authorized Drive records for this department. Group and document-type filters use the same folder and file metadata; no files are copied.")).toBeTruthy();
   });
 });
