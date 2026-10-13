@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PermissionGate } from "@/components/PermissionGate";
 import { EnquiriesWorkspace } from "@/components/sales/EnquiriesWorkspace";
 import { EnquiryDetail } from "@/components/sales/EnquiryDetail";
+import { OpportunityDetail } from "@/components/sales/OpportunityDetail";
 import { EnquiryDialog } from "@/components/sales/SalesIntakeDialogs";
 import { ProposalDetail } from "@/routes/_authenticated/sales";
 import type { MasterSpecificationSummary, SalesEnquiry, SalesOpportunity } from "@/lib/sales";
@@ -20,6 +21,8 @@ function EnquiriesPage() {
   const sales = useQuery(salesOverviewQueryOptions(user?.id ?? null));
   const [newEnquiryOpen, setNewEnquiryOpen] = useState(false);
   const [detail, setDetail] = useState<SalesEnquiry | null>(null);
-  const [opportunityDetail, setOpportunityDetail] = useState<{ opportunity: SalesOpportunity; specification: MasterSpecificationSummary } | null>(null);
-  return <PermissionGate permission="sales.view"><EnquiriesWorkspace enquiries={sales.data?.enquiries ?? []} opportunities={sales.data?.opportunities ?? []} onNew={() => setNewEnquiryOpen(true)} onOpenEnquiry={setDetail} onOpenOpportunity={(opportunity) => { const specification = sales.data?.masterSpecifications.find((item) => item.opportunity_id === opportunity.id); if (specification) setOpportunityDetail({ opportunity, specification }); }} /><EnquiryDialog open={newEnquiryOpen} onOpenChange={setNewEnquiryOpen} customers={sales.data?.customers ?? []} contacts={sales.data?.contacts ?? []} employees={sales.data?.employees ?? []} /><EnquiryDetail enquiry={detail} departments={sales.data?.departments ?? []} linkedOpportunity={sales.data?.opportunities.find((opportunity) => opportunity.enquiry_id === detail?.id) ?? null} onOpenChange={(open) => !open && setDetail(null)} /><ProposalDetail detail={opportunityDetail} requirements={sales.data?.requirements ?? []} onOpenChange={(open) => !open && setOpportunityDetail(null)} actorId={user?.id ?? null} /></PermissionGate>;
+  const [opportunityDetail, setOpportunityDetail] = useState<SalesOpportunity | null>(null);
+  const [specificationDetail, setSpecificationDetail] = useState<{ opportunity: SalesOpportunity; specification: MasterSpecificationSummary } | null>(null);
+  const selectedSpecification = sales.data?.masterSpecifications.find((item) => item.opportunity_id === opportunityDetail?.id) ?? null;
+  return <PermissionGate permission="sales.view"><EnquiriesWorkspace enquiries={sales.data?.enquiries ?? []} opportunities={sales.data?.opportunities ?? []} onNew={() => setNewEnquiryOpen(true)} onOpenEnquiry={setDetail} onOpenOpportunity={setOpportunityDetail} /><EnquiryDialog open={newEnquiryOpen} onOpenChange={setNewEnquiryOpen} customers={sales.data?.customers ?? []} contacts={sales.data?.contacts ?? []} employees={sales.data?.employees ?? []} /><EnquiryDetail enquiry={detail} departments={sales.data?.departments ?? []} linkedOpportunity={sales.data?.opportunities.find((opportunity) => opportunity.enquiry_id === detail?.id) ?? null} onOpenChange={(open) => !open && setDetail(null)} /><OpportunityDetail opportunity={opportunityDetail} specification={selectedSpecification} onViewSpecification={() => { if (opportunityDetail && selectedSpecification) { setOpportunityDetail(null); setSpecificationDetail({ opportunity: opportunityDetail, specification: selectedSpecification }); } }} onOpenChange={(open) => !open && setOpportunityDetail(null)} /><ProposalDetail detail={specificationDetail} requirements={sales.data?.requirements ?? []} onOpenChange={(open) => !open && setSpecificationDetail(null)} actorId={user?.id ?? null} /></PermissionGate>;
 }
