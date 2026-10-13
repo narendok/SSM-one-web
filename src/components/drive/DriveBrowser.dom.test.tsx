@@ -86,7 +86,7 @@ describe("DriveBrowser project reads", () => {
 
     expect((await screen.findByRole("button", { name: "Folder" })).hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Drive" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Project files" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("keeps upload and folder creation available for a loaded unlocked folder", async () => {
