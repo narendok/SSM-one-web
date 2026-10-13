@@ -16,6 +16,7 @@ new_case responsibility_cases
 worker responsibility_cases 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000431 /tmp/structured-docx-same-key-one.out & one=$!
 worker responsibility_cases 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000431 /tmp/structured-docx-same-key-two.out & two=$!
 wait "$one"; wait "$two"; assert_counts responsibility_cases '1:1:1'; printf 'SAME_KEY_REPLAY_PASS receipts=1 audits=1 active=1\n'
+psql "${psql_args[@]}" --dbname=responsibility_cases <<'SQL' >/dev/null
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000401',false);
 SELECT public.assign_project_structured_docx_responsibility('00000000-0000-4000-8000-000000000420','00000000-0000-4000-8000-000000000410','DFMEA','00000000-0000-4000-8000-000000000402',NULL,'00000000-0000-4000-8000-000000000434');
 SELECT set_config('request.jwt.claim.sub','',false);
