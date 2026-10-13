@@ -366,7 +366,7 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(await screen.findByText("Persisted unissued revision 1 is available for this exact pinned source.")).toBeTruthy();
     expect((screen.getByLabelText("Scope statement") as HTMLTextAreaElement).value).toBe("Hydrated historical HTML text");
     expect(screen.getByRole("button", { name: "View saved revision history" })).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Save unavailable" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Save structured Sales draft" }) as HTMLButtonElement).disabled).toBe(true);
     expect(discoverStructuredSalesDraftCapabilityMock).toHaveBeenCalledTimes(1);
   });
 
