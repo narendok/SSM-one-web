@@ -32,5 +32,7 @@ describe("OpportunityDetail", () => {
     expect(screen.getByRole("tab", { name: "Feasibility" })).toBeTruthy();
     expect(screen.getByText("Project status")).toBeTruthy();
     expect(screen.getByText(/A project can only be created through the approved baseline/i)).toBeTruthy();
+    expect(screen.getByText("Not sent for feasibility; no assigned team.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Start feasibility review" })).toBeDisabled();
   });
 });
