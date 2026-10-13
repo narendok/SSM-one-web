@@ -65,7 +65,7 @@ export function SalesDashboard({ customers, enquiries, opportunities, clientProj
       {metrics.map((metric) => <Card key={metric.label}><CardHeader className="pb-2"><CardDescription>{metric.label}</CardDescription><CardTitle className="text-2xl">{metric.value}</CardTitle></CardHeader><CardContent className="text-xs text-muted-foreground">{metric.detail}</CardContent></Card>)}
     </section>
     <section className="grid gap-5 xl:grid-cols-3">
-      <WorkColumn icon={ClipboardList} title="Ongoing enquiries" description="Saved customer needs that need a next step." link={{ to: "/sales/enquiries", label: "View enquiries" }}>
+      <WorkColumn icon={ClipboardList} title="Ongoing enquiries" description="Saved customer needs that need a next step." link={{ to: "/sales/enquiries", label: "View enquiries & opportunities" }}>
         {ongoingEnquiries.slice(0, 6).map((enquiry) => <button type="button" key={enquiry.id} onClick={() => onOpenEnquiry(enquiry)} className="w-full border-l-2 border-primary/30 py-1 pl-3 text-left"><div className="flex items-start justify-between gap-2"><p className="font-medium">{enquiry.enquiry_number}</p><Badge variant="outline">{label(enquiry.status)}</Badge></div><p className="mt-1 line-clamp-2 text-sm">{enquiry.requirement_summary}</p><p className="mt-1 text-xs text-muted-foreground">{enquiry.customer?.legal_name ?? "Customer not linked"} · {enquiry.next_action ?? "No next action"}</p><p className="mt-1 text-xs text-muted-foreground">{dueLabel(enquiry.next_action_date)}</p></button>)}
         {!ongoingEnquiries.length && <EmptyState icon={ClipboardList} text="No ongoing enquiries are recorded." />}
       </WorkColumn>
