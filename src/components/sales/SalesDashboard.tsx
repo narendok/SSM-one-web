@@ -81,7 +81,7 @@ export function SalesDashboard({ customers, enquiries, opportunities, tickets, t
 }
 
 function WorkColumn({ icon: Icon, title, description, link, children }: { icon: typeof ClipboardList; title: string; description: string; link: { to: "/sales/enquiries" | "/customer-service" | "/tasks"; label: string }; children: React.ReactNode }) {
-  return <Card><CardHeader><div className="flex items-center gap-2"><Icon className="size-4 text-primary" /><CardTitle>{title}</CardTitle></div><CardDescription>{description}</CardDescription></CardHeader><CardContent className="space-y-4">{children}<Button asChild variant="ghost" className="w-full justify-between"><Link to={link.to}>{link.label}<ArrowRight className="size-4" /></Link></Button></CardContent></Card>;
+  return <Card><CardHeader><div className="flex items-center gap-2"><Icon className="size-4 text-primary" /><CardTitle>{title}</CardTitle></div><CardDescription>{description}</CardDescription></CardHeader><CardContent className="space-y-4">{children}<Button asChild variant="ghost" className="w-full justify-between">{link.to === "/sales/enquiries" ? <Link to="/sales/enquiries">{link.label}<ArrowRight className="size-4" /></Link> : link.to === "/customer-service" ? <Link to="/customer-service">{link.label}<ArrowRight className="size-4" /></Link> : <Link to="/tasks">{link.label}<ArrowRight className="size-4" /></Link>}</Button></CardContent></Card>;
 }
 
 function EmptyState({ icon: Icon, text }: { icon: typeof AlertCircle; text: string }) {
