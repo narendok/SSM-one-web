@@ -23,4 +23,8 @@
 
 ## Single planning entry point
 
-Read docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md for the current web/backend requirements and delivery order; update it in place rather than adding competing dated portal roadmaps. Use docs/planning/SSM_ONE_DOCUMENT_CATALOGUE.md as an optimized reference, not an implementation prerequisite. Preserve technical contracts, pending SQL and historical evidence; source-only work is not a live API. Android builds have their own plan in the Android repository. In the local SSMOneWeb workspace, active docs live at ../docs and the source checkout excludes its duplicate docs folder; GitHub/Lovable retain the repository docs/ paths. Dated backups are immutable.
+Read docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md for the current web/backend requirements and delivery order; update it in place rather than adding competing dated portal roadmaps. Use docs/planning/SSM_ONE_DOCUMENT_CATALOGUE.md as an optimized reference, not an implementation prerequisite. Preserve technical contracts, pending SQL and historical evidence; source-only work is not a live API. Android builds have their own plan in the Android repository. SSMOneWeb itself is the full Git repository root; application code and docs/ are tracked together. No separate docs mirror or nested source checkout is used. Historical backups live outside this repository in sibling SSMOneWebBackups. Dated backups are immutable.
+
+## Workspace authority
+
+Use original Lovable project d758dbf2-2f0e-44b3-b149-1ec51def58eb and backend yyrvduosyyaluifqvwkr. Preserve existing auth, departments, RLS, official numbering, manual edits and historical revisions. Do not create a competing backend. No destructive database operations, new production test users, privileged credential/access changes or Publish without required specific authorization. Historical backup captures are immutable; code/Git capture is not a database or private Storage backup.

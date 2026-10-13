@@ -9,4 +9,4 @@ This is the single active documentation folder for the web portal and its backen
 
 Technical interface contracts and pending SQL remain in their established source locations; do not treat proposals as installed operations. Original source/reference data remains under planning/sources. Dated backup snapshots retain their original docs layout and are immutable.
 
-Active local documentation lives directly in SSMOneWeb/docs, separate from application code in source/. GitHub/Lovable version these files under repository docs/. The local source checkout excludes docs/ to avoid another physical copy; documentation sync uses an isolated Git index and preserves current remote application code. Android planning remains in its own repository.
+SSMOneWeb is the full Git repository root. This docs/ folder is tracked alongside portal application code, directly synchronized by normal Git operations with GitHub/Lovable. There is no nested source checkout or separate documentation mirror. Historical backups live outside the repository in sibling SSMOneWebBackups; Android planning stays in its own repository.

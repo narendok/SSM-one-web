@@ -4,7 +4,7 @@
 - [Optimized document catalogue](docs/planning/SSM_ONE_DOCUMENT_CATALOGUE.md)
 - [Documentation and evidence](docs/README.md)
 
-These are the current web/backend planning entry points. Historical implementation reports are under docs/evidence; technical contracts and pending SQL retain their exact scope. Android implementation/build planning remains in the separate Android repository. The local SSMOneWeb workspace keeps one physical docs folder at its root, mirrored to repository docs/ for GitHub/Lovable. No backend activation or deployment is implied by this documentation sync.
+These are the current web/backend planning entry points. Historical implementation reports are under docs/evidence; technical contracts and pending SQL retain their exact scope. Android implementation/build planning remains in the separate Android repository. SSMOneWeb itself is the full Git repository root: application code and docs/ are tracked together and synchronized directly with GitHub/Lovable. There is no nested source checkout or documentation mirror. Historical backups are preserved outside the repository in sibling SSMOneWebBackups. No backend activation or deployment is implied by this documentation sync.
 
 The existing application reference follows and retains its historical description; current contracts and the unified plan govern changed behavior.
 
