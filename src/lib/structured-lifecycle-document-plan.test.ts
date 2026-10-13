@@ -5,8 +5,9 @@ describe("structured lifecycle document plan", () => {
   it("maps all twelve templates to one responsible department and scope", () => {
     expect(structuredLifecycleDocumentPlan).toHaveLength(12);
     expect(structuredLifecyclePlanForDepartment("SAL").map((row) => row.kind)).toEqual([
-      "SOR", "NDA", "COMMERCIAL_QUOTATION", "CONTRACT_REVIEW",
+      "SOR", "COMMERCIAL_QUOTATION", "CONTRACT_REVIEW",
     ]);
+    expect(structuredLifecyclePlanForDepartment("OPS").map((row) => row.kind)).toEqual(["NDA"]);
     expect(structuredLifecyclePlanForDepartment("RND").map((row) => row.kind)).toEqual([
       "PRS", "BOM_COST_TRACKER", "DFMEA", "DVPR",
     ]);
@@ -21,5 +22,16 @@ describe("structured lifecycle document plan", () => {
     expect(structuredLifecyclePlanForKind("SOR")).toMatchObject({ scope: "SALES_OPPORTUNITY", materializationState: "DEPLOYMENT_PENDING" });
     expect(structuredLifecyclePlanForKind("CONTRACT_REVIEW")).toMatchObject({ requiresExplicitResponsibility: true, materializationState: "DEPLOYMENT_PENDING" });
     expect(structuredLifecyclePlanForKind("DFMEA")).toMatchObject({ scope: "PROJECT", materializationState: "LOCAL_EXPORT_ONLY" });
+  });
+
+  it("routes NDA to Operations / Legal without granting Sales access", () => {
+    expect(structuredLifecyclePlanForKind("NDA")).toMatchObject({
+      departmentCode: "OPS",
+      departmentName: "Operations / Legal",
+      requiresExplicitResponsibility: true,
+      scope: "SALES_OPPORTUNITY",
+      materializationState: "LOCAL_EXPORT_ONLY",
+    });
+    expect(structuredLifecyclePlanForDepartment("SAL").some((row) => row.kind === "NDA")).toBe(false);
   });
 });

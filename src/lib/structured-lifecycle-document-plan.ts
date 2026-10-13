@@ -4,7 +4,7 @@ export type StructuredDocumentPlanRow = {
   kind: StructuredLifecycleTemplateKind;
   label: string;
   description: string;
-  departmentCode: "SAL" | "RND" | "PROD" | "FIN" | "HR";
+  departmentCode: "SAL" | "OPS" | "RND" | "PROD" | "FIN" | "HR";
   departmentName: string;
   requiresExplicitResponsibility: boolean;
   scope: "SALES_OPPORTUNITY" | "PROJECT";
@@ -13,6 +13,7 @@ export type StructuredDocumentPlanRow = {
 
 const departmentNames = {
   SAL: "Sales",
+  OPS: "Operations / Legal",
   RND: "Hardware & R&D",
   PROD: "Production & Calibration",
   FIN: "Finance",
@@ -21,7 +22,7 @@ const departmentNames = {
 
 const rows: readonly StructuredDocumentPlanRow[] = [
   { kind: "SOR", label: "Statement of Requirements", description: "Sales source requirements and scope.", departmentCode: "SAL", departmentName: departmentNames.SAL, requiresExplicitResponsibility: false, scope: "SALES_OPPORTUNITY", materializationState: "DEPLOYMENT_PENDING" },
-  { kind: "NDA", label: "NDA review", description: "Sales confidentiality review.", departmentCode: "SAL", departmentName: departmentNames.SAL, requiresExplicitResponsibility: false, scope: "SALES_OPPORTUNITY", materializationState: "LOCAL_EXPORT_ONLY" },
+  { kind: "NDA", label: "NDA review", description: "Legal review, initially operated through Operations.", departmentCode: "OPS", departmentName: departmentNames.OPS, requiresExplicitResponsibility: true, scope: "SALES_OPPORTUNITY", materializationState: "LOCAL_EXPORT_ONLY" },
   { kind: "COMMERCIAL_QUOTATION", label: "Commercial quotation", description: "Sales commercial worksheet.", departmentCode: "SAL", departmentName: departmentNames.SAL, requiresExplicitResponsibility: false, scope: "SALES_OPPORTUNITY", materializationState: "LOCAL_EXPORT_ONLY" },
   { kind: "CONTRACT_REVIEW", label: "Contract Review", description: "Sales-led cross-functional review.", departmentCode: "SAL", departmentName: departmentNames.SAL, requiresExplicitResponsibility: true, scope: "SALES_OPPORTUNITY", materializationState: "DEPLOYMENT_PENDING" },
   { kind: "PRS", label: "Product Requirements Specification", description: "Hardware & R&D requirements specification.", departmentCode: "RND", departmentName: departmentNames.RND, requiresExplicitResponsibility: true, scope: "PROJECT", materializationState: "LOCAL_EXPORT_ONLY" },
