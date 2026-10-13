@@ -8,6 +8,7 @@ import { DriveBrowser } from "./DriveBrowser";
 
 const fetchChildren = vi.fn();
 const initialFolder = vi.fn();
+const searchDepartmentDriveNodes = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -26,6 +27,7 @@ vi.mock("@/lib/drive", async () => {
   return {
     ...actual,
     fetchChildren: (...args: unknown[]) => fetchChildren(...args),
+    searchDepartmentDriveNodes: (...args: unknown[]) => searchDepartmentDriveNodes(...args),
     fetchCanonicalDepartments: vi.fn().mockResolvedValue([]),
   };
 });
@@ -52,6 +54,7 @@ afterEach(() => {
   cleanup();
   fetchChildren.mockReset();
   initialFolder.mockReset();
+  searchDepartmentDriveNodes.mockReset();
 });
 
 describe("DriveBrowser project reads", () => {
@@ -99,5 +102,15 @@ describe("DriveBrowser project reads", () => {
       expect(folderButton.hasAttribute("disabled")).toBe(false);
       expect(uploadButton.hasAttribute("disabled")).toBe(false);
     });
+  });
+
+  it("does not load cross-project Drive records outside a selected department", async () => {
+    const user = userEvent.setup();
+    renderBrowser(() => fetchChildren.mockResolvedValue([]));
+
+    expect(screen.queryByLabelText("Across projects")).toBeNull();
+    expect(searchDepartmentDriveNodes).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole("button", { name: "Upload" }));
+    expect(searchDepartmentDriveNodes).not.toHaveBeenCalled();
   });
 });
