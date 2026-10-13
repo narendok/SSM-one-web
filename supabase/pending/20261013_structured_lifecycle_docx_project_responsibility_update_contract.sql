@@ -52,6 +52,9 @@ DECLARE
   v_target_employee public.employees%ROWTYPE;
   v_target_membership public.employee_departments%ROWTYPE;
   v_target_team_membership public.project_team_members%ROWTYPE;
+  v_manager_employee public.employees%ROWTYPE;
+  v_manager_membership public.employee_departments%ROWTYPE;
+  v_manager_team_membership public.project_team_members%ROWTYPE;
   v_department public.departments%ROWTYPE;
   v_replacement_id uuid;
   v_payload_hash text;
@@ -91,22 +94,27 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Current project structured DOCX department is unavailable';
   END IF;
+  -- Lock the caller's mutable manager prerequisites before the authoritative
+  -- post-lock assertion. A membership/status revocation that wins while this
+  -- request waits therefore rejects rather than using pre-wait authority.
+  SELECT * INTO v_manager_employee FROM public.employees
+  WHERE user_id = v_actor
+  FOR SHARE;
+  SELECT * INTO v_manager_membership FROM public.employee_departments
+  WHERE employee_id = v_manager_employee.id AND department_id = v_previous.department_id
+  FOR KEY SHARE;
+  SELECT * INTO v_manager_team_membership FROM public.project_team_members
+  WHERE employee_id = v_manager_employee.id AND project_id = v_previous.project_id
+  FOR KEY SHARE;
+  IF v_manager_employee.id IS NULL OR v_manager_employee.employment_status <> 'ACTIVE'
+     OR v_manager_membership.employee_id IS NULL OR v_manager_team_membership.employee_id IS NULL THEN
+    RAISE EXCEPTION 'Active project-team membership is required for registry management';
+  END IF;
   v_actor := public.assert_structured_lifecycle_docx_registry_manager(v_previous.project_id, v_previous.department_id);
   v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object(
     'assignment_id',p_assignment_id,'expected_revision',p_expected_revision,
     'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id
   )::text,'UTF8'),'sha256'),'hex');
-  SELECT * INTO v_receipt
-  FROM public.structured_lifecycle_docx_responsibility_update_receipts
-  WHERE actor_user_id = v_actor AND request_key = p_request_key
-  FOR UPDATE;
-  IF FOUND THEN
-    IF v_receipt.payload_hash = v_payload_hash THEN RETURN v_receipt.replacement_assignment_id; END IF;
-    RAISE EXCEPTION 'Responsibility reassignment request key conflicts with a different payload';
-  END IF;
-
-  -- A successful exact replay still requires the caller's current manager
-  -- authority. Receipt lookup is intentionally after both advisory locks.
   SELECT * INTO v_receipt
   FROM public.structured_lifecycle_docx_responsibility_update_receipts
   WHERE actor_user_id = v_actor AND request_key = p_request_key

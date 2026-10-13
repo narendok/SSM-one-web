@@ -7,19 +7,21 @@ cleanup(){ status=$?; if [[ -n "$server_pid" ]] && kill -0 "$server_pid" 2>/dev/
 mkdir -p "$socket_dir"; chown -R 1000:1000 "$work_dir"; setpriv --reuid=1000 --regid=1000 --clear-groups initdb -D "$data_dir" --no-locale --encoding=UTF8 --auth-local=trust -U lovable >/dev/null
 printf "listen_addresses=''\nport=%s\nunix_socket_directories='%s'\nshared_memory_type=mmap\ndynamic_shared_memory_type=mmap\n" "$port" "$socket_dir" >> "$data_dir/postgresql.conf"; setpriv --reuid=1000 --regid=1000 --clear-groups postgres -D "$data_dir" >/dev/null 2>&1 & server_pid=$!
 for _ in $(seq 1 150); do psql --host="$socket_dir" --port="$port" --username=lovable --dbname=postgres -Atqc 'SELECT 1' >/dev/null 2>&1 && break; sleep .1; done
-createdb --host="$socket_dir" --port="$port" --username=lovable structured_docx_responsibility_update_race; args=(--set=ON_ERROR_STOP=1 --host="$socket_dir" --port="$port" --username=lovable --dbname=structured_docx_responsibility_update_race)
-psql "${args[@]}" -f "$root/supabase/pending/tests/structured_lifecycle_docx_registry_local_fixture.sql" >/dev/null
-psql "${args[@]}" -f "$root/supabase/pending/20261012_structured_lifecycle_docx_registry_contract.sql" >/dev/null
-psql "${args[@]}" -f "$root/supabase/pending/20261013_structured_lifecycle_docx_project_responsibility_update_contract.sql" >/dev/null
-psql "${args[@]}" -f "$root/supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_setup.sql" >/dev/null
-psql "${args[@]}" -v responsible_employee_id='00000000-0000-4000-8000-000000000303' -v request_key='00000000-0000-4000-8000-000000000331' -f "$root/supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_worker.sql" >/tmp/structured-docx-update-race-one.out 2>&1 & one=$!
-psql "${args[@]}" -v responsible_employee_id='00000000-0000-4000-8000-000000000304' -v request_key='00000000-0000-4000-8000-000000000332' -f "$root/supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_worker.sql" >/tmp/structured-docx-update-race-two.out 2>&1 & two=$!
-set +e
-wait "$one"; one_status=$?
-wait "$two"; two_status=$?
-set -e
-if [[ $one_status -eq 0 && $two_status -eq 0 ]]; then echo 'Both simultaneous same-revision reassignments succeeded' >&2; exit 1; fi
-if [[ $one_status -ne 0 && $two_status -ne 0 ]]; then echo 'Both simultaneous same-revision reassignments failed' >&2; exit 1; fi
-if ! { cat /tmp/structured-docx-update-race-one.out /tmp/structured-docx-update-race-two.out | rg -q 'Project structured DOCX responsibility revision is stale|Active project structured DOCX responsibility assignment is unavailable'; }; then echo 'Losing reassignment did not reject after the competing reassignment' >&2; exit 1; fi
-psql "${args[@]}" -f "$root/supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_assertions.sql"
+args=(--set=ON_ERROR_STOP=1 --host="$socket_dir" --port="$port" --username=lovable)
+new_case(){ local db="$1"; createdb "${args[@]}" "$db"; psql "${args[@]}" --dbname="$db" -f "$root/supabase/pending/tests/structured_lifecycle_docx_registry_local_fixture.sql" >/dev/null; psql "${args[@]}" --dbname="$db" -f "$root/supabase/pending/20261012_structured_lifecycle_docx_registry_contract.sql" >/dev/null; psql "${args[@]}" --dbname="$db" -f "$root/supabase/pending/20261013_structured_lifecycle_docx_project_responsibility_update_contract.sql" >/dev/null; psql "${args[@]}" --dbname="$db" -f "$root/supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_case_setup.sql" >/dev/null; }
+worker(){ local db="$1" target="$2" key="$3" output="$4"; psql "${args[@]}" --dbname="$db" -v responsible_employee_id="$target" -v request_key="$key" -f "$root/supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_case_worker.sql" >"$output" 2>&1; }
+assert_counts(){ local db="$1" expected="$2"; psql "${args[@]}" --dbname="$db" -Atqc "SELECT count(*) || ':' || (SELECT count(*) FROM public.structured_lifecycle_docx_responsibility_update_audit_events) || ':' || (SELECT count(*) FROM public.structured_lifecycle_docx_responsibility_assignments WHERE status='ACTIVE' AND project_id='00000000-0000-4000-8000-000000000420' AND document_kind='BOM') FROM public.structured_lifecycle_docx_responsibility_update_receipts" | rg -x "$expected" >/dev/null; }
+new_case same_key
+worker same_key 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000431 /tmp/structured-docx-same-key-one.out & one=$!
+worker same_key 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000431 /tmp/structured-docx-same-key-two.out & two=$!
+wait "$one"; wait "$two"; assert_counts same_key '1:1:1'; printf 'SAME_KEY_REPLAY_PASS receipts=1 audits=1 active=1\n'
+new_case conflicting_key
+worker conflicting_key 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000432 /tmp/structured-docx-conflict-one.out & one=$!
+worker conflicting_key 00000000-0000-4000-8000-000000000404 00000000-0000-4000-8000-000000000432 /tmp/structured-docx-conflict-two.out & two=$!
+set +e; wait "$one"; one_status=$?; wait "$two"; two_status=$?; set -e
+if [[ $one_status -eq 0 && $two_status -eq 0 ]] || [[ $one_status -ne 0 && $two_status -ne 0 ]] || ! cat /tmp/structured-docx-conflict-one.out /tmp/structured-docx-conflict-two.out | rg -q 'request key conflicts'; then echo 'Conflicting request-key race did not yield one conflict' >&2; exit 1; fi
+assert_counts conflicting_key '1:1:1'; printf 'CONFLICTING_PAYLOAD_PASS receipts=1 audits=1 active=1\n'
+race_revocation(){ local case_name="$1" mutation="$2" expected_error="$3"; new_case "$case_name"; psql "${args[@]}" --dbname="$case_name" -c "BEGIN; SELECT pg_advisory_xact_lock(hashtextextended('structured-docx-assignment|00000000-0000-4000-8000-000000000420|BOM',0)); SELECT pg_sleep(1); COMMIT;" >/dev/null 2>&1 & holder=$!; sleep .1; worker "$case_name" 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000433 "/tmp/structured-docx-${case_name}.out" & worker_pid=$!; sleep .1; psql "${args[@]}" --dbname="$case_name" -c "$mutation" >/dev/null; wait "$holder"; set +e; wait "$worker_pid"; worker_status=$?; set -e; if [[ $worker_status -eq 0 ]] || ! rg -q "$expected_error" "/tmp/structured-docx-${case_name}.out"; then echo "$case_name revocation race did not reject" >&2; exit 1; fi; assert_counts "$case_name" '0:0:1'; printf '%s_PASS receipts=0 audits=0 active=1\n' "${case_name^^}"; }
+race_revocation manager_membership_revoke "DELETE FROM public.project_team_members WHERE project_id='00000000-0000-4000-8000-000000000420' AND employee_id='00000000-0000-4000-8000-000000000401'" 'Active project-team membership is required'
+race_revocation target_membership_revoke "DELETE FROM public.employee_departments WHERE department_id='00000000-0000-4000-8000-000000000410' AND employee_id='00000000-0000-4000-8000-000000000403'" 'Assigned responsible and reviewer employees must be active department project-team members'
 printf 'STRUCTURED_LIFECYCLE_DOCX_PROJECT_RESPONSIBILITY_UPDATE_CONCURRENCY_PASS=true\n'
