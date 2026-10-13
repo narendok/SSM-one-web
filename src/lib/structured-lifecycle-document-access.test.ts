@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canOpenDirectSalesStructuredDocuments,
   isStructuredDocumentInCatalog,
+  projectStructuredDocumentAvailability,
 } from "./structured-lifecycle-document-access";
 
 describe("structured lifecycle document catalog routing", () => {
@@ -53,5 +54,12 @@ describe("structured lifecycle document catalog routing", () => {
     expect(canOpenDirectSalesStructuredDocuments({ ...pinnedEntry, isActive: false })).toBe(false);
     expect(canOpenDirectSalesStructuredDocuments({ ...pinnedEntry, folderIsLocked: false })).toBe(false);
     expect(canOpenDirectSalesStructuredDocuments({ ...pinnedEntry, folderIsTrashed: true })).toBe(false);
+  });
+
+  it("withholds all project document titles and exports until the backend resolves a current assigned person", () => {
+    expect(projectStructuredDocumentAvailability()).toEqual({
+      available: false,
+      reason: "Project document titles, contents, and local export remain unavailable until the backend verifies a current responsible-person assignment.",
+    });
   });
 });
