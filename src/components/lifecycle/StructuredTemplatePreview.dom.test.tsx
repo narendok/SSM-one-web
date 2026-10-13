@@ -15,7 +15,7 @@ import { mapMasterSpecificationSource } from "@/lib/lifecycle-structured-templat
 import { MASTER_SPECIFICATION_TBC } from "@/lib/master-specification";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { ProposalDetail } from "@/routes/_authenticated/sales";
+import { ProposalDetail, SalesDocumentsDetail } from "@/routes/_authenticated/sales";
 
 const source = mapMasterSpecificationSource({
   opportunityId: "opportunity-id",
@@ -231,6 +231,29 @@ function ProposalDetailDialogHarness() {
   );
 }
 
+function SalesDocumentsDetailHarness() {
+  const [open, setOpen] = useState(true);
+  const detail = {
+    opportunity: {
+      id: "opportunity-id",
+      opportunity_number: "OPPORTUNITY-2026-0013",
+    },
+    specification: {
+      id: "specification-id",
+      specification_number: "MASTER-2026-0001",
+      current_version: 1,
+      customer_id: "customer-id",
+    },
+  } as never;
+  return (
+    <SalesDocumentsDetail
+      detail={open ? detail : null}
+      onOpenChange={setOpen}
+      actorId="actor-a"
+    />
+  );
+}
+
 const proposalSpecificationData = {
   proposedName: "Synthetic Tracker",
   customerOrInternalOwner: "Synthetic OEM",
@@ -368,6 +391,33 @@ describe("StructuredTemplatePreview mounted local interactions", () => {
     expect(screen.getByRole("button", { name: "View saved revision history" })).toBeTruthy();
     expect((screen.getByRole("button", { name: "Save structured Sales draft" }) as HTMLButtonElement).disabled).toBe(true);
     expect(discoverStructuredSalesDraftCapabilityMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the Sales document editor directly for the pinned Sales source without proposal nesting", async () => {
+    previewSource.mockResolvedValue(source);
+    discoverStructuredSalesDraftCapabilityMock.mockResolvedValue(null);
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === "sales_opportunity_structured_drafts") {
+        return { select: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }) }) }) }) }) } as never;
+      }
+      throw new Error(`Unexpected table ${table}`);
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <SalesDocumentsDetailHarness />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("Sales documents")).toBeTruthy();
+    expect((await screen.findByTestId("pinned-authorized-source")).textContent).toContain(
+      "OPPORTUNITY-2026-0013",
+    );
+    expect(screen.getByRole("tab", { name: "Statement of Requirements" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Contract Review" })).toBeTruthy();
+    expect(screen.queryByText("Back to proposal")).toBeNull();
+    expect(screen.queryByRole("tab", { name: /BOM/i })).toBeNull();
+    expect((screen.getByRole("button", { name: "Save structured Sales draft" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("isolates authorized source and local edits when the mounted actor changes or signs out", async () => {
