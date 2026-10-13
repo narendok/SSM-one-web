@@ -16,8 +16,8 @@ new_case same_key
 worker same_key 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000431 /tmp/structured-docx-same-key-one.out & one=$!
 worker same_key 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000431 /tmp/structured-docx-same-key-two.out & two=$!
 wait "$one"; wait "$two"; assert_counts same_key '1:1:1'; printf 'SAME_KEY_REPLAY_PASS receipts=1 audits=1 active=1\n'
-worker same_key 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000432 /tmp/structured-docx-conflict-one.out & one=$!
-worker same_key 00000000-0000-4000-8000-000000000404 00000000-0000-4000-8000-000000000432 /tmp/structured-docx-conflict-two.out & two=$!
+worker same_key 00000000-0000-4000-8000-000000000404 00000000-0000-4000-8000-000000000432 /tmp/structured-docx-conflict-one.out & one=$!
+worker same_key 00000000-0000-4000-8000-000000000403 00000000-0000-4000-8000-000000000432 /tmp/structured-docx-conflict-two.out & two=$!
 set +e; wait "$one"; one_status=$?; wait "$two"; two_status=$?; set -e
 if [[ $one_status -eq 0 && $two_status -eq 0 ]] || [[ $one_status -ne 0 && $two_status -ne 0 ]] || ! cat /tmp/structured-docx-conflict-one.out /tmp/structured-docx-conflict-two.out | rg -q 'request key conflicts'; then echo 'Conflicting request-key race did not yield one conflict' >&2; exit 1; fi
 assert_counts same_key '2:2:1'; printf 'CONFLICTING_PAYLOAD_PASS receipts=2 audits=2 active=1\n'
