@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, CircleAlert, Eye, FileText, FolderOpen, Plus, Search } from "lucide-react";
+import { Building2, CircleAlert, Eye, FileText, FolderOpen, Plus } from "lucide-react";
 import { PermissionGate } from "@/components/PermissionGate";
 import { StructuredTemplatePreview } from "@/components/lifecycle/StructuredTemplatePreview";
 import { EnquiryDialog } from "@/components/sales/SalesIntakeDialogs";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EnquiryDetail } from "@/components/sales/EnquiryDetail";
+import { SalesDashboard } from "@/components/sales/SalesDashboard";
 import { StructuredPreviewExitDialog } from "@/components/lifecycle/StructuredPreviewExitBoundary";
 import {
   type CustomerRequirement,
@@ -25,6 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { salesOverviewQueryOptions } from "@/lib/sales-overview-query";
 import { SalesOpportunityPipeline } from "@/components/sales/SalesOpportunityPipeline";
 import { canOpenDirectSalesStructuredDocuments, type SalesStructuredDocumentEntry } from "@/lib/structured-lifecycle-document-access";
+import { fetchTasks } from "@/lib/tasks";
 
 export const Route = createFileRoute("/_authenticated/sales")({
   head: () => ({
@@ -68,18 +70,13 @@ function toSalesStructuredDocumentEntry(
 }
 function SalesPage() {
   const [dialog, setDialog] = useState<"enquiry" | null>(null);
-  const [enquirySearch, setEnquirySearch] = useState("");
   const [enquiryDetail, setEnquiryDetail] = useState<SalesEnquiry | null>(null);
   const [showExistingRecords, setShowExistingRecords] = useState(false);
   const [detail, setDetail] = useState<SalesDetail | null>(null);
   const [documentDetail, setDocumentDetail] = useState<SalesDetail | null>(null);
   const { loading: authLoading, user } = useAuth();
   const sales = useQuery(salesOverviewQueryOptions(user?.id ?? null));
-  const visibleEnquiries = useMemo(() => {
-    const query = enquirySearch.trim().toLowerCase();
-    if (!query) return sales.data?.enquiries ?? [];
-    return (sales.data?.enquiries ?? []).filter((enquiry) => [enquiry.enquiry_number, enquiry.requirement_summary, enquiry.status, enquiry.customer?.legal_name].filter(Boolean).some((value) => value?.toLowerCase().includes(query)));
-  }, [enquirySearch, sales.data?.enquiries]);
+  const salesTasks = useQuery({ queryKey: ["project_tasks", "sales-overview"], queryFn: fetchTasks, enabled: Boolean(user?.id), retry: false });
   const directDocumentDetail = documentDetail;
   return (
     <PermissionGate permission="sales.view" fallback={<AccessDenied />}>
@@ -107,10 +104,7 @@ function SalesPage() {
             </CardContent>
           </Card>
         )}
-        <Card>
-          <CardHeader><CardTitle>Enquiries</CardTitle><CardDescription>Saved customer needs, newest first. Open a record to continue when its later actions are available.</CardDescription></CardHeader>
-          <CardContent className="space-y-3"><div className="relative max-w-md"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><input value={enquirySearch} onChange={(event) => setEnquirySearch(event.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm" placeholder="Search enquiries" /></div>{visibleEnquiries.map((item) => <button key={item.id} type="button" onClick={() => setEnquiryDetail(item)} className="flex w-full items-start justify-between gap-3 border-l-2 border-primary/30 pl-3 text-left"><div><p className="font-medium">{item.enquiry_number ?? "Enquiry"}</p><p className="mt-1 text-sm">{item.requirement_summary}</p><p className="mt-1 text-xs text-muted-foreground">{item.customer?.legal_name ?? "Customer not linked"} · {item.enquiry_date}</p></div><Badge variant="outline">{item.status.replaceAll("_", " ")}</Badge></button>)}{!visibleEnquiries.length && <p className="py-8 text-sm text-muted-foreground">No saved enquiries match this search.</p>}</CardContent>
-        </Card>
+        <SalesDashboard customers={sales.data?.customers ?? []} enquiries={sales.data?.enquiries ?? []} opportunities={sales.data?.opportunities ?? []} tickets={sales.data?.supportTickets ?? null} tasks={salesTasks.isError ? null : salesTasks.data ?? null} onOpenEnquiry={setEnquiryDetail} />
         <div><Button type="button" variant="outline" onClick={() => setShowExistingRecords((value) => !value)}>{showExistingRecords ? "Hide existing records" : "Existing records"}</Button>{showExistingRecords && <Card className="mt-3"><CardHeader><CardTitle>Opportunities</CardTitle><CardDescription>Existing records remain available here; opening a proposal keeps its established history and document controls.</CardDescription></CardHeader><CardContent className="space-y-3">{sales.data?.opportunities.map((item) => <div key={item.id} className="flex items-start justify-between gap-3 border-l-2 border-primary/30 pl-3"><div><p className="font-medium">{item.opportunity_number} · {item.name}</p><p className="mt-1 text-xs text-muted-foreground">{item.customer?.legal_name ?? "Customer pending"}</p></div><div className="flex items-center gap-2"><Badge variant="outline">{item.stage.replaceAll("_", " ")}</Badge>{sales.data?.masterSpecifications.find((specification) => specification.opportunity_id === item.id) && <Button size="sm" variant="outline" onClick={() => { const specification = sales.data?.masterSpecifications.find((candidate) => candidate.opportunity_id === item.id); if (specification) setDetail({ opportunity: item, specification }); }}>Open</Button>}</div></div>)}</CardContent></Card>}</div>
         <EnquiryDialog
           open={dialog === "enquiry"}
