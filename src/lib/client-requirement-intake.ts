@@ -86,6 +86,19 @@ export const controlledRequirementAvailability = {
   dependency: "A protected atomic requirement-creation routine must verify the opportunity/customer pair, pin the selected Master Specification version, create revision 1 and its audit receipt together, and reject replay or mismatched sources.",
 } as const;
 
+/**
+ * The handover controls deliberately remain present but unavailable until the
+ * source-only atomic contract has been installed and accepted. A due date is
+ * not collected here because the existing feasibility-review record has no
+ * due-date field; pretending it is saved would create a misleading workflow.
+ */
+export const salesFeasibilityHandoverAvailability = {
+  available: false,
+  reason: "Sending for feasibility is not available yet.",
+  detail: "It needs one protected saved action that creates the controlled requirement, assigns every selected department reviewer, and sends their notices together.",
+  dueDateDetail: "Due dates are not available because the current review record does not store a due date.",
+} as const;
+
 export function clientRequirementState(input: { expiresAt: string | null; isActive: boolean; revokedAt: string | null }, now = new Date()): "ACTIVE" | "EXPIRED" | "REVOKED" {
   if (!input.isActive || input.revokedAt) return "REVOKED";
   if (input.expiresAt && new Date(input.expiresAt) <= now) return "EXPIRED";
