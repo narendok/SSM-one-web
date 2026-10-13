@@ -335,14 +335,6 @@ function SalesPage() {
                           View proposal
                         </Button>
                       )}
-                       {specification && (
-                         <Button
-                           size="sm"
-                           onClick={() => setDocumentDetail({ opportunity: item, specification })}
-                         >
-                           <FileText className="size-4" /> Sales documents
-                         </Button>
-                       )}
                       {item.nda_required && <Badge variant="secondary">NDA</Badge>}
                     </div>
                   </div>
