@@ -5,7 +5,7 @@ STATUS: UNDEPLOYED. LOCAL DISPOSABLE ACCEPTANCE ONLY.
 
 Scope
 - Exact reviewed contract: `supabase/pending/20261013_structured_lifecycle_docx_project_responsibility_update_contract.sql`
-- Exact SHA-256: `8466fac60ce19b1f6c8be26d379b078e7ab7aaa65f799f34d4214f4544698936`
+- Exact SHA-256: `9d7ba40cd516b6e122e93520f556f62ced20af9f518204de152069e70f798a25`
 - The contract remains an additive extension of the frozen registry contract.
 - No installation, production grants, RLS policy change, data change, user creation, storage operation, UI wiring, or Publish action occurred.
 

@@ -20,6 +20,6 @@ wait "$two"; two_status=$?
 set -e
 if [[ $one_status -eq 0 && $two_status -eq 0 ]]; then echo 'Both simultaneous same-revision reassignments succeeded' >&2; exit 1; fi
 if [[ $one_status -ne 0 && $two_status -ne 0 ]]; then echo 'Both simultaneous same-revision reassignments failed' >&2; exit 1; fi
-if ! { cat /tmp/structured-docx-update-race-one.out /tmp/structured-docx-update-race-two.out | rg -q 'Project structured DOCX responsibility revision is stale'; }; then echo 'Losing reassignment did not fail stale' >&2; exit 1; fi
+if ! { cat /tmp/structured-docx-update-race-one.out /tmp/structured-docx-update-race-two.out | rg -q 'Project structured DOCX responsibility revision is stale|Active project structured DOCX responsibility assignment is unavailable'; }; then echo 'Losing reassignment did not reject after the competing reassignment' >&2; exit 1; fi
 psql "${args[@]}" -f "$root/supabase/pending/tests/structured_lifecycle_docx_project_responsibility_update_concurrency_assertions.sql"
 printf 'STRUCTURED_LIFECYCLE_DOCX_PROJECT_RESPONSIBILITY_UPDATE_CONCURRENCY_PASS=true\n'
