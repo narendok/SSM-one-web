@@ -3,9 +3,10 @@ import { DriveBrowser } from "@/components/drive/DriveBrowser";
 
 export const Route = createFileRoute("/_authenticated/drive")({
   validateSearch: (search: Record<string, unknown>) => {
-    const result: { node?: string; department?: string } = {};
+    const result: { node?: string; department?: string; salesEntry?: boolean } = {};
     if (typeof search.node === "string") result.node = search.node;
     if (typeof search.department === "string") result.department = search.department;
+    if (search.salesEntry === true) result.salesEntry = true;
     return result;
   },
   head: () => ({
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/drive")({
 });
 
 function DrivePage() {
-  const { node, department } = Route.useSearch();
+  const { node, department, salesEntry } = Route.useSearch();
   return (
     <div className="space-y-4">
       <div>
@@ -37,7 +38,7 @@ function DrivePage() {
           Browse the existing controlled project and department folder hierarchy available to your account.
         </p>
       </div>
-      <DriveBrowser initialNodeId={node} departmentId={department} />
+      <DriveBrowser initialNodeId={node} departmentId={department} restrictedFolderId={salesEntry && node ? node : null} />
     </div>
   );
 }
