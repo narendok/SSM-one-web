@@ -96,14 +96,18 @@ BEGIN
     SELECT 1 FROM public.employees employee
     JOIN public.employee_departments membership ON membership.employee_id = employee.id
       AND membership.department_id = v_previous.department_id
+    JOIN public.project_team_members team_membership ON team_membership.employee_id = employee.id
+      AND team_membership.project_id = v_previous.project_id
     WHERE employee.id = p_responsible_employee_id AND employee.employment_status = 'ACTIVE'
   ) OR (p_reviewer_employee_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.employees employee
     JOIN public.employee_departments membership ON membership.employee_id = employee.id
       AND membership.department_id = v_previous.department_id
+    JOIN public.project_team_members team_membership ON team_membership.employee_id = employee.id
+      AND team_membership.project_id = v_previous.project_id
     WHERE employee.id = p_reviewer_employee_id AND employee.employment_status = 'ACTIVE'
   )) THEN
-    RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department members';
+    RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department project-team members';
   END IF;
 
   UPDATE public.structured_lifecycle_docx_responsibility_assignments
