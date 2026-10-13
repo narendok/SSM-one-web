@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { OpportunityDetail } from "./OpportunityDetail";
 
@@ -32,6 +32,7 @@ describe("OpportunityDetail", () => {
     expect(screen.getByRole("tab", { name: "Feasibility" })).toBeTruthy();
     expect(screen.getByText("Project status")).toBeTruthy();
     expect(screen.getByText(/A project can only be created through the approved baseline/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Feasibility" }));
     expect(screen.getByText("Not sent for feasibility; no assigned team.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Start feasibility review" })).toBeDisabled();
   });
