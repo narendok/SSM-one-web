@@ -3,12 +3,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, CircleAlert, Eye, FileText, FolderOpen, Plus, Search } from "lucide-react";
 import { PermissionGate } from "@/components/PermissionGate";
-import { CreateCustomerDialog } from "@/components/sales/CreateCustomerDialog";
 import { StructuredTemplatePreview } from "@/components/lifecycle/StructuredTemplatePreview";
 import { EnquiryDialog } from "@/components/sales/SalesIntakeDialogs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StructuredPreviewExitDialog } from "@/components/lifecycle/StructuredPreviewExitBoundary";
 import {
   type CustomerRequirement,
@@ -76,6 +76,7 @@ function SalesPage() {
     if (!query) return sales.data?.enquiries ?? [];
     return (sales.data?.enquiries ?? []).filter((enquiry) => [enquiry.enquiry_number, enquiry.requirement_summary, enquiry.status, enquiry.customer?.legal_name].filter(Boolean).some((value) => value?.toLowerCase().includes(query)));
   }, [enquirySearch, sales.data?.enquiries]);
+  const directDocumentDetail = documentDetail;
   return (
     <PermissionGate permission="sales.view" fallback={<AccessDenied />}>
       <div className="space-y-6">
