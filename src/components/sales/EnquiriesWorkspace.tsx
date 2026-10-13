@@ -46,7 +46,7 @@ export function EnquiriesWorkspace({ enquiries, opportunities, onNew, onOpenEnqu
       owner: "Owner not assigned",
       nextAction: enquiry.next_action ?? "No next action",
       status: enquiry.status,
-      sourceEnquiryId: opportunity.enquiry_id,
+      sourceEnquiryId: null,
       record: enquiry,
     }));
     const opportunityItems = opportunities.map((opportunity) => ({
@@ -59,7 +59,7 @@ export function EnquiriesWorkspace({ enquiries, opportunities, onNew, onOpenEnqu
       owner: "Owner not assigned",
       nextAction: opportunity.next_action ?? "No next action",
       status: opportunity.status,
-      sourceEnquiryId: null,
+      sourceEnquiryId: opportunity.enquiry_id,
       record: opportunity,
     }));
     return [...opportunityItems, ...enquiryItems];

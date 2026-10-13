@@ -7,6 +7,7 @@ import { SalesOpportunityPipeline } from "./SalesOpportunityPipeline";
 const opportunity = {
   id: "opportunity-id",
   opportunity_number: "OPPORTUNITY-2026-0013",
+  enquiry_id: null,
   name: "Tracker",
   stage: "new",
   status: "active",
