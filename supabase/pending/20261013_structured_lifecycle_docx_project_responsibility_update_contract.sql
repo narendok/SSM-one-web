@@ -49,6 +49,10 @@ DECLARE
   v_actor uuid;
   v_previous public.structured_lifecycle_docx_responsibility_assignments%ROWTYPE;
   v_receipt public.structured_lifecycle_docx_responsibility_update_receipts%ROWTYPE;
+  v_target_employee public.employees%ROWTYPE;
+  v_target_membership public.employee_departments%ROWTYPE;
+  v_target_team_membership public.project_team_members%ROWTYPE;
+  v_department public.departments%ROWTYPE;
   v_replacement_id uuid;
   v_payload_hash text;
 BEGIN
@@ -58,13 +62,35 @@ BEGIN
     RAISE EXCEPTION 'Invalid project structured DOCX responsibility reassignment payload';
   END IF;
 
+  -- Authenticate independently before serializing a caller-owned request key.
+  -- Management authority is deliberately checked only after the assignment root
+  -- and current rows are locked below, then checked again on every replay.
+  v_actor := public.lifecycle_actor();
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws(
+    '|','structured-docx-reassignment-request',v_actor::text,p_request_key::text
+  ),0));
   SELECT * INTO v_previous
   FROM public.structured_lifecycle_docx_responsibility_assignments
   WHERE id = p_assignment_id;
   IF NOT FOUND OR v_previous.scope_type <> 'PROJECT' THEN
     RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
   END IF;
-
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws(
+    '|','structured-docx-assignment',v_previous.project_id::text,v_previous.document_kind
+  ),0));
+  SELECT * INTO v_previous
+  FROM public.structured_lifecycle_docx_responsibility_assignments
+  WHERE id = p_assignment_id
+  FOR UPDATE;
+  IF NOT FOUND OR v_previous.scope_type <> 'PROJECT' THEN
+    RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
+  END IF;
+  SELECT * INTO v_department FROM public.departments
+  WHERE id = v_previous.department_id
+  FOR SHARE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Current project structured DOCX department is unavailable';
+  END IF;
   v_actor := public.assert_structured_lifecycle_docx_registry_manager(v_previous.project_id, v_previous.department_id);
   v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object(
     'assignment_id',p_assignment_id,'expected_revision',p_expected_revision,
@@ -79,37 +105,52 @@ BEGIN
     RAISE EXCEPTION 'Responsibility reassignment request key conflicts with a different payload';
   END IF;
 
-  SELECT * INTO v_previous
-  FROM public.structured_lifecycle_docx_responsibility_assignments
-  WHERE id = p_assignment_id;
-  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',v_previous.project_id::text,v_previous.document_kind),0));
-  SELECT * INTO v_previous
-  FROM public.structured_lifecycle_docx_responsibility_assignments
-  WHERE id = p_assignment_id
+  -- A successful exact replay still requires the caller's current manager
+  -- authority. Receipt lookup is intentionally after both advisory locks.
+  SELECT * INTO v_receipt
+  FROM public.structured_lifecycle_docx_responsibility_update_receipts
+  WHERE actor_user_id = v_actor AND request_key = p_request_key
   FOR UPDATE;
-  IF NOT FOUND OR v_previous.scope_type <> 'PROJECT' OR v_previous.status <> 'ACTIVE' THEN
+  IF FOUND THEN
+    IF v_receipt.payload_hash = v_payload_hash THEN RETURN v_receipt.replacement_assignment_id; END IF;
+    RAISE EXCEPTION 'Responsibility reassignment request key conflicts with a different payload';
+  END IF;
+  IF v_previous.status <> 'ACTIVE' THEN
     RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
   END IF;
-
   IF v_previous.responsibility_revision <> p_expected_revision THEN
     RAISE EXCEPTION 'Project structured DOCX responsibility revision is stale';
   END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM public.employees employee
-    JOIN public.employee_departments membership ON membership.employee_id = employee.id
-      AND membership.department_id = v_previous.department_id
-    JOIN public.project_team_members team_membership ON team_membership.employee_id = employee.id
-      AND team_membership.project_id = v_previous.project_id
-    WHERE employee.id = p_responsible_employee_id AND employee.employment_status = 'ACTIVE'
-  ) OR (p_reviewer_employee_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.employees employee
-    JOIN public.employee_departments membership ON membership.employee_id = employee.id
-      AND membership.department_id = v_previous.department_id
-    JOIN public.project_team_members team_membership ON team_membership.employee_id = employee.id
-      AND team_membership.project_id = v_previous.project_id
-    WHERE employee.id = p_reviewer_employee_id AND employee.employment_status = 'ACTIVE'
-  )) THEN
+  -- Lock each mutable prerequisite so a concurrent employee-status, department,
+  -- department-membership, or project-team mutation cannot invalidate a target
+  -- between validation and the immutable replacement insert.
+  SELECT * INTO v_target_employee FROM public.employees
+  WHERE id = p_responsible_employee_id
+  FOR SHARE;
+  SELECT * INTO v_target_membership FROM public.employee_departments
+  WHERE employee_id = p_responsible_employee_id AND department_id = v_previous.department_id
+  FOR KEY SHARE;
+  SELECT * INTO v_target_team_membership FROM public.project_team_members
+  WHERE employee_id = p_responsible_employee_id AND project_id = v_previous.project_id
+  FOR KEY SHARE;
+  IF NOT FOUND OR v_target_employee.employment_status <> 'ACTIVE'
+     OR v_target_membership.employee_id IS NULL OR v_target_team_membership.employee_id IS NULL THEN
     RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department project-team members';
+  END IF;
+  IF p_reviewer_employee_id IS NOT NULL THEN
+    SELECT * INTO v_target_employee FROM public.employees
+    WHERE id = p_reviewer_employee_id
+    FOR SHARE;
+    SELECT * INTO v_target_membership FROM public.employee_departments
+    WHERE employee_id = p_reviewer_employee_id AND department_id = v_previous.department_id
+    FOR KEY SHARE;
+    SELECT * INTO v_target_team_membership FROM public.project_team_members
+    WHERE employee_id = p_reviewer_employee_id AND project_id = v_previous.project_id
+    FOR KEY SHARE;
+    IF NOT FOUND OR v_target_employee.employment_status <> 'ACTIVE'
+       OR v_target_membership.employee_id IS NULL OR v_target_team_membership.employee_id IS NULL THEN
+      RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department project-team members';
+    END IF;
   END IF;
 
   UPDATE public.structured_lifecycle_docx_responsibility_assignments
