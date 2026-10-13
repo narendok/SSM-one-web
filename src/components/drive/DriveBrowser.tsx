@@ -51,7 +51,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   const [workspaceDepartmentId, setWorkspaceDepartmentId] = useState<string | null>(() => readWorkspaceDepartmentId());
   const [folderId, setFolderId] = useState<string | null>(null);
   const [lockedFolderId, setLockedFolderId] = useState<string | null>(null);
-  const isRestrictedSalesFolder = Boolean(restrictedFolderId);
+  const isRestrictedFolder = Boolean(restrictedFolderId);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<"grid" | "list">("list");
@@ -187,7 +187,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }, [projectBoms, search]);
 
   async function handleUpload(files: FileList | null) {
-    if (isRestrictedSalesFolder || lockedFolderId === folderId || !files?.length) return;
+    if (isRestrictedFolder || lockedFolderId === folderId || !files?.length) return;
     for (const file of Array.from(files)) {
       try {
         setBusy(`Uploading ${file.name}…`);
@@ -202,7 +202,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }
 
   async function handleNewFolder() {
-    if (isRestrictedSalesFolder || lockedFolderId === folderId) return;
+    if (isRestrictedFolder || lockedFolderId === folderId) return;
     const name = window.prompt("Folder name");
     if (!name?.trim()) return;
     try {
@@ -215,7 +215,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }
 
   async function handleRename(node: DriveNode) {
-    if (isRestrictedSalesFolder) return;
+    if (isRestrictedFolder) return;
     const name = window.prompt("New name", node.name);
     if (!name?.trim() || name === node.name) return;
     try {
@@ -227,7 +227,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }
 
   async function handleTrash(node: DriveNode) {
-    if (isRestrictedSalesFolder) return;
+    if (isRestrictedFolder) return;
     if (!window.confirm(`Move "${node.name}" to trash?`)) return;
     try {
       await trashNode(node);
@@ -239,7 +239,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }
 
   async function handleStar(node: DriveNode) {
-    if (isRestrictedSalesFolder) return;
+    if (isRestrictedFolder) return;
     try {
       const on = await toggleStar(node.id);
       qc.setQueryData(["drive_favorites"], (prev: Set<string> | undefined) => {
@@ -254,7 +254,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
   }
 
   function openNode(node: DriveNode) {
-    if (isRestrictedSalesFolder) return;
+    if (isRestrictedFolder) return;
     if (node.node_type === "FOLDER") {
       setFolderId(node.id);
       setLockedFolderId(node.is_locked ? node.id : null);
@@ -275,7 +275,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenuItem onClick={() => handleStar(node)} disabled={isRestrictedSalesFolder}>
+          <DropdownMenuItem onClick={() => handleStar(node)} disabled={isRestrictedFolder}>
             <Star className="h-4 w-4 mr-2" /> {starred ? "Remove star" : "Star as audit-critical"}
           </DropdownMenuItem>
           {node.node_type === "FILE" && (
@@ -283,7 +283,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
               <DropdownMenuItem onClick={() => downloadNode(node)}>
                 <Download className="h-4 w-4 mr-2" /> Download
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShareFor(node)} disabled={isRestrictedSalesFolder}>
+              <DropdownMenuItem onClick={() => setShareFor(node)} disabled={isRestrictedFolder}>
                 <Link2 className="h-4 w-4 mr-2" /> Share link
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setRevisionsFor(node)}>
@@ -292,12 +292,12 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
             </>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleRename(node)} disabled={isRestrictedSalesFolder || node.is_locked}>
+          <DropdownMenuItem onClick={() => handleRename(node)} disabled={isRestrictedFolder || node.is_locked}>
             <Pencil className="h-4 w-4 mr-2" /> Rename
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => handleTrash(node)}
-            disabled={isRestrictedSalesFolder || node.is_locked}
+            disabled={isRestrictedFolder || node.is_locked}
             className="text-destructive"
           >
             <Trash2 className="h-4 w-4 mr-2" /> Move to trash
@@ -376,10 +376,10 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
         <Button variant="outline" size="icon" onClick={() => setView(view === "list" ? "grid" : "list")} disabled={filter === "boms"}>
           {view === "list" ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
         </Button>
-        <Button variant="outline" onClick={handleNewFolder} disabled={isRestrictedSalesFolder || lockedFolderId === folderId || filter === "boms"}>
+        <Button variant="outline" onClick={handleNewFolder} disabled={isRestrictedFolder || lockedFolderId === folderId || filter === "boms"}>
           <FolderPlus className="h-4 w-4 mr-1" /> Folder
         </Button>
-        <Button onClick={() => fileInput.current?.click()} disabled={isRestrictedSalesFolder || lockedFolderId === folderId || !!busy || filter === "boms"}>
+        <Button onClick={() => fileInput.current?.click()} disabled={isRestrictedFolder || lockedFolderId === folderId || !!busy || filter === "boms"}>
           {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />} Upload
         </Button>
         <input
@@ -395,7 +395,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
       </div>
 
       <div className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
-        <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => { if (isRestrictedSalesFolder) return; setFilter("all"); setFolderId(null); setLockedFolderId(null); }} disabled={isRestrictedSalesFolder}>
+        <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => { if (isRestrictedFolder) return; setFilter("all"); setFolderId(null); setLockedFolderId(null); }} disabled={isRestrictedFolder}>
           <Home className="h-3.5 w-3.5" /> {projectId ? "Project files" : "Drive"}
         </button>
         {crumbs.map((c) => (
@@ -403,8 +403,8 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
             <ChevronRight className="h-3.5 w-3.5" />
             <button
               className={cn("hover:text-foreground", c.id === folderId && "text-foreground font-medium")}
-              onClick={() => { if (isRestrictedSalesFolder) return; setFolderId(c.id); setLockedFolderId(null); }}
-              disabled={isRestrictedSalesFolder}
+              onClick={() => { if (isRestrictedFolder) return; setFolderId(c.id); setLockedFolderId(null); }}
+              disabled={isRestrictedFolder}
             >
               {c.name}
             </button>

@@ -730,7 +730,7 @@ export function ProposalDetail({
                           search={{
                             node: canOpenDocuments ? directDocumentEntry?.folderNodeId : undefined,
                             department: canOpenDocuments ? directDocumentEntry?.departmentId : undefined,
-                            salesEntry: canOpenDocuments ? true : undefined,
+                            sourceBound: canOpenDocuments ? true : undefined,
                           }}
                         >
                           <FolderOpen className="size-4" /> Open Sales folder
