@@ -373,7 +373,7 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
         <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
-            {!projectId && activeDepartmentId && <TabsTrigger value="common">Controlled documents</TabsTrigger>}
+            {!projectId && activeDepartmentId && <TabsTrigger value="common">Common documents</TabsTrigger>}
             {!projectId && activeDepartmentId && <TabsTrigger value="internal">Internal projects</TabsTrigger>}
             {!projectId && activeDepartmentId && <TabsTrigger value="client">Client projects</TabsTrigger>}
             {!projectId && activeDepartmentId && <TabsTrigger value="other">Other department work</TabsTrigger>}
@@ -446,6 +446,12 @@ export function DriveBrowser({ projectId = null, departmentId = null, initialNod
             </Card>
           ))}
         </div>
+      )}
+
+      {!projectId && activeDepartmentId && !folderId && (
+        <p className="text-xs text-muted-foreground">
+          Document type filtering becomes available inside an authorized folder and uses the file metadata in that folder.
+        </p>
       )}
 
       {!projectId && !activeDepartmentId && !canBrowseAllWorkspaces ? <Card className="p-8 text-center text-muted-foreground">Select a department workspace to open its Drive.</Card> : <>

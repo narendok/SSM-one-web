@@ -212,6 +212,35 @@ function SalesPage() {
             </Button>
           </div>
         </PermissionGate>
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales work</CardTitle>
+            <CardDescription>
+              Follow the customer lifecycle using the records already available to your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              <Button variant="outline" className="justify-start" asChild>
+                <Link to="/customers">
+                  <Building2 className="size-4" /> Customer
+                </Link>
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => setDialog("enquiry")}>
+                <FileText className="size-4" /> Enquiry
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => setDialog("opportunity")}>
+                <BriefcaseBusiness className="size-4" /> Opportunity / proposal
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => setDialog("commercial")}>
+                <Handshake className="size-4" /> Quotation / contract
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => setDialog("handover")}>
+                <UsersRound className="size-4" /> Orders / handover
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Metric
             icon={<Building2 className="size-4" />}
@@ -335,14 +364,6 @@ function SalesPage() {
                           View proposal
                         </Button>
                       )}
-                       {specification && (
-                         <Button
-                           size="sm"
-                           onClick={() => setDocumentDetail({ opportunity: item, specification })}
-                         >
-                           <FileText className="size-4" /> Sales documents
-                         </Button>
-                       )}
                       {item.nda_required && <Badge variant="secondary">NDA</Badge>}
                     </div>
                   </div>

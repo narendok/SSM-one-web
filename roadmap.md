@@ -4,6 +4,8 @@
 
 - [ ] **Deferred — Excel workbook sync mapping.** Existing Excel synchronization is requested, not an export-only substitute. Await the user’s workbook and its approved location before mapping sheets, fields, or importing any records; do not invent a sync or data.
 
+- [x] Align the Department Drive Common documents label and add ordered Sales work shortcuts for Customer, Enquiry, Opportunity / proposal, Quotation / contract, and Orders / handover. These reuse existing authorized record views and dialogs only; the redundant overview-level Sales documents action was removed while the existing proposal editor entry remains. Document-type filtering remains limited to metadata in the currently open authorized folder.
+
 - [x] Align the existing department Drive with four visible groups: Common documents, Internal projects, Client projects, and Other department work. Each opens only its verified existing root; Other department work remains honestly unmapped. A document-type filter uses only existing Drive file-type metadata. No folder, permission, record, or Sales document workflow changed.
 
 - [x] Refine the Project documents area into a concise department workspace with assignment status and the existing project-folder shortcut. Private document details remain withheld without a verified current assignment; no document, access, or project record changed.
