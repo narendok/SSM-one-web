@@ -7,7 +7,7 @@ root = Path(__file__).resolve().parents[3]
 contract = root / "supabase/pending/20261013_structured_lifecycle_docx_project_responsibility_update_contract.sql"
 bundle = root / "docs/evidence/20261013_structured_lifecycle_docx_project_responsibility_update_source_review_bundle.txt"
 text = contract.read_text()
-expected_hash = "REPLACE_AFTER_HASH"
+expected_hash = "7cb0b6ddde5f35fa20b2ed1898ebbeb41c36c24a69355d76809570a58eb1ef65"
 actual_hash = hashlib.sha256(contract.read_bytes()).hexdigest()
 required = (
     "responsibility_revision integer NOT NULL DEFAULT 1",
