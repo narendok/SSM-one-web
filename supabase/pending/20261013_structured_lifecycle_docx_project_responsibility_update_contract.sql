@@ -65,21 +65,11 @@ BEGIN
     RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
   END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',v_previous.project_id::text,v_previous.document_kind),0));
-  SELECT * INTO v_previous
-  FROM public.structured_lifecycle_docx_responsibility_assignments
-  WHERE id = p_assignment_id
-  FOR UPDATE;
-  IF NOT FOUND OR v_previous.scope_type <> 'PROJECT' OR v_previous.status <> 'ACTIVE' THEN
-    RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
-  END IF;
-
   v_actor := public.assert_structured_lifecycle_docx_registry_manager(v_previous.project_id, v_previous.department_id);
   v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object(
     'assignment_id',p_assignment_id,'expected_revision',p_expected_revision,
     'responsible_employee_id',p_responsible_employee_id,'reviewer_employee_id',p_reviewer_employee_id
   )::text,'UTF8'),'sha256'),'hex');
-
   SELECT * INTO v_receipt
   FROM public.structured_lifecycle_docx_responsibility_update_receipts
   WHERE actor_user_id = v_actor AND request_key = p_request_key
@@ -89,6 +79,18 @@ BEGIN
     RAISE EXCEPTION 'Responsibility reassignment request key conflicts with a different payload';
   END IF;
 
+  SELECT * INTO v_previous
+  FROM public.structured_lifecycle_docx_responsibility_assignments
+  WHERE id = p_assignment_id;
+  PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws('|','structured-docx-assignment',v_previous.project_id::text,v_previous.document_kind),0));
+  SELECT * INTO v_previous
+  FROM public.structured_lifecycle_docx_responsibility_assignments
+  WHERE id = p_assignment_id
+  FOR UPDATE;
+  IF NOT FOUND OR v_previous.scope_type <> 'PROJECT' OR v_previous.status <> 'ACTIVE' THEN
+    RAISE EXCEPTION 'Active project structured DOCX responsibility assignment is unavailable';
+  END IF;
+
   IF v_previous.responsibility_revision <> p_expected_revision THEN
     RAISE EXCEPTION 'Project structured DOCX responsibility revision is stale';
   END IF;
@@ -96,14 +98,18 @@ BEGIN
     SELECT 1 FROM public.employees employee
     JOIN public.employee_departments membership ON membership.employee_id = employee.id
       AND membership.department_id = v_previous.department_id
+    JOIN public.project_team_members team_membership ON team_membership.employee_id = employee.id
+      AND team_membership.project_id = v_previous.project_id
     WHERE employee.id = p_responsible_employee_id AND employee.employment_status = 'ACTIVE'
   ) OR (p_reviewer_employee_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.employees employee
     JOIN public.employee_departments membership ON membership.employee_id = employee.id
       AND membership.department_id = v_previous.department_id
+    JOIN public.project_team_members team_membership ON team_membership.employee_id = employee.id
+      AND team_membership.project_id = v_previous.project_id
     WHERE employee.id = p_reviewer_employee_id AND employee.employment_status = 'ACTIVE'
   )) THEN
-    RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department members';
+    RAISE EXCEPTION 'Assigned responsible and reviewer employees must be active department project-team members';
   END IF;
 
   UPDATE public.structured_lifecycle_docx_responsibility_assignments
