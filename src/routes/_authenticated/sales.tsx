@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -105,6 +105,7 @@ function SalesPage() {
     | null
   >(null);
   const [detail, setDetail] = useState<SalesDetail | null>(null);
+  const [documentDetail, setDocumentDetail] = useState<SalesDetail | null>(null);
   const { loading: authLoading, user } = useAuth();
   const sales = useQuery(salesOverviewQueryOptions(user?.id ?? null));
   const metrics = useMemo(
@@ -136,6 +137,16 @@ function SalesPage() {
       ),
     [sales.data?.masterSpecifications],
   );
+  const documentSourceByOpportunity = useMemo(
+    () => new Map((sales.data?.opportunities ?? []).map((opportunity) => [opportunity.id, opportunity])),
+    [sales.data?.opportunities],
+  );
+  const directDocumentDetail = documentDetail
+    ? {
+        opportunity: documentSourceByOpportunity.get(documentDetail.opportunity.id) ?? documentDetail.opportunity,
+        specification: specificationByOpportunity.get(documentDetail.opportunity.id) ?? documentDetail.specification,
+      }
+    : null;
   const sourceContract = useMemo(
     () =>
       buildSalesSourceContractAvailability({
@@ -324,6 +335,14 @@ function SalesPage() {
                           View proposal
                         </Button>
                       )}
+                       {specification && (
+                         <Button
+                           size="sm"
+                           onClick={() => setDocumentDetail({ opportunity: item, specification })}
+                         >
+                           <FileText className="size-4" /> Sales documents
+                         </Button>
+                       )}
                       {item.nda_required && <Badge variant="secondary">NDA</Badge>}
                     </div>
                   </div>
@@ -511,6 +530,11 @@ function SalesPage() {
           detail={detail}
           requirements={sales.data?.requirements ?? []}
           onOpenChange={(open) => !open && setDetail(null)}
+          actorId={user?.id ?? null}
+        />
+        <SalesDocumentsDetail
+          detail={directDocumentDetail}
+          onOpenChange={(open) => !open && setDocumentDetail(null)}
           actorId={user?.id ?? null}
         />
       </div>
@@ -800,6 +824,57 @@ export function ProposalDetail({
                 </div>
               )}
             </>
+          )}
+        </>
+      )}
+    </StructuredPreviewExitDialog>
+  );
+}
+export function SalesDocumentsDetail({
+  detail,
+  onOpenChange,
+  actorId,
+}: {
+  detail: SalesDetail | null;
+  onOpenChange: (open: boolean) => void;
+  actorId: string | null;
+}) {
+  const [localEdits, setLocalEdits] = useState<Record<string, string>>({});
+  const sourcePin = detail
+    ? {
+        opportunityNumber: detail.opportunity.opportunity_number,
+        specificationNumber: detail.specification.specification_number,
+        versionNumber: detail.specification.current_version,
+      }
+    : undefined;
+  useEffect(() => {
+    setLocalEdits({});
+  }, [detail?.opportunity.id, detail?.specification.id, detail?.specification.current_version]);
+  return (
+    <StructuredPreviewExitDialog
+      open={Boolean(detail)}
+      onOpenChange={(open) => {
+        if (!open) onOpenChange(false);
+      }}
+      dirty={Object.keys(localEdits).length > 0}
+      className="max-h-[90vh] max-w-6xl overflow-y-auto"
+    >
+      {() => (
+        <>
+          <DialogHeader>
+            <DialogTitle>Sales documents</DialogTitle>
+            <DialogDescription>
+              {detail?.opportunity.opportunity_number} · {detail?.specification.specification_number} · rev {detail?.specification.current_version}
+            </DialogDescription>
+          </DialogHeader>
+          {sourcePin && (
+            <StructuredTemplatePreview
+              sourcePin={sourcePin}
+              actorId={actorId}
+              catalogScope="sales-proposal"
+              localEdits={localEdits}
+              onLocalEditsChange={setLocalEdits}
+            />
           )}
         </>
       )}
