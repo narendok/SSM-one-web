@@ -105,7 +105,7 @@ END $$;
 CREATE TEMP TABLE reassigned AS
 SELECT public.reassign_project_structured_docx_responsibility(
   (SELECT id FROM initial_assignment),1,'00000000-0000-4000-8000-000000000203',
-  '00000000-0000-4000-8000-000000000202','00000000-0000-4000-8000-000000000232'
+  NULL,'00000000-0000-4000-8000-000000000232'
 ) AS id;
 DO $$ BEGIN
   IF (SELECT status FROM public.structured_lifecycle_docx_responsibility_assignments WHERE id=(SELECT id FROM initial_assignment)) <> 'REVOKED'
@@ -115,7 +115,7 @@ DO $$ BEGIN
   END IF;
   IF (SELECT public.reassign_project_structured_docx_responsibility(
     (SELECT id FROM initial_assignment),1,'00000000-0000-4000-8000-000000000203',
-    '00000000-0000-4000-8000-000000000202','00000000-0000-4000-8000-000000000232'
+    NULL,'00000000-0000-4000-8000-000000000232'
   )) <> (SELECT id FROM reassigned) THEN
     RAISE EXCEPTION 'Exact reassignment replay did not return its original replacement';
   END IF;
