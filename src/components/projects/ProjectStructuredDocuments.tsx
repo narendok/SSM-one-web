@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { documentAccessBoundaryMessage, isStructuredDocumentInCatalog } from "@/lib/structured-lifecycle-document-access";
-import { structuredLifecycleTemplatePreviews } from "@/lib/lifecycle-structured-template-previews";
+import { documentAccessBoundaryMessage } from "@/lib/structured-lifecycle-document-access";
+import { structuredLifecyclePlanForDepartment } from "@/lib/structured-lifecycle-document-plan";
 
 type ProjectStructuredDocumentsProps = { projectId: string; projectDepartmentId: string | null };
 type Department = { id: string; code: string | null; name: string };
@@ -33,9 +33,7 @@ export function ProjectStructuredDocuments({ projectId, projectDepartmentId }: P
   if (department.isError) return <UnavailableProjectDocuments reason="The recorded project department could not be read." onRetry={() => void department.refetch()} />;
   if (!department.data?.code) return <UnavailableProjectDocuments reason="The recorded project department has no active category mapping." />;
 
-  const categories = structuredLifecycleTemplatePreviews.filter((template) =>
-    isStructuredDocumentInCatalog(template.kind, "project-documents", department.data?.code),
-  );
+  const categories = structuredLifecyclePlanForDepartment(department.data.code);
   return (
     <section aria-label="Project documents" className="space-y-4">
       <div>
@@ -59,9 +57,14 @@ export function ProjectStructuredDocuments({ projectId, projectDepartmentId }: P
                   <p className="font-medium">{template.label}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
                 </div>
-                <Badge variant="secondary">Access pending</Badge>
+                <Badge variant="secondary">{template.materializationState === "DEPLOYMENT_PENDING" ? "Save pending" : "Local export only"}</Badge>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">No editable form, DOCX, history, or download is exposed from this project view.</p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {template.requiresExplicitResponsibility ? "Interdisciplinary responsibility must be assigned explicitly. " : "A current responsible-person assignment is required. "}
+                {template.materializationState === "DEPLOYMENT_PENDING"
+                  ? "The reviewed Drive save path is still disabled."
+                  : "Editable DOCX export stays local; Drive save, history, and download are unavailable."}
+              </p>
             </Card>
           ))}
         </div>
