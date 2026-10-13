@@ -27,7 +27,7 @@ const groups: NavGroup[] = [
   ] },
   { label: "Sales", collapsible: true, department: "sales", items: [
     { label: "Sales overview", to: "/sales", icon: BriefcaseBusiness, permission: "sales.view" },
-    { label: "Enquiries", to: "/sales/enquiries", icon: ClipboardList, permission: "sales.view" },
+    { label: "Enquiries & Opportunities", to: "/sales/enquiries", icon: ClipboardList, permission: "sales.view" },
     { label: "Customers", to: "/customers", icon: Building2, permission: "sales.view" },
   ] },
   { label: "Engineering", collapsible: true, department: "engineering", items: [
