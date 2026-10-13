@@ -3,6 +3,11 @@
 ## Scope
 Build Phase 4 as an additive module in the existing unified SSM One application. Reuse existing employees, RBAC, activity/audit, tasks, approvals, notifications, Drive, documents, entity IDs and project foundations; do not replace PartsBench or create separate systems.
 
+## Current Sales web flow
+- Sales overview is a compact dashboard; the combined **Enquiries & Opportunities** list puts active opportunities first and keeps status separate from stage.
+- Every authorised opportunity opens its saved detail. A linked Master Specification is optional and opens only when present.
+- Persisted records explicitly marked SAMPLE ONLY or SYNTHETIC ONLY are labelled Sample. The authorised OEM Tracker sample enquiry is an unapproved draft only; it does not dispatch review or create an opportunity, project, or document access.
+
 ## Delivery slices
 1. **Sales foundation** — customer master and contacts, enquiries/opportunities, sales owner assignment, configurable pipeline status, dashboard and permission-aware navigation.
 2. **NDA & customer intake** — configurable NDA templates/instances, secure customer links, requirement Part 1 drafts/submissions, attachments, customer actions and clarifications.

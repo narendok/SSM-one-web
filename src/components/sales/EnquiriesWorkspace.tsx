@@ -17,6 +17,7 @@ type WorkItem = {
   owner: string;
   nextAction: string;
   status: string;
+  isSample: boolean;
   sourceEnquiryId: string | null;
   record: SalesEnquiry | SalesOpportunity;
 };
@@ -30,6 +31,7 @@ type Props = {
 };
 
 function label(value: string) { return value.replaceAll("_", " "); }
+function isMarkedSample(name: string | null | undefined) { return (name ?? "").toUpperCase().includes("SAMPLE ONLY") || (name ?? "").toUpperCase().includes("SYNTHETIC ONLY"); }
 
 export function EnquiriesWorkspace({ enquiries, opportunities, onNew, onOpenEnquiry, onOpenOpportunity }: Props) {
   const [search, setSearch] = useState("");
@@ -46,6 +48,7 @@ export function EnquiriesWorkspace({ enquiries, opportunities, onNew, onOpenEnqu
       owner: "Owner not assigned",
       nextAction: enquiry.next_action ?? "No next action",
       status: enquiry.status,
+      isSample: Boolean(enquiry.customer?.is_sample) || isMarkedSample(enquiry.customer?.legal_name) || isMarkedSample(enquiry.requirement_summary),
       sourceEnquiryId: null,
       record: enquiry,
     }));
@@ -59,14 +62,15 @@ export function EnquiriesWorkspace({ enquiries, opportunities, onNew, onOpenEnqu
       owner: "Owner not assigned",
       nextAction: opportunity.next_action ?? "No next action",
       status: opportunity.status,
+      isSample: Boolean(opportunity.customer?.is_sample) || isMarkedSample(opportunity.customer?.legal_name) || isMarkedSample(opportunity.name),
       sourceEnquiryId: opportunity.enquiry_id,
       record: opportunity,
     }));
-    return [...opportunityItems, ...enquiryItems];
+    return [...opportunityItems.sort((left, right) => Number(right.status === "active") - Number(left.status === "active")), ...enquiryItems];
   }, [enquiries, opportunities]);
   const visible = useMemo(() => items.filter((item) => {
     const needle = search.trim().toLowerCase();
     return (status === "all" || item.status === status) && (!needle || [item.code, item.subject, item.customer, item.stage, item.nextAction].some((value) => value.toLowerCase().includes(needle)));
   }), [items, search, status]);
-  return <div className="space-y-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-sm font-medium text-primary">Sales work</p><h1 className="mt-1 text-2xl font-semibold">Enquiries &amp; Opportunities</h1><p className="mt-2 text-sm text-muted-foreground">Review active opportunities first, then saved enquiries that are ready for the next step.</p></div><Button onClick={onNew}><Plus className="size-4" />New enquiry</Button></div><Card><CardHeader><CardTitle>Sales work</CardTitle><CardDescription>Review sending is not available yet.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Search customer, code, subject, stage, or next action" /></div><Select value={status} onValueChange={setStatus}><SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All statuses" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem>{statuses.map((item) => <SelectItem key={item} value={item}>{label(item)}</SelectItem>)}</SelectContent></Select></div><div className="divide-y">{visible.map((item) => <button key={`${item.kind}-${item.id}`} type="button" onClick={() => item.kind === "opportunity" ? onOpenOpportunity(item.record as SalesOpportunity) : onOpenEnquiry(item.record as SalesEnquiry)} className="grid w-full gap-3 py-4 text-left md:grid-cols-[minmax(9rem,1fr)_minmax(14rem,2fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(10rem,1.25fr)]"><div><p className="text-sm font-medium">{item.customer}</p><p className="mt-1 text-xs text-muted-foreground">{item.code}</p></div><div><div className="flex flex-wrap items-center gap-2"><p className="font-medium">{item.subject}</p><Badge variant="outline">{item.kind === "opportunity" ? "Opportunity" : "Enquiry"}</Badge>{item.sourceEnquiryId && <Badge variant="secondary">Linked enquiry</Badge>}</div><p className="mt-1 text-xs text-muted-foreground md:hidden">{label(item.stage)} · {item.owner} · {item.nextAction}</p></div><p className="text-sm text-muted-foreground">{label(item.stage)}</p><p className="text-sm text-muted-foreground">{item.owner}</p><p className="text-sm text-muted-foreground">{item.nextAction}</p></button>)}{!visible.length && <p className="py-10 text-center text-sm text-muted-foreground">No authorised enquiries or opportunities match these filters.</p>}</div></CardContent></Card></div>;
+  return <div className="space-y-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-sm font-medium text-primary">Sales work</p><h1 className="mt-1 text-2xl font-semibold">Enquiries &amp; Opportunities</h1><p className="mt-2 text-sm text-muted-foreground">Review active opportunities first, then saved enquiries that are ready for the next step.</p></div><Button onClick={onNew}><Plus className="size-4" />New enquiry</Button></div><Card><CardHeader><CardTitle>Sales work</CardTitle><CardDescription>Review sending is not available yet.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Search customer, code, subject, stage, or next action" /></div><Select value={status} onValueChange={setStatus}><SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All statuses" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem>{statuses.map((item) => <SelectItem key={item} value={item}>{label(item)}</SelectItem>)}</SelectContent></Select></div><div className="hidden grid-cols-[minmax(9rem,1fr)_minmax(14rem,2fr)_minmax(10rem,1fr)_minmax(8rem,1fr)_minmax(10rem,1.25fr)] gap-3 border-b pb-2 text-xs font-medium text-muted-foreground md:grid"><span>Customer</span><span>Subject</span><span>Status / stage</span><span>Owner</span><span>Next action</span></div><div className="divide-y">{visible.map((item) => <button key={`${item.kind}-${item.id}`} type="button" onClick={() => item.kind === "opportunity" ? onOpenOpportunity(item.record as SalesOpportunity) : onOpenEnquiry(item.record as SalesEnquiry)} className="grid w-full gap-3 py-4 text-left md:grid-cols-[minmax(9rem,1fr)_minmax(14rem,2fr)_minmax(10rem,1fr)_minmax(8rem,1fr)_minmax(10rem,1.25fr)]"><div><p className="text-sm font-medium">{item.customer}</p><p className="mt-1 text-xs text-muted-foreground">{item.code}</p></div><div><div className="flex flex-wrap items-center gap-2"><p className="font-medium">{item.subject}</p><Badge variant="outline">{item.kind === "opportunity" ? "Opportunity" : "Enquiry"}</Badge>{item.isSample && <Badge variant="secondary">Sample</Badge>}{item.sourceEnquiryId && <Badge variant="secondary">Linked enquiry</Badge>}</div><p className="mt-1 text-xs text-muted-foreground md:hidden">{label(item.status)} · {label(item.stage)} · {item.owner} · {item.nextAction}</p></div><div className="flex flex-wrap content-start gap-1"><Badge variant="outline">{label(item.status)}</Badge>{item.kind === "opportunity" && <Badge variant="secondary">{label(item.stage)}</Badge>}</div><p className="text-sm text-muted-foreground">{item.owner}</p><p className="text-sm text-muted-foreground">{item.nextAction}</p></button>)}{!visible.length && <p className="py-10 text-center text-sm text-muted-foreground">No authorised enquiries or opportunities match these filters.</p>}</div></CardContent></Card></div>;
 }
