@@ -2,6 +2,8 @@
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000401',false);
 SELECT public.reassign_project_structured_docx_responsibility(
   (SELECT id FROM public.structured_lifecycle_docx_responsibility_assignments
-   WHERE project_id='00000000-0000-4000-8000-000000000420' AND document_kind=:'document_kind' AND responsibility_revision=1 AND status='ACTIVE'),
-  1, :'responsible_employee_id'::uuid, NULL, :'request_key'::uuid
+   WHERE project_id='00000000-0000-4000-8000-000000000420' AND document_kind=:'document_kind' AND status='ACTIVE'),
+  (SELECT responsibility_revision FROM public.structured_lifecycle_docx_responsibility_assignments
+   WHERE project_id='00000000-0000-4000-8000-000000000420' AND document_kind=:'document_kind' AND status='ACTIVE'),
+  :'responsible_employee_id'::uuid, NULL, :'request_key'::uuid
 );
