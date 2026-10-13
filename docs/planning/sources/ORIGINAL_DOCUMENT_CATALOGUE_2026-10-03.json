@@ -1,0 +1,809 @@
+{
+  "status": "PLANNING REFERENCE ONLY — NOT A LIVE CONFIGURATION OR DATABASE SEED",
+  "source_sha256": "7e8e008eba28db1b1f207d2d74583c0c0eab3589deae699eee391d05ba755612",
+  "source": "C:\\Users\\Admin\\Downloads\\Smart Company Management System & Automated Lifecycle Documentation (1).docx",
+  "entries": [
+    {
+      "source_block": "B0450",
+      "source_section": "9.1",
+      "source_text": "HLPL/SAL/SOP/01: Sales & Business Development Standard Operating Procedure",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Sales",
+      "workstream": "Sales / commercial",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0451",
+      "source_section": "9.1",
+      "source_text": "HLPL-SAL-mNDA-01: Mutual Non-Disclosure Agreement Master Template",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Sales",
+      "workstream": "Sales / commercial",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0452",
+      "source_section": "9.1",
+      "source_text": "HLPL/SAL/RR/01: Sales Department Roles, Responsibilities & Delegation Matrix",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Sales",
+      "workstream": "Sales / commercial",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0454",
+      "source_section": "9.1",
+      "source_text": "HLPL-SAL-REV-01: Monthly Sales Pipeline Audit & Lead Conversion Review Checklist",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Sales",
+      "workstream": "Sales / commercial",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0455",
+      "source_section": "9.1",
+      "source_text": "HLPL-SAL-AR-01: Quarterly Commercial Account & Receivables Aging Audit Sheet",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Sales + Finance",
+      "workstream": "Commercial review; finance retains accounting authority",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0457",
+      "source_section": "9.1",
+      "source_text": "HLPL-F-SAL-01: Customer Enquiry & Lead Registration Form",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Sales",
+      "workstream": "Sales / commercial",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0458",
+      "source_section": "9.1",
+      "source_text": "HLPL/F/MKT/01: Contract Review Record & Cross-Functional Feasibility Sheet",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Sales",
+      "workstream": "Sales / commercial",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0459",
+      "source_section": "9.1",
+      "source_text": "HLPL-SAL-QUO-01: Standard Commercial Proposal & Quotation Template",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Sales",
+      "workstream": "Sales / commercial",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0463",
+      "source_section": "9.2",
+      "source_text": "HLPL/QMSP/HW/001: Embedded Hardware Engineering Design Procedure & Stage Gates (HW_01 to HW_37)",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0465",
+      "source_section": "9.2",
+      "source_text": "HLPL-EHW-AUD-01: Bi-Annual Design Rule Check (DRC) & Component Library Compliance Audit",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0466",
+      "source_section": "9.2",
+      "source_text": "HLPL-EHW-REV-01: Monthly Hardware Stage Gate Review & ECN Audit Log",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0468",
+      "source_section": "9.2",
+      "source_text": "HLPL-[PROJ]-EHW-PRS: Product Requirement Specification (PRS) Master Template",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0469",
+      "source_section": "9.2",
+      "source_text": "HLPL-[PROJ]-EHW-BLK: System Block Diagram & Architecture Template",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0470",
+      "source_section": "9.2",
+      "source_text": "HLPL-[PROJ]-EHW-SCH: Circuit Schematic & Design Artifact Standard",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0471",
+      "source_section": "9.2",
+      "source_text": "HLPL-[PROJ]-EHW-PCB: PCB Layout, Gerber Package & Fabrication Files",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0472",
+      "source_section": "9.2",
+      "source_text": "HLPL-[PROJ]-EHW-BOM: Automated Engineering Bill of Materials & Costing Tracker",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0473",
+      "source_section": "9.2",
+      "source_text": "HLPL-[PROJ]-EHW-DFMEA: Hardware Design Failure Mode and Effects Analysis Register",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Hardware engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0474",
+      "source_section": "9.2",
+      "source_text": "HLPL-[PROJ]-QA-DVP: Design Verification Plan & Report (DVP&R) Master Sheet",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Design verification; Operations coordinates independent review",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0478",
+      "source_section": "9.3",
+      "source_text": "HLPL-QSM-SW-00001: Software Development Lifecycle (SDLC) SOP & Tollgate Gates (G0 to G11)",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Firmware / software",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0479",
+      "source_section": "9.3",
+      "source_text": "HLPL-SW-CICD-01: Continuous Integration & Deployment Pipeline Configuration Standards",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Firmware / software",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0481",
+      "source_section": "9.3",
+      "source_text": "HLPL-SW-REV-01: Monthly Code Quality, Security Vulnerability & Coverage Audit",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Firmware / software",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0482",
+      "source_section": "9.3",
+      "source_text": "HLPL-SW-PER-01: Quarterly API Performance & Cloud Throughput Review Sheet",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Firmware / software",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0484",
+      "source_section": "9.3",
+      "source_text": "HLPL-[PROJ]-ESW-HSI: Hardware-Software Interface (HSI) Specification Template",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Firmware / software",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0485",
+      "source_section": "9.3",
+      "source_text": "HLPL-[PROJ]-ESW-POC: Proof-of-Concept Firmware Validation Baseline",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Firmware / software",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0489",
+      "source_section": "9.4",
+      "source_text": "HLPL-MECH-SOP-01: Mechanical Engineering & Tooling Design SOP",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Mechanical engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0491",
+      "source_section": "9.4",
+      "source_text": "HLPL-MECH-AUD-01: Bi-Annual Customer Tooling, Die Wear & Mold Maintenance Audit",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Hardware / R&D + Production + Facility",
+      "workstream": "Mechanical design; production tool maintenance; Facility custody",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0492",
+      "source_section": "9.4",
+      "source_text": "HLPL-MECH-REV-01: Monthly Mechanical ECO & 3D Interference Audit Sheet",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Mechanical engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0494",
+      "source_section": "9.4",
+      "source_text": "HLPL-[PROJ]-MECH-CAD: 3D STEP Enclosure Model & Interference Analysis Archive",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Mechanical engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0495",
+      "source_section": "9.4",
+      "source_text": "HLPL-[PROJ]-MECH-DRW: 2D Production Drawing & Mold Tooling Specification",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Mechanical engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0496",
+      "source_section": "9.4",
+      "source_text": "HLPL-MECH-ECO: Mechanical Engineering Change Order Form",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Hardware / R&D",
+      "workstream": "Mechanical engineering",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0500",
+      "source_section": "9.5",
+      "source_text": "HLPL-PUR-SOP-1: Procurement & Supplier Management SOP",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0501",
+      "source_section": "9.5",
+      "source_text": "F-PUR-10: Desktop Supplier Evaluation Form",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0502",
+      "source_section": "9.5",
+      "source_text": "F-PUR-11: Supplier Performance & Scorecard Report",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0503",
+      "source_section": "9.5",
+      "source_text": "F-PUR-13 / F-PUR-14: Supplier On-Site Audit & Quality Systems Evaluation Checklists",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0504",
+      "source_section": "9.5",
+      "source_text": "F-PUR-16: Supplier Capacity Gap Assessment & Feasibility Evaluation Report",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0505",
+      "source_section": "9.5",
+      "source_text": "HLPL-PUR-ASL-01: Approved Supplier List (ASL) & Approved Component Master List (ACML)",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0507",
+      "source_section": "9.5",
+      "source_text": "HLPL-PUR-REV-01: Monthly ASL/ACML Audit & Supplier Lead-Time Variance Report",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0508",
+      "source_section": "9.5",
+      "source_text": "HLPL-PUR-AUD-01: Annual Master Supplier System & Capacity Audit Schedule",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0510",
+      "source_section": "9.5",
+      "source_text": "F-PUR-15: Supplier Production Part Approval Process (PPAP) Checklist & Submission Warrant",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Procurement",
+      "workstream": "Suppliers / stores / incoming quality",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0514",
+      "source_section": "9.6",
+      "source_text": "SSM/QA/SOP/01: Electronics & Mechanical Quality Assurance SOP",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "QMS / quality governance",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0515",
+      "source_section": "9.6",
+      "source_text": "HLPL-QA-CAL-01: IMTE Calibration Register & MSA / Gage R&R Plan",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Production",
+      "workstream": "Calibration / MSA",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0516",
+      "source_section": "9.6",
+      "source_text": "HLPL-QA-FIFO-01: First-In, First-Out (FIFO) Control Matrix & Work Instructions (WI)",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Procurement + Production",
+      "workstream": "Stores FIFO and production consumption instructions",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0517",
+      "source_section": "9.6",
+      "source_text": "HLPL-QA-LLR-01: Lessons Learned Register & Knowledge Base",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "QMS / quality governance",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0518",
+      "source_section": "9.6",
+      "source_text": "HLPL-EMF-5S-01: Monthly 5S Audit Checklist & Workplace Organization Standard",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Production",
+      "workstream": "Workplace / 5S",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0519",
+      "source_section": "9.6",
+      "source_text": "HLPL-EMF-CAP-01: Assembly Line Capacity & Takt Time Analysis Register",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Production",
+      "workstream": "Capacity / takt planning",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0520",
+      "source_section": "9.6",
+      "source_text": "HLPL-EMF-NC-01: Non-Conforming Product Control & NC Rework Procedure",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Production",
+      "workstream": "Product disposition; Operations coordinates CAPA",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0521",
+      "source_section": "9.6",
+      "source_text": "HLPL-EMF-CHK-01: Pre-Manufacturing Line Startup Master Checklist",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Production",
+      "workstream": "Line startup",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0522",
+      "source_section": "9.6",
+      "source_text": "HLPL-EMF-PM-01: Equipment Preventive Maintenance Plan & OEE Tracker",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Production",
+      "workstream": "Process equipment PM / OEE; Facility supports infrastructure",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0523",
+      "source_section": "9.6",
+      "source_text": "HLPL-EMF-KPI-01: Production Annual KPI & Operational Efficiency Log",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Production",
+      "workstream": "Production KPI",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0525",
+      "source_section": "9.6",
+      "source_text": "HLPL-QA-REV-01: Monthly Internal Quality Audit & Calibration Expiration Audit",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Operations + Production",
+      "workstream": "QMS audit; Production calibration review",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0526",
+      "source_section": "9.6",
+      "source_text": "HLPL-EMF-REV-01: Monthly Line OEE, First-Pass Yield & Scrap Rate Audit Sheet",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Production",
+      "workstream": "OEE / yield / scrap review",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0527",
+      "source_section": "9.6",
+      "source_text": "HLPL-QA-IATF-01: Annual IATF 16949 / ISO 9001 System Compliance Audit Review",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Operations",
+      "workstream": "QMS / quality governance",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0529",
+      "source_section": "9.6",
+      "source_text": "HLPL-APQP-001: Advanced Product Quality Planning (APQP) Master Gate Checklist",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Operations",
+      "workstream": "QMS / quality governance",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0530",
+      "source_section": "9.6",
+      "source_text": "HLPL-Project_Code-PFD-01: Process Flow Diagram (PFD) Master Template",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Production",
+      "workstream": "Process flow",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0531",
+      "source_section": "9.6",
+      "source_text": "HLPL-Project_Code-02: Process Failure Mode and Effects Analysis (PFMEA) Sheet",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Production",
+      "workstream": "PFMEA; engineering / QMS contributions",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0532",
+      "source_section": "9.6",
+      "source_text": "HLPL-Project_Code-CP-01: Production Control Plan Master Register",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Production",
+      "workstream": "Control plan; incoming inspection linked to Procurement",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0533",
+      "source_section": "9.6",
+      "source_text": "HLPL-QA-NCR-01: Non-Conformance Report (NCR) & 8D CAPA Logbook",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Operations",
+      "workstream": "CAPA coordination; each originating team owns its NCR evidence",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0534",
+      "source_section": "9.6",
+      "source_text": "HLPL-QA-FQC-01: Final Quality Control (FQC) & Pre-Dispatch Inspection (PDI) Reports",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Production",
+      "workstream": "EOL / FQC / PDI",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0535",
+      "source_section": "9.6",
+      "source_text": "HLPL-QA-PPM-01: Process Rejection & PPM Defect Tracking Sheet",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Production",
+      "workstream": "Process defect tracking",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0539",
+      "source_section": "9.7",
+      "source_text": "HLPL-F-KPI-01: Financial Performance & Operational KPI Register",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Finance",
+      "workstream": "Finance; restricted infrastructure contributions",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0540",
+      "source_section": "9.7",
+      "source_text": "R-SEC-01 / R-INS-01 / R-LIA-01: Enterprise Security, Infrastructure & Liability Risk Registers",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations + Facility + Finance",
+      "workstream": "Split security/infrastructure/liability by purpose; no blanket shared register",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0542",
+      "source_section": "9.7",
+      "source_text": "HLPL-FIN-REV-01: Monthly Financial MIS & Statutory Tax Closing Checklist",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Finance",
+      "workstream": "Finance; restricted infrastructure contributions",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0543",
+      "source_section": "9.7",
+      "source_text": "HLPL-SIT-AUD-01: Monthly Server Backup & IT Security Infrastructure Audit",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Facility / Maintenance",
+      "workstream": "Authorized IT infrastructure workstream; admin-only system configuration",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0545",
+      "source_section": "9.7",
+      "source_text": "(Note: Project-specific financial billing records, tax invoices, and project IT provisioning tickets are managed dynamically via the ERP core during project lifecycle execution.)",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Finance + Facility",
+      "workstream": "Separate financial records from project IT tickets",
+      "planning_status": "Workflow-managed record family; schema/template still to verify"
+    },
+    {
+      "source_block": "B0548",
+      "source_section": "9.8",
+      "source_text": "HLPL/F/HR/03: Annual Skill Matrix Evaluation & Departmental Competency Sheet",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Human Resources",
+      "workstream": "HR / competence",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0549",
+      "source_section": "9.8",
+      "source_text": "HLPL-HR-TNI-01: Training Need Identification (TNI) & Annual Training Calendar",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Human Resources",
+      "workstream": "HR / competence",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0550",
+      "source_section": "9.8",
+      "source_text": "HLPL-HR-BGV-01: Background Verification (BGV) Policy & Employee Onboarding Register",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Human Resources",
+      "workstream": "HR / competence",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0551",
+      "source_section": "9.8",
+      "source_text": "HLPL-HR-GRV-01: Employee Grievance & Internal Query Tracking Register",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Human Resources",
+      "workstream": "HR / competence",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0553",
+      "source_section": "9.8",
+      "source_text": "HLPL-HR-AUD-01: Quarterly Statutory Labor, Factory License & Training Adherence Review",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Human Resources + Operations",
+      "workstream": "HR workforce compliance; Operations coordinates applicable licenses",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0555",
+      "source_section": "9.8",
+      "source_text": "(Note: Project-specific manpower allocation, role assignment matrix, and training execution logs are tracked dynamically via HR management workflows.)",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Human Resources",
+      "workstream": "HR / competence",
+      "planning_status": "Workflow-managed record family; schema/template still to verify"
+    },
+    {
+      "source_block": "B0558",
+      "source_section": "9.9",
+      "source_text": "HLPL-OPS-RISK-01: Centralized Enterprise Risk Register & Risk Mitigation Matrix",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0559",
+      "source_section": "9.9",
+      "source_text": "HLPL-OPS-METRIC-01: Cross-Departmental Operational Metric Tracker & KPI Dashboard",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0560",
+      "source_section": "9.9",
+      "source_text": "HLPL-OPS-6SIG-01: Six Sigma Implementation Roadmap & DMAIC Tollgate Governance Framework",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0561",
+      "source_section": "9.9",
+      "source_text": "ISO 9001:2015 Certification: Enterprise Quality Management System (QMS) framework.",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Reference only; applicability and valid certificate/license not established"
+    },
+    {
+      "source_block": "B0562",
+      "source_section": "9.9",
+      "source_text": "ISO/IEC 27001:2022 Certification: Information Security Management System (ISMS) governing data protection, IT infrastructure, and client confidential IP.",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Reference only; applicability and valid certificate/license not established"
+    },
+    {
+      "source_block": "B0563",
+      "source_section": "9.9",
+      "source_text": "ISO 14001:2015 Certification: Environmental Management System (EMS) ensuring sustainable operations and compliance with environmental regulations.",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Reference only; applicability and valid certificate/license not established"
+    },
+    {
+      "source_block": "B0564",
+      "source_section": "9.9",
+      "source_text": "ISO 45001:2018 Certification: Occupational Health and Safety (OH&S) Management System standard.",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Reference only; applicability and valid certificate/license not established"
+    },
+    {
+      "source_block": "B0565",
+      "source_section": "9.9",
+      "source_text": "Factory License & Statutory Approvals: Validated Factory License, UP Pollution Control Board Consent to Operate (UPPCB CTO), and Fire Safety No-Objection Certificate (Fire NOC).",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Reference only; applicability and valid certificate/license not established"
+    },
+    {
+      "source_block": "B0566",
+      "source_section": "9.9",
+      "source_text": "Diesel Generator (DG) Maintenance Logs: Operational run-time, fuel consumption, stack emission tests, and preventive maintenance logs for backup utility generators.",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Facility / Maintenance",
+      "workstream": "Utilities / DG maintenance",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0567",
+      "source_section": "9.9",
+      "source_text": "E-Waste Disposal Agreements & Manifests: Certified agreements with authorized recyclers for safe disposal of electronic scrap, PCB assemblies, and hazardous manufacturing waste.",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Facility / Maintenance + Operations",
+      "workstream": "Waste handling / authorized disposal; Operations governance",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0568",
+      "source_section": "9.9",
+      "source_text": "Security & Facility Management Service Contracts: Formally executed contracts and SLA tracking for 24/7 physical security, access control maintenance, and facility housekeeping.",
+      "drive_category": "01_Common_Controlled_Documents",
+      "proposed_department_owner": "Facility / Maintenance",
+      "workstream": "Physical security / facility contracts; restricted commercial details",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0570",
+      "source_section": "9.9",
+      "source_text": "HLPL-OPS-REV-01: Quarterly Enterprise Operational Governance & Risk Audit Review",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0571",
+      "source_section": "9.9",
+      "source_text": "Electricity, Water etc",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Facility / Maintenance",
+      "workstream": "Electricity / water records; Finance payment review",
+      "planning_status": "Source shorthand; fields, owner routing and template still to define"
+    },
+    {
+      "source_block": "B0572",
+      "source_section": "9.9",
+      "source_text": "Enterprise Master Risk Register: Centralized matrix capturing strategic, financial, operational, supply chain, and regulatory risks alongside mitigation actions.",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0573",
+      "source_section": "9.9",
+      "source_text": "Management Review Meeting (MRM) Minutes: Quarterly executive governance documentation reviewing quality objectives, audit results, customer feedback, and resource allocations.",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0574",
+      "source_section": "9.9",
+      "source_text": "Internal Audit Schedule & Reports: Annual schedule covering QMS, EMS, ISMS, process audits, and layer process audits (LPA) across all 11 functional departments.",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Target catalogue entry; actual template/evidence not verified"
+    },
+    {
+      "source_block": "B0575",
+      "source_section": "9.9",
+      "source_text": "Pest Control reminder",
+      "drive_category": "02_Periodic_and_Conditional_Reviews",
+      "proposed_department_owner": "Facility / Maintenance",
+      "workstream": "Pest control schedule / evidence",
+      "planning_status": "Source shorthand; fields, owner routing and template still to define"
+    },
+    {
+      "source_block": "B0577",
+      "source_section": "9.9",
+      "source_text": "Each OEM project Audit Risk Matrix",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Source shorthand; fields, owner routing and template still to define"
+    },
+    {
+      "source_block": "B0578",
+      "source_section": "9.9",
+      "source_text": "(Note: Project-specific Six Sigma DMAIC project charter and tollgate sign-off certificates are archived under operational compliance records.)",
+      "drive_category": "03_Project_Deliverables",
+      "proposed_department_owner": "Operations",
+      "workstream": "Governance / risk",
+      "planning_status": "Workflow-managed record family; schema/template still to verify"
+    }
+  ],
+  "source_inventory_count": 89
+}

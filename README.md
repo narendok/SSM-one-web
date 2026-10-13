@@ -1,3 +1,15 @@
+# SSM One portal planning
+
+- [Unified web portal plan](docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md)
+- [Optimized document catalogue](docs/planning/SSM_ONE_DOCUMENT_CATALOGUE.md)
+- [Documentation and evidence](docs/README.md)
+
+These are the current web/backend planning entry points. Historical implementation reports are under docs/evidence; technical contracts and pending SQL retain their exact scope. Android implementation/build planning remains in the separate Android repository. The local SSMOneWeb workspace keeps one physical docs folder at its root, mirrored to repository docs/ for GitHub/Lovable. No backend activation or deployment is implied by this documentation sync.
+
+The existing application reference follows and retains its historical description; current contracts and the unified plan govern changed behavior.
+
+---
+
 # PartsBench — Electronics Component Inventory & BOM Portal
 
 PartsBench is a full-stack inventory management portal for electronics components,

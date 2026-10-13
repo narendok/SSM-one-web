@@ -20,3 +20,7 @@
 - Serialize project DOCX updates by actor/request key before the assignment root, then recheck manager authority and lock mutable target prerequisites; this preserves replay without stale authority or membership races.
 - Keep Sales feasibility handover behind one pending atomic source-bound requirement-and-routing contract; separate client calls must not create partial requirements, assignments, or notifications.
 - Keep Sales feasibility routing receipts private, replay-bound to the Sales actor and immutable enquiry/opportunity/Master source tuple; reviewer notifications must be generated inside the protected transaction, never by the client.
+
+## Single planning entry point
+
+Read docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md for the current web/backend requirements and delivery order; update it in place rather than adding competing dated portal roadmaps. Use docs/planning/SSM_ONE_DOCUMENT_CATALOGUE.md as an optimized reference, not an implementation prerequisite. Preserve technical contracts, pending SQL and historical evidence; source-only work is not a live API. Android builds have their own plan in the Android repository. In the local SSMOneWeb workspace, active docs live at ../docs and the source checkout excludes its duplicate docs folder; GitHub/Lovable retain the repository docs/ paths. Dated backups are immutable.

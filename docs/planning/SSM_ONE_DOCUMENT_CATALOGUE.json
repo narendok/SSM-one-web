@@ -1,0 +1,536 @@
+{
+  "title": "SSM One document catalogue",
+  "status": "Optimized target/reference, not deployment or a database seed",
+  "refined": "2026-10-14",
+  "source_sha256": "7e8e008eba28db1b1f207d2d74583c0c0eab3589deae699eee391d05ba755612",
+  "family_count": 38,
+  "original_source_blocks": 89,
+  "mapped_unique_source_blocks": 89,
+  "clarification_only_families": [
+    "D02",
+    "D04"
+  ],
+  "original_source": "sources/ORIGINAL_DOCUMENT_CATALOGUE_2026-10-03.json",
+  "folder_groups": [
+    "Common documents",
+    "Internal projects",
+    "Client projects",
+    "Other department work"
+  ],
+  "rules": [
+    "Families are logical groups, not official numbers or required separate files",
+    "Requiredness is determined by accepted stage/customer/applicability contracts",
+    "Reuse software records; file export is a rendition",
+    "Blank templates/policies belong in Common; actual records use project context or Other work",
+    "Preserve separate confidential scopes and unique subtypes when grouping",
+    "Cataloguing is not a prerequisite to complete all families before shipping the current flow"
+  ],
+  "families": [
+    {
+      "id": "D01",
+      "owner": "Each department",
+      "family": "Common operating pack: SOPs, authority matrix and work instructions",
+      "format": "DOCX / approved references",
+      "create_or_record_when": "Maintain one controlled pack per department/workstream; reuse its revision across projects. Includes engineering/SDLC/CI standards, FIFO and nonconformance procedures.",
+      "source_blocks": [
+        "B0450",
+        "B0452",
+        "B0463",
+        "B0478",
+        "B0479",
+        "B0489",
+        "B0500",
+        "B0514",
+        "B0516",
+        "B0520"
+      ],
+      "delivery_scope": "Foundation, independently",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D02",
+      "owner": "Sales",
+      "family": "Customer Register and contacts",
+      "format": "Software records → synced XLSX",
+      "create_or_record_when": "One managed Customer Register.xlsx from Customer master; refresh additions/changes, retain revisions. Not one file per customer and not external Excel import.",
+      "source_blocks": [],
+      "delivery_scope": "Current flow",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D03",
+      "owner": "Sales",
+      "family": "Enquiries & Opportunities register / pipeline reviews",
+      "format": "Software records / review log",
+      "create_or_record_when": "One linked queue and stage/owner/review tracking; pipeline review uses the same records rather than duplicate forms.",
+      "source_blocks": [
+        "B0457",
+        "B0454"
+      ],
+      "delivery_scope": "Current flow",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D04",
+      "owner": "Sales",
+      "family": "Master Specification / customer inputs / SOR",
+      "format": "Versioned fields + DOCX",
+      "create_or_record_when": "Capture known requirements once, preserve source/customer/revision, reuse in feasibility and project start. SOR is a rendition, not another source of truth.",
+      "source_blocks": [],
+      "delivery_scope": "Current flow",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D05",
+      "owner": "Sales coordinates assigned departments",
+      "family": "Feasibility / contract review",
+      "format": "Assigned review records + DOCX",
+      "create_or_record_when": "Selected departments record scope, owner, due date, evidence, decision and conditions; one consolidated review links the contributions.",
+      "source_blocks": [
+        "B0458"
+      ],
+      "delivery_scope": "Current flow",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D06",
+      "owner": "Sales",
+      "family": "Quotation / commercial proposal",
+      "format": "DOCX / commercial records",
+      "create_or_record_when": "When an opportunity requires a commercial offer; scoped Finance input, explicit issuance and version history.",
+      "source_blocks": [
+        "B0459"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D07",
+      "owner": "Operations / Legal",
+      "family": "NDA and confidential agreement",
+      "format": "DOCX + actual agreement evidence",
+      "create_or_record_when": "Only when required by the customer/program. Template belongs to Legal/Common; executed agreement is scoped to its case/project. Sales initiates/links, without Legal access.",
+      "source_blocks": [
+        "B0451"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D08",
+      "owner": "Hardware / R&D",
+      "family": "PRS / confirmed requirement baseline",
+      "format": "Versioned baseline + DOCX",
+      "create_or_record_when": "After required feasibility/confirmation, pin the exact approved requirements for explicit project start and engineering.",
+      "source_blocks": [
+        "B0468"
+      ],
+      "delivery_scope": "Next gate",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D09",
+      "owner": "Hardware / R&D",
+      "family": "Architecture / block diagram / HSI",
+      "format": "Design files / specification",
+      "create_or_record_when": "Applicable engineering scope; architecture and HSI remain distinct linked subtypes and exact source revisions.",
+      "source_blocks": [
+        "B0469",
+        "B0484"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D10",
+      "owner": "Hardware / R&D",
+      "family": "Design and release file package",
+      "format": "Native CAD / schematic / PCB / ZIP",
+      "create_or_record_when": "Engineer-provided schematic, Gerber/fabrication, enclosure/STEP and drawing/tooling files. ERP links real artifacts and checksums; it does not generate CAD.",
+      "source_blocks": [
+        "B0470",
+        "B0471",
+        "B0494",
+        "B0495"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D11",
+      "owner": "Hardware / R&D",
+      "family": "Engineering BOM / cost tracker",
+      "format": "Authoritative BOM + workbook rendition",
+      "create_or_record_when": "Saved tentative/final BOM; Procurement reviews the same pinned parts/revision. Exports do not create duplicate BOM authorities or stock movements.",
+      "source_blocks": [
+        "B0472"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D12",
+      "owner": "Hardware / R&D",
+      "family": "DFMEA",
+      "format": "Structured ratings/actions + DOCX",
+      "create_or_record_when": "When design risk analysis is applicable; ratings, actions and closure come from actual engineers/reviewers.",
+      "source_blocks": [
+        "B0473"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D13",
+      "owner": "Hardware / R&D",
+      "family": "POC / design verification / DVP&R",
+      "format": "Test records + evidence / DOCX",
+      "create_or_record_when": "At applicable POC/validation stages; separate plan and measured-result subtypes, linked source/firmware/sample revisions.",
+      "source_blocks": [
+        "B0474",
+        "B0485"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D14",
+      "owner": "Hardware / R&D",
+      "family": "Design change / ECO / ECN review",
+      "format": "Change register + evidence",
+      "create_or_record_when": "On a change or failed review; preserve previous decisions and record impact/effectivity. Stage/ECO audits read this history.",
+      "source_blocks": [
+        "B0466",
+        "B0492",
+        "B0496"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D15",
+      "owner": "Hardware / R&D",
+      "family": "Software quality / security / performance review",
+      "format": "Review records",
+      "create_or_record_when": "Only firmware/software/cloud scopes that need these reviews; frequency is configured, not imposed on every project.",
+      "source_blocks": [
+        "B0481",
+        "B0482"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D16",
+      "owner": "Hardware / R&D",
+      "family": "DRC / component-library review",
+      "format": "Review records",
+      "create_or_record_when": "When hardware/library review is due or change-triggered; reference actual rules and evidence.",
+      "source_blocks": [
+        "B0465"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D17",
+      "owner": "Production",
+      "family": "Tooling condition / custody / mold maintenance review",
+      "format": "Asset/tool review records",
+      "create_or_record_when": "Production maintains process tools; Engineering supplies design evidence; Facility handles custody where authorized.",
+      "source_blocks": [
+        "B0491"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D18",
+      "owner": "Procurement",
+      "family": "Supplier qualification / ASL / ACML / performance and capacity",
+      "format": "Supplier registers + review evidence",
+      "create_or_record_when": "One supplier history with evaluation, on-site/system reviews, approved lists, scorecards/capacity/lead-time observations. No duplicate workbook per review title.",
+      "source_blocks": [
+        "B0501",
+        "B0502",
+        "B0503",
+        "B0504",
+        "B0505",
+        "B0507",
+        "B0508"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D19",
+      "owner": "Procurement",
+      "family": "Supplier PPAP / submission warrant",
+      "format": "Checklist + supplier evidence",
+      "create_or_record_when": "Only applicable customer/product/supplier programs; a document-type/project category, never a fifth department Drive group.",
+      "source_blocks": [
+        "B0510"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D20",
+      "owner": "Production",
+      "family": "Calibration / MSA / expiration review",
+      "format": "Instrument register + evidence",
+      "create_or_record_when": "Applicable instruments/gages/processes; Operations quality audit links the same authorized calibration evidence.",
+      "source_blocks": [
+        "B0515",
+        "B0525"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D21",
+      "owner": "Production",
+      "family": "Line capacity / startup / process flow",
+      "format": "Readiness records / PFD",
+      "create_or_record_when": "When preparing an actual build/line; use recorded capacity and readiness, retain separate process-flow subtype.",
+      "source_blocks": [
+        "B0519",
+        "B0521",
+        "B0530"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D22",
+      "owner": "Production",
+      "family": "PFMEA / control plan",
+      "format": "Distinct structured templates / DOCX",
+      "create_or_record_when": "Applicable manufacturing process; PFMEA and control plan retain their own fields/decisions and cross-references.",
+      "source_blocks": [
+        "B0531",
+        "B0532"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D23",
+      "owner": "Production",
+      "family": "EOL / FQC / PDI",
+      "format": "Measured unit records + DOCX",
+      "create_or_record_when": "For actual build/dispatch units; serial, firmware, test/inspector evidence and explicit disposition, never generated passes.",
+      "source_blocks": [
+        "B0534"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D24",
+      "owner": "Production",
+      "family": "5S / OEE / yield / scrap / defects / KPI reviews",
+      "format": "Operational registers + calculated views",
+      "create_or_record_when": "When production observations/reviews exist; use defined formulas/time windows. Standards/templates are Common; completed reviews are Other work.",
+      "source_blocks": [
+        "B0518",
+        "B0523",
+        "B0526",
+        "B0535"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D25",
+      "owner": "Operations",
+      "family": "NCR / 8D / CAPA / lessons learned",
+      "format": "Linked case and action records",
+      "create_or_record_when": "When nonconformance or learning occurs; originating departments retain evidence and Operations coordinates the case.",
+      "source_blocks": [
+        "B0517",
+        "B0533"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D26",
+      "owner": "Finance",
+      "family": "Receivables / MIS / financial KPI / closing / billing",
+      "format": "Financial records + XLSX/DOCX renditions",
+      "create_or_record_when": "Use Finance-owned records; Sales sees permitted commercial context. Tax invoice is a separate authorized rendition. IT tickets from the combined source note stay outside Finance records.",
+      "source_blocks": [
+        "B0455",
+        "B0539",
+        "B0542",
+        "B0545"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D27",
+      "owner": "HR",
+      "family": "Skill matrix / TNI / training / manpower and workforce reviews",
+      "format": "Restricted HR records + matrix rendition",
+      "create_or_record_when": "Recorded competence/training/assignment; corporate scope unless project-linked work is needed. License governance is linked to Operations, not another HR workbook.",
+      "source_blocks": [
+        "B0548",
+        "B0549",
+        "B0553",
+        "B0555"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D28",
+      "owner": "HR",
+      "family": "Onboarding / BGV",
+      "format": "Restricted policy and case records",
+      "create_or_record_when": "When an authorized onboarding/verification case exists; policy is Common, personnel evidence remains restricted.",
+      "source_blocks": [
+        "B0550"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D29",
+      "owner": "HR",
+      "family": "Grievance / employee query",
+      "format": "Restricted case register",
+      "create_or_record_when": "Only actual authorized employee cases; not a generally shared project document.",
+      "source_blocks": [
+        "B0551"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D30",
+      "owner": "Operations",
+      "family": "Linked risk registers / project risk matrix",
+      "format": "Scoped risk records",
+      "create_or_record_when": "Combine repeated enterprise-risk titles into one index, with separate authorized strategic, financial, infrastructure/security and project scopes. No blanket shared confidential register.",
+      "source_blocks": [
+        "B0540",
+        "B0558",
+        "B0572",
+        "B0577"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D31",
+      "owner": "Operations",
+      "family": "Certification / statutory applicability and validity evidence",
+      "format": "Reference / actual external evidence",
+      "create_or_record_when": "Only when applicability and real evidence are confirmed. ISO/IATF/licenses/consents/NOC references are not automatically mandatory templates or claimed certificates.",
+      "source_blocks": [
+        "B0527",
+        "B0561",
+        "B0562",
+        "B0563",
+        "B0564",
+        "B0565"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D32",
+      "owner": "Operations",
+      "family": "APQP / internal audits / governance / management review",
+      "format": "Assigned checklist/review records",
+      "create_or_record_when": "Applicable program/governance reviews; one schedule/history links scope, customer feedback, risks and decisions across eight existing departments.",
+      "source_blocks": [
+        "B0529",
+        "B0570",
+        "B0573",
+        "B0574"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D33",
+      "owner": "Operations",
+      "family": "DMAIC / improvement charter and tollgate evidence",
+      "format": "Improvement project records",
+      "create_or_record_when": "Only approved improvement work; real sign-offs/evidence, not a compulsory document for every client project.",
+      "source_blocks": [
+        "B0560",
+        "B0578"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D34",
+      "owner": "Production",
+      "family": "Process-equipment PM / downtime / OEE",
+      "format": "Maintenance and performance records",
+      "create_or_record_when": "For applicable production equipment and actual maintenance/observations; Facility supports infrastructure separately.",
+      "source_blocks": [
+        "B0522"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D35",
+      "owner": "Facility / Maintenance",
+      "family": "Utilities / DG / electricity and water",
+      "format": "Facility records + evidence",
+      "create_or_record_when": "Actual utilities/assets/consumption/maintenance, with scoped Finance payment review; unknown source shorthand requires field configuration.",
+      "source_blocks": [
+        "B0566",
+        "B0571"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D36",
+      "owner": "Facility / Maintenance",
+      "family": "IT backup / security review / project IT tickets",
+      "format": "Authorized IT records",
+      "create_or_record_when": "Infrastructure work only; privileged configuration remains administrator-controlled. Split project IT tickets from financial billing in the source note.",
+      "source_blocks": [
+        "B0543",
+        "B0545"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D37",
+      "owner": "Facility / Maintenance",
+      "family": "Facility/security service / waste disposal / pest control",
+      "format": "Contracts, service and disposal evidence",
+      "create_or_record_when": "Applicable services/assets/schedules; actual agreements/qualified disposal evidence and private commercial terms. Short reminders are work tasks, not templates.",
+      "source_blocks": [
+        "B0567",
+        "B0568",
+        "B0575"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    },
+    {
+      "id": "D38",
+      "owner": "Operations",
+      "family": "Cross-department KPI definitions / dashboard",
+      "format": "Definitions + authorized aggregate views",
+      "create_or_record_when": "Reuse measured records and the reviewed formula from each department, not a second manually copied enterprise tracker.",
+      "source_blocks": [
+        "B0559"
+      ],
+      "delivery_scope": "As applicable",
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+    }
+  ]
+}

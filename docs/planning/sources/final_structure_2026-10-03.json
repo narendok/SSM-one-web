@@ -1,0 +1,3311 @@
+{
+  "source": "C:\\Users\\Admin\\Downloads\\Smart Company Management System & Automated Lifecycle Documentation (1).docx",
+  "sha256": "7e8e008eba28db1b1f207d2d74583c0c0eab3589deae699eee391d05ba755612",
+  "records": [
+    {
+      "id": "B0001",
+      "kind": "p",
+      "style": "Title",
+      "text": "Enterprise Smart Management System & Automated Lifecycle Documentation Framework"
+    },
+    {
+      "id": "B0002",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "1. Executive Summary & Core Architectural Vision"
+    },
+    {
+      "id": "B0003",
+      "kind": "p",
+      "style": "",
+      "text": "My Company operates in high-precision automotive electronics and mobility solutions, engineering products such as Body Control Units (BCU), Telematics Systems (SLCT), Xlink Controllers, eFan Controllers, and Power Shuttle Transmissions. To ensure compliance with quality management systems (IATF 16949:2016 and ISO 9001:2015) and environmental standards (ISO 14001), Hexense Labs requires a centralized, fully integrated Smart Enterprise Automation Architecture."
+    },
+    {
+      "id": "B0005",
+      "kind": "p",
+      "style": "",
+      "text": "This document specifies the Smart Company Management System (SCMS). The framework unifies all eleven functional departments into a single digital backbone: Project manufacture. "
+    },
+    {
+      "id": "B0007",
+      "kind": "p",
+      "style": "",
+      "text": "Sales & Business Development"
+    },
+    {
+      "id": "B0008",
+      "kind": "p",
+      "style": "",
+      "text": "Embedded Hardware Engineering"
+    },
+    {
+      "id": "B0009",
+      "kind": "p",
+      "style": "",
+      "text": "Embedded Firmware Engineering"
+    },
+    {
+      "id": "B0010",
+      "kind": "p",
+      "style": "",
+      "text": "Cloud & Mobile Application , we are calling as software Engineering"
+    },
+    {
+      "id": "B0011",
+      "kind": "p",
+      "style": "",
+      "text": "Mechanical Engineering"
+    },
+    {
+      "id": "B0012",
+      "kind": "p",
+      "style": "",
+      "text": "Purchasing & Supply Chain Management"
+    },
+    {
+      "id": "B0013",
+      "kind": "p",
+      "style": "",
+      "text": "Quality Assurance & Regulatory Compliance ( PCB-related hardware team takes care. Only mechanical, aesthetics, and packaging-wise done by this team )"
+    },
+    {
+      "id": "B0014",
+      "kind": "p",
+      "style": "",
+      "text": "Electronics & Mechanical Manufacturing"
+    },
+    {
+      "id": "B0015",
+      "kind": "p",
+      "style": "",
+      "text": "Accounts & Finance"
+    },
+    {
+      "id": "B0016",
+      "kind": "p",
+      "style": "",
+      "text": "Service & IT Infrastructure"
+    },
+    {
+      "id": "B0017",
+      "kind": "p",
+      "style": "",
+      "text": "Human Resources"
+    },
+    {
+      "id": "B0018",
+      "kind": "p",
+      "style": "",
+      "text": "Operations (department cross sync & facility management)"
+    },
+    {
+      "id": "B0020",
+      "kind": "p",
+      "style": "",
+      "text": "                      +------------------------------------------+"
+    },
+    {
+      "id": "B0022",
+      "kind": "p",
+      "style": "",
+      "text": "                      |         OEM CLIENT PORTAL LINK           |"
+    },
+    {
+      "id": "B0024",
+      "kind": "p",
+      "style": "",
+      "text": "                      |   (RFQ / Telemetry / Order Tracking)    |"
+    },
+    {
+      "id": "B0026",
+      "kind": "p",
+      "style": "",
+      "text": "                      +--------------------+---------------------+"
+    },
+    {
+      "id": "B0028",
+      "kind": "p",
+      "style": "",
+      "text": "                                           |"
+    },
+    {
+      "id": "B0030",
+      "kind": "p",
+      "style": "",
+      "text": "                                           v"
+    },
+    {
+      "id": "B0032",
+      "kind": "p",
+      "style": "",
+      "text": "+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0034",
+      "kind": "p",
+      "style": "",
+      "text": "|                            CENTRALIZED CRM & ERP CORE                             |"
+    },
+    {
+      "id": "B0036",
+      "kind": "p",
+      "style": "",
+      "text": "|                    (Project Master Spec Sheet - PMSS / SSOT)                      |"
+    },
+    {
+      "id": "B0038",
+      "kind": "p",
+      "style": "",
+      "text": "+-------+--------------+---------------+--------------+--------------+--------------+"
+    },
+    {
+      "id": "B0040",
+      "kind": "p",
+      "style": "",
+      "text": "        |              |               |              |              |"
+    },
+    {
+      "id": "B0042",
+      "kind": "p",
+      "style": "",
+      "text": "        v              v               v              v              v"
+    },
+    {
+      "id": "B0044",
+      "kind": "p",
+      "style": "",
+      "text": "  +-----------+  +-----------+   +-----------+  +-----------+  +-----------+"
+    },
+    {
+      "id": "B0046",
+      "kind": "p",
+      "style": "",
+      "text": "  |   SALES   |  |   R&D HW  |   | R&D FW/SW |  | MECH ENG  |  | PURCHASE  |"
+    },
+    {
+      "id": "B0048",
+      "kind": "p",
+      "style": "",
+      "text": "  |  (HLPL/   |  |  (HLPL/   |   |  (HLPL/   |  |  (HLPL/   |  |  (HLPL/   |"
+    },
+    {
+      "id": "B0050",
+      "kind": "p",
+      "style": "",
+      "text": "  | SAL/SOP)  |  | QMSP/HW)  |   |  QSM/SW)  |  |  MECH/DS) |  | PUR/SOP)  |"
+    },
+    {
+      "id": "B0052",
+      "kind": "p",
+      "style": "",
+      "text": "  +-----+-----+  +-----+-----+   +-----+-----+  +-----+-----+  +-----+-----+"
+    },
+    {
+      "id": "B0054",
+      "kind": "p",
+      "style": "",
+      "text": "        |              |               |              |              |"
+    },
+    {
+      "id": "B0056",
+      "kind": "p",
+      "style": "",
+      "text": "        +--------------+---------------+--------------+--------------+"
+    },
+    {
+      "id": "B0058",
+      "kind": "p",
+      "style": "",
+      "text": "                                       |"
+    },
+    {
+      "id": "B0060",
+      "kind": "p",
+      "style": "",
+      "text": "                                       v"
+    },
+    {
+      "id": "B0062",
+      "kind": "p",
+      "style": "",
+      "text": "+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0064",
+      "kind": "p",
+      "style": "",
+      "text": "|                        CROSS-FUNCTIONAL QUALITY & EOL CORE                        |"
+    },
+    {
+      "id": "B0066",
+      "kind": "p",
+      "style": "",
+      "text": "|             (APQP / DFMEA / PFMEA / Control Plan / Automated EOL Jigs)            |"
+    },
+    {
+      "id": "B0068",
+      "kind": "p",
+      "style": "",
+      "text": "+-------+------------------------------+------------------------------+-------------+"
+    },
+    {
+      "id": "B0070",
+      "kind": "p",
+      "style": "",
+      "text": "        |                              |                              |"
+    },
+    {
+      "id": "B0072",
+      "kind": "p",
+      "style": "",
+      "text": "        v                              v                              v"
+    },
+    {
+      "id": "B0074",
+      "kind": "p",
+      "style": "",
+      "text": "  +-----------+                  +-----------+                  +-----------+"
+    },
+    {
+      "id": "B0076",
+      "kind": "p",
+      "style": "",
+      "text": "  | MFG / SMT |                  |  FINANCE  |                  | HR & OPS  |"
+    },
+    {
+      "id": "B0078",
+      "kind": "p",
+      "style": "",
+      "text": "  | (SSM/QA/  |                  | (Tax / FA |                  | (Six Sigma|"
+    },
+    {
+      "id": "B0080",
+      "kind": "p",
+      "style": "",
+      "text": "  |   SOP)    |                  | Billing)  |                  |  Roadmap) |"
+    },
+    {
+      "id": "B0082",
+      "kind": "p",
+      "style": "",
+      "text": "  +-----------+                  +-----------+                  +-----------+"
+    },
+    {
+      "id": "B0083",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Key Technological Pillars"
+    },
+    {
+      "id": "B0084",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Departmental Settings & SLA Controls"
+    },
+    {
+      "id": "B0085",
+      "kind": "p",
+      "style": "",
+      "text": "Every page and lifecycle stage within the system enforces default operational targets, standard timelines, and lead-time benchmarks. Through a centralized settings interface, each department can fully customize its operational baseline, including:"
+    },
+    {
+      "id": "B0086",
+      "kind": "p",
+      "style": "",
+      "text": "Department-Specific Auto-Drafting Templates: Standardized document definitions, checklists, and forms tailored to departmental outputs."
+    },
+    {
+      "id": "B0087",
+      "kind": "p",
+      "style": "",
+      "text": "Roles & Responsibilities Matrix: Granular permission mapping, ownership rules, and sign-off authorities across all functional positions."
+    },
+    {
+      "id": "B0088",
+      "kind": "p",
+      "style": "",
+      "text": "WIP & Milestone Tracking Features: Configurable stage gates, tracking fields, automated status updates, and progress metrics."
+    },
+    {
+      "id": "B0089",
+      "kind": "p",
+      "style": "",
+      "text": "Standard Timelines & Lead Times: Default Service Level Agreements (SLAs), turnaround targets, and escalation thresholds for all workflow tasks."
+    },
+    {
+      "id": "B0090",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Identifier & Document Numbering Engine: Eliminates manual naming errors by dynamically composing standardized document tags across every engineering and commercial output."
+    },
+    {
+      "id": "B0091",
+      "kind": "p",
+      "style": "",
+      "text": "Auto-Drafting Master Templates: Automatically generates cross-departmental baseline templates upon project initiation or trigger events, including Commercial Proposals & Quotations, Contract Review Records (HLPL/F/MKT/01), DFMEA sheets, BOM Cost & Compliance Trackers, APQP Checklists (HLPL-APQP-001), Process Flow Diagrams (PFD), Control Plans, PPAP Checklists (F-PUR-15), Supplier Capacity & Scorecards (F-PUR-11/16), First-Piece & PDI Certificates, and Skill Matrix & Training Reports (HLPL/F/HR/03)."
+    },
+    {
+      "id": "B0092",
+      "kind": "p",
+      "style": "",
+      "text": "Real-Time Cross-Departmental Alert Triggers: Automated notifications via CRM/ERP push updates to webhooks and email when gated lifecycle thresholds are breached or dependencies clear."
+    },
+    {
+      "id": "B0093",
+      "kind": "p",
+      "style": "",
+      "text": "Bi-Directional Change Control: Instant synchronization between engineering updates (ECN/ECO), Bill of Materials (BOM) changes, and manufacturing line configurations."
+    },
+    {
+      "id": "B0094",
+      "kind": "p",
+      "style": "",
+      "text": "Live OEM Client Portal Integration: Provides direct visibility for OEM partners to review feasibility, sign off on Product Requirement Specifications (PRS), and track production milestones."
+    },
+    {
+      "id": "B0095",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "2. Master Data Schema & Document Numbering Engine"
+    },
+    {
+      "id": "B0096",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Automated Document Numbering Formula"
+    },
+    {
+      "id": "B0097",
+      "kind": "p",
+      "style": "",
+      "text": "All documents generated across the enterprise lifecycle must strictly conform to the unified, machine-parsable naming algorithm:"
+    },
+    {
+      "id": "B0099",
+      "kind": "p",
+      "style": "",
+      "text": "$$\\text{Document ID} = \\mathbf{HLPL-[\\text{PROJ_ID}]-[\\text{DEPT}]-[\\text{DOC_TYPE}]-[\\text{REV}]}$$  HLPL  -  Project_Code  -  EHW  -  PRS  -  01"
+    },
+    {
+      "id": "B0101",
+      "kind": "p",
+      "style": "",
+      "text": "   |        |       |      |       |"
+    },
+    {
+      "id": "B0103",
+      "kind": "p",
+      "style": "",
+      "text": "   |        |       |      |       +---> Revision Index (00, 01, 02...)"
+    },
+    {
+      "id": "B0105",
+      "kind": "p",
+      "style": "",
+      "text": "   |        |       |      +-----------> Document Type Code (PRS, BOM, SCH...)"
+    },
+    {
+      "id": "B0107",
+      "kind": "p",
+      "style": "",
+      "text": "   |        |       +------------------> Owning Department Code (EHW, SAL, PUR...)"
+    },
+    {
+      "id": "B0109",
+      "kind": "p",
+      "style": "",
+      "text": "   |        +--------------------------> Project Identifier (BCU, SLCT, XLINK...)"
+    },
+    {
+      "id": "B0111",
+      "kind": "p",
+      "style": "",
+      "text": "   +-----------------------------------> Enterprise Prefix (Letter from My company name )"
+    },
+    {
+      "id": "B0112",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Code Specifications"
+    },
+    {
+      "id": "B0115",
+      "kind": "tbl",
+      "rows": [
+        [
+          "Code Type",
+          "Token",
+          "Standard Expansion",
+          "Example / Mapping Reference"
+        ],
+        [
+          "Enterprise Prefix",
+          "HLPL",
+          "Hexense Labs Private Limited",
+          "Corporate Master Standard"
+        ],
+        [
+          "Project Identifier",
+          "BCU",
+          "Body Control Unit",
+          "Project ID HLPL-BCU-02 / HLPL-BCU-03"
+        ],
+        [
+          "",
+          "SLCT",
+          "Telematics / SLCT Module",
+          "Commercial Order Tracker Item 6"
+        ],
+        [
+          "",
+          "XLINK",
+          "Commercial Vehicle Gateway",
+          "Commercial Order Tracker Item 3"
+        ],
+        [
+          "",
+          "EFAN",
+          "eFan Speed Controller",
+          "Commercial Order Tracker Item 8"
+        ],
+        [
+          "",
+          "PST",
+          "Power Shuttle Transmission",
+          "Commercial Order Tracker Item 10"
+        ],
+        [
+          "Department Code",
+          "SAL",
+          "Sales & Business Development",
+          "Department Code SBD / Sales"
+        ],
+        [
+          "",
+          "EHW",
+          "Embedded Hardware Engineering",
+          "Department Code EHW"
+        ],
+        [
+          "",
+          "ESW",
+          "Embedded Software / Firmware",
+          "Department Code ESW"
+        ],
+        [
+          "",
+          "SW",
+          "Cloud & Application Software",
+          "Department Code SW"
+        ],
+        [
+          "",
+          "MECH",
+          "Mechanical Engineering",
+          "Department Code MMF / Mechanical"
+        ],
+        [
+          "",
+          "PUR",
+          "Purchasing & Supply Chain",
+          "Department Code SCM / Purchasing"
+        ],
+        [
+          "",
+          "QA",
+          "Quality Assurance & Compliance",
+          "Department Code QA / Quality"
+        ],
+        [
+          "",
+          "EMF",
+          "Electronics Manufacturing",
+          "Department Code EMF"
+        ],
+        [
+          "",
+          "FIN",
+          "Accounts & Finance",
+          "Department Code FIN"
+        ],
+        [
+          "",
+          "SIT",
+          "Service & IT Infrastructure",
+          "Department Code SIT"
+        ],
+        [
+          "",
+          "HR",
+          "HR & Administration",
+          "Department Code HR / OPS"
+        ],
+        [
+          "Document Type",
+          "SOR",
+          "Statement of Requirements",
+          "Input Document Reference"
+        ],
+        [
+          "",
+          "PRS",
+          "Product Requirement Spec",
+          "Stage Gate HW_02 / APQP Item 1"
+        ],
+        [
+          "",
+          "SCH",
+          "Schematic Design",
+          "Stage Gate HW_15 / APQP Item 7"
+        ],
+        [
+          "",
+          "GER",
+          "Gerber / PCB Fabrication Files",
+          "Stage Gate HW_24 / APQP Item 23"
+        ],
+        [
+          "",
+          "BOM",
+          "Bill of Materials",
+          "Stage Gate HW_19 / APQP Item 6"
+        ],
+        [
+          "",
+          "DFMEA",
+          "Design Failure Mode & Effects",
+          "Stage Gate HW_13 / APQP Item 14"
+        ],
+        [
+          "",
+          "PFMEA",
+          "Process Failure Mode & Effects",
+          "Manufacturing Quality Record"
+        ],
+        [
+          "",
+          "CP",
+          "Manufacturing Control Plan",
+          "Quality Master Record"
+        ],
+        [
+          "",
+          "DVP",
+          "Design Verification Plan",
+          "Stage Gate HW_14 / APQP Item 17"
+        ],
+        [
+          "",
+          "ECN",
+          "Engineering Change Notice",
+          "Stage Gate HW_36 / Change Record"
+        ],
+        [
+          "Standardized HW Stages",
+          "S1–S37",
+          "Complete Hardware & Project Stage Workflow (S1 Requirement Analysis at 5 cum. days to S37 Compliance at 214 cum. days)",
+          "HW Project Tracker / System Deliverables Mapping"
+        ]
+      ]
+    },
+    {
+      "id": "B0116",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Single Source of Truth: Project Master Spec Sheet (PMSS)"
+    },
+    {
+      "id": "B0117",
+      "kind": "p",
+      "style": "",
+      "text": "Every newly created project initializes a unified Project Master Spec Sheet (PMSS) within the central database. Upon project creation, the system automatically generates and attaches the APQP Phase Mapping, Risk Management Matrix, department-specific templates, roles and responsibilities matrix, WIP tracking features, and default SLA/timeline baselines to the PMSS core. The PMSS aggregates system-level requirements:"
+    },
+    {
+      "id": "B0119",
+      "kind": "p",
+      "style": "",
+      "text": "Operating Parameters: System Nominal Voltage (12V/24V), Operating Temperature Range (-40°C to +85°C), Enclosure IP Rating (IP67/IP68), I/O Channel Mapping."
+    },
+    {
+      "id": "B0120",
+      "kind": "p",
+      "style": "",
+      "text": "Compliance Requirements: (based on vehicle type)AIS-140, AEC-Q100/Q200 Grade Selection, ISO 7637-2 Pulse Immunity, RoHS/REACH compliance."
+    },
+    {
+      "id": "B0121",
+      "kind": "p",
+      "style": "",
+      "text": "Target Metrics: Target Unit BOM Cost, Manufacturing Cycle Time, Target Delivery Dates."
+    },
+    {
+      "id": "B0122",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Metadata Control Block & Revision Log"
+    },
+    {
+      "id": "B0123",
+      "kind": "p",
+      "style": "",
+      "text": "Every generated engineering or management document contains a dynamic header metadata block and change audit log.+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0125",
+      "kind": "p",
+      "style": "",
+      "text": "| COMPANY NAME PRIVATE LIMITED             Department                                          |"
+    },
+    {
+      "id": "B0127",
+      "kind": "p",
+      "style": "",
+      "text": "| DOCUMENT CONTROL HEADER                                                           |"
+    },
+    {
+      "id": "B0129",
+      "kind": "p",
+      "style": "",
+      "text": "+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0131",
+      "kind": "p",
+      "style": "",
+      "text": "| Document Title : Product Requirement Specification - [PROJ_ID]                     |"
+    },
+    {
+      "id": "B0133",
+      "kind": "p",
+      "style": "",
+      "text": "| Document ID    : HLPL-[PROJ_ID]-EHW-PRS-02          Issue Date : 01 April 2026      |"
+    },
+    {
+      "id": "B0135",
+      "kind": "p",
+      "style": "",
+      "text": "| Project / model Code   : HLPL-[PROJ_ID]-001                   Revision   : 02                 |"
+    },
+    {
+      "id": "B0137",
+      "kind": "p",
+      "style": "",
+      "text": "| Classification : Internal / OEM Confidential      Status     : Approved           |"
+    },
+    {
+      "id": "B0139",
+      "kind": "p",
+      "style": "",
+      "text": "+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0140",
+      "kind": "p",
+      "style": "",
+      "text": "Logo will be updated from settings ."
+    },
+    {
+      "id": "B0141",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Revision Control Log"
+    },
+    {
+      "id": "B0143",
+      "kind": "tbl",
+      "rows": [
+        [
+          "Rev",
+          "Effective Date",
+          "Affected Sections",
+          "Description of Change",
+          "Author / Engineer",
+          "Approver (HOD)"
+        ],
+        [
+          "00",
+          "01-Apr-2026",
+          "All",
+          "Initial Document Baseline Release",
+          "Hardware Team",
+          ""
+        ],
+        [
+          "01",
+          "13-Aug-2026",
+          "Sec 3.2, BOM",
+          "TVS Diode updated for transient protection (ECN-001)",
+          "",
+          " "
+        ],
+        [
+          "02",
+          "01-Sep-2026",
+          "Sec 4.1, PCB",
+          "MOSFET package layout modified for thermal dissipation (ECN-002)",
+          "officer ",
+          ""
+        ]
+      ]
+    },
+    {
+      "id": "B0144",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "3. Complete End-to-End Automated Project Lifecycle Flow"
+    },
+    {
+      "id": "B0146",
+      "kind": "p",
+      "style": "",
+      "text": "Here are a total of nine stages that you identify as a life cycle, below are details :"
+    },
+    {
+      "id": "B0147",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 1: Sales Intake & Client Portal Form"
+    },
+    {
+      "id": "B0148",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Inbound client inquiry details (contact, target vehicle platform, operating conditions), reference Customer data filling form document link (https://docs.google.com/document/d/1YsM3XHDcrL5N0g_jzTmji1h6gYKV6ByH), annual target volume projections, and lead metadata."
+    },
+    {
+      "id": "B0149",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: Inbound customer inquiry logged into CRM system (HLPL-F-SAL-01)."
+    },
+    {
+      "id": "B0150",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: CRM generates unique Enquiry ID (e.g., 2026-27/001), creates dynamic secure Client Portal Form Link, and dispatches automated Mutual Non-Disclosure Agreement (HLPL-SAL-mNDA-01) for electronic signature."
+    },
+    {
+      "id": "B0151",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: Sales & BD receives lead assignment notification; Legal / Admin alerted to track NDA execution."
+    },
+    {
+      "id": "B0152",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0153",
+      "kind": "p",
+      "style": "",
+      "text": "Sales Executive logs lead metadata into CRM (HLPL-F-SAL-01)."
+    },
+    {
+      "id": "B0154",
+      "kind": "p",
+      "style": "",
+      "text": "OEM client completes portal details: Statement of Requirements (SOR), volume projections, target vehicle platform, and operating conditions."
+    },
+    {
+      "id": "B0155",
+      "kind": "p",
+      "style": "",
+      "text": "Automated NDA workflow generates and dispatches a Mutual Non-Disclosure Agreement for electronic signature."
+    },
+    {
+      "id": "B0156",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 2: Cross-Departmental R&D Feasibility Analysis"
+    },
+    {
+      "id": "B0157",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Bilaterally signed mNDA, complete customer SOR (voltage levels, pin counts, communication protocols, thermal envelope, target unit cost)."
+    },
+    {
+      "id": "B0158",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: Full submission of client SOR and execution of mNDA (initiating automated creation of the central PMSS)."
+    },
+    {
+      "id": "B0159",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: System initializes draft PMSS (HLPL-[PROJ]-PMSS-00), automatically attaching the APQP Phase Mapping, Risk Management Matrix, auto-drafting master templates, roles and responsibilities matrix, milestone tracking features, and SLA/timeline baselines, generates Contract Review Record (HLPL/F/MKT/01), and creates review tickets across R&D domains."
+    },
+    {
+      "id": "B0160",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: R&D Leads (Hardware, Firmware, Software, Mechanical), Purchasing Lead, Quality Lead, and Sales Lead receive review task tickets."
+    },
+    {
+      "id": "B0161",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0162",
+      "kind": "p",
+      "style": "",
+      "text": "Hardware Feasibility: Evaluates voltage levels, pin counts, controller processing power, and sensing interfaces."
+    },
+    {
+      "id": "B0163",
+      "kind": "p",
+      "style": "",
+      "text": "Software/Firmware Feasibility: Assesses protocol stacks (CAN, J1939, MQTT), memory footprint, and cloud data throughput."
+    },
+    {
+      "id": "B0164",
+      "kind": "p",
+      "style": "",
+      "text": "Mechanical Feasibility: Evaluates packaging constraints, connector orientation, and thermal dissipation envelope."
+    },
+    {
+      "id": "B0165",
+      "kind": "p",
+      "style": "",
+      "text": "Purchasing & Commercial Feasibility: Verifies component availability, lead times, and preliminary unit costs against target margins."
+    },
+    {
+      "id": "B0166",
+      "kind": "p",
+      "style": "",
+      "text": "Contract Review Execution: Formal completion of Contract Review Record (HLPL/F/MKT/01) with cross-functional sign-offs."
+    },
+    {
+      "id": "B0167",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 3: Requirement Freeze & Commercial Confirmation"
+    },
+    {
+      "id": "B0168",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Approved Contract Review Record (HLPL/F/MKT/01), validated PMSS parameters, target unit price, development NRE quotes, and delivery schedule."
+    },
+    {
+      "id": "B0169",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: Multi-department feasibility sign-off completion on Contract Review Record."
+    },
+    {
+      "id": "B0170",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: System compiles Product Requirement Specification (HLPL-[PROJ]-EHW-PRS-00) and Commercial Proposal & Quotation (HLPL-SAL-QUO-01), routing them to the OEM via the Client Portal."
+    },
+    {
+      "id": "B0171",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: Sales Lead alerted to transmit proposal; Accounts Lead notified to expect incoming PO/LOI."
+    },
+    {
+      "id": "B0172",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0173",
+      "kind": "p",
+      "style": "",
+      "text": "Sales transmits commercial proposal and frozen PRS to the client via the Client Portal."
+    },
+    {
+      "id": "B0174",
+      "kind": "p",
+      "style": "",
+      "text": "Client signs PRS digitally and issues Purchase Order (PO) or formal Letter of Intent (LOI)."
+    },
+    {
+      "id": "B0175",
+      "kind": "p",
+      "style": "",
+      "text": "Accounts verifies PO details against quotation terms."
+    },
+    {
+      "id": "B0176",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 4: Proof of Concept (POC) by Hardware, firmware & software(if applicable) & Live Client Portal Sync"
+    },
+    {
+      "id": "B0177",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Verified customer Purchase Order/LOI, frozen PRS-00, pinout specifications, block diagrams, MCU driver libraries."
+    },
+    {
+      "id": "B0178",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: Account verification and PO lock in ERP core."
+    },
+    {
+      "id": "B0179",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: System initializes project workspace across HW Tracker (HW_01–HW_37) and SDLC (G0–G11), generating Block Diagram (HLPL-[PROJ]-EHW-BLK-01) and PoC Firmware Test Code (HLPL-[PROJ]-ESW-POC-01)."
+    },
+    {
+      "id": "B0180",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: R&D Engineering leads (HW, FW, SW) notified of project activation; OEM Client Portal team alerted to sync milestone dashboard."
+    },
+    {
+      "id": "B0181",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0182",
+      "kind": "p",
+      "style": "",
+      "text": "Hardware releases Block Diagram (HW_04) and Power Distribution Tree."
+    },
+    {
+      "id": "B0183",
+      "kind": "p",
+      "style": "",
+      "text": "Firmware releases PoC test code for core MCU peripheral validation (HW_12)."
+    },
+    {
+      "id": "B0184",
+      "kind": "p",
+      "style": "",
+      "text": "Engineering builds bench PoC setup to validate critical circuit functionality."
+    },
+    {
+      "id": "B0185",
+      "kind": "p",
+      "style": "",
+      "text": "Automated portal sync updates live project completion percentage visible to OEM client."
+    },
+    {
+      "id": "B0186",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 5: Pilot Build & Tentative Deliverables"
+    },
+    {
+      "id": "B0187",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Validated bench PoC test results, preliminary schematics, component candidate data, mechanical enclosure dimensions."
+    },
+    {
+      "id": "B0188",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: PoC functional clearance and MCU peripheral driver sign-off (HW_12 = OK)."
+    },
+    {
+      "id": "B0189",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: Releases Tentative BOM (HLPL-[PROJ]-EHW-BOM-00), Schematics (HLPL-[PROJ]-EHW-SCH-01), Layout Files (HLPL-[PROJ]-EHW-PCB-01), 3D STEP Enclosure Model by soft tooling (HLPL-[PROJ]-MECH-CAD-01), and fires Procurement Request (HW_07)."
+    },
+    {
+      "id": "B0190",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: Purchasing Lead alerted for sample procurement; Manufacturing/SMT Lead notified to schedule pilot line run."
+    },
+    {
+      "id": "B0191",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0192",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Procurement Request (HW_07) fires to Purchasing for prototype component sourcing."
+    },
+    {
+      "id": "B0193",
+      "kind": "p",
+      "style": "",
+      "text": "Purchasing orders sample parts, bare PCBs, panel stencils, and 3D enclosure prints (HW_08, HW_26)."
+    },
+    {
+      "id": "B0194",
+      "kind": "p",
+      "style": "",
+      "text": "Prototype SMT assembly (HW_30, HW_31) executed in-house or via empanelled job-work vendors."
+    },
+    {
+      "id": "B0195",
+      "kind": "p",
+      "style": "",
+      "text": "Hardware conducts basic bring-up and verification (HW_31)."
+    },
+    {
+      "id": "B0196",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 6: Client Validation & Pre-Compliance Testing"
+    },
+    {
+      "id": "B0197",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Assembled prototype units, Design Verification Report (HW_32 / DVR = OK), pre-compliance test plan, DVP&R test profiles."
+    },
+    {
+      "id": "B0198",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: DVR approval with zero critical bugs (HW_32 = OK)."
+    },
+    {
+      "id": "B0199",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: Generates Pre-Compliance Testing Checklist (HLPL-[PROJ]-QA-DVP-01), dispatches proto samples to client, and logs field feedback records."
+    },
+    {
+      "id": "B0200",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: Quality Assurance Lead notified to oversee testing; Sales Lead notified to track customer field validation sign-off."
+    },
+    {
+      "id": "B0201",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0202",
+      "kind": "p",
+      "style": "",
+      "text": "R&D conducts internal EMC/EMI and ESD pre-compliance testing based on the DVP&R (HW_27)."
+    },
+    {
+      "id": "B0203",
+      "kind": "p",
+      "style": "",
+      "text": "Pilot units handed over to client for vehicle fitment and proto testing."
+    },
+    {
+      "id": "B0204",
+      "kind": "p",
+      "style": "",
+      "text": "Client submits feedback and field validation reports via the Client Portal."
+    },
+    {
+      "id": "B0205",
+      "kind": "p",
+      "style": "",
+      "text": "If issues are identified, system triggers ECN control loop (HW_32A / HW_36A)."
+    },
+    {
+      "id": "B0206",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 7: Final Hardware & Mechanical Design Release"
+    },
+    {
+      "id": "B0207",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Signed client proto approval, cleared pre-compliance test reports, resolved ECN/ECO items, finalized software HSI spec."
+    },
+    {
+      "id": "B0208",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: Client proto clearance uploaded to portal and internal DVP&R approval."
+    },
+    {
+      "id": "B0209",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: Auto-compiles and freezes Final Gerber Package (HLPL-[PROJ]-EHW-GER-01), Production BOM (HLPL-[PROJ]-EHW-BOM-01), HSI Specification (HLPL-[PROJ]-ESW-HSI-01), and 2D/3D Mechanical Release Drawings (HLPL-[PROJ]-MECH-DRW-01)."
+    },
+    {
+      "id": "B0210",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: R&D Head receives approval gate ticket; Purchasing and Quality Leads alerted for production enablement."
+    },
+    {
+      "id": "B0211",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0212",
+      "kind": "p",
+      "style": "",
+      "text": "Hardware releases Final Gerber Files (HW_24), Production BOM (HW_19), and Hardware-Software Interface (HSI) spec (HW_28)."
+    },
+    {
+      "id": "B0213",
+      "kind": "p",
+      "style": "",
+      "text": "Mechanical freezes 2D engineering drawings and injection mold tooling CAD models (HW_17)."
+    },
+    {
+      "id": "B0214",
+      "kind": "p",
+      "style": "",
+      "text": "Quality compiles final Design Verification Plan and Report (DVP&R)."
+    },
+    {
+      "id": "B0215",
+      "kind": "p",
+      "style": "",
+      "text": "Release Package uploaded to central repository under strict role-based access."
+    },
+    {
+      "id": "B0216",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 8: Type Approval & Long-Range Supply Chain Planning"
+    },
+    {
+      "id": "B0217",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Frozen Production BOM-01, annual volume forecast, vendor desktop evaluations, supplier capacity figures."
+    },
+    {
+      "id": "B0218",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: R&D Head sign-off on Stage 7 Release Package (HW_26 Release Gate)."
+    },
+    {
+      "id": "B0219",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: Generates Desktop Supplier Evaluation (F-PUR-10), Capacity Assessment (F-PUR-16), Supplier PPAP Dossiers (F-PUR-15), Approved Supplier List update (HLPL-PUR-ASL-01), and TAC / AIS-140 compliance filings."
+    },
+    {
+      "id": "B0220",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: Purchasing Lead alerted to execute long-lead POs; Regulatory/Quality Lead alerted for TAC certification tracking."
+    },
+    {
+      "id": "B0221",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0222",
+      "kind": "p",
+      "style": "",
+      "text": "Purchasing executes Desktop Supplier Evaluation (F-PUR-10) and Capacity Assessment (F-PUR-16) for volume suppliers."
+    },
+    {
+      "id": "B0223",
+      "kind": "p",
+      "style": "",
+      "text": "Parts cataloged into Category A (Automotive Grade AEC-Q) and Category B (Standard Grade with DFMEA waiver)."
+    },
+    {
+      "id": "B0224",
+      "kind": "p",
+      "style": "",
+      "text": "Quality oversees supplier PPAP submissions (F-PUR-15) and audits."
+    },
+    {
+      "id": "B0225",
+      "kind": "p",
+      "style": "",
+      "text": "Regulatory team secures official AIS-140 / TAC certifications."
+    },
+    {
+      "id": "B0226",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Stage 9: Mass Production, EOL Testing & Logistics"
+    },
+    {
+      "id": "B0227",
+      "kind": "p",
+      "style": "",
+      "text": "Data Inputs: Customer mass production PO, active ASL/ACML status, production schedule, raw material IQC pass logs, EOL test specifications."
+    },
+    {
+      "id": "B0228",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger Event: Customer mass production PO release and ASL component qualification."
+    },
+    {
+      "id": "B0229",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action & Artifact Generation: System generates Production Work Orders, imports Process Flow Diagram ([PROJ]-PFD-01), PFMEA (SS-[PROJ]-02), Control Plan (HLPL-[PROJ]-CP-01), generates serialized PDI Test Certificates, and produces Tax Invoices/e-Way Bills."
+    },
+    {
+      "id": "B0230",
+      "kind": "p",
+      "style": "",
+      "text": "Department Notifications: Manufacturing Lead, Testing/PDI Lead, Quality Lead, and Finance/Logistics Lead alerted for dispatch release."
+    },
+    {
+      "id": "B0231",
+      "kind": "p",
+      "style": "",
+      "text": "Workflow:"
+    },
+    {
+      "id": "B0232",
+      "kind": "p",
+      "style": "",
+      "text": "Incoming Quality Control (IQC) inspects raw materials against specs."
+    },
+    {
+      "id": "B0233",
+      "kind": "p",
+      "style": "",
+      "text": "SMT Line executes PCB Baking, Solder Paste Printing, SPI, Surface Mounting, Reflow, and AOI inspection."
+    },
+    {
+      "id": "B0234",
+      "kind": "p",
+      "style": "",
+      "text": "Through-Hole insertion, Wave Soldering, and Conformal Coating executed."
+    },
+    {
+      "id": "B0235",
+      "kind": "p",
+      "style": "",
+      "text": "Automated End-of-Line (EOL) Testing Jig flashes production code, executes functional pin testing, and records pass/fail telemetry to server."
+    },
+    {
+      "id": "B0236",
+      "kind": "p",
+      "style": "",
+      "text": "Pre-Dispatch Inspection (PDI) generates serialized QR code labels."
+    },
+    {
+      "id": "B0237",
+      "kind": "p",
+      "style": "",
+      "text": "ERP generates Tax Invoice, dispatches shipment, and tracks delivery."
+    },
+    {
+      "id": "B0238",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "4. Departmental Documentation, Workflow & Alert Matrix"
+    },
+    {
+      "id": "B0239",
+      "kind": "p",
+      "style": "",
+      "text": "+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0241",
+      "kind": "p",
+      "style": "",
+      "text": "|                         ENTERPRISE AUTOMATION SYSTEM                              |"
+    },
+    {
+      "id": "B0243",
+      "kind": "p",
+      "style": "",
+      "text": "+---------------------+-------------------------------+-----------------------------+"
+    },
+    {
+      "id": "B0244",
+      "kind": "p",
+      "style": "",
+      "text": "| Department          | Primary SOP & Document Standards | Automated Alerts & Webhooks |"
+    },
+    {
+      "id": "B0245",
+      "kind": "p",
+      "style": "",
+      "text": "+---------------------+-------------------------------+-----------------------------+"
+    },
+    {
+      "id": "B0246",
+      "kind": "p",
+      "style": "",
+      "text": "| Sales & BD          | HLPL/SAL/SOP/01, HLPL/F/MKT/01| Unsigned NDA > 48h          |"
+    },
+    {
+      "id": "B0247",
+      "kind": "p",
+      "style": "",
+      "text": "| Embedded Hardware   | HLPL/QMSP/HW/001, Stages 01-37| Unapproved Component alert  |"
+    },
+    {
+      "id": "B0248",
+      "kind": "p",
+      "style": "",
+      "text": "| Embedded Firmware   | HLPL-QSM-SW-00001, Gates G0-G11| Unchecked Pull Request alert|"
+    },
+    {
+      "id": "B0249",
+      "kind": "p",
+      "style": "",
+      "text": "| Software Eng.       | HLPL-QSM-SW-00001, Gates G0-G11| CI/CD Pipeline failure      |"
+    },
+    {
+      "id": "B0250",
+      "kind": "p",
+      "style": "",
+      "text": "| Mechanical Eng.     | HLPL-MECH-SOP-01, STEP Models | Enclosure Clash trigger     |"
+    },
+    {
+      "id": "B0251",
+      "kind": "p",
+      "style": "",
+      "text": "| Purchasing & SCM    | HLPL-PUR-SOP-1, F-PUR-10/16   | Lead Time Delay warning     |"
+    },
+    {
+      "id": "B0252",
+      "kind": "p",
+      "style": "",
+      "text": "| Quality Assurance   | SSM/QA/SOP/01, HLPL-APQP-001  | Open NCR / SCAR alert       |"
+    },
+    {
+      "id": "B0253",
+      "kind": "p",
+      "style": "",
+      "text": "| Manufacturing       | PFMEA, Control Plan, PFD      | First-Piece Inspection hold |"
+    },
+    {
+      "id": "B0254",
+      "kind": "p",
+      "style": "",
+      "text": "| Production & EOL    | HW_29, Control Plan, EOL Jigs | First-Pass Yield < 95%      |"
+    },
+    {
+      "id": "B0255",
+      "kind": "p",
+      "style": "",
+      "text": "| Finance & Accounts  | Expense Control, Tax Rules    | Overdue Receivable > 45d    |"
+    },
+    {
+      "id": "B0256",
+      "kind": "p",
+      "style": "",
+      "text": "| Service & IT        | ISMS, SLA Monitoring          | Open Ticket TAT Alert       |"
+    },
+    {
+      "id": "B0257",
+      "kind": "p",
+      "style": "",
+      "text": "| HR & Administration | Roles Matrix, Six Sigma Plan | Training Adherence warning |"
+    },
+    {
+      "id": "B0258",
+      "kind": "p",
+      "style": "",
+      "text": "+---------------------+-------------------------------+-----------------------------+"
+    },
+    {
+      "id": "B0259",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "1. Sales & Business Development"
+    },
+    {
+      "id": "B0260",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: A.D. Sales, Sr. Manager Sales."
+    },
+    {
+      "id": "B0261",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Sales SOP (HLPL/SAL/SOP/01), Lead Record (HLPL-F-SAL-01), Auto-Generated Commercial Proposals & Quotations, Contract Review Record (HLPL/F/MKT/01), Roles & Authority Matrix (HLPL/SAL/RR/01)."
+    },
+    {
+      "id": "B0262",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Lead capture, SOR evaluation, commercial quotation drafting, customer contract negotiation, order intake, and customer feedback collection."
+    },
+    {
+      "id": "B0263",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0264",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_SAL_01: Customer SOR uploaded without signed NDA (Triggers alert to Legal & Sales Manager)."
+    },
+    {
+      "id": "B0265",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_SAL_02: Contract Review pending functional sign-offs > 48 hours."
+    },
+    {
+      "id": "B0266",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_SAL_03: Customer payment overdue beyond agreed terms (Target: 45 days)."
+    },
+    {
+      "id": "B0267",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "2. Embedded Hardware Engineering"
+    },
+    {
+      "id": "B0268",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders:  Hardware Lead."
+    },
+    {
+      "id": "B0269",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Hardware Development SOP (HLPL/QMSP/HW/001), Hardware Tracking Sheet (HW_01 to HW_37), PRS (HLPL-[PROJ]-EHW-PRS), Baseline DFMEA Templates (HLPL-[PROJ]-EHW-DFMEA), Automated BOM Cost & Compliance Trackers, Gerber Files, BOM."
+    },
+    {
+      "id": "B0270",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Requirement analysis, block diagram, key part evaluation, schematic capture, PCB layout design, DFM/DFA review, EMC pre-compliance, and hardware bring-up."
+    },
+    {
+      "id": "B0271",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0272",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_HWW_01: Key component selected lacking AEC-Q qualification without R&D Risk Waiver."
+    },
+    {
+      "id": "B0273",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_HW_02: Schematic / Layout validation gate failed (HW_16, HW_20, HW_23 = NOT OK)."
+    },
+    {
+      "id": "B0274",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_HW_03: Major testing bug detected during HW basic bring-up (HW_32A triggers schematic rollback to HW_15)."
+    },
+    {
+      "id": "B0275",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "3. Embedded Firmware , Software & Cloud Applications if applicable"
+    },
+    {
+      "id": "B0276",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: Chief Technology Officer (CTO), Lead Software Developer (LSD), Staff Software Developer (SSD)."
+    },
+    {
+      "id": "B0277",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Software SOP (HLPL-QSM-SW-00001), Software Gated Lifecycle (G0 to G11), Hardware-Software Interface (HLPL-[PROJ]-ESW-HSI)."
+    },
+    {
+      "id": "B0278",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Firmware peripheral driver development, application stack logic, API development, CI/CD pipeline deployment, PR reviews, automated unit testing, staging verification, and production release."
+    },
+    {
+      "id": "B0279",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0280",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_SW_01: Pull Request merged without mandatory Staff/Lead Developer approval (G6 gate violation)."
+    },
+    {
+      "id": "B0281",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_SW_02: Automated CI build failure or code coverage drop below threshold."
+    },
+    {
+      "id": "B0282",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_SW_03: Firmware HSI protocol mismatch against hardware register map."
+    },
+    {
+      "id": "B0283",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "4. Mechanical Engineering"
+    },
+    {
+      "id": "B0284",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: Mechanical Lead / Design Team."
+    },
+    {
+      "id": "B0285",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Enclosure STEP Files (HW_17), 2D Mechanical Drawings, Thermal Analysis Reports (HSD Report), Mold Tooling Specs."
+    },
+    {
+      "id": "B0286",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Casing design, thermal modeling, connector clearance check, 3D printing, ingress protection (IP) sealing validation, and tooling fabrication release."
+    },
+    {
+      "id": "B0287",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0288",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_MECH_01: Component height exceeds mechanical enclosure boundary (3D STEP collision detected)."
+    },
+    {
+      "id": "B0289",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_MECH_02: Thermal simulation exceeds maximum junction temperature for power switches/MOSFETs."
+    },
+    {
+      "id": "B0290",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "5. Purchasing & Supply Chain"
+    },
+    {
+      "id": "B0291",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: Purchase Head, Purchase Engineer."
+    },
+    {
+      "id": "B0292",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Supplier Selection SOP (HLPL-PUR-SOP-1), Capacity Assessment (F-PUR-16), Supplier Audit (F-PUR-13/F-PUR-14), Approved Supplier List (ASL/ACML), Automated PPAP Dossier Checklist (F-PUR-15), Vendor Scorecard & Capacity Reports (F-PUR-11 and F-PUR-16)."
+    },
+    {
+      "id": "B0293",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Dual-track procurement:"
+    },
+    {
+      "id": "B0294",
+      "kind": "p",
+      "style": "",
+      "text": "Prototype Track: Rapid sample component procurement, PCB prototype fabrication, stencil sourcing."
+    },
+    {
+      "id": "B0295",
+      "kind": "p",
+      "style": "",
+      "text": "Mass Production Track: Desktop supplier evaluation (F-PUR-10), capacity gap analysis, AEC-Q dossier compilation, PPAP collection, annual supplier audits."
+    },
+    {
+      "id": "B0296",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0297",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_PUR_01: Active BOM contains component from non-ASL vendor."
+    },
+    {
+      "id": "B0298",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_PUR_02: Supplier capacity gap detected between rated shift output and customer volume forecast."
+    },
+    {
+      "id": "B0299",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_PUR_03: Supplier audit score below 60% (Triggers mandatory SCAR and suspension review)."
+    },
+    {
+      "id": "B0300",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Dual-Track Procurement Engine Architecture"
+    },
+    {
+      "id": "B0301",
+      "kind": "p",
+      "style": "",
+      "text": "To support both rapid development agility and scalable volume manufacturing, Purchasing & SCM operates a structured dual-track procurement process:"
+    },
+    {
+      "id": "B0302",
+      "kind": "p",
+      "style": "",
+      "text": "Prototype / Pilot Track: Optimized for speed, rapid iteration, and quick-turn turnaround. Utilizes Tentative BOMs (HLPL-[PROJ]-EHW-BOM-00), 3D-printed enclosure prototypes or soft tooling, quick-turn bare PCB fabrication, and sample purchase orders for rapid bench-top validation and prototype assembly."
+    },
+    {
+      "id": "B0303",
+      "kind": "p",
+      "style": "",
+      "text": "Mass Production Track: Optimized for long-term component availability, strict cost targets, and automotive compliance. Utilizes frozen Production BOMs (HLPL-[PROJ]-EHW-BOM-01), hardened multi-cavity injection molds, panelized production Gerber sets, formal Supplier PPAP Level 3 submissions (F-PUR-15), and long-range material forecasting via ASL/ACML vendor networks."
+    },
+    {
+      "id": "B0304",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "6. Quality Assurance & Regulatory Compliance"
+    },
+    {
+      "id": "B0305",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: VP Operations / Quality, Quality Head, QA Engineer."
+    },
+    {
+      "id": "B0306",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: APQP Master Gate Checklist (HLPL-APQP-001), Electronics & Mechanical Quality SOP (SSM/QA/SOP/01), Process Flow Diagram (PFD) & Control Plan Templates, DVP&R, Non-Conformance Reports (NCR/SCAR), Calibration Register."
+    },
+    {
+      "id": "B0307",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: APQP phase gate monitoring, IQC, IPQC, FQC, PDI inspection, RCA/CAPA execution, internal quality audits, and test equipment calibration."
+    },
+    {
+      "id": "B0308",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0309",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_QA_01: APQP phase gate transition attempted with open R/Y risk flags."
+    },
+    {
+      "id": "B0310",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_QA_02: Measuring instrument calibration expired or overdue."
+    },
+    {
+      "id": "B0311",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_QA_03: Customer complaint / field failure logged (Triggers mandatory 8D CAPA workflow)."
+    },
+    {
+      "id": "B0312",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "7. Electronics & Mechanical Manufacturing"
+    },
+    {
+      "id": "B0313",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: Production Head / Electronics & Mech Manufacturing Leads."
+    },
+    {
+      "id": "B0314",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Process Flow Diagram (HLPL-Project_Code-PFD-01), Process Failure Mode and Effects Analysis (HLPL-Project_Code-02), Control Plan (HLPL-Project_Code-CP-01), Work Instructions (WI)."
+    },
+    {
+      "id": "B0315",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Raw material issue, solder paste storage & temperature verification, PCB baking, SMT mounting, reflow soldering, AOI, manual insertion, wave soldering, conformal coating, device assembly, and sealing."
+    },
+    {
+      "id": "B0316",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0317",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_MFG_01: First-piece inspection failed during line setup (Blocks batch production)."
+    },
+    {
+      "id": "B0318",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_MFG_02: Reflow thermal profile out of spec or solder paste shelf-life expired."
+    },
+    {
+      "id": "B0319",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "8. Production & EOL Testing"
+    },
+    {
+      "id": "B0320",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: Testing Lead / PDI & Testing Team."
+    },
+    {
+      "id": "B0321",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Pre-Testing Code (HW_29), EOL Test Specs, Control Plan Inspection Criteria, First-Piece Inspection & Pre-Dispatch Inspection (PDI) Certificates, Automated Test Logs."
+    },
+    {
+      "id": "B0322",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Automated Test Plan execution via specialized test jigs:+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0324",
+      "kind": "p",
+      "style": "",
+      "text": "|                      AUTOMATED EOL TEST JIG ENGINE                                |"
+    },
+    {
+      "id": "B0326",
+      "kind": "p",
+      "style": "",
+      "text": "+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0328",
+      "kind": "p",
+      "style": "",
+      "text": "|  1. MCU Pre-Code Flash  -->  2. Voltage Regulator Verification                      |"
+    },
+    {
+      "id": "B0330",
+      "kind": "p",
+      "style": "",
+      "text": "|  3. Relay & Switch Test -->  4. CAN/J1939 Bus Loopback                             |"
+    },
+    {
+      "id": "B0332",
+      "kind": "p",
+      "style": "",
+      "text": "|  5. Sensor Calibration  -->  6. Final Production Firmware Injection               |"
+    },
+    {
+      "id": "B0334",
+      "kind": "p",
+      "style": "",
+      "text": "+-----------------------------------------------------------------------------------+"
+    },
+    {
+      "id": "B0336",
+      "kind": "p",
+      "style": "",
+      "text": "                                        |"
+    },
+    {
+      "id": "B0338",
+      "kind": "p",
+      "style": "",
+      "text": "                                        v"
+    },
+    {
+      "id": "B0340",
+      "kind": "p",
+      "style": "",
+      "text": "              +---------------------------------------------------+"
+    },
+    {
+      "id": "B0342",
+      "kind": "p",
+      "style": "",
+      "text": "              |   PASS: Serialized QR Code Label Printed & Synced |"
+    },
+    {
+      "id": "B0344",
+      "kind": "p",
+      "style": "",
+      "text": "              |   FAIL: Device Locked & Routed to Rework Station  |"
+    },
+    {
+      "id": "B0346",
+      "kind": "p",
+      "style": "",
+      "text": "              +---------------------------------------------------+"
+    },
+    {
+      "id": "B0348",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0349",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_TST_01: First-Pass Yield drops below 95% threshold on production run."
+    },
+    {
+      "id": "B0350",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_TST_02: EOL Test Jig detects parametric out-of-bounds on microcontroller pin."
+    },
+    {
+      "id": "B0351",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9. Accounts & Finance"
+    },
+    {
+      "id": "B0352",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: Finance Lead / Accounts Team."
+    },
+    {
+      "id": "B0353",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Financial KPI Register (HLPL-F-KPI-01), Tax Invoices, Bank/Vendor/Customer Reconciliation Sheets, Monthly MIS Reports."
+    },
+    {
+      "id": "B0354",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Booking revenue, billing against order status, payment collection monitoring, vendor invoice processing, maker-checker payment releases, and statutory tax filings (GST, TDS)."
+    },
+    {
+      "id": "B0355",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0356",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_FIN_01: Invoice processing attempted without approved PO and Goods Receipt Note (GRN)."
+    },
+    {
+      "id": "B0357",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_FIN_02: Monthly book closing delayed beyond 15th of next month."
+    },
+    {
+      "id": "B0358",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "10. Service & IT Infrastructure"
+    },
+    {
+      "id": "B0359",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: Service Lead / IT Coordinator."
+    },
+    {
+      "id": "B0360",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Risk Register (R-SEC-01, R-INS-01, R-LIA-01), Infrastructure SOP, SLA Tracking Reports."
+    },
+    {
+      "id": "B0361",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Server infrastructure management, database backups, VPN security enforcement, customer support ticketing, field issue resolution, and IT security audits."
+    },
+    {
+      "id": "B0362",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0363",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_IT_01: Server backup execution failed or offsite replication delayed."
+    },
+    {
+      "id": "B0364",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_IT_02: Service ticket Turnaround Time (TAT) exceeds SLA limit."
+    },
+    {
+      "id": "B0365",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "11. Human Resources"
+    },
+    {
+      "id": "B0366",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: HR Lead, Deployment Lead."
+    },
+    {
+      "id": "B0367",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Role & Responsibility Matrix (HLPL/SAL/RR/01), Departmental Skill Matrix & Training Gap Report (HLPL/F/HR/03), Training Plan."
+    },
+    {
+      "id": "B0368",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Workforce planning, employee onboarding, background verification (BGV), skill matrix updating, monthly training execution, and employee relations."
+    },
+    {
+      "id": "B0369",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0370",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_HR_01: Monthly training quota drops below 2 sessions per month."
+    },
+    {
+      "id": "B0371",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_HR_02: Mandatory background verification or onboarding document overdue."
+    },
+    {
+      "id": "B0372",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "12. Administration & Operations"
+    },
+    {
+      "id": "B0373",
+      "kind": "p",
+      "style": "",
+      "text": "Responsible Leaders: Admin Lead, Operations Lead."
+    },
+    {
+      "id": "B0374",
+      "kind": "p",
+      "style": "",
+      "text": "Primary Documentation: Enterprise Risk Register (HLPL-OPS-RISK-01), Six Sigma Implementation Roadmap, Cross-Departmental Operational Metric Tracker (HLPL-OPS-METRIC-01)."
+    },
+    {
+      "id": "B0375",
+      "kind": "p",
+      "style": "",
+      "text": "Core Workflows: Enterprise risk management, maintaining the central Risk Matrix, monitoring cross-departmental operational metrics, Six Sigma DMAIC deployment, and operational compliance governance."
+    },
+    {
+      "id": "B0376",
+      "kind": "p",
+      "style": "",
+      "text": "System Alerts:"
+    },
+    {
+      "id": "B0377",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_OPS_01: Six Sigma DMAIC phase tollgate review overdue."
+    },
+    {
+      "id": "B0378",
+      "kind": "p",
+      "style": "",
+      "text": "ALERT_OPS_02: Enterprise risk threshold exceeded without mitigation plan."
+    },
+    {
+      "id": "B0379",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "5. Cross-Departmental Bi-Directional Change Control Loops"
+    },
+    {
+      "id": "B0380",
+      "kind": "p",
+      "style": "",
+      "text": "To handle engineering changes, field issues, and requirement adjustments, the system enforces four automated, bi-directional closed loops."
+    },
+    {
+      "id": "B0381",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Loop 1: Customer Scope / Requirement Change"
+    },
+    {
+      "id": "B0382",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger: OEM Client submits modified specification via Client Portal."
+    },
+    {
+      "id": "B0383",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action: System flags PMSS as Under Amendment and halts active phase gate transitions."
+    },
+    {
+      "id": "B0384",
+      "kind": "p",
+      "style": "",
+      "text": "Routing: Sales receives alert -> R&D (EHW, ESW, MECH) performs impact analysis on BOM, schedule, and tooling."
+    },
+    {
+      "id": "B0385",
+      "kind": "p",
+      "style": "",
+      "text": "Resolution: System updates Contract Review (HLPL/F/MKT/01) with amendment details -> Sales issues revised commercial quotation -> Client signs via portal -> PMSS unlocks with incremented revision (e.g., Rev 01 to Rev 02)."
+    },
+    {
+      "id": "B0386",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Loop 2: Mechanical / Component Interference"
+    },
+    {
+      "id": "B0387",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger: Automated 3D STEP clearance check detects physical clash between PCB component and enclosure housing."
+    },
+    {
+      "id": "B0388",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action: System generates Mechanical ECO ticket (HLPL-MECH-ECO) linking Hardware placement file and Mechanical assembly."
+    },
+    {
+      "id": "B0389",
+      "kind": "p",
+      "style": "",
+      "text": "Routing: Hardware Lead notified -> PCB component repositioned or alternate component package selected (HW_18, HW_20)."
+    },
+    {
+      "id": "B0390",
+      "kind": "p",
+      "style": "",
+      "text": "Resolution: DFM/DFA check re-executed -> Mechanical re-validates 3D assembly -> Layout re-cleared (HW_23 = OK) -> Updated Gerber files generated (HW_24)."
+    },
+    {
+      "id": "B0391",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Loop 3: Test Verification Failure"
+    },
+    {
+      "id": "B0392",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger: Pre-compliance EMC/ESD failure or DVP test failure logged during Stage 6 (HW_32 = NOT OK)."
+    },
+    {
+      "id": "B0393",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action: System locks Phase Gate transition, preventing pilot release, and logs Hardware Issues / RCA record (Phase 4)."
+    },
+    {
+      "id": "B0394",
+      "kind": "p",
+      "style": "",
+      "text": "Routing: Automated escalation to Hardware Lead and Quality Head -> Circuit modification initiated."
+    },
+    {
+      "id": "B0395",
+      "kind": "p",
+      "style": "",
+      "text": "Resolution: Hardware modifies Schematic design (HW_15 / HW_32A) -> ECN raised (ECN-001 / ECN-002) -> Prototype re-fabricated and tested -> Re-validation report attached (APQP Item 20) -> Gate unlocked."
+    },
+    {
+      "id": "B0396",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "Loop 4: Post-Release ECO/ECN"
+    },
+    {
+      "id": "B0397",
+      "kind": "p",
+      "style": "",
+      "text": "Trigger: Component End-of-Life (EOL), cost-reduction drive, or field issue triggers change request (HW_36 / HW_36A)."
+    },
+    {
+      "id": "B0398",
+      "kind": "p",
+      "style": "",
+      "text": "Automated Action: R&D Head initiates formal Engineering Change Order (ECO) workflow."
+    },
+    {
+      "id": "B0399",
+      "kind": "p",
+      "style": "",
+      "text": "Routing:"
+    },
+    {
+      "id": "B0400",
+      "kind": "p",
+      "style": "",
+      "text": "R&D re-assesses DFMEA RPN scores."
+    },
+    {
+      "id": "B0401",
+      "kind": "p",
+      "style": "",
+      "text": "Purchasing checks inventory scrap liability and ASL vendor status."
+    },
+    {
+      "id": "B0402",
+      "kind": "p",
+      "style": "",
+      "text": "Quality updates PFMEA (SS-[PROJ]-02) and Control Plan (HLPL-[PROJ]-CP-01)."
+    },
+    {
+      "id": "B0403",
+      "kind": "p",
+      "style": "",
+      "text": "Resolution: Final sign-off by R&D Head and VP Operations -> ERP automatically updates Active BOM -> SMT line feeder setup sheets updated -> Old revision components locked in inventory."
+    },
+    {
+      "id": "B0404",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "6. Departmental Live Dashboard Specifications"
+    },
+    {
+      "id": "B0406",
+      "kind": "tbl",
+      "rows": [
+        [
+          "Department",
+          "Real-Time Input Dependencies",
+          "Internal Work-In-Progress (WIP) Metrics",
+          "Outgoing Deliverables",
+          "Readiness Gate Criteria"
+        ],
+        [
+          "Sales & BD",
+          "OEM Inquiry, Client SOR, Feasibility Sign-offs",
+          "CRM Pipeline Value, Open Lead Conversion Rate, Tender Aging",
+          "Signed NDA, Quotation, Signed PRS, Contract Review (HLPL/F/MKT/01)",
+          "Signed Customer PO & Approved PRS"
+        ],
+        [
+          "Embedded HW",
+          "Customer PRS, Feasibility Approval, Component Samples",
+          "Schematic Capture Status, Layout DRC Checks, HW Stage Gates (HW_01-HW_37)",
+          "Schematics (HW_15), Gerber (HW_24), Production BOM (HW_19), DVR (HW_32)",
+          "R&D Head Sign-off (HW_26 Release Gate)"
+        ],
+        [
+          "Embedded SW",
+          "HW Register Map, Hardware HSI Spec (HW_28), Function Specs",
+          "Active Feature Branches, CI/CD Pipeline Success Rate, Open Bug Count",
+          "Peripheral Drivers, Tested Firmware Binary, HSI Spec (HW_28)",
+          "Zero Critical / High Severity Bugs in Staging"
+        ],
+        [
+          "Cloud Software",
+          "Firmware Telemetry Payload Spec, Database Schema Specs",
+          "PR Review Queue, API Response Latency, Automated Unit Test Coverage",
+          "Deployed Microservices, OEM Cloud Integrations, Web Portals",
+          "G9/G10 Production Merge & Deployment Approval"
+        ],
+        [
+          "Mechanical Eng.",
+          "PCB Geometry, Connector Heights, Vehicle Mounting Envelope",
+          "3D Modeling Status, Mold Flow Analysis, Ingress Protection (IP) Checks",
+          "3D Enclosure STEP Files (HW_17), 2D Drawings, Mold Tool Specs",
+          "Zero 3D Component Clashes & IP Sealing Pass"
+        ],
+        [
+          "Purchasing & SCM",
+          "Engineering BOM (Tentative/Final), Forecast Volume, Vendor Specs",
+          "Desktop Audit Score (F-PUR-10), Supplier Capacity Gap (F-PUR-16), Lead Time",
+          "Prototype Components, Bare PCBs, Approved ASL/ACML, Supplier PPAP",
+          "100% BOM Parts Onboarded on ASL/ACML"
+        ],
+        [
+          "Quality Assurance",
+          "PRS, DVP Requirements, Supplier PPAPs, IQC Reports",
+          "APQP Gate Status (HLPL-APQP-001), DVP Verification Progress, Open NCRs",
+          "Approved DVP&R, Calibration Register, Audit Reports, PDI Clearance",
+          "APQP Phase Closure & Zero Open Critical NCRs"
+        ],
+        [
+          "Manufacturing",
+          "Work Orders, Final Released BOM, Bare PCBs, Component Kits",
+          "SMT Yield Rate, Reflow Profile Stability, Line Cycle Time",
+          "Fully Assembled Board Assemblies (PCBA), Completed Enclosure Builds",
+          "First-Piece Inspection Approval & AOI Pass"
+        ],
+        [
+          "EOL Testing",
+          "Assembled PCBA, Pre-Testing Firmware Code, Test Jigs",
+          "Unit Test Cycle Time, Jig Pass/Fail Ratio, First-Pass Yield %",
+          "Flashed Production Device, Serialized Test Certificates, Pass Logs",
+          "100% EOL Functional Parameter Verification"
+        ],
+        [
+          "Accounts & Finance",
+          "Dispatched Work Orders, PDI Certificates, Vendor Receipts",
+          "Receivables Aging (>45 Days), Invoice Processing Queues, MIS Status",
+          "Verified Tax Invoices, Monthly Financial MIS, Payment Release Slips",
+          "Payment Receipt Verification or Credit Line Approval"
+        ],
+        [
+          "Service & IT",
+          "User Support Tickets, Server Telemetry, Backup Schedules",
+          "SLA Resolution TAT, System Uptime %, Vulnerability Patch Status",
+          "Incident Resolution Logs, Risk Register Updates, Security Audit Clearance",
+          "100% Critical IT Infrastructure Backup & SLA Adherence"
+        ],
+        [
+          "HR & Operations",
+          "Resource Requests, Training Schedules, Audit Requirements",
+          "Training Adherence %, Skill Matrix Scores, Six Sigma DMAIC Tollgates",
+          "Onboarded Personnel, Verification Reports, Six Sigma Project Certs",
+          "Competency & BGV Verification Clearance"
+        ]
+      ]
+    },
+    {
+      "id": "B0407",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "7. Comprehensive Maintenance & Tooling Management Framework"
+    },
+    {
+      "id": "B0408",
+      "kind": "p",
+      "style": "",
+      "text": "To ensure operational continuity across SMT lines, automated testing jigs, and mechanical fabrication equipment, Hexense Labs enforces a Total Productive Maintenance (TPM) master plan integrated with strictly monitored mean-time metrics and quality assurance registers."
+    },
+    {
+      "id": "B0409",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "7.1 Total Productive Maintenance (TPM) Master Plan & MTBF/MTTR Tracking"
+    },
+    {
+      "id": "B0410",
+      "kind": "p",
+      "style": "",
+      "text": "Preventive and predictive maintenance schedules are executed according to the enterprise TPM plan. Equipment performance is monitored against key maintenance benchmarks to eliminate unplanned line stops and process drift:"
+    },
+    {
+      "id": "B0411",
+      "kind": "p",
+      "style": "",
+      "text": "Preventive Maintenance (PM) Cycles: Biannual and annual preventive servicing covering PCB loaders, automatic solder paste printers, SPI units, chip shooters, reflow ovens, AOI units, wave soldering machines, and automated EOL jigs."
+    },
+    {
+      "id": "B0412",
+      "kind": "p",
+      "style": "",
+      "text": "Mean Time Between Failures (MTBF) & Mean Time to Repair (MTTR): Tracked per machine to evaluate Overall Equipment Effectiveness (OEE) and optimize spare parts inventory."
+    },
+    {
+      "id": "B0413",
+      "kind": "p",
+      "style": "",
+      "text": "Autonomous Maintenance & Start-Up Checks: Daily start-up verification checklists executed by machine operators prior to batch production runs."
+    },
+    {
+      "id": "B0414",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "7.2 Calibration Registers (IMTE) & Measurement System Analysis (MSA / Gage R&R)"
+    },
+    {
+      "id": "B0415",
+      "kind": "p",
+      "style": "",
+      "text": "All Inspection, Measuring, and Test Equipment (IMTE) used across quality control and production lines are subject to strict calibration controls and Measurement System Analysis (MSA) under IATF 16949 requirements:"
+    },
+    {
+      "id": "B0416",
+      "kind": "p",
+      "style": "",
+      "text": "IMTE Calibration Register: Centralized tracking of dial vernier calipers, micrometers, multimeters, and oscilloscopes, maintaining national/international traceability standards and calibration expiration alerts."
+    },
+    {
+      "id": "B0417",
+      "kind": "p",
+      "style": "",
+      "text": "Gage Repeatability & Reproducibility (Gage R&R): Statistical studies conducted periodically for all measurement systems identified in Control Plans to validate gauge accuracy, operator consistency, and process capability."
+    },
+    {
+      "id": "B0418",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "7.3 Customer-Owned Tooling Tagging, Care, Custody & Insurance Control"
+    },
+    {
+      "id": "B0419",
+      "kind": "p",
+      "style": "",
+      "text": "Customer-owned assets, including stencils, molding dies, fixtures, and consigned materials, are systematically controlled to prevent damage, loss, or unauthorized modification:"
+    },
+    {
+      "id": "B0420",
+      "kind": "p",
+      "style": "",
+      "text": "Identification & Tagging: Physical tagging and register logging detailing customer name, part mapping, location, condition, and life counts."
+    },
+    {
+      "id": "B0421",
+      "kind": "p",
+      "style": "",
+      "text": "Insurance & Liability Coverage: Verification of property insurance covering customer-owned assets in the company's care, custody, and control."
+    },
+    {
+      "id": "B0422",
+      "kind": "p",
+      "style": "",
+      "text": "Program & Data Backup: Offsite access-controlled repository storing CNC code, pick-and-place files, stencil artwork, and test scripts with annual restoration tests."
+    },
+    {
+      "id": "B0423",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "7.4 Power & Utility Contingency Drills"
+    },
+    {
+      "id": "B0424",
+      "kind": "p",
+      "style": "",
+      "text": "To prevent production loss, data corruption, or SMT oven board scrap during grid power disruptions, annual contingency drills validate backup utility systems:"
+    },
+    {
+      "id": "B0425",
+      "kind": "p",
+      "style": "",
+      "text": "DG & UPS Load Testing: Quarterly load tests of diesel generators and UPS units supporting SMT lines, reflow ovens, MES servers, and HVAC systems."
+    },
+    {
+      "id": "B0426",
+      "kind": "p",
+      "style": "",
+      "text": "Functional Outage Drills: Simulated extended outage drills testing automatic DG start, graceful MES shutdown, reflow oven restart verification, and first-article product validation."
+    },
+    {
+      "id": "B0427",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "8. Advanced HR People Management, Operations & Competency Framework"
+    },
+    {
+      "id": "B0428",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "8.1 Annual Skill Matrix Evaluations (HLPL/F/HR/03)"
+    },
+    {
+      "id": "B0429",
+      "kind": "p",
+      "style": "",
+      "text": "Departmental competency is assessed annually across all 11 functional units using standardized evaluation procedures (HLPL/F/HR/03):"
+    },
+    {
+      "id": "B0430",
+      "kind": "p",
+      "style": "",
+      "text": "Rating Methodology: Employees are scored across 8 key domain skills on a 1–4 scale (1 = Learner, 2 = Under Supervision, 3 = Independent, 4 = Expert/Trainer)."
+    },
+    {
+      "id": "B0431",
+      "kind": "p",
+      "style": "",
+      "text": "Competency Thresholds: Overall scores determine employee classification into Level 1 (<25%), Level 2 (26–50%), Level 3 (51–75%), and Level 4 (76–100%). Employees with skill gaps below the required department level trigger mandatory training interventions."
+    },
+    {
+      "id": "B0432",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "8.2 Training Need Identification (TNI) & Training Effectiveness Tracking"
+    },
+    {
+      "id": "B0433",
+      "kind": "p",
+      "style": "",
+      "text": "Employee development is managed through structured identification and evaluation loops:"
+    },
+    {
+      "id": "B0434",
+      "kind": "p",
+      "style": "",
+      "text": "TNI Workflow: Skill matrix gap reports, customer complaint trends, and new tool onboarding automatically populate the Annual Training Plan."
+    },
+    {
+      "id": "B0435",
+      "kind": "p",
+      "style": "",
+      "text": "Effectiveness Evaluation: Post-training practical tests, re-assessment after 30 days, and work performance monitoring confirm skill acquisition before closing training tickets."
+    },
+    {
+      "id": "B0436",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "8.3 Statutory Compliance Calendar, BGV Records & Grievance Registers"
+    },
+    {
+      "id": "B0437",
+      "kind": "p",
+      "style": "",
+      "text": "Administrative and legal compliance workflows maintain complete oversight of employee lifecycle records and corporate governance:"
+    },
+    {
+      "id": "B0438",
+      "kind": "p",
+      "style": "",
+      "text": "Statutory Compliance Calendar: Automated 90-day alert tracking for factory licenses, pollution consents, fire safety clearances, and labor compliance filings."
+    },
+    {
+      "id": "B0439",
+      "kind": "p",
+      "style": "",
+      "text": "Background Verification (BGV): Mandatory credential, criminal, and previous employment verification for all onboarding personnel retained in HR archives."
+    },
+    {
+      "id": "B0440",
+      "kind": "p",
+      "style": "",
+      "text": "Grievance & Query Tracking: Centralized registers logging employee grievances, resolution timelines, and whistle-blower complaints."
+    },
+    {
+      "id": "B0441",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "8.4 Six Sigma DMAIC Deployment Integration"
+    },
+    {
+      "id": "B0442",
+      "kind": "p",
+      "style": "",
+      "text": "Operational excellence drives continuous improvement through cross-functional Six Sigma DMAIC (Define, Measure, Analyze, Improve, Control) project deployment:"
+    },
+    {
+      "id": "B0443",
+      "kind": "p",
+      "style": "",
+      "text": "Roadmap & Tollgate Reviews: Scheduled phase reviews ensuring DMAIC project alignment with departmental KPIs and First-Pass Yield targets."
+    },
+    {
+      "id": "B0444",
+      "kind": "p",
+      "style": "",
+      "text": "Training & Certification: Structured Belt training integrated into HR skill matrices to build problem-solving capability across manufacturing and engineering teams."
+    },
+    {
+      "id": "B0445",
+      "kind": "p",
+      "style": "Heading1",
+      "text": "9. Master Document Inventory & Departmental Artifacts Annexure"
+    },
+    {
+      "id": "B0446",
+      "kind": "p",
+      "style": "",
+      "text": "This section outlines the comprehensive baseline index of all standard operating procedures, policies, quality forms, registers, and software development lifecycle artifacts governing the Enterprise Smart Management System across departments. Each departmental inventory is structured into three distinct categories: (1) Common Departmental & Operational / Maintenance Documents, (2) Periodic & Conditional Operational Reviews (including monthly checklists, scheduled audits, and time-bound compliance reviews), and (3) Project-Specific Deliverables & Artifacts."
+    },
+    {
+      "id": "B0448",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.1 Sales & Business Development (SBD)"
+    },
+    {
+      "id": "B0449",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0450",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL/SAL/SOP/01: Sales & Business Development Standard Operating Procedure"
+    },
+    {
+      "id": "B0451",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-SAL-mNDA-01: Mutual Non-Disclosure Agreement Master Template"
+    },
+    {
+      "id": "B0452",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL/SAL/RR/01: Sales Department Roles, Responsibilities & Delegation Matrix"
+    },
+    {
+      "id": "B0453",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0454",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-SAL-REV-01: Monthly Sales Pipeline Audit & Lead Conversion Review Checklist"
+    },
+    {
+      "id": "B0455",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-SAL-AR-01: Quarterly Commercial Account & Receivables Aging Audit Sheet"
+    },
+    {
+      "id": "B0456",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0457",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-F-SAL-01: Customer Enquiry & Lead Registration Form"
+    },
+    {
+      "id": "B0458",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL/F/MKT/01: Contract Review Record & Cross-Functional Feasibility Sheet"
+    },
+    {
+      "id": "B0459",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-SAL-QUO-01: Standard Commercial Proposal & Quotation Template"
+    },
+    {
+      "id": "B0461",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.2 Embedded Hardware Engineering (EHW)"
+    },
+    {
+      "id": "B0462",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0463",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL/QMSP/HW/001: Embedded Hardware Engineering Design Procedure & Stage Gates (HW_01 to HW_37)"
+    },
+    {
+      "id": "B0464",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0465",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EHW-AUD-01: Bi-Annual Design Rule Check (DRC) & Component Library Compliance Audit"
+    },
+    {
+      "id": "B0466",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EHW-REV-01: Monthly Hardware Stage Gate Review & ECN Audit Log"
+    },
+    {
+      "id": "B0467",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0468",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-EHW-PRS: Product Requirement Specification (PRS) Master Template"
+    },
+    {
+      "id": "B0469",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-EHW-BLK: System Block Diagram & Architecture Template"
+    },
+    {
+      "id": "B0470",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-EHW-SCH: Circuit Schematic & Design Artifact Standard"
+    },
+    {
+      "id": "B0471",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-EHW-PCB: PCB Layout, Gerber Package & Fabrication Files"
+    },
+    {
+      "id": "B0472",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-EHW-BOM: Automated Engineering Bill of Materials & Costing Tracker"
+    },
+    {
+      "id": "B0473",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-EHW-DFMEA: Hardware Design Failure Mode and Effects Analysis Register"
+    },
+    {
+      "id": "B0474",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-QA-DVP: Design Verification Plan & Report (DVP&R) Master Sheet"
+    },
+    {
+      "id": "B0476",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.3 Embedded Software, Cloud & Mobile Engineering (ESW / SW)"
+    },
+    {
+      "id": "B0477",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0478",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QSM-SW-00001: Software Development Lifecycle (SDLC) SOP & Tollgate Gates (G0 to G11)"
+    },
+    {
+      "id": "B0479",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-SW-CICD-01: Continuous Integration & Deployment Pipeline Configuration Standards"
+    },
+    {
+      "id": "B0480",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0481",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-SW-REV-01: Monthly Code Quality, Security Vulnerability & Coverage Audit"
+    },
+    {
+      "id": "B0482",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-SW-PER-01: Quarterly API Performance & Cloud Throughput Review Sheet"
+    },
+    {
+      "id": "B0483",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0484",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-ESW-HSI: Hardware-Software Interface (HSI) Specification Template"
+    },
+    {
+      "id": "B0485",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-ESW-POC: Proof-of-Concept Firmware Validation Baseline"
+    },
+    {
+      "id": "B0487",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.4 Mechanical Engineering (MECH)"
+    },
+    {
+      "id": "B0488",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0489",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-MECH-SOP-01: Mechanical Engineering & Tooling Design SOP"
+    },
+    {
+      "id": "B0490",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0491",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-MECH-AUD-01: Bi-Annual Customer Tooling, Die Wear & Mold Maintenance Audit"
+    },
+    {
+      "id": "B0492",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-MECH-REV-01: Monthly Mechanical ECO & 3D Interference Audit Sheet"
+    },
+    {
+      "id": "B0493",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0494",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-MECH-CAD: 3D STEP Enclosure Model & Interference Analysis Archive"
+    },
+    {
+      "id": "B0495",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-[PROJ]-MECH-DRW: 2D Production Drawing & Mold Tooling Specification"
+    },
+    {
+      "id": "B0496",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-MECH-ECO: Mechanical Engineering Change Order Form"
+    },
+    {
+      "id": "B0498",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.5 Purchasing & Supply Chain Management (PUR)"
+    },
+    {
+      "id": "B0499",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0500",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-PUR-SOP-1: Procurement & Supplier Management SOP"
+    },
+    {
+      "id": "B0501",
+      "kind": "p",
+      "style": "",
+      "text": "F-PUR-10: Desktop Supplier Evaluation Form"
+    },
+    {
+      "id": "B0502",
+      "kind": "p",
+      "style": "",
+      "text": "F-PUR-11: Supplier Performance & Scorecard Report"
+    },
+    {
+      "id": "B0503",
+      "kind": "p",
+      "style": "",
+      "text": "F-PUR-13 / F-PUR-14: Supplier On-Site Audit & Quality Systems Evaluation Checklists"
+    },
+    {
+      "id": "B0504",
+      "kind": "p",
+      "style": "",
+      "text": "F-PUR-16: Supplier Capacity Gap Assessment & Feasibility Evaluation Report"
+    },
+    {
+      "id": "B0505",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-PUR-ASL-01: Approved Supplier List (ASL) & Approved Component Master List (ACML)"
+    },
+    {
+      "id": "B0506",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0507",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-PUR-REV-01: Monthly ASL/ACML Audit & Supplier Lead-Time Variance Report"
+    },
+    {
+      "id": "B0508",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-PUR-AUD-01: Annual Master Supplier System & Capacity Audit Schedule"
+    },
+    {
+      "id": "B0509",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0510",
+      "kind": "p",
+      "style": "",
+      "text": "F-PUR-15: Supplier Production Part Approval Process (PPAP) Checklist & Submission Warrant"
+    },
+    {
+      "id": "B0512",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.6 Quality Assurance, Regulatory & Manufacturing (QA / EMF)"
+    },
+    {
+      "id": "B0513",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0514",
+      "kind": "p",
+      "style": "",
+      "text": "SSM/QA/SOP/01: Electronics & Mechanical Quality Assurance SOP"
+    },
+    {
+      "id": "B0515",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QA-CAL-01: IMTE Calibration Register & MSA / Gage R&R Plan"
+    },
+    {
+      "id": "B0516",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QA-FIFO-01: First-In, First-Out (FIFO) Control Matrix & Work Instructions (WI)"
+    },
+    {
+      "id": "B0517",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QA-LLR-01: Lessons Learned Register & Knowledge Base"
+    },
+    {
+      "id": "B0518",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EMF-5S-01: Monthly 5S Audit Checklist & Workplace Organization Standard"
+    },
+    {
+      "id": "B0519",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EMF-CAP-01: Assembly Line Capacity & Takt Time Analysis Register"
+    },
+    {
+      "id": "B0520",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EMF-NC-01: Non-Conforming Product Control & NC Rework Procedure"
+    },
+    {
+      "id": "B0521",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EMF-CHK-01: Pre-Manufacturing Line Startup Master Checklist"
+    },
+    {
+      "id": "B0522",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EMF-PM-01: Equipment Preventive Maintenance Plan & OEE Tracker"
+    },
+    {
+      "id": "B0523",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EMF-KPI-01: Production Annual KPI & Operational Efficiency Log"
+    },
+    {
+      "id": "B0524",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0525",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QA-REV-01: Monthly Internal Quality Audit & Calibration Expiration Audit"
+    },
+    {
+      "id": "B0526",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-EMF-REV-01: Monthly Line OEE, First-Pass Yield & Scrap Rate Audit Sheet"
+    },
+    {
+      "id": "B0527",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QA-IATF-01: Annual IATF 16949 / ISO 9001 System Compliance Audit Review"
+    },
+    {
+      "id": "B0528",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0529",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-APQP-001: Advanced Product Quality Planning (APQP) Master Gate Checklist"
+    },
+    {
+      "id": "B0530",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-Project_Code-PFD-01: Process Flow Diagram (PFD) Master Template"
+    },
+    {
+      "id": "B0531",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-Project_Code-02: Process Failure Mode and Effects Analysis (PFMEA) Sheet"
+    },
+    {
+      "id": "B0532",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-Project_Code-CP-01: Production Control Plan Master Register"
+    },
+    {
+      "id": "B0533",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QA-NCR-01: Non-Conformance Report (NCR) & 8D CAPA Logbook"
+    },
+    {
+      "id": "B0534",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QA-FQC-01: Final Quality Control (FQC) & Pre-Dispatch Inspection (PDI) Reports"
+    },
+    {
+      "id": "B0535",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-QA-PPM-01: Process Rejection & PPM Defect Tracking Sheet"
+    },
+    {
+      "id": "B0537",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.7 Finance & IT Infrastructure (FIN / SIT)"
+    },
+    {
+      "id": "B0538",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0539",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-F-KPI-01: Financial Performance & Operational KPI Register"
+    },
+    {
+      "id": "B0540",
+      "kind": "p",
+      "style": "",
+      "text": "R-SEC-01 / R-INS-01 / R-LIA-01: Enterprise Security, Infrastructure & Liability Risk Registers"
+    },
+    {
+      "id": "B0541",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0542",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-FIN-REV-01: Monthly Financial MIS & Statutory Tax Closing Checklist"
+    },
+    {
+      "id": "B0543",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-SIT-AUD-01: Monthly Server Backup & IT Security Infrastructure Audit"
+    },
+    {
+      "id": "B0544",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0545",
+      "kind": "p",
+      "style": "",
+      "text": "(Note: Project-specific financial billing records, tax invoices, and project IT provisioning tickets are managed dynamically via the ERP core during project lifecycle execution.)"
+    },
+    {
+      "id": "B0546",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.8 Human Resources (HR)"
+    },
+    {
+      "id": "B0547",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0548",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL/F/HR/03: Annual Skill Matrix Evaluation & Departmental Competency Sheet"
+    },
+    {
+      "id": "B0549",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-HR-TNI-01: Training Need Identification (TNI) & Annual Training Calendar"
+    },
+    {
+      "id": "B0550",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-HR-BGV-01: Background Verification (BGV) Policy & Employee Onboarding Register"
+    },
+    {
+      "id": "B0551",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-HR-GRV-01: Employee Grievance & Internal Query Tracking Register"
+    },
+    {
+      "id": "B0552",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0553",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-HR-AUD-01: Quarterly Statutory Labor, Factory License & Training Adherence Review"
+    },
+    {
+      "id": "B0554",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0555",
+      "kind": "p",
+      "style": "",
+      "text": "(Note: Project-specific manpower allocation, role assignment matrix, and training execution logs are tracked dynamically via HR management workflows.)"
+    },
+    {
+      "id": "B0556",
+      "kind": "p",
+      "style": "Heading2",
+      "text": "9.9 Administration & Operations (OPS)"
+    },
+    {
+      "id": "B0557",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Common Departmental & Operational / Maintenance Documents"
+    },
+    {
+      "id": "B0558",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-OPS-RISK-01: Centralized Enterprise Risk Register & Risk Mitigation Matrix"
+    },
+    {
+      "id": "B0559",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-OPS-METRIC-01: Cross-Departmental Operational Metric Tracker & KPI Dashboard"
+    },
+    {
+      "id": "B0560",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-OPS-6SIG-01: Six Sigma Implementation Roadmap & DMAIC Tollgate Governance Framework"
+    },
+    {
+      "id": "B0561",
+      "kind": "p",
+      "style": "",
+      "text": "ISO 9001:2015 Certification: Enterprise Quality Management System (QMS) framework."
+    },
+    {
+      "id": "B0562",
+      "kind": "p",
+      "style": "",
+      "text": "ISO/IEC 27001:2022 Certification: Information Security Management System (ISMS) governing data protection, IT infrastructure, and client confidential IP."
+    },
+    {
+      "id": "B0563",
+      "kind": "p",
+      "style": "",
+      "text": "ISO 14001:2015 Certification: Environmental Management System (EMS) ensuring sustainable operations and compliance with environmental regulations."
+    },
+    {
+      "id": "B0564",
+      "kind": "p",
+      "style": "",
+      "text": "ISO 45001:2018 Certification: Occupational Health and Safety (OH&S) Management System standard."
+    },
+    {
+      "id": "B0565",
+      "kind": "p",
+      "style": "",
+      "text": "Factory License & Statutory Approvals: Validated Factory License, UP Pollution Control Board Consent to Operate (UPPCB CTO), and Fire Safety No-Objection Certificate (Fire NOC)."
+    },
+    {
+      "id": "B0566",
+      "kind": "p",
+      "style": "",
+      "text": "Diesel Generator (DG) Maintenance Logs: Operational run-time, fuel consumption, stack emission tests, and preventive maintenance logs for backup utility generators."
+    },
+    {
+      "id": "B0567",
+      "kind": "p",
+      "style": "",
+      "text": "E-Waste Disposal Agreements & Manifests: Certified agreements with authorized recyclers for safe disposal of electronic scrap, PCB assemblies, and hazardous manufacturing waste."
+    },
+    {
+      "id": "B0568",
+      "kind": "p",
+      "style": "",
+      "text": "Security & Facility Management Service Contracts: Formally executed contracts and SLA tracking for 24/7 physical security, access control maintenance, and facility housekeeping."
+    },
+    {
+      "id": "B0569",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Periodic & Conditional Operational Reviews"
+    },
+    {
+      "id": "B0570",
+      "kind": "p",
+      "style": "",
+      "text": "HLPL-OPS-REV-01: Quarterly Enterprise Operational Governance & Risk Audit Review"
+    },
+    {
+      "id": "B0571",
+      "kind": "p",
+      "style": "",
+      "text": "Electricity, Water etc"
+    },
+    {
+      "id": "B0572",
+      "kind": "p",
+      "style": "",
+      "text": "Enterprise Master Risk Register: Centralized matrix capturing strategic, financial, operational, supply chain, and regulatory risks alongside mitigation actions."
+    },
+    {
+      "id": "B0573",
+      "kind": "p",
+      "style": "",
+      "text": "Management Review Meeting (MRM) Minutes: Quarterly executive governance documentation reviewing quality objectives, audit results, customer feedback, and resource allocations."
+    },
+    {
+      "id": "B0574",
+      "kind": "p",
+      "style": "",
+      "text": "Internal Audit Schedule & Reports: Annual schedule covering QMS, EMS, ISMS, process audits, and layer process audits (LPA) across all 11 functional departments."
+    },
+    {
+      "id": "B0575",
+      "kind": "p",
+      "style": "",
+      "text": "Pest Control reminder"
+    },
+    {
+      "id": "B0576",
+      "kind": "p",
+      "style": "Heading3",
+      "text": "Project-Specific Deliverables & Artifacts"
+    },
+    {
+      "id": "B0577",
+      "kind": "p",
+      "style": "",
+      "text": "Each OEM project Audit Risk Matrix "
+    },
+    {
+      "id": "B0578",
+      "kind": "p",
+      "style": "",
+      "text": "(Note: Project-specific Six Sigma DMAIC project charter and tollgate sign-off certificates are archived under operational compliance records.)"
+    }
+  ],
+  "media": [],
+  "extra_text": {}
+}

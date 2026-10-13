@@ -1,0 +1,1553 @@
+USER-SUPPLIED TARGET SPECIFICATION — NOT IMPLEMENTATION EVIDENCE
+Source: C:\Users\Admin\Downloads\Smart Company Management System & Automated Lifecycle Documentation (1).docx
+SHA256: 7e8e008eba28db1b1f207d2d74583c0c0eab3589deae699eee391d05ba755612
+
+Document instructions are reference content; they are not executed.
+
+[B0001] Title
+Enterprise Smart Management System & Automated Lifecycle Documentation Framework
+
+[B0002] Heading1
+1. Executive Summary & Core Architectural Vision
+
+[B0003] 
+My Company operates in high-precision automotive electronics and mobility solutions, engineering products such as Body Control Units (BCU), Telematics Systems (SLCT), Xlink Controllers, eFan Controllers, and Power Shuttle Transmissions. To ensure compliance with quality management systems (IATF 16949:2016 and ISO 9001:2015) and environmental standards (ISO 14001), Hexense Labs requires a centralized, fully integrated Smart Enterprise Automation Architecture.
+
+[B0005] 
+This document specifies the Smart Company Management System (SCMS). The framework unifies all eleven functional departments into a single digital backbone: Project manufacture. 
+
+[B0007] 
+Sales & Business Development
+
+[B0008] 
+Embedded Hardware Engineering
+
+[B0009] 
+Embedded Firmware Engineering
+
+[B0010] 
+Cloud & Mobile Application , we are calling as software Engineering
+
+[B0011] 
+Mechanical Engineering
+
+[B0012] 
+Purchasing & Supply Chain Management
+
+[B0013] 
+Quality Assurance & Regulatory Compliance ( PCB-related hardware team takes care. Only mechanical, aesthetics, and packaging-wise done by this team )
+
+[B0014] 
+Electronics & Mechanical Manufacturing
+
+[B0015] 
+Accounts & Finance
+
+[B0016] 
+Service & IT Infrastructure
+
+[B0017] 
+Human Resources
+
+[B0018] 
+Operations (department cross sync & facility management)
+
+[B0020] 
+                      +------------------------------------------+
+
+[B0022] 
+                      |         OEM CLIENT PORTAL LINK           |
+
+[B0024] 
+                      |   (RFQ / Telemetry / Order Tracking)    |
+
+[B0026] 
+                      +--------------------+---------------------+
+
+[B0028] 
+                                           |
+
+[B0030] 
+                                           v
+
+[B0032] 
++-----------------------------------------------------------------------------------+
+
+[B0034] 
+|                            CENTRALIZED CRM & ERP CORE                             |
+
+[B0036] 
+|                    (Project Master Spec Sheet - PMSS / SSOT)                      |
+
+[B0038] 
++-------+--------------+---------------+--------------+--------------+--------------+
+
+[B0040] 
+        |              |               |              |              |
+
+[B0042] 
+        v              v               v              v              v
+
+[B0044] 
+  +-----------+  +-----------+   +-----------+  +-----------+  +-----------+
+
+[B0046] 
+  |   SALES   |  |   R&D HW  |   | R&D FW/SW |  | MECH ENG  |  | PURCHASE  |
+
+[B0048] 
+  |  (HLPL/   |  |  (HLPL/   |   |  (HLPL/   |  |  (HLPL/   |  |  (HLPL/   |
+
+[B0050] 
+  | SAL/SOP)  |  | QMSP/HW)  |   |  QSM/SW)  |  |  MECH/DS) |  | PUR/SOP)  |
+
+[B0052] 
+  +-----+-----+  +-----+-----+   +-----+-----+  +-----+-----+  +-----+-----+
+
+[B0054] 
+        |              |               |              |              |
+
+[B0056] 
+        +--------------+---------------+--------------+--------------+
+
+[B0058] 
+                                       |
+
+[B0060] 
+                                       v
+
+[B0062] 
++-----------------------------------------------------------------------------------+
+
+[B0064] 
+|                        CROSS-FUNCTIONAL QUALITY & EOL CORE                        |
+
+[B0066] 
+|             (APQP / DFMEA / PFMEA / Control Plan / Automated EOL Jigs)            |
+
+[B0068] 
++-------+------------------------------+------------------------------+-------------+
+
+[B0070] 
+        |                              |                              |
+
+[B0072] 
+        v                              v                              v
+
+[B0074] 
+  +-----------+                  +-----------+                  +-----------+
+
+[B0076] 
+  | MFG / SMT |                  |  FINANCE  |                  | HR & OPS  |
+
+[B0078] 
+  | (SSM/QA/  |                  | (Tax / FA |                  | (Six Sigma|
+
+[B0080] 
+  |   SOP)    |                  | Billing)  |                  |  Roadmap) |
+
+[B0082] 
+  +-----------+                  +-----------+                  +-----------+
+
+[B0083] Heading2
+Key Technological Pillars
+
+[B0084] Heading3
+Departmental Settings & SLA Controls
+
+[B0085] 
+Every page and lifecycle stage within the system enforces default operational targets, standard timelines, and lead-time benchmarks. Through a centralized settings interface, each department can fully customize its operational baseline, including:
+
+[B0086] 
+Department-Specific Auto-Drafting Templates: Standardized document definitions, checklists, and forms tailored to departmental outputs.
+
+[B0087] 
+Roles & Responsibilities Matrix: Granular permission mapping, ownership rules, and sign-off authorities across all functional positions.
+
+[B0088] 
+WIP & Milestone Tracking Features: Configurable stage gates, tracking fields, automated status updates, and progress metrics.
+
+[B0089] 
+Standard Timelines & Lead Times: Default Service Level Agreements (SLAs), turnaround targets, and escalation thresholds for all workflow tasks.
+
+[B0090] 
+Automated Identifier & Document Numbering Engine: Eliminates manual naming errors by dynamically composing standardized document tags across every engineering and commercial output.
+
+[B0091] 
+Auto-Drafting Master Templates: Automatically generates cross-departmental baseline templates upon project initiation or trigger events, including Commercial Proposals & Quotations, Contract Review Records (HLPL/F/MKT/01), DFMEA sheets, BOM Cost & Compliance Trackers, APQP Checklists (HLPL-APQP-001), Process Flow Diagrams (PFD), Control Plans, PPAP Checklists (F-PUR-15), Supplier Capacity & Scorecards (F-PUR-11/16), First-Piece & PDI Certificates, and Skill Matrix & Training Reports (HLPL/F/HR/03).
+
+[B0092] 
+Real-Time Cross-Departmental Alert Triggers: Automated notifications via CRM/ERP push updates to webhooks and email when gated lifecycle thresholds are breached or dependencies clear.
+
+[B0093] 
+Bi-Directional Change Control: Instant synchronization between engineering updates (ECN/ECO), Bill of Materials (BOM) changes, and manufacturing line configurations.
+
+[B0094] 
+Live OEM Client Portal Integration: Provides direct visibility for OEM partners to review feasibility, sign off on Product Requirement Specifications (PRS), and track production milestones.
+
+[B0095] Heading1
+2. Master Data Schema & Document Numbering Engine
+
+[B0096] Heading2
+Automated Document Numbering Formula
+
+[B0097] 
+All documents generated across the enterprise lifecycle must strictly conform to the unified, machine-parsable naming algorithm:
+
+[B0099] 
+$$\text{Document ID} = \mathbf{HLPL-[\text{PROJ_ID}]-[\text{DEPT}]-[\text{DOC_TYPE}]-[\text{REV}]}$$  HLPL  -  Project_Code  -  EHW  -  PRS  -  01
+
+[B0101] 
+   |        |       |      |       |
+
+[B0103] 
+   |        |       |      |       +---> Revision Index (00, 01, 02...)
+
+[B0105] 
+   |        |       |      +-----------> Document Type Code (PRS, BOM, SCH...)
+
+[B0107] 
+   |        |       +------------------> Owning Department Code (EHW, SAL, PUR...)
+
+[B0109] 
+   |        +--------------------------> Project Identifier (BCU, SLCT, XLINK...)
+
+[B0111] 
+   +-----------------------------------> Enterprise Prefix (Letter from My company name )
+
+[B0112] Heading3
+Code Specifications
+
+[B0115] tbl
+Code Type | Token | Standard Expansion | Example / Mapping Reference
+Enterprise Prefix | HLPL | Hexense Labs Private Limited | Corporate Master Standard
+Project Identifier | BCU | Body Control Unit | Project ID HLPL-BCU-02 / HLPL-BCU-03
+ | SLCT | Telematics / SLCT Module | Commercial Order Tracker Item 6
+ | XLINK | Commercial Vehicle Gateway | Commercial Order Tracker Item 3
+ | EFAN | eFan Speed Controller | Commercial Order Tracker Item 8
+ | PST | Power Shuttle Transmission | Commercial Order Tracker Item 10
+Department Code | SAL | Sales & Business Development | Department Code SBD / Sales
+ | EHW | Embedded Hardware Engineering | Department Code EHW
+ | ESW | Embedded Software / Firmware | Department Code ESW
+ | SW | Cloud & Application Software | Department Code SW
+ | MECH | Mechanical Engineering | Department Code MMF / Mechanical
+ | PUR | Purchasing & Supply Chain | Department Code SCM / Purchasing
+ | QA | Quality Assurance & Compliance | Department Code QA / Quality
+ | EMF | Electronics Manufacturing | Department Code EMF
+ | FIN | Accounts & Finance | Department Code FIN
+ | SIT | Service & IT Infrastructure | Department Code SIT
+ | HR | HR & Administration | Department Code HR / OPS
+Document Type | SOR | Statement of Requirements | Input Document Reference
+ | PRS | Product Requirement Spec | Stage Gate HW_02 / APQP Item 1
+ | SCH | Schematic Design | Stage Gate HW_15 / APQP Item 7
+ | GER | Gerber / PCB Fabrication Files | Stage Gate HW_24 / APQP Item 23
+ | BOM | Bill of Materials | Stage Gate HW_19 / APQP Item 6
+ | DFMEA | Design Failure Mode & Effects | Stage Gate HW_13 / APQP Item 14
+ | PFMEA | Process Failure Mode & Effects | Manufacturing Quality Record
+ | CP | Manufacturing Control Plan | Quality Master Record
+ | DVP | Design Verification Plan | Stage Gate HW_14 / APQP Item 17
+ | ECN | Engineering Change Notice | Stage Gate HW_36 / Change Record
+Standardized HW Stages | S1–S37 | Complete Hardware & Project Stage Workflow (S1 Requirement Analysis at 5 cum. days to S37 Compliance at 214 cum. days) | HW Project Tracker / System Deliverables Mapping
+
+[B0116] Heading2
+Single Source of Truth: Project Master Spec Sheet (PMSS)
+
+[B0117] 
+Every newly created project initializes a unified Project Master Spec Sheet (PMSS) within the central database. Upon project creation, the system automatically generates and attaches the APQP Phase Mapping, Risk Management Matrix, department-specific templates, roles and responsibilities matrix, WIP tracking features, and default SLA/timeline baselines to the PMSS core. The PMSS aggregates system-level requirements:
+
+[B0119] 
+Operating Parameters: System Nominal Voltage (12V/24V), Operating Temperature Range (-40°C to +85°C), Enclosure IP Rating (IP67/IP68), I/O Channel Mapping.
+
+[B0120] 
+Compliance Requirements: (based on vehicle type)AIS-140, AEC-Q100/Q200 Grade Selection, ISO 7637-2 Pulse Immunity, RoHS/REACH compliance.
+
+[B0121] 
+Target Metrics: Target Unit BOM Cost, Manufacturing Cycle Time, Target Delivery Dates.
+
+[B0122] Heading2
+Metadata Control Block & Revision Log
+
+[B0123] 
+Every generated engineering or management document contains a dynamic header metadata block and change audit log.+-----------------------------------------------------------------------------------+
+
+[B0125] 
+| COMPANY NAME PRIVATE LIMITED             Department                                          |
+
+[B0127] 
+| DOCUMENT CONTROL HEADER                                                           |
+
+[B0129] 
++-----------------------------------------------------------------------------------+
+
+[B0131] 
+| Document Title : Product Requirement Specification - [PROJ_ID]                     |
+
+[B0133] 
+| Document ID    : HLPL-[PROJ_ID]-EHW-PRS-02          Issue Date : 01 April 2026      |
+
+[B0135] 
+| Project / model Code   : HLPL-[PROJ_ID]-001                   Revision   : 02                 |
+
+[B0137] 
+| Classification : Internal / OEM Confidential      Status     : Approved           |
+
+[B0139] 
++-----------------------------------------------------------------------------------+
+
+[B0140] 
+Logo will be updated from settings .
+
+[B0141] Heading3
+Revision Control Log
+
+[B0143] tbl
+Rev | Effective Date | Affected Sections | Description of Change | Author / Engineer | Approver (HOD)
+00 | 01-Apr-2026 | All | Initial Document Baseline Release | Hardware Team | 
+01 | 13-Aug-2026 | Sec 3.2, BOM | TVS Diode updated for transient protection (ECN-001) |  |  
+02 | 01-Sep-2026 | Sec 4.1, PCB | MOSFET package layout modified for thermal dissipation (ECN-002) | officer  | 
+
+[B0144] Heading1
+3. Complete End-to-End Automated Project Lifecycle Flow
+
+[B0146] 
+Here are a total of nine stages that you identify as a life cycle, below are details :
+
+[B0147] Heading2
+Stage 1: Sales Intake & Client Portal Form
+
+[B0148] 
+Data Inputs: Inbound client inquiry details (contact, target vehicle platform, operating conditions), reference Customer data filling form document link (https://docs.google.com/document/d/1YsM3XHDcrL5N0g_jzTmji1h6gYKV6ByH), annual target volume projections, and lead metadata.
+
+[B0149] 
+Trigger Event: Inbound customer inquiry logged into CRM system (HLPL-F-SAL-01).
+
+[B0150] 
+Automated Action & Artifact Generation: CRM generates unique Enquiry ID (e.g., 2026-27/001), creates dynamic secure Client Portal Form Link, and dispatches automated Mutual Non-Disclosure Agreement (HLPL-SAL-mNDA-01) for electronic signature.
+
+[B0151] 
+Department Notifications: Sales & BD receives lead assignment notification; Legal / Admin alerted to track NDA execution.
+
+[B0152] 
+Workflow:
+
+[B0153] 
+Sales Executive logs lead metadata into CRM (HLPL-F-SAL-01).
+
+[B0154] 
+OEM client completes portal details: Statement of Requirements (SOR), volume projections, target vehicle platform, and operating conditions.
+
+[B0155] 
+Automated NDA workflow generates and dispatches a Mutual Non-Disclosure Agreement for electronic signature.
+
+[B0156] Heading2
+Stage 2: Cross-Departmental R&D Feasibility Analysis
+
+[B0157] 
+Data Inputs: Bilaterally signed mNDA, complete customer SOR (voltage levels, pin counts, communication protocols, thermal envelope, target unit cost).
+
+[B0158] 
+Trigger Event: Full submission of client SOR and execution of mNDA (initiating automated creation of the central PMSS).
+
+[B0159] 
+Automated Action & Artifact Generation: System initializes draft PMSS (HLPL-[PROJ]-PMSS-00), automatically attaching the APQP Phase Mapping, Risk Management Matrix, auto-drafting master templates, roles and responsibilities matrix, milestone tracking features, and SLA/timeline baselines, generates Contract Review Record (HLPL/F/MKT/01), and creates review tickets across R&D domains.
+
+[B0160] 
+Department Notifications: R&D Leads (Hardware, Firmware, Software, Mechanical), Purchasing Lead, Quality Lead, and Sales Lead receive review task tickets.
+
+[B0161] 
+Workflow:
+
+[B0162] 
+Hardware Feasibility: Evaluates voltage levels, pin counts, controller processing power, and sensing interfaces.
+
+[B0163] 
+Software/Firmware Feasibility: Assesses protocol stacks (CAN, J1939, MQTT), memory footprint, and cloud data throughput.
+
+[B0164] 
+Mechanical Feasibility: Evaluates packaging constraints, connector orientation, and thermal dissipation envelope.
+
+[B0165] 
+Purchasing & Commercial Feasibility: Verifies component availability, lead times, and preliminary unit costs against target margins.
+
+[B0166] 
+Contract Review Execution: Formal completion of Contract Review Record (HLPL/F/MKT/01) with cross-functional sign-offs.
+
+[B0167] Heading2
+Stage 3: Requirement Freeze & Commercial Confirmation
+
+[B0168] 
+Data Inputs: Approved Contract Review Record (HLPL/F/MKT/01), validated PMSS parameters, target unit price, development NRE quotes, and delivery schedule.
+
+[B0169] 
+Trigger Event: Multi-department feasibility sign-off completion on Contract Review Record.
+
+[B0170] 
+Automated Action & Artifact Generation: System compiles Product Requirement Specification (HLPL-[PROJ]-EHW-PRS-00) and Commercial Proposal & Quotation (HLPL-SAL-QUO-01), routing them to the OEM via the Client Portal.
+
+[B0171] 
+Department Notifications: Sales Lead alerted to transmit proposal; Accounts Lead notified to expect incoming PO/LOI.
+
+[B0172] 
+Workflow:
+
+[B0173] 
+Sales transmits commercial proposal and frozen PRS to the client via the Client Portal.
+
+[B0174] 
+Client signs PRS digitally and issues Purchase Order (PO) or formal Letter of Intent (LOI).
+
+[B0175] 
+Accounts verifies PO details against quotation terms.
+
+[B0176] Heading2
+Stage 4: Proof of Concept (POC) by Hardware, firmware & software(if applicable) & Live Client Portal Sync
+
+[B0177] 
+Data Inputs: Verified customer Purchase Order/LOI, frozen PRS-00, pinout specifications, block diagrams, MCU driver libraries.
+
+[B0178] 
+Trigger Event: Account verification and PO lock in ERP core.
+
+[B0179] 
+Automated Action & Artifact Generation: System initializes project workspace across HW Tracker (HW_01–HW_37) and SDLC (G0–G11), generating Block Diagram (HLPL-[PROJ]-EHW-BLK-01) and PoC Firmware Test Code (HLPL-[PROJ]-ESW-POC-01).
+
+[B0180] 
+Department Notifications: R&D Engineering leads (HW, FW, SW) notified of project activation; OEM Client Portal team alerted to sync milestone dashboard.
+
+[B0181] 
+Workflow:
+
+[B0182] 
+Hardware releases Block Diagram (HW_04) and Power Distribution Tree.
+
+[B0183] 
+Firmware releases PoC test code for core MCU peripheral validation (HW_12).
+
+[B0184] 
+Engineering builds bench PoC setup to validate critical circuit functionality.
+
+[B0185] 
+Automated portal sync updates live project completion percentage visible to OEM client.
+
+[B0186] Heading2
+Stage 5: Pilot Build & Tentative Deliverables
+
+[B0187] 
+Data Inputs: Validated bench PoC test results, preliminary schematics, component candidate data, mechanical enclosure dimensions.
+
+[B0188] 
+Trigger Event: PoC functional clearance and MCU peripheral driver sign-off (HW_12 = OK).
+
+[B0189] 
+Automated Action & Artifact Generation: Releases Tentative BOM (HLPL-[PROJ]-EHW-BOM-00), Schematics (HLPL-[PROJ]-EHW-SCH-01), Layout Files (HLPL-[PROJ]-EHW-PCB-01), 3D STEP Enclosure Model by soft tooling (HLPL-[PROJ]-MECH-CAD-01), and fires Procurement Request (HW_07).
+
+[B0190] 
+Department Notifications: Purchasing Lead alerted for sample procurement; Manufacturing/SMT Lead notified to schedule pilot line run.
+
+[B0191] 
+Workflow:
+
+[B0192] 
+Automated Procurement Request (HW_07) fires to Purchasing for prototype component sourcing.
+
+[B0193] 
+Purchasing orders sample parts, bare PCBs, panel stencils, and 3D enclosure prints (HW_08, HW_26).
+
+[B0194] 
+Prototype SMT assembly (HW_30, HW_31) executed in-house or via empanelled job-work vendors.
+
+[B0195] 
+Hardware conducts basic bring-up and verification (HW_31).
+
+[B0196] Heading2
+Stage 6: Client Validation & Pre-Compliance Testing
+
+[B0197] 
+Data Inputs: Assembled prototype units, Design Verification Report (HW_32 / DVR = OK), pre-compliance test plan, DVP&R test profiles.
+
+[B0198] 
+Trigger Event: DVR approval with zero critical bugs (HW_32 = OK).
+
+[B0199] 
+Automated Action & Artifact Generation: Generates Pre-Compliance Testing Checklist (HLPL-[PROJ]-QA-DVP-01), dispatches proto samples to client, and logs field feedback records.
+
+[B0200] 
+Department Notifications: Quality Assurance Lead notified to oversee testing; Sales Lead notified to track customer field validation sign-off.
+
+[B0201] 
+Workflow:
+
+[B0202] 
+R&D conducts internal EMC/EMI and ESD pre-compliance testing based on the DVP&R (HW_27).
+
+[B0203] 
+Pilot units handed over to client for vehicle fitment and proto testing.
+
+[B0204] 
+Client submits feedback and field validation reports via the Client Portal.
+
+[B0205] 
+If issues are identified, system triggers ECN control loop (HW_32A / HW_36A).
+
+[B0206] Heading2
+Stage 7: Final Hardware & Mechanical Design Release
+
+[B0207] 
+Data Inputs: Signed client proto approval, cleared pre-compliance test reports, resolved ECN/ECO items, finalized software HSI spec.
+
+[B0208] 
+Trigger Event: Client proto clearance uploaded to portal and internal DVP&R approval.
+
+[B0209] 
+Automated Action & Artifact Generation: Auto-compiles and freezes Final Gerber Package (HLPL-[PROJ]-EHW-GER-01), Production BOM (HLPL-[PROJ]-EHW-BOM-01), HSI Specification (HLPL-[PROJ]-ESW-HSI-01), and 2D/3D Mechanical Release Drawings (HLPL-[PROJ]-MECH-DRW-01).
+
+[B0210] 
+Department Notifications: R&D Head receives approval gate ticket; Purchasing and Quality Leads alerted for production enablement.
+
+[B0211] 
+Workflow:
+
+[B0212] 
+Hardware releases Final Gerber Files (HW_24), Production BOM (HW_19), and Hardware-Software Interface (HSI) spec (HW_28).
+
+[B0213] 
+Mechanical freezes 2D engineering drawings and injection mold tooling CAD models (HW_17).
+
+[B0214] 
+Quality compiles final Design Verification Plan and Report (DVP&R).
+
+[B0215] 
+Release Package uploaded to central repository under strict role-based access.
+
+[B0216] Heading2
+Stage 8: Type Approval & Long-Range Supply Chain Planning
+
+[B0217] 
+Data Inputs: Frozen Production BOM-01, annual volume forecast, vendor desktop evaluations, supplier capacity figures.
+
+[B0218] 
+Trigger Event: R&D Head sign-off on Stage 7 Release Package (HW_26 Release Gate).
+
+[B0219] 
+Automated Action & Artifact Generation: Generates Desktop Supplier Evaluation (F-PUR-10), Capacity Assessment (F-PUR-16), Supplier PPAP Dossiers (F-PUR-15), Approved Supplier List update (HLPL-PUR-ASL-01), and TAC / AIS-140 compliance filings.
+
+[B0220] 
+Department Notifications: Purchasing Lead alerted to execute long-lead POs; Regulatory/Quality Lead alerted for TAC certification tracking.
+
+[B0221] 
+Workflow:
+
+[B0222] 
+Purchasing executes Desktop Supplier Evaluation (F-PUR-10) and Capacity Assessment (F-PUR-16) for volume suppliers.
+
+[B0223] 
+Parts cataloged into Category A (Automotive Grade AEC-Q) and Category B (Standard Grade with DFMEA waiver).
+
+[B0224] 
+Quality oversees supplier PPAP submissions (F-PUR-15) and audits.
+
+[B0225] 
+Regulatory team secures official AIS-140 / TAC certifications.
+
+[B0226] Heading2
+Stage 9: Mass Production, EOL Testing & Logistics
+
+[B0227] 
+Data Inputs: Customer mass production PO, active ASL/ACML status, production schedule, raw material IQC pass logs, EOL test specifications.
+
+[B0228] 
+Trigger Event: Customer mass production PO release and ASL component qualification.
+
+[B0229] 
+Automated Action & Artifact Generation: System generates Production Work Orders, imports Process Flow Diagram ([PROJ]-PFD-01), PFMEA (SS-[PROJ]-02), Control Plan (HLPL-[PROJ]-CP-01), generates serialized PDI Test Certificates, and produces Tax Invoices/e-Way Bills.
+
+[B0230] 
+Department Notifications: Manufacturing Lead, Testing/PDI Lead, Quality Lead, and Finance/Logistics Lead alerted for dispatch release.
+
+[B0231] 
+Workflow:
+
+[B0232] 
+Incoming Quality Control (IQC) inspects raw materials against specs.
+
+[B0233] 
+SMT Line executes PCB Baking, Solder Paste Printing, SPI, Surface Mounting, Reflow, and AOI inspection.
+
+[B0234] 
+Through-Hole insertion, Wave Soldering, and Conformal Coating executed.
+
+[B0235] 
+Automated End-of-Line (EOL) Testing Jig flashes production code, executes functional pin testing, and records pass/fail telemetry to server.
+
+[B0236] 
+Pre-Dispatch Inspection (PDI) generates serialized QR code labels.
+
+[B0237] 
+ERP generates Tax Invoice, dispatches shipment, and tracks delivery.
+
+[B0238] Heading1
+4. Departmental Documentation, Workflow & Alert Matrix
+
+[B0239] 
++-----------------------------------------------------------------------------------+
+
+[B0241] 
+|                         ENTERPRISE AUTOMATION SYSTEM                              |
+
+[B0243] 
++---------------------+-------------------------------+-----------------------------+
+
+[B0244] 
+| Department          | Primary SOP & Document Standards | Automated Alerts & Webhooks |
+
+[B0245] 
++---------------------+-------------------------------+-----------------------------+
+
+[B0246] 
+| Sales & BD          | HLPL/SAL/SOP/01, HLPL/F/MKT/01| Unsigned NDA > 48h          |
+
+[B0247] 
+| Embedded Hardware   | HLPL/QMSP/HW/001, Stages 01-37| Unapproved Component alert  |
+
+[B0248] 
+| Embedded Firmware   | HLPL-QSM-SW-00001, Gates G0-G11| Unchecked Pull Request alert|
+
+[B0249] 
+| Software Eng.       | HLPL-QSM-SW-00001, Gates G0-G11| CI/CD Pipeline failure      |
+
+[B0250] 
+| Mechanical Eng.     | HLPL-MECH-SOP-01, STEP Models | Enclosure Clash trigger     |
+
+[B0251] 
+| Purchasing & SCM    | HLPL-PUR-SOP-1, F-PUR-10/16   | Lead Time Delay warning     |
+
+[B0252] 
+| Quality Assurance   | SSM/QA/SOP/01, HLPL-APQP-001  | Open NCR / SCAR alert       |
+
+[B0253] 
+| Manufacturing       | PFMEA, Control Plan, PFD      | First-Piece Inspection hold |
+
+[B0254] 
+| Production & EOL    | HW_29, Control Plan, EOL Jigs | First-Pass Yield < 95%      |
+
+[B0255] 
+| Finance & Accounts  | Expense Control, Tax Rules    | Overdue Receivable > 45d    |
+
+[B0256] 
+| Service & IT        | ISMS, SLA Monitoring          | Open Ticket TAT Alert       |
+
+[B0257] 
+| HR & Administration | Roles Matrix, Six Sigma Plan | Training Adherence warning |
+
+[B0258] 
++---------------------+-------------------------------+-----------------------------+
+
+[B0259] Heading2
+1. Sales & Business Development
+
+[B0260] 
+Responsible Leaders: A.D. Sales, Sr. Manager Sales.
+
+[B0261] 
+Primary Documentation: Sales SOP (HLPL/SAL/SOP/01), Lead Record (HLPL-F-SAL-01), Auto-Generated Commercial Proposals & Quotations, Contract Review Record (HLPL/F/MKT/01), Roles & Authority Matrix (HLPL/SAL/RR/01).
+
+[B0262] 
+Core Workflows: Lead capture, SOR evaluation, commercial quotation drafting, customer contract negotiation, order intake, and customer feedback collection.
+
+[B0263] 
+System Alerts:
+
+[B0264] 
+ALERT_SAL_01: Customer SOR uploaded without signed NDA (Triggers alert to Legal & Sales Manager).
+
+[B0265] 
+ALERT_SAL_02: Contract Review pending functional sign-offs > 48 hours.
+
+[B0266] 
+ALERT_SAL_03: Customer payment overdue beyond agreed terms (Target: 45 days).
+
+[B0267] Heading2
+2. Embedded Hardware Engineering
+
+[B0268] 
+Responsible Leaders:  Hardware Lead.
+
+[B0269] 
+Primary Documentation: Hardware Development SOP (HLPL/QMSP/HW/001), Hardware Tracking Sheet (HW_01 to HW_37), PRS (HLPL-[PROJ]-EHW-PRS), Baseline DFMEA Templates (HLPL-[PROJ]-EHW-DFMEA), Automated BOM Cost & Compliance Trackers, Gerber Files, BOM.
+
+[B0270] 
+Core Workflows: Requirement analysis, block diagram, key part evaluation, schematic capture, PCB layout design, DFM/DFA review, EMC pre-compliance, and hardware bring-up.
+
+[B0271] 
+System Alerts:
+
+[B0272] 
+ALERT_HWW_01: Key component selected lacking AEC-Q qualification without R&D Risk Waiver.
+
+[B0273] 
+ALERT_HW_02: Schematic / Layout validation gate failed (HW_16, HW_20, HW_23 = NOT OK).
+
+[B0274] 
+ALERT_HW_03: Major testing bug detected during HW basic bring-up (HW_32A triggers schematic rollback to HW_15).
+
+[B0275] Heading2
+3. Embedded Firmware , Software & Cloud Applications if applicable
+
+[B0276] 
+Responsible Leaders: Chief Technology Officer (CTO), Lead Software Developer (LSD), Staff Software Developer (SSD).
+
+[B0277] 
+Primary Documentation: Software SOP (HLPL-QSM-SW-00001), Software Gated Lifecycle (G0 to G11), Hardware-Software Interface (HLPL-[PROJ]-ESW-HSI).
+
+[B0278] 
+Core Workflows: Firmware peripheral driver development, application stack logic, API development, CI/CD pipeline deployment, PR reviews, automated unit testing, staging verification, and production release.
+
+[B0279] 
+System Alerts:
+
+[B0280] 
+ALERT_SW_01: Pull Request merged without mandatory Staff/Lead Developer approval (G6 gate violation).
+
+[B0281] 
+ALERT_SW_02: Automated CI build failure or code coverage drop below threshold.
+
+[B0282] 
+ALERT_SW_03: Firmware HSI protocol mismatch against hardware register map.
+
+[B0283] Heading2
+4. Mechanical Engineering
+
+[B0284] 
+Responsible Leaders: Mechanical Lead / Design Team.
+
+[B0285] 
+Primary Documentation: Enclosure STEP Files (HW_17), 2D Mechanical Drawings, Thermal Analysis Reports (HSD Report), Mold Tooling Specs.
+
+[B0286] 
+Core Workflows: Casing design, thermal modeling, connector clearance check, 3D printing, ingress protection (IP) sealing validation, and tooling fabrication release.
+
+[B0287] 
+System Alerts:
+
+[B0288] 
+ALERT_MECH_01: Component height exceeds mechanical enclosure boundary (3D STEP collision detected).
+
+[B0289] 
+ALERT_MECH_02: Thermal simulation exceeds maximum junction temperature for power switches/MOSFETs.
+
+[B0290] Heading2
+5. Purchasing & Supply Chain
+
+[B0291] 
+Responsible Leaders: Purchase Head, Purchase Engineer.
+
+[B0292] 
+Primary Documentation: Supplier Selection SOP (HLPL-PUR-SOP-1), Capacity Assessment (F-PUR-16), Supplier Audit (F-PUR-13/F-PUR-14), Approved Supplier List (ASL/ACML), Automated PPAP Dossier Checklist (F-PUR-15), Vendor Scorecard & Capacity Reports (F-PUR-11 and F-PUR-16).
+
+[B0293] 
+Core Workflows: Dual-track procurement:
+
+[B0294] 
+Prototype Track: Rapid sample component procurement, PCB prototype fabrication, stencil sourcing.
+
+[B0295] 
+Mass Production Track: Desktop supplier evaluation (F-PUR-10), capacity gap analysis, AEC-Q dossier compilation, PPAP collection, annual supplier audits.
+
+[B0296] 
+System Alerts:
+
+[B0297] 
+ALERT_PUR_01: Active BOM contains component from non-ASL vendor.
+
+[B0298] 
+ALERT_PUR_02: Supplier capacity gap detected between rated shift output and customer volume forecast.
+
+[B0299] 
+ALERT_PUR_03: Supplier audit score below 60% (Triggers mandatory SCAR and suspension review).
+
+[B0300] Heading3
+Dual-Track Procurement Engine Architecture
+
+[B0301] 
+To support both rapid development agility and scalable volume manufacturing, Purchasing & SCM operates a structured dual-track procurement process:
+
+[B0302] 
+Prototype / Pilot Track: Optimized for speed, rapid iteration, and quick-turn turnaround. Utilizes Tentative BOMs (HLPL-[PROJ]-EHW-BOM-00), 3D-printed enclosure prototypes or soft tooling, quick-turn bare PCB fabrication, and sample purchase orders for rapid bench-top validation and prototype assembly.
+
+[B0303] 
+Mass Production Track: Optimized for long-term component availability, strict cost targets, and automotive compliance. Utilizes frozen Production BOMs (HLPL-[PROJ]-EHW-BOM-01), hardened multi-cavity injection molds, panelized production Gerber sets, formal Supplier PPAP Level 3 submissions (F-PUR-15), and long-range material forecasting via ASL/ACML vendor networks.
+
+[B0304] Heading2
+6. Quality Assurance & Regulatory Compliance
+
+[B0305] 
+Responsible Leaders: VP Operations / Quality, Quality Head, QA Engineer.
+
+[B0306] 
+Primary Documentation: APQP Master Gate Checklist (HLPL-APQP-001), Electronics & Mechanical Quality SOP (SSM/QA/SOP/01), Process Flow Diagram (PFD) & Control Plan Templates, DVP&R, Non-Conformance Reports (NCR/SCAR), Calibration Register.
+
+[B0307] 
+Core Workflows: APQP phase gate monitoring, IQC, IPQC, FQC, PDI inspection, RCA/CAPA execution, internal quality audits, and test equipment calibration.
+
+[B0308] 
+System Alerts:
+
+[B0309] 
+ALERT_QA_01: APQP phase gate transition attempted with open R/Y risk flags.
+
+[B0310] 
+ALERT_QA_02: Measuring instrument calibration expired or overdue.
+
+[B0311] 
+ALERT_QA_03: Customer complaint / field failure logged (Triggers mandatory 8D CAPA workflow).
+
+[B0312] Heading2
+7. Electronics & Mechanical Manufacturing
+
+[B0313] 
+Responsible Leaders: Production Head / Electronics & Mech Manufacturing Leads.
+
+[B0314] 
+Primary Documentation: Process Flow Diagram (HLPL-Project_Code-PFD-01), Process Failure Mode and Effects Analysis (HLPL-Project_Code-02), Control Plan (HLPL-Project_Code-CP-01), Work Instructions (WI).
+
+[B0315] 
+Core Workflows: Raw material issue, solder paste storage & temperature verification, PCB baking, SMT mounting, reflow soldering, AOI, manual insertion, wave soldering, conformal coating, device assembly, and sealing.
+
+[B0316] 
+System Alerts:
+
+[B0317] 
+ALERT_MFG_01: First-piece inspection failed during line setup (Blocks batch production).
+
+[B0318] 
+ALERT_MFG_02: Reflow thermal profile out of spec or solder paste shelf-life expired.
+
+[B0319] Heading2
+8. Production & EOL Testing
+
+[B0320] 
+Responsible Leaders: Testing Lead / PDI & Testing Team.
+
+[B0321] 
+Primary Documentation: Pre-Testing Code (HW_29), EOL Test Specs, Control Plan Inspection Criteria, First-Piece Inspection & Pre-Dispatch Inspection (PDI) Certificates, Automated Test Logs.
+
+[B0322] 
+Core Workflows: Automated Test Plan execution via specialized test jigs:+-----------------------------------------------------------------------------------+
+
+[B0324] 
+|                      AUTOMATED EOL TEST JIG ENGINE                                |
+
+[B0326] 
++-----------------------------------------------------------------------------------+
+
+[B0328] 
+|  1. MCU Pre-Code Flash  -->  2. Voltage Regulator Verification                      |
+
+[B0330] 
+|  3. Relay & Switch Test -->  4. CAN/J1939 Bus Loopback                             |
+
+[B0332] 
+|  5. Sensor Calibration  -->  6. Final Production Firmware Injection               |
+
+[B0334] 
++-----------------------------------------------------------------------------------+
+
+[B0336] 
+                                        |
+
+[B0338] 
+                                        v
+
+[B0340] 
+              +---------------------------------------------------+
+
+[B0342] 
+              |   PASS: Serialized QR Code Label Printed & Synced |
+
+[B0344] 
+              |   FAIL: Device Locked & Routed to Rework Station  |
+
+[B0346] 
+              +---------------------------------------------------+
+
+[B0348] 
+System Alerts:
+
+[B0349] 
+ALERT_TST_01: First-Pass Yield drops below 95% threshold on production run.
+
+[B0350] 
+ALERT_TST_02: EOL Test Jig detects parametric out-of-bounds on microcontroller pin.
+
+[B0351] Heading2
+9. Accounts & Finance
+
+[B0352] 
+Responsible Leaders: Finance Lead / Accounts Team.
+
+[B0353] 
+Primary Documentation: Financial KPI Register (HLPL-F-KPI-01), Tax Invoices, Bank/Vendor/Customer Reconciliation Sheets, Monthly MIS Reports.
+
+[B0354] 
+Core Workflows: Booking revenue, billing against order status, payment collection monitoring, vendor invoice processing, maker-checker payment releases, and statutory tax filings (GST, TDS).
+
+[B0355] 
+System Alerts:
+
+[B0356] 
+ALERT_FIN_01: Invoice processing attempted without approved PO and Goods Receipt Note (GRN).
+
+[B0357] 
+ALERT_FIN_02: Monthly book closing delayed beyond 15th of next month.
+
+[B0358] Heading2
+10. Service & IT Infrastructure
+
+[B0359] 
+Responsible Leaders: Service Lead / IT Coordinator.
+
+[B0360] 
+Primary Documentation: Risk Register (R-SEC-01, R-INS-01, R-LIA-01), Infrastructure SOP, SLA Tracking Reports.
+
+[B0361] 
+Core Workflows: Server infrastructure management, database backups, VPN security enforcement, customer support ticketing, field issue resolution, and IT security audits.
+
+[B0362] 
+System Alerts:
+
+[B0363] 
+ALERT_IT_01: Server backup execution failed or offsite replication delayed.
+
+[B0364] 
+ALERT_IT_02: Service ticket Turnaround Time (TAT) exceeds SLA limit.
+
+[B0365] Heading2
+11. Human Resources
+
+[B0366] 
+Responsible Leaders: HR Lead, Deployment Lead.
+
+[B0367] 
+Primary Documentation: Role & Responsibility Matrix (HLPL/SAL/RR/01), Departmental Skill Matrix & Training Gap Report (HLPL/F/HR/03), Training Plan.
+
+[B0368] 
+Core Workflows: Workforce planning, employee onboarding, background verification (BGV), skill matrix updating, monthly training execution, and employee relations.
+
+[B0369] 
+System Alerts:
+
+[B0370] 
+ALERT_HR_01: Monthly training quota drops below 2 sessions per month.
+
+[B0371] 
+ALERT_HR_02: Mandatory background verification or onboarding document overdue.
+
+[B0372] Heading2
+12. Administration & Operations
+
+[B0373] 
+Responsible Leaders: Admin Lead, Operations Lead.
+
+[B0374] 
+Primary Documentation: Enterprise Risk Register (HLPL-OPS-RISK-01), Six Sigma Implementation Roadmap, Cross-Departmental Operational Metric Tracker (HLPL-OPS-METRIC-01).
+
+[B0375] 
+Core Workflows: Enterprise risk management, maintaining the central Risk Matrix, monitoring cross-departmental operational metrics, Six Sigma DMAIC deployment, and operational compliance governance.
+
+[B0376] 
+System Alerts:
+
+[B0377] 
+ALERT_OPS_01: Six Sigma DMAIC phase tollgate review overdue.
+
+[B0378] 
+ALERT_OPS_02: Enterprise risk threshold exceeded without mitigation plan.
+
+[B0379] Heading1
+5. Cross-Departmental Bi-Directional Change Control Loops
+
+[B0380] 
+To handle engineering changes, field issues, and requirement adjustments, the system enforces four automated, bi-directional closed loops.
+
+[B0381] Heading2
+Loop 1: Customer Scope / Requirement Change
+
+[B0382] 
+Trigger: OEM Client submits modified specification via Client Portal.
+
+[B0383] 
+Automated Action: System flags PMSS as Under Amendment and halts active phase gate transitions.
+
+[B0384] 
+Routing: Sales receives alert -> R&D (EHW, ESW, MECH) performs impact analysis on BOM, schedule, and tooling.
+
+[B0385] 
+Resolution: System updates Contract Review (HLPL/F/MKT/01) with amendment details -> Sales issues revised commercial quotation -> Client signs via portal -> PMSS unlocks with incremented revision (e.g., Rev 01 to Rev 02).
+
+[B0386] Heading2
+Loop 2: Mechanical / Component Interference
+
+[B0387] 
+Trigger: Automated 3D STEP clearance check detects physical clash between PCB component and enclosure housing.
+
+[B0388] 
+Automated Action: System generates Mechanical ECO ticket (HLPL-MECH-ECO) linking Hardware placement file and Mechanical assembly.
+
+[B0389] 
+Routing: Hardware Lead notified -> PCB component repositioned or alternate component package selected (HW_18, HW_20).
+
+[B0390] 
+Resolution: DFM/DFA check re-executed -> Mechanical re-validates 3D assembly -> Layout re-cleared (HW_23 = OK) -> Updated Gerber files generated (HW_24).
+
+[B0391] Heading2
+Loop 3: Test Verification Failure
+
+[B0392] 
+Trigger: Pre-compliance EMC/ESD failure or DVP test failure logged during Stage 6 (HW_32 = NOT OK).
+
+[B0393] 
+Automated Action: System locks Phase Gate transition, preventing pilot release, and logs Hardware Issues / RCA record (Phase 4).
+
+[B0394] 
+Routing: Automated escalation to Hardware Lead and Quality Head -> Circuit modification initiated.
+
+[B0395] 
+Resolution: Hardware modifies Schematic design (HW_15 / HW_32A) -> ECN raised (ECN-001 / ECN-002) -> Prototype re-fabricated and tested -> Re-validation report attached (APQP Item 20) -> Gate unlocked.
+
+[B0396] Heading2
+Loop 4: Post-Release ECO/ECN
+
+[B0397] 
+Trigger: Component End-of-Life (EOL), cost-reduction drive, or field issue triggers change request (HW_36 / HW_36A).
+
+[B0398] 
+Automated Action: R&D Head initiates formal Engineering Change Order (ECO) workflow.
+
+[B0399] 
+Routing:
+
+[B0400] 
+R&D re-assesses DFMEA RPN scores.
+
+[B0401] 
+Purchasing checks inventory scrap liability and ASL vendor status.
+
+[B0402] 
+Quality updates PFMEA (SS-[PROJ]-02) and Control Plan (HLPL-[PROJ]-CP-01).
+
+[B0403] 
+Resolution: Final sign-off by R&D Head and VP Operations -> ERP automatically updates Active BOM -> SMT line feeder setup sheets updated -> Old revision components locked in inventory.
+
+[B0404] Heading1
+6. Departmental Live Dashboard Specifications
+
+[B0406] tbl
+Department | Real-Time Input Dependencies | Internal Work-In-Progress (WIP) Metrics | Outgoing Deliverables | Readiness Gate Criteria
+Sales & BD | OEM Inquiry, Client SOR, Feasibility Sign-offs | CRM Pipeline Value, Open Lead Conversion Rate, Tender Aging | Signed NDA, Quotation, Signed PRS, Contract Review (HLPL/F/MKT/01) | Signed Customer PO & Approved PRS
+Embedded HW | Customer PRS, Feasibility Approval, Component Samples | Schematic Capture Status, Layout DRC Checks, HW Stage Gates (HW_01-HW_37) | Schematics (HW_15), Gerber (HW_24), Production BOM (HW_19), DVR (HW_32) | R&D Head Sign-off (HW_26 Release Gate)
+Embedded SW | HW Register Map, Hardware HSI Spec (HW_28), Function Specs | Active Feature Branches, CI/CD Pipeline Success Rate, Open Bug Count | Peripheral Drivers, Tested Firmware Binary, HSI Spec (HW_28) | Zero Critical / High Severity Bugs in Staging
+Cloud Software | Firmware Telemetry Payload Spec, Database Schema Specs | PR Review Queue, API Response Latency, Automated Unit Test Coverage | Deployed Microservices, OEM Cloud Integrations, Web Portals | G9/G10 Production Merge & Deployment Approval
+Mechanical Eng. | PCB Geometry, Connector Heights, Vehicle Mounting Envelope | 3D Modeling Status, Mold Flow Analysis, Ingress Protection (IP) Checks | 3D Enclosure STEP Files (HW_17), 2D Drawings, Mold Tool Specs | Zero 3D Component Clashes & IP Sealing Pass
+Purchasing & SCM | Engineering BOM (Tentative/Final), Forecast Volume, Vendor Specs | Desktop Audit Score (F-PUR-10), Supplier Capacity Gap (F-PUR-16), Lead Time | Prototype Components, Bare PCBs, Approved ASL/ACML, Supplier PPAP | 100% BOM Parts Onboarded on ASL/ACML
+Quality Assurance | PRS, DVP Requirements, Supplier PPAPs, IQC Reports | APQP Gate Status (HLPL-APQP-001), DVP Verification Progress, Open NCRs | Approved DVP&R, Calibration Register, Audit Reports, PDI Clearance | APQP Phase Closure & Zero Open Critical NCRs
+Manufacturing | Work Orders, Final Released BOM, Bare PCBs, Component Kits | SMT Yield Rate, Reflow Profile Stability, Line Cycle Time | Fully Assembled Board Assemblies (PCBA), Completed Enclosure Builds | First-Piece Inspection Approval & AOI Pass
+EOL Testing | Assembled PCBA, Pre-Testing Firmware Code, Test Jigs | Unit Test Cycle Time, Jig Pass/Fail Ratio, First-Pass Yield % | Flashed Production Device, Serialized Test Certificates, Pass Logs | 100% EOL Functional Parameter Verification
+Accounts & Finance | Dispatched Work Orders, PDI Certificates, Vendor Receipts | Receivables Aging (>45 Days), Invoice Processing Queues, MIS Status | Verified Tax Invoices, Monthly Financial MIS, Payment Release Slips | Payment Receipt Verification or Credit Line Approval
+Service & IT | User Support Tickets, Server Telemetry, Backup Schedules | SLA Resolution TAT, System Uptime %, Vulnerability Patch Status | Incident Resolution Logs, Risk Register Updates, Security Audit Clearance | 100% Critical IT Infrastructure Backup & SLA Adherence
+HR & Operations | Resource Requests, Training Schedules, Audit Requirements | Training Adherence %, Skill Matrix Scores, Six Sigma DMAIC Tollgates | Onboarded Personnel, Verification Reports, Six Sigma Project Certs | Competency & BGV Verification Clearance
+
+[B0407] Heading1
+7. Comprehensive Maintenance & Tooling Management Framework
+
+[B0408] 
+To ensure operational continuity across SMT lines, automated testing jigs, and mechanical fabrication equipment, Hexense Labs enforces a Total Productive Maintenance (TPM) master plan integrated with strictly monitored mean-time metrics and quality assurance registers.
+
+[B0409] Heading2
+7.1 Total Productive Maintenance (TPM) Master Plan & MTBF/MTTR Tracking
+
+[B0410] 
+Preventive and predictive maintenance schedules are executed according to the enterprise TPM plan. Equipment performance is monitored against key maintenance benchmarks to eliminate unplanned line stops and process drift:
+
+[B0411] 
+Preventive Maintenance (PM) Cycles: Biannual and annual preventive servicing covering PCB loaders, automatic solder paste printers, SPI units, chip shooters, reflow ovens, AOI units, wave soldering machines, and automated EOL jigs.
+
+[B0412] 
+Mean Time Between Failures (MTBF) & Mean Time to Repair (MTTR): Tracked per machine to evaluate Overall Equipment Effectiveness (OEE) and optimize spare parts inventory.
+
+[B0413] 
+Autonomous Maintenance & Start-Up Checks: Daily start-up verification checklists executed by machine operators prior to batch production runs.
+
+[B0414] Heading2
+7.2 Calibration Registers (IMTE) & Measurement System Analysis (MSA / Gage R&R)
+
+[B0415] 
+All Inspection, Measuring, and Test Equipment (IMTE) used across quality control and production lines are subject to strict calibration controls and Measurement System Analysis (MSA) under IATF 16949 requirements:
+
+[B0416] 
+IMTE Calibration Register: Centralized tracking of dial vernier calipers, micrometers, multimeters, and oscilloscopes, maintaining national/international traceability standards and calibration expiration alerts.
+
+[B0417] 
+Gage Repeatability & Reproducibility (Gage R&R): Statistical studies conducted periodically for all measurement systems identified in Control Plans to validate gauge accuracy, operator consistency, and process capability.
+
+[B0418] Heading2
+7.3 Customer-Owned Tooling Tagging, Care, Custody & Insurance Control
+
+[B0419] 
+Customer-owned assets, including stencils, molding dies, fixtures, and consigned materials, are systematically controlled to prevent damage, loss, or unauthorized modification:
+
+[B0420] 
+Identification & Tagging: Physical tagging and register logging detailing customer name, part mapping, location, condition, and life counts.
+
+[B0421] 
+Insurance & Liability Coverage: Verification of property insurance covering customer-owned assets in the company's care, custody, and control.
+
+[B0422] 
+Program & Data Backup: Offsite access-controlled repository storing CNC code, pick-and-place files, stencil artwork, and test scripts with annual restoration tests.
+
+[B0423] Heading2
+7.4 Power & Utility Contingency Drills
+
+[B0424] 
+To prevent production loss, data corruption, or SMT oven board scrap during grid power disruptions, annual contingency drills validate backup utility systems:
+
+[B0425] 
+DG & UPS Load Testing: Quarterly load tests of diesel generators and UPS units supporting SMT lines, reflow ovens, MES servers, and HVAC systems.
+
+[B0426] 
+Functional Outage Drills: Simulated extended outage drills testing automatic DG start, graceful MES shutdown, reflow oven restart verification, and first-article product validation.
+
+[B0427] Heading1
+8. Advanced HR People Management, Operations & Competency Framework
+
+[B0428] Heading2
+8.1 Annual Skill Matrix Evaluations (HLPL/F/HR/03)
+
+[B0429] 
+Departmental competency is assessed annually across all 11 functional units using standardized evaluation procedures (HLPL/F/HR/03):
+
+[B0430] 
+Rating Methodology: Employees are scored across 8 key domain skills on a 1–4 scale (1 = Learner, 2 = Under Supervision, 3 = Independent, 4 = Expert/Trainer).
+
+[B0431] 
+Competency Thresholds: Overall scores determine employee classification into Level 1 (<25%), Level 2 (26–50%), Level 3 (51–75%), and Level 4 (76–100%). Employees with skill gaps below the required department level trigger mandatory training interventions.
+
+[B0432] Heading2
+8.2 Training Need Identification (TNI) & Training Effectiveness Tracking
+
+[B0433] 
+Employee development is managed through structured identification and evaluation loops:
+
+[B0434] 
+TNI Workflow: Skill matrix gap reports, customer complaint trends, and new tool onboarding automatically populate the Annual Training Plan.
+
+[B0435] 
+Effectiveness Evaluation: Post-training practical tests, re-assessment after 30 days, and work performance monitoring confirm skill acquisition before closing training tickets.
+
+[B0436] Heading2
+8.3 Statutory Compliance Calendar, BGV Records & Grievance Registers
+
+[B0437] 
+Administrative and legal compliance workflows maintain complete oversight of employee lifecycle records and corporate governance:
+
+[B0438] 
+Statutory Compliance Calendar: Automated 90-day alert tracking for factory licenses, pollution consents, fire safety clearances, and labor compliance filings.
+
+[B0439] 
+Background Verification (BGV): Mandatory credential, criminal, and previous employment verification for all onboarding personnel retained in HR archives.
+
+[B0440] 
+Grievance & Query Tracking: Centralized registers logging employee grievances, resolution timelines, and whistle-blower complaints.
+
+[B0441] Heading2
+8.4 Six Sigma DMAIC Deployment Integration
+
+[B0442] 
+Operational excellence drives continuous improvement through cross-functional Six Sigma DMAIC (Define, Measure, Analyze, Improve, Control) project deployment:
+
+[B0443] 
+Roadmap & Tollgate Reviews: Scheduled phase reviews ensuring DMAIC project alignment with departmental KPIs and First-Pass Yield targets.
+
+[B0444] 
+Training & Certification: Structured Belt training integrated into HR skill matrices to build problem-solving capability across manufacturing and engineering teams.
+
+[B0445] Heading1
+9. Master Document Inventory & Departmental Artifacts Annexure
+
+[B0446] 
+This section outlines the comprehensive baseline index of all standard operating procedures, policies, quality forms, registers, and software development lifecycle artifacts governing the Enterprise Smart Management System across departments. Each departmental inventory is structured into three distinct categories: (1) Common Departmental & Operational / Maintenance Documents, (2) Periodic & Conditional Operational Reviews (including monthly checklists, scheduled audits, and time-bound compliance reviews), and (3) Project-Specific Deliverables & Artifacts.
+
+[B0448] Heading2
+9.1 Sales & Business Development (SBD)
+
+[B0449] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0450] 
+HLPL/SAL/SOP/01: Sales & Business Development Standard Operating Procedure
+
+[B0451] 
+HLPL-SAL-mNDA-01: Mutual Non-Disclosure Agreement Master Template
+
+[B0452] 
+HLPL/SAL/RR/01: Sales Department Roles, Responsibilities & Delegation Matrix
+
+[B0453] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0454] 
+HLPL-SAL-REV-01: Monthly Sales Pipeline Audit & Lead Conversion Review Checklist
+
+[B0455] 
+HLPL-SAL-AR-01: Quarterly Commercial Account & Receivables Aging Audit Sheet
+
+[B0456] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0457] 
+HLPL-F-SAL-01: Customer Enquiry & Lead Registration Form
+
+[B0458] 
+HLPL/F/MKT/01: Contract Review Record & Cross-Functional Feasibility Sheet
+
+[B0459] 
+HLPL-SAL-QUO-01: Standard Commercial Proposal & Quotation Template
+
+[B0461] Heading2
+9.2 Embedded Hardware Engineering (EHW)
+
+[B0462] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0463] 
+HLPL/QMSP/HW/001: Embedded Hardware Engineering Design Procedure & Stage Gates (HW_01 to HW_37)
+
+[B0464] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0465] 
+HLPL-EHW-AUD-01: Bi-Annual Design Rule Check (DRC) & Component Library Compliance Audit
+
+[B0466] 
+HLPL-EHW-REV-01: Monthly Hardware Stage Gate Review & ECN Audit Log
+
+[B0467] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0468] 
+HLPL-[PROJ]-EHW-PRS: Product Requirement Specification (PRS) Master Template
+
+[B0469] 
+HLPL-[PROJ]-EHW-BLK: System Block Diagram & Architecture Template
+
+[B0470] 
+HLPL-[PROJ]-EHW-SCH: Circuit Schematic & Design Artifact Standard
+
+[B0471] 
+HLPL-[PROJ]-EHW-PCB: PCB Layout, Gerber Package & Fabrication Files
+
+[B0472] 
+HLPL-[PROJ]-EHW-BOM: Automated Engineering Bill of Materials & Costing Tracker
+
+[B0473] 
+HLPL-[PROJ]-EHW-DFMEA: Hardware Design Failure Mode and Effects Analysis Register
+
+[B0474] 
+HLPL-[PROJ]-QA-DVP: Design Verification Plan & Report (DVP&R) Master Sheet
+
+[B0476] Heading2
+9.3 Embedded Software, Cloud & Mobile Engineering (ESW / SW)
+
+[B0477] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0478] 
+HLPL-QSM-SW-00001: Software Development Lifecycle (SDLC) SOP & Tollgate Gates (G0 to G11)
+
+[B0479] 
+HLPL-SW-CICD-01: Continuous Integration & Deployment Pipeline Configuration Standards
+
+[B0480] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0481] 
+HLPL-SW-REV-01: Monthly Code Quality, Security Vulnerability & Coverage Audit
+
+[B0482] 
+HLPL-SW-PER-01: Quarterly API Performance & Cloud Throughput Review Sheet
+
+[B0483] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0484] 
+HLPL-[PROJ]-ESW-HSI: Hardware-Software Interface (HSI) Specification Template
+
+[B0485] 
+HLPL-[PROJ]-ESW-POC: Proof-of-Concept Firmware Validation Baseline
+
+[B0487] Heading2
+9.4 Mechanical Engineering (MECH)
+
+[B0488] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0489] 
+HLPL-MECH-SOP-01: Mechanical Engineering & Tooling Design SOP
+
+[B0490] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0491] 
+HLPL-MECH-AUD-01: Bi-Annual Customer Tooling, Die Wear & Mold Maintenance Audit
+
+[B0492] 
+HLPL-MECH-REV-01: Monthly Mechanical ECO & 3D Interference Audit Sheet
+
+[B0493] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0494] 
+HLPL-[PROJ]-MECH-CAD: 3D STEP Enclosure Model & Interference Analysis Archive
+
+[B0495] 
+HLPL-[PROJ]-MECH-DRW: 2D Production Drawing & Mold Tooling Specification
+
+[B0496] 
+HLPL-MECH-ECO: Mechanical Engineering Change Order Form
+
+[B0498] Heading2
+9.5 Purchasing & Supply Chain Management (PUR)
+
+[B0499] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0500] 
+HLPL-PUR-SOP-1: Procurement & Supplier Management SOP
+
+[B0501] 
+F-PUR-10: Desktop Supplier Evaluation Form
+
+[B0502] 
+F-PUR-11: Supplier Performance & Scorecard Report
+
+[B0503] 
+F-PUR-13 / F-PUR-14: Supplier On-Site Audit & Quality Systems Evaluation Checklists
+
+[B0504] 
+F-PUR-16: Supplier Capacity Gap Assessment & Feasibility Evaluation Report
+
+[B0505] 
+HLPL-PUR-ASL-01: Approved Supplier List (ASL) & Approved Component Master List (ACML)
+
+[B0506] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0507] 
+HLPL-PUR-REV-01: Monthly ASL/ACML Audit & Supplier Lead-Time Variance Report
+
+[B0508] 
+HLPL-PUR-AUD-01: Annual Master Supplier System & Capacity Audit Schedule
+
+[B0509] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0510] 
+F-PUR-15: Supplier Production Part Approval Process (PPAP) Checklist & Submission Warrant
+
+[B0512] Heading2
+9.6 Quality Assurance, Regulatory & Manufacturing (QA / EMF)
+
+[B0513] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0514] 
+SSM/QA/SOP/01: Electronics & Mechanical Quality Assurance SOP
+
+[B0515] 
+HLPL-QA-CAL-01: IMTE Calibration Register & MSA / Gage R&R Plan
+
+[B0516] 
+HLPL-QA-FIFO-01: First-In, First-Out (FIFO) Control Matrix & Work Instructions (WI)
+
+[B0517] 
+HLPL-QA-LLR-01: Lessons Learned Register & Knowledge Base
+
+[B0518] 
+HLPL-EMF-5S-01: Monthly 5S Audit Checklist & Workplace Organization Standard
+
+[B0519] 
+HLPL-EMF-CAP-01: Assembly Line Capacity & Takt Time Analysis Register
+
+[B0520] 
+HLPL-EMF-NC-01: Non-Conforming Product Control & NC Rework Procedure
+
+[B0521] 
+HLPL-EMF-CHK-01: Pre-Manufacturing Line Startup Master Checklist
+
+[B0522] 
+HLPL-EMF-PM-01: Equipment Preventive Maintenance Plan & OEE Tracker
+
+[B0523] 
+HLPL-EMF-KPI-01: Production Annual KPI & Operational Efficiency Log
+
+[B0524] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0525] 
+HLPL-QA-REV-01: Monthly Internal Quality Audit & Calibration Expiration Audit
+
+[B0526] 
+HLPL-EMF-REV-01: Monthly Line OEE, First-Pass Yield & Scrap Rate Audit Sheet
+
+[B0527] 
+HLPL-QA-IATF-01: Annual IATF 16949 / ISO 9001 System Compliance Audit Review
+
+[B0528] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0529] 
+HLPL-APQP-001: Advanced Product Quality Planning (APQP) Master Gate Checklist
+
+[B0530] 
+HLPL-Project_Code-PFD-01: Process Flow Diagram (PFD) Master Template
+
+[B0531] 
+HLPL-Project_Code-02: Process Failure Mode and Effects Analysis (PFMEA) Sheet
+
+[B0532] 
+HLPL-Project_Code-CP-01: Production Control Plan Master Register
+
+[B0533] 
+HLPL-QA-NCR-01: Non-Conformance Report (NCR) & 8D CAPA Logbook
+
+[B0534] 
+HLPL-QA-FQC-01: Final Quality Control (FQC) & Pre-Dispatch Inspection (PDI) Reports
+
+[B0535] 
+HLPL-QA-PPM-01: Process Rejection & PPM Defect Tracking Sheet
+
+[B0537] Heading2
+9.7 Finance & IT Infrastructure (FIN / SIT)
+
+[B0538] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0539] 
+HLPL-F-KPI-01: Financial Performance & Operational KPI Register
+
+[B0540] 
+R-SEC-01 / R-INS-01 / R-LIA-01: Enterprise Security, Infrastructure & Liability Risk Registers
+
+[B0541] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0542] 
+HLPL-FIN-REV-01: Monthly Financial MIS & Statutory Tax Closing Checklist
+
+[B0543] 
+HLPL-SIT-AUD-01: Monthly Server Backup & IT Security Infrastructure Audit
+
+[B0544] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0545] 
+(Note: Project-specific financial billing records, tax invoices, and project IT provisioning tickets are managed dynamically via the ERP core during project lifecycle execution.)
+
+[B0546] Heading2
+9.8 Human Resources (HR)
+
+[B0547] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0548] 
+HLPL/F/HR/03: Annual Skill Matrix Evaluation & Departmental Competency Sheet
+
+[B0549] 
+HLPL-HR-TNI-01: Training Need Identification (TNI) & Annual Training Calendar
+
+[B0550] 
+HLPL-HR-BGV-01: Background Verification (BGV) Policy & Employee Onboarding Register
+
+[B0551] 
+HLPL-HR-GRV-01: Employee Grievance & Internal Query Tracking Register
+
+[B0552] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0553] 
+HLPL-HR-AUD-01: Quarterly Statutory Labor, Factory License & Training Adherence Review
+
+[B0554] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0555] 
+(Note: Project-specific manpower allocation, role assignment matrix, and training execution logs are tracked dynamically via HR management workflows.)
+
+[B0556] Heading2
+9.9 Administration & Operations (OPS)
+
+[B0557] Heading3
+Common Departmental & Operational / Maintenance Documents
+
+[B0558] 
+HLPL-OPS-RISK-01: Centralized Enterprise Risk Register & Risk Mitigation Matrix
+
+[B0559] 
+HLPL-OPS-METRIC-01: Cross-Departmental Operational Metric Tracker & KPI Dashboard
+
+[B0560] 
+HLPL-OPS-6SIG-01: Six Sigma Implementation Roadmap & DMAIC Tollgate Governance Framework
+
+[B0561] 
+ISO 9001:2015 Certification: Enterprise Quality Management System (QMS) framework.
+
+[B0562] 
+ISO/IEC 27001:2022 Certification: Information Security Management System (ISMS) governing data protection, IT infrastructure, and client confidential IP.
+
+[B0563] 
+ISO 14001:2015 Certification: Environmental Management System (EMS) ensuring sustainable operations and compliance with environmental regulations.
+
+[B0564] 
+ISO 45001:2018 Certification: Occupational Health and Safety (OH&S) Management System standard.
+
+[B0565] 
+Factory License & Statutory Approvals: Validated Factory License, UP Pollution Control Board Consent to Operate (UPPCB CTO), and Fire Safety No-Objection Certificate (Fire NOC).
+
+[B0566] 
+Diesel Generator (DG) Maintenance Logs: Operational run-time, fuel consumption, stack emission tests, and preventive maintenance logs for backup utility generators.
+
+[B0567] 
+E-Waste Disposal Agreements & Manifests: Certified agreements with authorized recyclers for safe disposal of electronic scrap, PCB assemblies, and hazardous manufacturing waste.
+
+[B0568] 
+Security & Facility Management Service Contracts: Formally executed contracts and SLA tracking for 24/7 physical security, access control maintenance, and facility housekeeping.
+
+[B0569] Heading3
+Periodic & Conditional Operational Reviews
+
+[B0570] 
+HLPL-OPS-REV-01: Quarterly Enterprise Operational Governance & Risk Audit Review
+
+[B0571] 
+Electricity, Water etc
+
+[B0572] 
+Enterprise Master Risk Register: Centralized matrix capturing strategic, financial, operational, supply chain, and regulatory risks alongside mitigation actions.
+
+[B0573] 
+Management Review Meeting (MRM) Minutes: Quarterly executive governance documentation reviewing quality objectives, audit results, customer feedback, and resource allocations.
+
+[B0574] 
+Internal Audit Schedule & Reports: Annual schedule covering QMS, EMS, ISMS, process audits, and layer process audits (LPA) across all 11 functional departments.
+
+[B0575] 
+Pest Control reminder
+
+[B0576] Heading3
+Project-Specific Deliverables & Artifacts
+
+[B0577] 
+Each OEM project Audit Risk Matrix 
+
+[B0578] 
+(Note: Project-specific Six Sigma DMAIC project charter and tollgate sign-off certificates are archived under operational compliance records.)
+
+EMBEDDED MEDIA
