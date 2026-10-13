@@ -2,6 +2,8 @@
 
 ## Current request
 
+- [x] Refine the Project documents area into a concise department workspace with assignment status and the existing project-folder shortcut. Private document details remain withheld without a verified current assignment; no document, access, or project record changed.
+
 - [ ] Complete source-only responsibility reassignment acceptance: exact replay/conflict, null actor/target/revision, active department/project-team responsible/reviewer denials, current-scope rejection after revocation, and actor/request-key, manager-membership, and target-membership concurrent reassignment evidence. **No live installation, grants, policies, data, users, storage, or UI changes are authorized.**
 
 - [ ] **Deferred — shared work-contact directory and Legal documents.** Start with verified signed-in navigation and work-contact/reporting-line reads shared by web and Android. Then add centralized Legal documents and letterheads under Operations with configurable future ownership and scoped Legal responsibility. Protected Legal versioning/ownership, directory/document search in Help/assistant/chat/voice, and web/Android parity remain later phases. No private HR or personal-contact exposure, Legal role, grant, or access change is authorized in this follow-on.

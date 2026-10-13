@@ -350,7 +350,11 @@ function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="documents" className="pt-4">
-          <ProjectStructuredDocuments projectId={projectId} projectDepartmentId={project.department_id} />
+          <ProjectStructuredDocuments
+            projectId={projectId}
+            projectDepartmentId={project.department_id}
+            onOpenFolder={() => openProjectTab("files")}
+          />
         </TabsContent>
 
         <TabsContent value="bom" className="pt-4">
