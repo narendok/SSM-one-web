@@ -43,3 +43,37 @@ The phantom test proves only a writer that takes the accepted requirement-root. 
 not prove direct inserts are blocked. Before any installation, a target-bound direct-write
 compatibility review must either move every real writer into the root protocol or apply the
 separately reviewed direct privilege/policy removal with caller/RLS acceptance.
+
+## Original-target compatibility proposal — source-only
+
+Proposed path: `supabase/pending/20261015_requirement_feasibility_original_target_compatibility.sql`.
+It is expressly for the original target, does not reuse the isolated-target transition, and
+does not install any change. Its exact minimal effect is to revoke direct `INSERT`, `UPDATE`,
+and `DELETE` from `PUBLIC`, `anon`, and `authenticated` on the three replay-graph tables,
+then drop only these verified broad authenticated policies:
+
+| Table | Proposed direct-write removal | Supported replacement operation |
+|---|---|---|
+| `customer_requirements` | direct I/U/D and `Sales users manage customer requirements` | `submit_sales_feasibility_handover`; `submit_external_customer_requirement`; `create_sales_bound_customer_requirement` |
+| `customer_requirement_revisions` | direct I/U/D and `Sales users manage customer requirement revisions` | the same source-bound creation operations; later revision authority remains separately scoped |
+| `requirement_feasibility_reviews` | direct I/U/D and `Sales users manage feasibility reviews` | `submit_sales_feasibility_handover`; `assign_requirement_feasibility_review`; `record_requirement_feasibility_response` |
+
+The proposal intentionally leaves SELECT access, `service_role`, unrelated table policies,
+legacy scope helpers, historical rows, and baseline readers untouched. A future restore needs
+the pre-install `information_schema.role_table_grants` rows and the exact three policy
+definitions captured from the target, plus confirmation that no unknown service route or
+manual workflow still writes the tables. Recreating grants/policies without that capture is
+not an approved rollback.
+
+Disposable synthetic ordinary-caller evidence applies the exact proposed statements after
+first modelling the verified broad authenticated/anon grants and named Sales policies. It
+allows an `authenticated` Sales caller through `submit_sales_feasibility_handover`, then
+denies authenticated direct header insert, revision update, review delete, and anon header
+insert. This is synthetic policy/grant evidence only; it does not certify the managed target's
+JWT, deployed policy text, or all callers.
+
+The handover source also now serializes an exact enquiry/opportunity/customer/Master source
+tuple and rejects a different request key once one receipt owns that tuple. The local two-
+session barrier case proves one receipt and requirement commit while the competing key is
+denied. It does not prove safety for an unreviewed direct writer; that remains a deployment
+blocker.
