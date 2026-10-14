@@ -76,7 +76,7 @@ BEGIN
   SET LOCAL ROLE local_sales_caller;
   PERFORM set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000050', true);
   SELECT ARRAY[
-    (SELECT count(*)::int FROM public.customer_requirements WHERE id = '00000000-0000-4000-8000-0000-000000000080'::uuid),
+    (SELECT count(*)::int FROM public.customer_requirements WHERE id = '00000000-0000-4000-8000-000000000080'::uuid),
     (SELECT count(*)::int FROM public.customer_requirement_revisions WHERE id = '00000000-0000-4000-8000-000000000081'::uuid),
     (SELECT count(*)::int FROM public.requirement_feasibility_reviews WHERE requirement_id = '00000000-0000-4000-8000-000000000080'::uuid)
   ] INTO v_after;
