@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   Check,
@@ -31,6 +31,7 @@ type Props = {
   departments: Department[];
   employees: Employee[];
   onOpenSource: () => void;
+  internalDetails?: ReactNode;
 };
 type Column = {
   id: string;
@@ -123,6 +124,7 @@ export function SharedFeasibilityAnalysis({
   departments,
   employees,
   onOpenSource,
+  internalDetails,
 }: Props) {
   const [example, setExample] = useState(false);
   const [audience, setAudience] = useState<"internal" | "client">("internal");
@@ -714,6 +716,7 @@ export function SharedFeasibilityAnalysis({
           {notice}
         </p>
       )}
+      {!client && internalDetails}
       {!example && (
         <p className="text-xs leading-relaxed text-muted-foreground">
           This first version lets you review the layout. Live remarks editing, client sharing and

@@ -91,4 +91,7 @@ it("opens the integrated shared analysis and its explicit UI example from the op
   await user.click(screen.getByRole("button", { name: "Try example layout" }));
   expect(screen.getAllByRole("heading", { name: "Department remarks" })).toHaveLength(4);
   expect(screen.getByText("UI example · not saved to the portal.")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Client preview" }));
+  expect(screen.queryByRole("heading", { name: "Assigned reviews" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Review status" })).toBeNull();
 });
