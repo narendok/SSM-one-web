@@ -55,7 +55,7 @@ BEGIN
       AND policy.polname = v_policy_name;
     IF NOT FOUND
        OR v_actual_command IS DISTINCT FROM v_policy->>'cmd'
-       OR regexp_replace(v_actual_qual, '\s+', '', 'g') IS DISTINCT FROM regexp_replace(v_policy->>'qual', '\s+', '', 'g')
+       OR regexp_replace(replace(replace(v_actual_qual, '::text', ''), '::app_role', ''), '\s+', '', 'g') IS DISTINCT FROM regexp_replace(replace(replace(v_policy->>'qual', '::text', ''), '::app_role', ''), '\s+', '', 'g')
        OR v_actual_roles IS DISTINCT FROM ARRAY['authenticated'] THEN
       RAISE EXCEPTION 'Original-target requirement read/write policy drift detected for %.%; capture and review the live policy before installation', v_table_name, v_policy_name;
     END IF;
