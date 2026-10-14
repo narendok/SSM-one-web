@@ -267,9 +267,33 @@ BEGIN
     RETURN;
   END IF;
 
-  -- New requirements have no existing root. Serialize the exact opportunity/Master
-  -- source before creation; once inserted, acquire its own root before revisions/reviews.
+  -- New requirements have no existing root. Serialize the exact enquiry/opportunity/customer/
+  -- Master source before creation, then reject a different request key that already owns
+  -- that source tuple. This is deliberately a business-source guard, not a replacement for
+  -- the private request-key receipt or the requirement-root graph lock.
   PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-source-root:' || p_opportunity_id::text || '|' || p_master_specification_version_id::text, 0));
+  SELECT * INTO v_prior
+  FROM public.sales_feasibility_handover_requests existing_source
+  WHERE existing_source.opportunity_id = p_opportunity_id
+    AND existing_source.customer_id = p_customer_id
+    AND existing_source.master_specification_version_id = p_master_specification_version_id
+    AND existing_source.payload_canonical->>'title' = btrim(p_title)
+  FOR UPDATE;
+  IF FOUND AND (v_prior.request_key <> p_request_key OR v_prior.requested_by <> v_actor_id) THEN
+    RAISE EXCEPTION 'An existing feasibility handover already owns this source; reopen it instead';
+  END IF;
+  IF FOUND THEN
+    v_root_lock_key := hashtextextended('sales-feasibility-requirement-root:' || v_prior.requirement_id::text, 0);
+    PERFORM pg_advisory_xact_lock(v_root_lock_key);
+    IF v_prior.payload_hash <> v_payload_hash OR v_prior.payload_canonical <> v_payload_canonical THEN
+      RAISE EXCEPTION 'Request key conflicts with a different caller or payload';
+    END IF;
+    SELECT * INTO v_requirement FROM public.customer_requirements WHERE id = v_prior.requirement_id FOR SHARE;
+    SELECT coalesce(array_agg((pin->>'id')::uuid ORDER BY (pin->>'department_id')::uuid, (pin->>'id')::uuid), ARRAY[]::uuid[])
+    INTO v_review_ids FROM jsonb_array_elements(v_prior.review_pins) pin;
+    RETURN QUERY SELECT v_prior.requirement_id, v_review_ids, true;
+    RETURN;
+  END IF;
 
   INSERT INTO public.customer_requirements (
     requirement_number, opportunity_id, customer_id, title, status, current_revision,
