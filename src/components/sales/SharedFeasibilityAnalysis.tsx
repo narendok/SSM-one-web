@@ -135,6 +135,9 @@ export function SharedFeasibilityAnalysis({
   const [highlights, setHighlights] = useState<Record<string, string>>({});
   const [editingHighlight, setEditingHighlight] = useState<string | null>(null);
   const [highlightDraft, setHighlightDraft] = useState("");
+  const [internalRemarks, setInternalRemarks] = useState<Record<string, string>>({});
+  const [editingInternal, setEditingInternal] = useState<string | null>(null);
+  const [internalDraft, setInternalDraft] = useState("");
   const [notice, setNotice] = useState("");
   const [question, setQuestion] = useState("");
   const [discussion, setDiscussion] = useState<Array<{ body: string; clientVisible: boolean }>>([]);
@@ -196,6 +199,8 @@ export function SharedFeasibilityAnalysis({
     setRequirements(exampleRequirements);
     setDraft(exampleRequirements);
     setHighlights({});
+    setInternalRemarks({});
+    setEditingInternal(null);
     setEditingHighlight(null);
     setEditingRequirements(false);
     setNotice("");
@@ -548,17 +553,76 @@ export function SharedFeasibilityAnalysis({
                         {column.conditions}
                       </p>
                     </div>
-                    <details className="rounded-md bg-muted/30 p-2.5">
-                      <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground">
-                        Internal notes · not client visible
-                      </summary>
-                      <p className="mt-2 whitespace-pre-wrap break-words leading-relaxed">
-                        {column.internal}
-                      </p>
-                    </details>
                   </div>
                 )}
                 <footer className="mt-auto border-t bg-primary/[0.04] p-4">
+                  {!client && (
+                    <section className="mb-4 border-b pb-4" aria-label="Internal remarks">
+                      <h6 className="text-xs font-semibold">Internal remarks</h6>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        Team only � never included in client highlights
+                      </p>
+                      {example && editingInternal === column.id ? (
+                        <form
+                          className="mt-3 space-y-2"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            setInternalRemarks({
+                              ...internalRemarks,
+                              [column.id]: internalDraft.trim(),
+                            });
+                            setEditingInternal(null);
+                            setNotice(
+                              "Internal remark updated in the UI example only. Nothing was published or sent.",
+                            );
+                          }}
+                        >
+                          <Label htmlFor={`internal-${column.id}`}>Example internal remark</Label>
+                          <Textarea
+                            id={`internal-${column.id}`}
+                            value={internalDraft}
+                            maxLength={1200}
+                            rows={4}
+                            onChange={(event) => setInternalDraft(event.target.value)}
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <Button size="sm" type="submit">
+                              Save preview
+                            </Button>
+                            <Button
+                              size="sm"
+                              type="button"
+                              variant="ghost"
+                              onClick={() => setEditingInternal(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <p className="mt-2.5 whitespace-pre-wrap break-words text-xs leading-relaxed">
+                            {internalRemarks[column.id] ?? column.internal}
+                          </p>
+                          {example && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="mt-2 h-7 px-0 text-xs"
+                              onClick={() => {
+                                setInternalDraft(internalRemarks[column.id] ?? column.internal);
+                                setEditingInternal(column.id);
+                              }}
+                            >
+                              Edit internal remark
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </section>
+                  )}
+
                   <div className="flex items-center gap-1.5">
                     <MessageSquare className="size-3.5 text-primary" />
                     <h6 className="text-xs font-semibold">Department remarks</h6>

@@ -117,6 +117,27 @@ describe("SharedFeasibilityAnalysis", () => {
     expect(screen.queryByText(/Compare board reuse and a layout revision/)).toBeNull();
   });
 
+  it("edits internal remarks independently and excludes them from the client projection", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Try example layout" }));
+    const hardware = within(screen.getByRole("article", { name: "Hardware analysis" }));
+    await user.click(hardware.getByRole("button", { name: "Edit internal remark" }));
+    await user.clear(hardware.getByRole("textbox", { name: "Example internal remark" }));
+    await user.type(
+      hardware.getByRole("textbox", { name: "Example internal remark" }),
+      "Private margin concern",
+    );
+    await user.click(hardware.getByRole("button", { name: "Save preview" }));
+    expect(hardware.getByText("Private margin concern")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Client preview" }));
+    expect(screen.queryByText("Private margin concern")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Internal remarks" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Internal view" }));
+    await user.click(screen.getByRole("button", { name: "Exit example" }));
+    await user.click(screen.getByRole("button", { name: "Try example layout" }));
+    expect(screen.queryByText("Private margin concern")).toBeNull();
+  });
+
   it("does not autosave requirement edits or overwrite the example reviewed snapshot", async () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: "Try example layout" }));

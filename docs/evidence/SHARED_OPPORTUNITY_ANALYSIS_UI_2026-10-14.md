@@ -35,3 +35,10 @@ Final isolation refinement validation: all 13 focused tests passed again, full T
 Original-project final confirmation: Lovable history showed the client-isolation fix as the previewed source. The existing opportunity opened its linked Master revision, and the example client projection showed four Department remarks headings with Assigned reviews and Review status absent. This confirms UI projection in the existing internal preview, not external client authorization. No record edits or notifications were sent.
 
 [Original project requirements](ssm-analysis-lovable-top-20261015.png) · [Original department columns](ssm-analysis-lovable-departments-20261015.png) · [Final client highlights](ssm-analysis-lovable-client-20261015.png)
+
+## Separate remarks follow-up - 15 October 2026
+
+Each department card now ends with independent Internal remarks (team only) and Client-visible highlight areas. Example internal remarks support Edit, Save preview and Cancel; they never populate the client highlight and are absent from the client projection. Example edits reset on exit. Recorded internal data remains read-only; no live persistence or publication contract was invented. Focused verification: 14 tests passed across shared analysis, opportunity details and combined pipeline, including internal-remark audience isolation and reset.
+
+The existing lifecycle heartbeat was updated and resumed at the user's request. Its first completion boundary is operational feasibility pass plus recorded client approval of the final Master requirements revision and baseline lock before authorized Research/POC or justified Pilot start. This schedules remaining work; it does not declare operational approval or deployment complete.
+TypeScript no-emit check and production Vite/Nitro build passed for this follow-up.
