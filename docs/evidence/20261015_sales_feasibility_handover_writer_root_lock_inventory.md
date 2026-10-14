@@ -58,12 +58,26 @@ then drop only these verified broad authenticated policies:
 | `customer_requirement_revisions` | direct I/U/D and `Sales users manage customer requirement revisions` | the same source-bound creation operations; later revision authority remains separately scoped |
 | `requirement_feasibility_reviews` | direct I/U/D and `Sales users manage feasibility reviews` | `submit_sales_feasibility_handover`; `assign_requirement_feasibility_review`; `record_requirement_feasibility_response` |
 
-The proposal intentionally leaves SELECT access, `service_role`, unrelated table policies,
-legacy scope helpers, historical rows, and baseline readers untouched. A future restore needs
-the pre-install `information_schema.role_table_grants` rows and the exact three policy
-definitions captured from the target, plus confirmation that no unknown service route or
-manual workflow still writes the tables. Recreating grants/policies without that capture is
-not an approved rollback.
+Read preservation correction: read-only original-target inspection established the existing
+authenticated predicates: Sales/Engineering/Admin can read requirement headers and revisions;
+the same scope can read feasibility reviews. The three Sales-manage `FOR ALL` policies also
+contribute a narrower Sales-manage/Admin SELECT path, so dropping them without replacing the
+independent read scope would be unsafe to claim as SELECT-neutral. The corrected proposal
+fails closed when any of its six named original-target policies differs from the inspected
+command, role, or predicate, removes only the three exact `FOR ALL` policies, and retains the
+three existing named `FOR SELECT` policies. It does not expand visibility, change table SELECT
+grants, alter `service_role`, legacy scope helpers, historical rows, or baseline readers.
+
+The revised disposable model proves ordinary Sales before/after reads on all three tables are
+unchanged, anon reads remain denied, direct authenticated/anon I/U/D remains denied, and the
+protected handover remains allowed. It is synthetic policy/grant evidence only. It does not
+yet prove protected assignment or protected response under the corrected target policy shape;
+those require their own accepted prerequisite graphs and target-bound caller/RLS cases.
+
+A future restore needs the pre-install `information_schema.role_table_grants` rows and all six
+exact policy definitions captured from the target, plus confirmation that no unknown service
+route or manual workflow still writes the tables. Recreating grants/policies without that
+capture is not an approved rollback.
 
 Disposable synthetic ordinary-caller evidence applies the exact proposed statements after
 first modelling the verified broad authenticated/anon grants and named Sales policies. It
