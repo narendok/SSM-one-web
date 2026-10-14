@@ -1,6 +1,7 @@
 \set ON_ERROR_STOP on
 BEGIN;
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000050', true);
+SELECT pg_advisory_xact_lock(20261015, 4);
 DO $replay$
 BEGIN
   BEGIN
@@ -12,11 +13,11 @@ BEGIN
       ARRAY['00000000-0000-4000-8000-000000000062'::uuid],
       '2026-10-13 18:23:00+00'::timestamptz, '00000000-0000-4000-8000-000000000197'
     );
-    RAISE EXCEPTION 'LOCAL_CASE_FAIL concurrent graph modification replay accepted';
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL writer-held plain update replay accepted';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM <> 'Review graph has changed since this receipt was issued' THEN RAISE; END IF;
   END;
 END;
 $replay$;
 COMMIT;
-\echo SALES_FEASIBILITY_HANDOVER_GRAPH_LOCK_REPLAY_DENIED
+\echo SALES_FEASIBILITY_HANDOVER_WRITER_HELD_REPLAY_DENIED
