@@ -1,6 +1,6 @@
 # Pending Sales feasibility handover contract
 
-Status: **source-only review**. The proposed executable source is
+Status: **source-only verification**. The proposed executable source is
 `supabase/pending/20261013_sales_feasibility_handover.sql`; it is not installed
 and authorizes no application write.
 
@@ -47,12 +47,12 @@ request_key UUID
 ## Minimum acceptance before UI enablement
 
 Disposable ordinary-caller evidence must cover Sales denial; enquiry/opportunity/customer and Master-version mismatch; stale enquiry timestamp; inactive/duplicate department; missing/inactive/wrong-department reviewer; no partial graph after notification failure; exact replay and changed-payload conflict; concurrent same-key and competing-department requests; direct table/helper denial; and non-owner RLS reads. It must prove that no verdict, baseline, or project conversion occurs during handover.
-## Replay audit - 15 October 2026: installation remains blocked
+## Replay safeguard repair - 15 October 2026
 
-The current executable proposal does not yet meet required atomic behavior step 8. Its existing-receipt branch checks actor and canonical payload, then returns before the normal enquiry/opportunity/source and selected department/reviewer checks. Revoked membership, inactive reviewer/department, changed source linkage, or a changed review graph must not be accepted merely because a receipt exists. The branch also queries all reviews currently attached to the requirement instead of verifying an immutable exact original review set.
+The replay path now locks the receipt first, then repeats the normal caller-authority, enquiry/opportunity/customer, current-Master-version, active department and active reviewer-membership checks before it can return an existing result. It verifies that the receipt's requirement has exactly the selected department/reviewer review graph and that each review retains revision 1 plus the original pinned Master Specification version. It never reroutes or renotifies on replay.
 
-Before installation, refactor common current-authority/source and recipient-scope validation so both initial execution and identical replay use it under the documented lock order. Separate immutable request identity from mutable current-version freshness: a later legitimate source revision must not rewrite the original receipt or silently turn a retry into a new submission. Define whether such a retry returns an authorized historical receipt or fails with a specific stale-source result. Require the exact original department/reviewer/revision review graph; reject missing, substituted or additional reviews. Do not reroute or renotify during replay.
+The current-Master-version rule applies to both initial execution and replay. A later Master revision makes the old request stale; the caller must start a new handover request rather than reinterpret an old receipt. The original receipt stays immutable.
 
-Extend disposable SQL checks for: reviewer deactivation; membership removal; department deactivation; enquiry/customer/opportunity relinking; changed review recipient/source; removed or extra review rows; and unchanged graph/notification/audit counts after every denied replay. Retain exact replay, changed-payload conflict, caller denial and concurrency checks. These cases are required, not verified results.
+Disposable SQL checks cover reviewer deactivation, membership removal, department deactivation, changed enquiry/opportunity linkage, stale Master version, removed/extra/substituted review rows and unchanged graph/notification/audit counts after every denied replay. Exact replay, changed-payload conflict, caller denial and concurrency remain required.
 
-Environment limitation: this Windows host has no discoverable psql/postgres/initdb/bash/docker commands, and wsl --list --quiet reports WSL is not installed. The existing runner requires a Linux disposable PostgreSQL cluster. No installation, production database call, permission change or SQL deployment was attempted. Earlier synthetic local acceptance does not cover this newly identified replay gap. The proposal remains source-only and must not be enabled from the UI.
+This repair remains source-only until the local disposable suite passes and its exact output is reviewed. No installation, production database call, permission change or SQL deployment is included in this follow-up. The Sales action remains disabled.

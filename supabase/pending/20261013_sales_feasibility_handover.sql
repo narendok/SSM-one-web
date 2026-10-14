@@ -85,6 +85,8 @@ DECLARE
   v_requirement public.customer_requirements%ROWTYPE;
   v_revision public.customer_requirement_revisions%ROWTYPE;
   v_prior public.sales_feasibility_handover_requests%ROWTYPE;
+  v_review_count integer;
+  v_review_matches integer;
   v_payload_canonical jsonb;
   v_payload_hash text;
   v_department_id uuid;
@@ -127,31 +129,13 @@ BEGIN
 
   -- Global order: request key -> receipt -> enquiry -> opportunity -> specification
   -- -> requirement/revision -> review rows -> active employee/membership prerequisites.
+  -- A receipt never bypasses current authority, source, or recipient-scope checks.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text, 0));
   IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
     RAISE EXCEPTION 'Sales management permission is required';
   END IF;
   SELECT * INTO v_prior FROM public.sales_feasibility_handover_requests
   WHERE request_key = p_request_key FOR UPDATE;
-  IF FOUND THEN
-    IF v_prior.requested_by = v_actor_id
-       AND v_prior.enquiry_id = p_enquiry_id
-       AND v_prior.opportunity_id = p_opportunity_id
-       AND v_prior.customer_id = p_customer_id
-       AND v_prior.master_specification_version_id = p_master_specification_version_id
-       AND v_prior.payload_hash = v_payload_hash
-       AND v_prior.payload_canonical = v_payload_canonical THEN
-      IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
-        RAISE EXCEPTION 'Sales management permission is required';
-      END IF;
-      RETURN QUERY SELECT v_prior.requirement_id, ARRAY(
-        SELECT review.id FROM public.requirement_feasibility_reviews review
-        WHERE review.requirement_id = v_prior.requirement_id ORDER BY review.department_id
-      ), true;
-      RETURN;
-    END IF;
-    RAISE EXCEPTION 'Request key conflicts with a different caller or payload';
-  END IF;
 
   SELECT * INTO v_enquiry FROM public.sales_enquiries
   WHERE id = p_enquiry_id AND customer_id = p_customer_id FOR UPDATE;
@@ -199,6 +183,43 @@ BEGIN
     FOR KEY SHARE OF employee, membership;
     IF NOT FOUND THEN RAISE EXCEPTION 'Selected reviewer is not an active member of the selected department'; END IF;
   END LOOP;
+
+  IF FOUND THEN
+    IF v_prior.requested_by <> v_actor_id
+       OR v_prior.enquiry_id <> p_enquiry_id
+       OR v_prior.opportunity_id <> p_opportunity_id
+       OR v_prior.customer_id <> p_customer_id
+       OR v_prior.master_specification_version_id <> p_master_specification_version_id
+       OR v_prior.payload_hash <> v_payload_hash
+       OR v_prior.payload_canonical <> v_payload_canonical THEN
+      RAISE EXCEPTION 'Request key conflicts with a different caller or payload';
+    END IF;
+
+    SELECT count(*) INTO v_review_count
+    FROM public.requirement_feasibility_reviews review
+    WHERE review.requirement_id = v_prior.requirement_id;
+    SELECT count(*) INTO v_review_matches
+    FROM unnest(p_department_ids, p_reviewer_user_ids) AS selected(department_id, reviewer_user_id)
+    JOIN public.requirement_feasibility_reviews review
+      ON review.requirement_id = v_prior.requirement_id
+      AND review.department_id = selected.department_id
+      AND review.reviewer_user_id = selected.reviewer_user_id
+      AND review.source_revision_number = 1
+      AND review.master_specification_version_id = v_prior.master_specification_version_id;
+    IF v_review_count <> cardinality(p_department_ids)
+       OR v_review_matches <> cardinality(p_department_ids) THEN
+      RAISE EXCEPTION 'Review graph has changed since this receipt was issued';
+    END IF;
+    IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
+      RAISE EXCEPTION 'Sales management permission is required';
+    END IF;
+    RETURN QUERY SELECT v_prior.requirement_id, ARRAY(
+      SELECT review.id FROM public.requirement_feasibility_reviews review
+      WHERE review.requirement_id = v_prior.requirement_id
+      ORDER BY review.department_id
+    ), true;
+    RETURN;
+  END IF;
 
   INSERT INTO public.customer_requirements (
     requirement_number, opportunity_id, customer_id, title, status, current_revision,
