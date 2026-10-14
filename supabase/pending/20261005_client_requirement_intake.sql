@@ -409,6 +409,7 @@ DECLARE
   v_source_version_number integer;
   v_workstreams jsonb;
   v_review_found boolean := false;
+  v_root_lock_key bigint;
 BEGIN
   IF auth.uid() IS NULL OR NOT public.has_permission(auth.uid(), 'sales.manage') THEN
     RAISE EXCEPTION 'Sales management permission is required';
@@ -417,7 +418,11 @@ BEGIN
     RAISE EXCEPTION 'Requirement, department, and reviewer are required';
   END IF;
 
-  -- All protected routines lock source rows in this order: requirement, revision, review, version.
+  -- Shared graph order: requirement-root -> requirement -> revision -> review -> version.
+  -- This pending routine participates in handover replay serialization; direct table
+  -- writers remain outside it and must be removed in the separate compatibility gate.
+  v_root_lock_key := hashtextextended('sales-feasibility-requirement-root:' || p_requirement_id::text, 0);
+  PERFORM pg_advisory_xact_lock(v_root_lock_key);
   SELECT * INTO v_requirement
   FROM public.customer_requirements
   WHERE id = p_requirement_id
@@ -608,6 +613,7 @@ DECLARE
   v_prior public.requirement_feasibility_response_requests%ROWTYPE;
   v_payload_canonical jsonb;
   v_payload_hash text;
+  v_root_lock_key bigint;
 BEGIN
   IF auth.uid() IS NULL OR NOT public.has_permission(auth.uid(), 'engineering.manage') THEN
     RAISE EXCEPTION 'Engineering management permission is required';
@@ -620,10 +626,12 @@ BEGIN
     RAISE EXCEPTION 'A terminal feasibility verdict and findings are required';
   END IF;
 
-  -- Match assignment's order: requirement, revision, review, version. The review ID is resolved
-  -- without a row lock first so the requirement can be the first locked mutable source row.
+  -- Resolve the root without a row lock, then serialize the graph before the first
+  -- mutable source row: requirement-root -> requirement -> revision -> review -> version.
   SELECT * INTO v_review FROM public.requirement_feasibility_reviews WHERE id = p_review_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Feasibility review is unavailable'; END IF;
+  v_root_lock_key := hashtextextended('sales-feasibility-requirement-root:' || v_review.requirement_id::text, 0);
+  PERFORM pg_advisory_xact_lock(v_root_lock_key);
   SELECT * INTO v_requirement FROM public.customer_requirements
   WHERE id = v_review.requirement_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Feasibility review source requirement is unavailable'; END IF;
