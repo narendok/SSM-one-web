@@ -38,3 +38,76 @@ BEGIN
 END;
 $cases$;
 ROLLBACK;
+
+\echo SALES_FEASIBILITY_HANDOVER_REPLAY_SCOPE_CASES_START
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000050', true);
+CREATE TEMP TABLE replay_seed AS
+SELECT * FROM public.submit_sales_feasibility_handover(
+  '00000000-0000-4000-8000-000000000095', '00000000-0000-4000-8000-000000000020',
+  '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000071',
+  'Replay scope seed', 'REPLAY-LOCAL', 'Replay scope validation.',
+  ARRAY['00000000-0000-4000-8000-000000000060'::uuid],
+  ARRAY['00000000-0000-4000-8000-000000000062'::uuid],
+  '2026-10-13 18:23:00+00'::timestamptz, '00000000-0000-4000-8000-000000000196'
+);
+DO $cases$
+DECLARE
+  v_requirement uuid := (SELECT requirement_id FROM replay_seed);
+  v_headers integer := (SELECT count(*) FROM public.customer_requirements);
+  v_revisions integer := (SELECT count(*) FROM public.customer_requirement_revisions);
+  v_reviews integer := (SELECT count(*) FROM public.requirement_feasibility_reviews);
+  v_notices integer := (SELECT count(*) FROM public.notifications);
+  v_audits integer := (SELECT count(*) FROM public.activity_log WHERE action = 'feasibility_handover_submitted');
+  v_receipts integer := (SELECT count(*) FROM public.sales_feasibility_handover_requests);
+  v_baseline_reviews integer;
+  v_baseline_notices integer;
+  v_baseline_audits integer;
+  v_baseline_receipts integer;
+  v_replay_args text := 'not used';
+BEGIN
+  PERFORM v_replay_args;
+  CREATE TEMP TABLE replay_baseline AS SELECT v_headers AS headers, v_revisions AS revisions, v_reviews AS reviews, v_notices AS notices, v_audits AS audits, v_receipts AS receipts;
+  UPDATE public.employees SET employment_status = 'INACTIVE' WHERE user_id = '00000000-0000-4000-8000-000000000062';
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL inactive reviewer replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Selected reviewer is not an active member of the selected department' THEN RAISE; END IF; END;
+  UPDATE public.employees SET employment_status = 'ACTIVE' WHERE user_id = '00000000-0000-4000-8000-000000000062';
+  DELETE FROM public.employee_departments WHERE employee_id = '00000000-0000-4000-8000-000000000061';
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL removed reviewer membership replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Selected reviewer is not an active member of the selected department' THEN RAISE; END IF; END;
+  INSERT INTO public.employee_departments (employee_id, department_id) VALUES ('00000000-0000-4000-8000-000000000061','00000000-0000-4000-8000-000000000060');
+  UPDATE public.departments SET is_active = false WHERE id = '00000000-0000-4000-8000-000000000060';
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL inactive department replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Selected department is unavailable' THEN RAISE; END IF; END;
+  UPDATE public.departments SET is_active = true WHERE id = '00000000-0000-4000-8000-000000000060';
+  UPDATE public.master_specifications SET current_version = 2 WHERE id = '00000000-0000-4000-8000-000000000070';
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL stale Master replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Current Master Specification version is unavailable for this opportunity and customer' THEN RAISE; END IF; END;
+  UPDATE public.master_specifications SET current_version = 1 WHERE id = '00000000-0000-4000-8000-000000000070';
+  DELETE FROM public.requirement_feasibility_reviews WHERE requirement_id = v_requirement;
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL removed review replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Review graph has changed since this receipt was issued' THEN RAISE; END IF; END;
+  INSERT INTO public.requirement_feasibility_reviews (requirement_id, department_id, reviewer_user_id, status, created_by, source_revision_number, master_specification_version_id) VALUES (v_requirement, '00000000-0000-4000-8000-000000000060', '00000000-0000-4000-8000-000000000062', 'pending', '00000000-0000-4000-8000-000000000050', 1, '00000000-0000-4000-8000-000000000071');
+  INSERT INTO public.departments (id, is_active) VALUES ('00000000-0000-4000-8000-000000000063', true);
+  INSERT INTO public.requirement_feasibility_reviews (requirement_id, department_id, reviewer_user_id, status, created_by, source_revision_number, master_specification_version_id) VALUES (v_requirement, '00000000-0000-4000-8000-000000000063', '00000000-0000-4000-8000-000000000062', 'pending', '00000000-0000-4000-8000-000000000050', 1, '00000000-0000-4000-8000-000000000071');
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL expanded review graph replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Review graph has changed since this receipt was issued' THEN RAISE; END IF; END;
+  SELECT reviews, notices, audits, receipts INTO v_baseline_reviews, v_baseline_notices, v_baseline_audits, v_baseline_receipts FROM replay_baseline;
+  IF (SELECT count(*) FROM public.customer_requirements) <> v_headers OR (SELECT count(*) FROM public.customer_requirement_revisions) <> v_revisions OR (SELECT count(*) FROM public.notifications) <> v_baseline_notices OR (SELECT count(*) FROM public.activity_log WHERE action = 'feasibility_handover_submitted') <> v_baseline_audits OR (SELECT count(*) FROM public.sales_feasibility_handover_requests) <> v_baseline_receipts THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL denied replay mutated handover headers, revisions, notices, audits, or receipts'; END IF;
+  IF (SELECT count(*) FROM public.requirement_feasibility_reviews WHERE requirement_id <> v_requirement) <> v_baseline_reviews - 1 THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL replay mutations escaped the reviewed graph'; END IF;
+  RAISE NOTICE 'SALES_FEASIBILITY_HANDOVER_REPLAY_SCOPE_PASS receipt=% inactive_reviewer=denied membership=denied department=denied stale_master=denied removed_review=denied extra_review=denied', v_requirement;
+END;
+$cases$;
+ROLLBACK;
