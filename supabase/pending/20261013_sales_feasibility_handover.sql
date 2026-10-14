@@ -274,10 +274,10 @@ BEGIN
   PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-source-root:' || p_opportunity_id::text || '|' || p_master_specification_version_id::text, 0));
   SELECT * INTO v_prior
   FROM public.sales_feasibility_handover_requests existing_source
-  WHERE existing_source.enquiry_id = p_enquiry_id
-    AND existing_source.opportunity_id = p_opportunity_id
+  WHERE existing_source.opportunity_id = p_opportunity_id
     AND existing_source.customer_id = p_customer_id
     AND existing_source.master_specification_version_id = p_master_specification_version_id
+    AND existing_source.payload_canonical->>'title' = btrim(p_title)
   FOR UPDATE;
   IF FOUND AND (v_prior.request_key <> p_request_key OR v_prior.requested_by <> v_actor_id) THEN
     RAISE EXCEPTION 'An existing feasibility handover already owns this source; reopen it instead';
