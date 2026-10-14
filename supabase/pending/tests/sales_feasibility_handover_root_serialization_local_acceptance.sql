@@ -1,0 +1,15 @@
+-- LOCAL DISPOSABLE ONLY. Seeds exact replay and two competing request keys for one root.
+\set ON_ERROR_STOP on
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000050', true);
+CREATE TEMP TABLE root_seed AS
+SELECT * FROM public.submit_sales_feasibility_handover(
+  '00000000-0000-4000-8000-000000000095', '00000000-0000-4000-8000-000000000020',
+  '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000071',
+  'Root serialization seed', 'ROOT-LOCAL', 'Deterministic root serialization validation.',
+  ARRAY['00000000-0000-4000-8000-000000000060'::uuid],
+  ARRAY['00000000-0000-4000-8000-000000000062'::uuid],
+  '2026-10-13 18:23:00+00'::timestamptz, '00000000-0000-4000-8000-000000000198'
+);
+COMMIT;
+\echo SALES_FEASIBILITY_HANDOVER_ROOT_SERIALIZATION_SEED_READY

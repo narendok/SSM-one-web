@@ -104,6 +104,7 @@ DECLARE
   v_current_review_pins jsonb;
   v_expected_review_pins jsonb;
   v_source_version_number integer;
+  v_root_lock_key bigint;
   v_index integer;
 BEGIN
   IF v_actor_id IS NULL OR NOT public.has_permission(v_actor_id, 'sales.manage') THEN
@@ -137,10 +138,13 @@ BEGIN
   v_payload_hash := md5(v_payload_canonical::text);
 
   -- Global order: request key -> receipt -> enquiry -> opportunity -> specification/version
-  -- -> selected departments -> selected employees/memberships -> requirement/revision -> review rows.
-  -- Replay takes FOR SHARE on mutable validation facts so ordinary UPDATE writers
-  -- cannot change an accepted graph before its pinned comparison returns.
-  -- A receipt never bypasses current authority, source, or recipient-scope checks.
+  -- -> selected departments -> selected employees/memberships -> requirement-root
+  -- -> requirement/revision -> review rows. A replay obtains the known requirement-root
+  -- after its private receipt; first execution acquires the source-root before creating a
+  -- requirement and then its new requirement-root. The root lock is shared only with the
+  -- verified pending review assignment/response contracts. It serializes their graph
+  -- insert/update paths but cannot make direct table writers safe; live installation stays
+  -- blocked until direct grants/policies are removed after compatibility evidence.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text, 0));
   IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
     RAISE EXCEPTION 'Sales management permission is required';
@@ -196,6 +200,8 @@ BEGIN
   END LOOP;
 
   IF v_prior.request_key IS NOT NULL THEN
+    v_root_lock_key := hashtextextended('sales-feasibility-requirement-root:' || v_prior.requirement_id::text, 0);
+    PERFORM pg_advisory_xact_lock(v_root_lock_key);
     IF v_prior.requested_by <> v_actor_id
        OR v_prior.enquiry_id <> p_enquiry_id
        OR v_prior.opportunity_id <> p_opportunity_id
@@ -261,6 +267,10 @@ BEGIN
     RETURN;
   END IF;
 
+  -- New requirements have no existing root. Serialize the exact opportunity/Master
+  -- source before creation; once inserted, acquire its own root before revisions/reviews.
+  PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-source-root:' || p_opportunity_id::text || '|' || p_master_specification_version_id::text, 0));
+
   INSERT INTO public.customer_requirements (
     requirement_number, opportunity_id, customer_id, title, status, current_revision,
     customer_reference, requirement_data, submitted_at, created_by
@@ -273,6 +283,8 @@ BEGIN
       'master_specification_version_number', v_source_version_number, 'applicable_workstreams', v_workstreams
     )), now(), v_actor_id
   ) RETURNING * INTO v_requirement;
+  v_root_lock_key := hashtextextended('sales-feasibility-requirement-root:' || v_requirement.id::text, 0);
+  PERFORM pg_advisory_xact_lock(v_root_lock_key);
   INSERT INTO public.customer_requirement_revisions (
     requirement_id, revision_number, change_summary, requirement_data, status, created_by
   ) VALUES (v_requirement.id, 1, 'Initial source-bound Sales feasibility handover', v_requirement.requirement_data, 'submitted', v_actor_id)
