@@ -30,7 +30,7 @@ psql "${args[@]}" -c 'GRANT EXECUTE ON FUNCTION public.submit_sales_feasibility_
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_local_acceptance.sql"
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_local_acceptance.sql"
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_writer.sql" >"$log_dir/graph-writer.log" 2>&1 & writer_pid=$!
-for _ in $(seq 1 50); do grep -q 'FOR UPDATE' "$log_dir/graph-writer.log" 2>/dev/null && break; sleep 0.05; done
+sleep 0.1
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_replay.sql" >"$log_dir/graph-replay.log" 2>&1 & replay_pid=$!
 wait "$writer_pid"
 wait "$replay_pid"

@@ -229,7 +229,7 @@ BEGIN
       'master_specification_version_id', locked_review.master_specification_version_id,
       'master_specification_version_number', locked_review.master_specification_version_number,
       'applicable_workstreams', locked_review.applicable_workstreams
-    ) ORDER BY locked_review.id), '[]'::jsonb)
+    ) ORDER BY locked_review.department_id, locked_review.id), '[]'::jsonb)
     INTO v_current_review_pins
     FROM (
       SELECT review.*
@@ -238,7 +238,7 @@ BEGIN
       ORDER BY review.id
       FOR KEY SHARE
     ) AS locked_review;
-    SELECT coalesce(jsonb_agg(pin ORDER BY (pin->>'id')::uuid), '[]'::jsonb)
+    SELECT coalesce(jsonb_agg(pin ORDER BY (pin->>'department_id')::uuid, (pin->>'id')::uuid), '[]'::jsonb)
     INTO v_expected_review_pins
     FROM jsonb_array_elements(v_prior.review_pins) pin;
     IF v_requirement.current_revision <> v_prior.source_revision_number
@@ -254,7 +254,7 @@ BEGIN
     RETURN QUERY SELECT v_prior.requirement_id, ARRAY(
       SELECT (pin->>'id')::uuid
       FROM jsonb_array_elements(v_expected_review_pins) pin
-      ORDER BY (pin->>'id')::uuid
+      ORDER BY (pin->>'department_id')::uuid, (pin->>'id')::uuid
     ), true;
     RETURN;
   END IF;
@@ -319,7 +319,7 @@ BEGIN
         'master_specification_version_id', review.master_specification_version_id,
         'master_specification_version_number', review.master_specification_version_number,
         'applicable_workstreams', review.applicable_workstreams
-      ) ORDER BY review.id)
+      ) ORDER BY review.department_id, review.id)
       FROM public.requirement_feasibility_reviews review
       WHERE review.id = ANY(v_review_ids)
     ));
