@@ -54,6 +54,8 @@ SELECT * FROM public.submit_sales_feasibility_handover(
 DO $cases$
 DECLARE
   v_requirement uuid := (SELECT requirement_id FROM replay_seed);
+  v_original_review uuid := (SELECT review_ids[1] FROM replay_seed);
+  v_original_revision uuid;
   v_headers integer := (SELECT count(*) FROM public.customer_requirements);
   v_revisions integer := (SELECT count(*) FROM public.customer_requirement_revisions);
   v_reviews integer := (SELECT count(*) FROM public.requirement_feasibility_reviews);
@@ -66,6 +68,12 @@ DECLARE
   v_baseline_receipts integer;
   v_replay_args text := 'not used';
 BEGIN
+  SELECT source_revision_id INTO v_original_revision
+  FROM public.sales_feasibility_handover_requests
+  WHERE request_key = '00000000-0000-4000-8000-000000000196';
+  IF (SELECT review_ids FROM replay_seed) IS DISTINCT FROM ARRAY[v_original_review] THEN
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL seed did not return its immutable review identity';
+  END IF;
   PERFORM v_replay_args;
   CREATE TEMP TABLE replay_baseline AS SELECT v_headers AS headers, v_revisions AS revisions, v_reviews AS reviews, v_notices AS notices, v_audits AS audits, v_receipts AS receipts;
   UPDATE public.employees SET employment_status = 'INACTIVE' WHERE user_id = '00000000-0000-4000-8000-000000000062';
@@ -92,6 +100,33 @@ BEGIN
     RAISE EXCEPTION 'LOCAL_CASE_FAIL stale Master replay accepted';
   EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Current Master Specification version is unavailable for this opportunity and customer' THEN RAISE; END IF; END;
   UPDATE public.master_specifications SET current_version = 1 WHERE id = '00000000-0000-4000-8000-000000000070';
+  UPDATE public.requirement_feasibility_reviews
+  SET source_revision_id = '00000000-0000-4000-8000-000000000081'
+  WHERE id = v_original_review;
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL changed source revision id replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Review graph has changed since this receipt was issued' THEN RAISE; END IF; END;
+  UPDATE public.requirement_feasibility_reviews SET source_revision_id = v_original_revision WHERE id = v_original_review;
+  UPDATE public.requirement_feasibility_reviews SET master_specification_version_number = 2 WHERE id = v_original_review;
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL changed Master version number replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Review graph has changed since this receipt was issued' THEN RAISE; END IF; END;
+  UPDATE public.requirement_feasibility_reviews SET master_specification_version_number = 1 WHERE id = v_original_review;
+  UPDATE public.requirement_feasibility_reviews SET applicable_workstreams = '["FIRMWARE"]'::jsonb WHERE id = v_original_review;
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL changed applicability replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Review graph has changed since this receipt was issued' THEN RAISE; END IF; END;
+  UPDATE public.requirement_feasibility_reviews SET applicable_workstreams = '["HARDWARE"]'::jsonb WHERE id = v_original_review;
+  DELETE FROM public.requirement_feasibility_reviews WHERE requirement_id = v_requirement;
+  INSERT INTO public.requirement_feasibility_reviews (requirement_id, department_id, reviewer_user_id, status, created_by, source_revision_id, source_revision_number, master_specification_version_id, master_specification_version_number, applicable_workstreams)
+  VALUES (v_requirement, '00000000-0000-4000-8000-000000000060', '00000000-0000-4000-8000-000000000062', 'pending', '00000000-0000-4000-8000-000000000050', v_original_revision, 1, '00000000-0000-4000-8000-000000000071', 1, '["HARDWARE"]'::jsonb);
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL replacement review identity replay accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Review graph has changed since this receipt was issued' THEN RAISE; END IF; END;
   DELETE FROM public.requirement_feasibility_reviews WHERE requirement_id = v_requirement;
   BEGIN
     PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
@@ -107,7 +142,7 @@ BEGIN
   SELECT reviews, notices, audits, receipts INTO v_baseline_reviews, v_baseline_notices, v_baseline_audits, v_baseline_receipts FROM replay_baseline;
   IF (SELECT count(*) FROM public.customer_requirements) <> v_headers OR (SELECT count(*) FROM public.customer_requirement_revisions) <> v_revisions OR (SELECT count(*) FROM public.notifications) <> v_baseline_notices OR (SELECT count(*) FROM public.activity_log WHERE action = 'feasibility_handover_submitted') <> v_baseline_audits OR (SELECT count(*) FROM public.sales_feasibility_handover_requests) <> v_baseline_receipts THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL denied replay mutated handover headers, revisions, notices, audits, or receipts'; END IF;
   IF (SELECT count(*) FROM public.requirement_feasibility_reviews WHERE requirement_id <> v_requirement) <> v_baseline_reviews - 1 THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL replay mutations escaped the reviewed graph'; END IF;
-  RAISE NOTICE 'SALES_FEASIBILITY_HANDOVER_REPLAY_SCOPE_PASS receipt=% inactive_reviewer=denied membership=denied department=denied stale_master=denied removed_review=denied extra_review=denied', v_requirement;
+  RAISE NOTICE 'SALES_FEASIBILITY_HANDOVER_REPLAY_SCOPE_PASS receipt=% inactive_reviewer=denied membership=denied department=denied stale_master=denied changed_source_revision=denied changed_master_number=denied changed_applicability=denied replacement_review_id=denied removed_review=denied extra_review=denied', v_requirement;
 END;
 $cases$;
 ROLLBACK;

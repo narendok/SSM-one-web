@@ -6,10 +6,10 @@
 - Provide a separate suggestions-only review of the shared feasibility interface.
 
 ## Delivery sequence
-1. Recheck current caller authority, source links, active department/reviewer scope, and the exact immutable original review graph before replay returns.
-2. Add disposable acceptance for revoked reviewer/membership/department, relinked sources, altered review graph, conflict/replay, rollback, and concurrency.
+1. Persist and recheck immutable requirement-revision and exact review identity/source pins before replay returns.
+2. Add disposable acceptance for replacement review IDs, changed source pins, Master applicability, and concurrent graph modification alongside existing scope checks.
 3. Run the local verification suite and report exact source and results for review.
 
 ## Technical details
-- The pending handover remains a source-only, single protected transaction.
+- The pending handover remains a source-only, single protected transaction with private exact graph pins.
 - Baseline approval, customer confirmation, project creation and document access remain unchanged.

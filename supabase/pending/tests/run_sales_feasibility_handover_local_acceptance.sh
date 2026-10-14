@@ -28,4 +28,12 @@ psql "${args[@]}" -f "$root/supabase/pending/20261013_sales_feasibility_handover
 # Fixture-only execution grant: intentionally absent from the pending proposal.
 psql "${args[@]}" -c 'GRANT EXECUTE ON FUNCTION public.submit_sales_feasibility_handover(uuid, uuid, uuid, uuid, text, text, text, uuid[], uuid[], timestamptz, uuid) TO authenticated;'
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_local_acceptance.sql"
+psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_local_acceptance.sql"
+psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_writer.sql" >"$log_dir/graph-writer.log" 2>&1 & writer_pid=$!
+sleep 0.1
+psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_replay.sql" >"$log_dir/graph-replay.log" 2>&1 & replay_pid=$!
+wait "$writer_pid"
+wait "$replay_pid"
+cat "$log_dir/graph-writer.log" "$log_dir/graph-replay.log"
+psql "${args[@]}" -Atqc "SELECT CASE WHEN (SELECT count(*) FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197') = 1 AND (SELECT count(*) FROM public.requirement_feasibility_reviews WHERE requirement_id = (SELECT requirement_id FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197')) = 1 AND (SELECT applicable_workstreams FROM public.requirement_feasibility_reviews WHERE requirement_id = (SELECT requirement_id FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197')) = '[\"FIRMWARE\"]'::jsonb THEN 'SALES_FEASIBILITY_HANDOVER_GRAPH_LOCK_CONCURRENCY_PASS receipt=1 reviews=1 replay=denied' ELSE 'SALES_FEASIBILITY_HANDOVER_GRAPH_LOCK_CONCURRENCY_FAIL' END" | grep -Fx 'SALES_FEASIBILITY_HANDOVER_GRAPH_LOCK_CONCURRENCY_PASS receipt=1 reviews=1 replay=denied'
 printf 'SALES_FEASIBILITY_HANDOVER_LOCAL_ACCEPTANCE_EXECUTION_COMPLETE=true\n'

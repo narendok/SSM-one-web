@@ -16,9 +16,18 @@ CREATE TABLE public.sales_feasibility_handover_requests (
   payload_hash text NOT NULL,
   payload_canonical jsonb NOT NULL,
   requirement_id uuid NOT NULL UNIQUE REFERENCES public.customer_requirements(id) ON DELETE RESTRICT,
+  source_revision_id uuid NOT NULL REFERENCES public.customer_requirement_revisions(id) ON DELETE RESTRICT,
+  source_revision_number integer NOT NULL,
+  master_specification_version_number integer NOT NULL,
+  applicable_workstreams jsonb NOT NULL,
+  review_pins jsonb NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (length(btrim(payload_hash)) > 0),
-  CHECK (jsonb_typeof(payload_canonical) = 'object')
+  CHECK (jsonb_typeof(payload_canonical) = 'object'),
+  CHECK (source_revision_number > 0),
+  CHECK (master_specification_version_number > 0),
+  CHECK (jsonb_typeof(applicable_workstreams) = 'array'),
+  CHECK (jsonb_typeof(review_pins) = 'array')
 );
 GRANT ALL ON TABLE public.sales_feasibility_handover_requests TO service_role;
 REVOKE ALL ON TABLE public.sales_feasibility_handover_requests FROM PUBLIC, anon, authenticated;
@@ -85,8 +94,6 @@ DECLARE
   v_requirement public.customer_requirements%ROWTYPE;
   v_revision public.customer_requirement_revisions%ROWTYPE;
   v_prior public.sales_feasibility_handover_requests%ROWTYPE;
-  v_review_count integer;
-  v_review_matches integer;
   v_payload_canonical jsonb;
   v_payload_hash text;
   v_department_id uuid;
@@ -94,6 +101,8 @@ DECLARE
   v_review_id uuid;
   v_review_ids uuid[] := ARRAY[]::uuid[];
   v_workstreams jsonb;
+  v_current_review_pins jsonb;
+  v_expected_review_pins jsonb;
   v_source_version_number integer;
   v_index integer;
 BEGIN
@@ -128,7 +137,7 @@ BEGIN
   v_payload_hash := md5(v_payload_canonical::text);
 
   -- Global order: request key -> receipt -> enquiry -> opportunity -> specification
-  -- -> requirement/revision -> review rows -> active employee/membership prerequisites.
+  -- -> requirement/revision -> review rows (by id) -> active employee/membership prerequisites.
   -- A receipt never bypasses current authority, source, or recipient-scope checks.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text, 0));
   IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
@@ -195,28 +204,57 @@ BEGIN
       RAISE EXCEPTION 'Request key conflicts with a different caller or payload';
     END IF;
 
-    SELECT count(*) INTO v_review_count
-    FROM public.requirement_feasibility_reviews review
-    WHERE review.requirement_id = v_prior.requirement_id;
-    SELECT count(*) INTO v_review_matches
-    FROM unnest(p_department_ids, p_reviewer_user_ids) AS selected(department_id, reviewer_user_id)
-    JOIN public.requirement_feasibility_reviews review
-      ON review.requirement_id = v_prior.requirement_id
-      AND review.department_id = selected.department_id
-      AND review.reviewer_user_id = selected.reviewer_user_id
-      AND review.source_revision_number = 1
-      AND review.master_specification_version_id = v_prior.master_specification_version_id;
-    IF v_review_count <> cardinality(p_department_ids)
-       OR v_review_matches <> cardinality(p_department_ids) THEN
+    SELECT * INTO v_requirement
+    FROM public.customer_requirements requirement
+    WHERE requirement.id = v_prior.requirement_id
+    FOR KEY SHARE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Review graph has changed since this receipt was issued';
+    END IF;
+    SELECT * INTO v_revision
+    FROM public.customer_requirement_revisions revision
+    WHERE revision.id = v_prior.source_revision_id
+      AND revision.requirement_id = v_prior.requirement_id
+      AND revision.revision_number = v_prior.source_revision_number
+    FOR KEY SHARE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Review graph has changed since this receipt was issued';
+    END IF;
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+      'id', locked_review.id,
+      'department_id', locked_review.department_id,
+      'reviewer_user_id', locked_review.reviewer_user_id,
+      'source_revision_id', locked_review.source_revision_id,
+      'source_revision_number', locked_review.source_revision_number,
+      'master_specification_version_id', locked_review.master_specification_version_id,
+      'master_specification_version_number', locked_review.master_specification_version_number,
+      'applicable_workstreams', locked_review.applicable_workstreams
+    ) ORDER BY locked_review.department_id, locked_review.id), '[]'::jsonb)
+    INTO v_current_review_pins
+    FROM (
+      SELECT review.*
+      FROM public.requirement_feasibility_reviews review
+      WHERE review.requirement_id = v_prior.requirement_id
+      ORDER BY review.id
+      FOR KEY SHARE
+    ) AS locked_review;
+    SELECT coalesce(jsonb_agg(pin ORDER BY (pin->>'department_id')::uuid, (pin->>'id')::uuid), '[]'::jsonb)
+    INTO v_expected_review_pins
+    FROM jsonb_array_elements(v_prior.review_pins) pin;
+    IF v_requirement.current_revision <> v_prior.source_revision_number
+       OR v_revision.requirement_data IS DISTINCT FROM v_requirement.requirement_data
+       OR v_prior.master_specification_version_number <> v_source_version_number
+       OR v_prior.applicable_workstreams IS DISTINCT FROM v_workstreams
+       OR v_current_review_pins IS DISTINCT FROM v_expected_review_pins THEN
       RAISE EXCEPTION 'Review graph has changed since this receipt was issued';
     END IF;
     IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
       RAISE EXCEPTION 'Sales management permission is required';
     END IF;
     RETURN QUERY SELECT v_prior.requirement_id, ARRAY(
-      SELECT review.id FROM public.requirement_feasibility_reviews review
-      WHERE review.requirement_id = v_prior.requirement_id
-      ORDER BY review.department_id
+      SELECT (pin->>'id')::uuid
+      FROM jsonb_array_elements(v_expected_review_pins) pin
+      ORDER BY (pin->>'department_id')::uuid, (pin->>'id')::uuid
     ), true;
     RETURN;
   END IF;
@@ -266,9 +304,25 @@ BEGIN
     ));
   INSERT INTO public.sales_feasibility_handover_requests (
     request_key, requested_by, enquiry_id, opportunity_id, customer_id, master_specification_version_id,
-    payload_hash, payload_canonical, requirement_id
+    payload_hash, payload_canonical, requirement_id, source_revision_id, source_revision_number,
+    master_specification_version_number, applicable_workstreams, review_pins
   ) VALUES (p_request_key, v_actor_id, p_enquiry_id, p_opportunity_id, p_customer_id,
-    p_master_specification_version_id, v_payload_hash, v_payload_canonical, v_requirement.id);
+    p_master_specification_version_id, v_payload_hash, v_payload_canonical, v_requirement.id,
+    v_revision.id, v_revision.revision_number, v_source_version_number, v_workstreams,
+    (
+      SELECT jsonb_agg(jsonb_build_object(
+        'id', review.id,
+        'department_id', review.department_id,
+        'reviewer_user_id', review.reviewer_user_id,
+        'source_revision_id', review.source_revision_id,
+        'source_revision_number', review.source_revision_number,
+        'master_specification_version_id', review.master_specification_version_id,
+        'master_specification_version_number', review.master_specification_version_number,
+        'applicable_workstreams', review.applicable_workstreams
+      ) ORDER BY review.department_id, review.id)
+      FROM public.requirement_feasibility_reviews review
+      WHERE review.id = ANY(v_review_ids)
+    ));
   RETURN QUERY SELECT v_requirement.id, v_review_ids, false;
 END;
 $$;
