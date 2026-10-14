@@ -29,7 +29,6 @@ psql "${args[@]}" -f "$root/supabase/pending/tests/requirement_feasibility_origi
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_competing_source_a.sql" >"$log_dir/competing-a.log" 2>&1 & first_pid=$!
 psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 31); SELECT pg_advisory_unlock(20261015, 31);' >/dev/null
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_competing_source_b.sql" >"$log_dir/competing-b.log" 2>&1 & second_pid=$!
-psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 32); SELECT pg_advisory_unlock(20261015, 32);' >/dev/null
 wait "$first_pid"; wait "$second_pid"
 cat "$log_dir/competing-a.log" "$log_dir/competing-b.log"
 psql "${args[@]}" -Atqc "SELECT CASE WHEN (SELECT count(*) FROM public.sales_feasibility_handover_requests WHERE request_key IN ('00000000-0000-4000-8000-000000000212','00000000-0000-4000-8000-000000000213')) = 1 AND (SELECT count(*) FROM public.customer_requirements WHERE title LIKE 'Competing source handover%') = 1 THEN 'SALES_FEASIBILITY_HANDOVER_COMPETING_SOURCE_PASS receipts=1 requirements=1 second=denied' ELSE 'SALES_FEASIBILITY_HANDOVER_COMPETING_SOURCE_FAIL' END" | grep -Fx 'SALES_FEASIBILITY_HANDOVER_COMPETING_SOURCE_PASS receipts=1 requirements=1 second=denied'
