@@ -29,11 +29,21 @@ psql "${args[@]}" -f "$root/supabase/pending/20261013_sales_feasibility_handover
 psql "${args[@]}" -c 'GRANT EXECUTE ON FUNCTION public.submit_sales_feasibility_handover(uuid, uuid, uuid, uuid, text, text, text, uuid[], uuid[], timestamptz, uuid) TO authenticated;'
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_local_acceptance.sql"
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_local_acceptance.sql"
-psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_writer.sql" >"$log_dir/graph-writer.log" 2>&1 & writer_pid=$!
-sleep 0.1
-psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_graph_lock_replay.sql" >"$log_dir/graph-replay.log" 2>&1 & replay_pid=$!
-wait "$writer_pid"
-wait "$replay_pid"
-cat "$log_dir/graph-writer.log" "$log_dir/graph-replay.log"
-psql "${args[@]}" -Atqc "SELECT CASE WHEN (SELECT count(*) FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197') = 1 AND (SELECT count(*) FROM public.requirement_feasibility_reviews WHERE requirement_id = (SELECT requirement_id FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197')) = 1 AND (SELECT applicable_workstreams FROM public.requirement_feasibility_reviews WHERE requirement_id = (SELECT requirement_id FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197')) = '[\"FIRMWARE\"]'::jsonb THEN 'SALES_FEASIBILITY_HANDOVER_GRAPH_LOCK_CONCURRENCY_PASS receipt=1 reviews=1 replay=denied' ELSE 'SALES_FEASIBILITY_HANDOVER_GRAPH_LOCK_CONCURRENCY_FAIL' END" | grep -Fx 'SALES_FEASIBILITY_HANDOVER_GRAPH_LOCK_CONCURRENCY_PASS receipt=1 reviews=1 replay=denied'
+psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_replay_held.sql" >"$log_dir/replay-held.log" 2>&1 & replay_held_pid=$!
+psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 1); SELECT pg_advisory_unlock(20261015, 1);' >/dev/null
+psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_plain_writer_after_replay.sql" >"$log_dir/replay-held-writer.log" 2>&1 & replay_held_writer_pid=$!
+psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 2); SELECT pg_advisory_unlock(20261015, 2);' >/dev/null
+wait "$replay_held_pid"
+wait "$replay_held_writer_pid"
+cat "$log_dir/replay-held.log" "$log_dir/replay-held-writer.log"
+psql "${args[@]}" -Atqc "SELECT CASE WHEN (SELECT applicable_workstreams FROM public.requirement_feasibility_reviews WHERE requirement_id = (SELECT requirement_id FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197')) = '[\"FIRMWARE\"]'::jsonb THEN 'SALES_FEASIBILITY_HANDOVER_REPLAY_HELD_PLAIN_UPDATE_PASS' ELSE 'SALES_FEASIBILITY_HANDOVER_REPLAY_HELD_PLAIN_UPDATE_FAIL' END" | grep -Fx 'SALES_FEASIBILITY_HANDOVER_REPLAY_HELD_PLAIN_UPDATE_PASS'
+psql "${args[@]}" -c "UPDATE public.requirement_feasibility_reviews SET applicable_workstreams = '[\"HARDWARE\"]'::jsonb WHERE requirement_id = (SELECT requirement_id FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197');"
+psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_plain_writer_held.sql" >"$log_dir/writer-held.log" 2>&1 & writer_held_pid=$!
+psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 3); SELECT pg_advisory_unlock(20261015, 3);' >/dev/null
+psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_replay_after_writer.sql" >"$log_dir/writer-held-replay.log" 2>&1 & writer_held_replay_pid=$!
+psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 4); SELECT pg_advisory_unlock(20261015, 4);' >/dev/null
+wait "$writer_held_pid"
+wait "$writer_held_replay_pid"
+cat "$log_dir/writer-held.log" "$log_dir/writer-held-replay.log"
+psql "${args[@]}" -Atqc "SELECT CASE WHEN (SELECT count(*) FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197') = 1 AND (SELECT count(*) FROM public.requirement_feasibility_reviews WHERE requirement_id = (SELECT requirement_id FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197')) = 1 AND (SELECT applicable_workstreams FROM public.requirement_feasibility_reviews WHERE requirement_id = (SELECT requirement_id FROM public.sales_feasibility_handover_requests WHERE request_key = '00000000-0000-4000-8000-000000000197')) = '[\"FIRMWARE\"]'::jsonb THEN 'SALES_FEASIBILITY_HANDOVER_WRITER_HELD_PLAIN_UPDATE_PASS receipt=1 reviews=1 replay=denied' ELSE 'SALES_FEASIBILITY_HANDOVER_WRITER_HELD_PLAIN_UPDATE_FAIL' END" | grep -Fx 'SALES_FEASIBILITY_HANDOVER_WRITER_HELD_PLAIN_UPDATE_PASS receipt=1 reviews=1 replay=denied'
 printf 'SALES_FEASIBILITY_HANDOVER_LOCAL_ACCEPTANCE_EXECUTION_COMPLETE=true\n'

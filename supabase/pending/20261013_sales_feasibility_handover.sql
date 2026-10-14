@@ -136,8 +136,10 @@ BEGIN
   );
   v_payload_hash := md5(v_payload_canonical::text);
 
-  -- Global order: request key -> receipt -> enquiry -> opportunity -> specification
-  -- -> requirement/revision -> review rows (by id) -> active employee/membership prerequisites.
+  -- Global order: request key -> receipt -> enquiry -> opportunity -> specification/version
+  -- -> selected departments -> selected employees/memberships -> requirement/revision -> review rows.
+  -- Replay takes FOR SHARE on mutable validation facts so ordinary UPDATE writers
+  -- cannot change an accepted graph before its pinned comparison returns.
   -- A receipt never bypasses current authority, source, or recipient-scope checks.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text, 0));
   IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
@@ -169,7 +171,7 @@ BEGIN
     RAISE EXCEPTION 'Current Master Specification version is unavailable for this opportunity and customer';
   END IF;
   SELECT * INTO v_master_version FROM public.master_specification_versions
-  WHERE id = p_master_specification_version_id FOR KEY SHARE;
+  WHERE id = p_master_specification_version_id FOR SHARE;
   v_workstreams := v_master_version.specification_data->'workstreams';
   IF jsonb_typeof(v_workstreams) IS DISTINCT FROM 'array' OR jsonb_array_length(v_workstreams) = 0
      OR EXISTS (SELECT 1 FROM jsonb_array_elements(v_workstreams) item(value)
@@ -182,14 +184,14 @@ BEGIN
   FOR v_index IN 1..cardinality(p_department_ids) LOOP
     v_department_id := p_department_ids[v_index];
     v_reviewer_user_id := p_reviewer_user_ids[v_index];
-    PERFORM 1 FROM public.departments department WHERE department.id = v_department_id AND department.is_active FOR KEY SHARE;
+    PERFORM 1 FROM public.departments department WHERE department.id = v_department_id AND department.is_active FOR SHARE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Selected department is unavailable'; END IF;
     PERFORM 1 FROM public.employees employee
     JOIN public.employee_departments membership ON membership.employee_id = employee.id
     WHERE employee.user_id = v_reviewer_user_id
       AND employee.employment_status = 'ACTIVE'
       AND membership.department_id = v_department_id
-    FOR KEY SHARE OF employee, membership;
+    FOR SHARE OF employee, membership;
     IF NOT FOUND THEN RAISE EXCEPTION 'Selected reviewer is not an active member of the selected department'; END IF;
   END LOOP;
 
@@ -207,7 +209,7 @@ BEGIN
     SELECT * INTO v_requirement
     FROM public.customer_requirements requirement
     WHERE requirement.id = v_prior.requirement_id
-    FOR KEY SHARE;
+    FOR SHARE;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'Review graph has changed since this receipt was issued';
     END IF;
@@ -216,7 +218,7 @@ BEGIN
     WHERE revision.id = v_prior.source_revision_id
       AND revision.requirement_id = v_prior.requirement_id
       AND revision.revision_number = v_prior.source_revision_number
-    FOR KEY SHARE;
+    FOR SHARE;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'Review graph has changed since this receipt was issued';
     END IF;
@@ -236,7 +238,7 @@ BEGIN
       FROM public.requirement_feasibility_reviews review
       WHERE review.requirement_id = v_prior.requirement_id
       ORDER BY review.id
-      FOR KEY SHARE
+      FOR SHARE
     ) AS locked_review;
     SELECT coalesce(jsonb_agg(pin ORDER BY (pin->>'department_id')::uuid, (pin->>'id')::uuid), '[]'::jsonb)
     INTO v_expected_review_pins
