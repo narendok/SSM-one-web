@@ -184,7 +184,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Selected reviewer is not an active member of the selected department'; END IF;
   END LOOP;
 
-  IF FOUND THEN
+  IF v_prior.request_key IS NOT NULL THEN
     IF v_prior.requested_by <> v_actor_id
        OR v_prior.enquiry_id <> p_enquiry_id
        OR v_prior.opportunity_id <> p_opportunity_id
