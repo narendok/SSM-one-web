@@ -29,10 +29,18 @@ The harness uses database advisory barriers for deterministic sequencing. It doe
 not use an artificial prior `SELECT ... FOR UPDATE` or timing sleeps as the sole
 coordination mechanism.
 
+## Writer/root compatibility update
+
+The source-only inventory is recorded in
+`20261015_sales_feasibility_handover_writer_root_lock_inventory.md`. Handover replay and
+the pending protected assignment/response routines now share an advisory key derived from
+the requirement ID. Disposable same-key replay, different-key assignment, and guarded
+new-review insertion schedules passed. This covers only writers that opt into that key.
+
 ## Remaining blocker
 
-Existing-row locks cannot stop a new review row inserted after the replay scan or a
-writer that bypasses the protected contract. Before installation, every real
+Existing-row locks cannot stop a new review row inserted by a writer that bypasses the
+requirement-root protocol or any direct table writer. Before installation, every real
 review/assignment writer must adopt one accepted root serialization or predicate-safe
 guard at the requirement root, and direct-write/RLS denial must be proven under
 production-like roles. Until then, the handover action remains disabled.

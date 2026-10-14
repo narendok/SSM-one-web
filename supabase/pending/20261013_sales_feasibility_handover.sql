@@ -137,13 +137,14 @@ BEGIN
   );
   v_payload_hash := md5(v_payload_canonical::text);
 
-  -- Global order: request key -> requirement-root -> receipt -> enquiry -> opportunity
-  -- -> specification/version -> selected departments -> selected employees/memberships
-  -- -> requirement/revision -> review rows. The requirement-root lock is intentionally
-  -- shared by this handover and only the verified pending review assignment/response
-  -- contracts. It serializes insert/update review graph changes for a known requirement.
-  -- It does not make direct table writers safe; deployment remains blocked until their
-  -- grants/policies are separately removed after target-bound compatibility evidence.
+  -- Global order: request key -> receipt -> enquiry -> opportunity -> specification/version
+  -- -> selected departments -> selected employees/memberships -> requirement-root
+  -- -> requirement/revision -> review rows. A replay obtains the known requirement-root
+  -- after its private receipt; first execution acquires the source-root before creating a
+  -- requirement and then its new requirement-root. The root lock is shared only with the
+  -- verified pending review assignment/response contracts. It serializes their graph
+  -- insert/update paths but cannot make direct table writers safe; live installation stays
+  -- blocked until direct grants/policies are removed after compatibility evidence.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text, 0));
   IF NOT public.has_permission(v_actor_id, 'sales.manage') THEN
     RAISE EXCEPTION 'Sales management permission is required';
