@@ -29,7 +29,7 @@ export type FeasibilityPlanningSpecification = {
   current_version: number;
 };
 
-export type FeasibilityPlanningState = "PENDING" | "READY" | "STALE" | "MISSING_SOURCE" | "SOURCE_ERROR" | "UNSUPPORTED_UNVERIFIED" | "APPLICABILITY_TBC";
+export type FeasibilityPlanningState = "PENDING" | "READY" | "NOT_FEASIBLE" | "STALE" | "MISSING_SOURCE" | "SOURCE_ERROR" | "UNSUPPORTED_UNVERIFIED" | "APPLICABILITY_TBC";
 
 export type FeasibilityPlanningSnapshot = {
   state: FeasibilityPlanningState;
@@ -104,6 +104,9 @@ export function buildFeasibilityPlanningSnapshot(input: {
     return planningSnapshot({ state: "PENDING", requirementRevision, masterSpecification, applicableWorkstreams, isTerminalVerdict, canSatisfyPlanningGate: false, message: "An assigned feasibility verdict is still pending." });
   }
 
+  if (input.review.status === "not_feasible") {
+    return planningSnapshot({ state: "NOT_FEASIBLE", requirementRevision, masterSpecification, applicableWorkstreams, isTerminalVerdict, canSatisfyPlanningGate: false, message: "The department recorded not feasible. A completed negative review cannot satisfy baseline readiness." });
+  }
   return planningSnapshot({ state: "READY", requirementRevision, masterSpecification, applicableWorkstreams, isTerminalVerdict, canSatisfyPlanningGate: true, message: "The review is bound to the current immutable requirement and Master Specification revisions for read-only planning." });
 }
 

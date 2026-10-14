@@ -42,3 +42,10 @@ Each department card now ends with independent Internal remarks (team only) and 
 
 The existing lifecycle heartbeat was updated and resumed at the user's request. Its first completion boundary is operational feasibility pass plus recorded client approval of the final Master requirements revision and baseline lock before authorized Research/POC or justified Pilot start. This schedules remaining work; it does not declare operational approval or deployment complete.
 TypeScript no-emit check and production Vite/Nitro build passed for this follow-up.
+
+## Feasibility readiness correction - 15 October 2026
+
+Inspection found the pure read-only feasibility composer counted a source-pinned not_feasible verdict as READY because it accepted any terminal decision. It now preserves that terminal decision as NOT_FEASIBLE and cannot satisfy baseline readiness. A regression verifies the negative decision blocks the composed baseline even when commercial authorization exists and no unresolved conditions were supplied. All 14 feasibility-planning tests passed. This is a read-only readiness correction, not a deployed handover/approval contract or client acceptance.
+
+Original Lovable preview of the prior remarks commit was inspected using existing OPPORTUNITY-2026-0013: four Internal remarks headings and four Edit internal remark controls appeared in the opt-in example; Client preview excluded those internal headings while retaining Department highlights. No fixtures or live records were changed. Protected submit_sales_feasibility_handover remains source-only pending installation and caller-authenticated acceptance.
+Validation completed: 14 feasibility-planning tests, TypeScript no-emit check and production Vite/Nitro build passed. The production build was rerun after the previous run was interrupted; no business changes were made during verification.

@@ -32,3 +32,12 @@ describe("buildBaselineReadinessSnapshot", () => {
     expect(state.blockers).toEqual(["Read-only source records could not be verified."]);
   });
 });
+describe("negative feasibility decision", () => {
+  it("retains the completed verdict but blocks baseline readiness", () => {
+    const planning = buildFeasibilityPlanningSnapshot({ review: { ...pinnedReview, status: "not_feasible" }, requirements: [requirement], revisions: [revision], masterSpecifications: [specification] });
+    expect(planning).toMatchObject({ state: "NOT_FEASIBLE", isTerminalVerdict: true, canSatisfyPlanningGate: false });
+    const baseline = buildBaselineReadinessSnapshot({ planning: [planning], requiredDepartments: ["HARDWARE"], commercialStatus: "customer_authorized", customerAuthorizedAt: "2026-10-15T00:00:00Z", unresolvedConditions: [] });
+    expect(baseline).toMatchObject({ state: "BLOCKED", canApprove: false });
+    expect(baseline.blockers).toContain("HARDWARE feasibility is not feasible.");
+  });
+});
