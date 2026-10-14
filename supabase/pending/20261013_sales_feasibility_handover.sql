@@ -267,9 +267,21 @@ BEGIN
     RETURN;
   END IF;
 
-  -- New requirements have no existing root. Serialize the exact opportunity/Master
-  -- source before creation; once inserted, acquire its own root before revisions/reviews.
+  -- New requirements have no existing root. Serialize the exact enquiry/opportunity/customer/
+  -- Master source before creation, then reject a different request key that already owns
+  -- that source tuple. This is deliberately a business-source guard, not a replacement for
+  -- the private request-key receipt or the requirement-root graph lock.
   PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-source-root:' || p_opportunity_id::text || '|' || p_master_specification_version_id::text, 0));
+  PERFORM 1
+  FROM public.sales_feasibility_handover_requests existing_source
+  WHERE existing_source.enquiry_id = p_enquiry_id
+    AND existing_source.opportunity_id = p_opportunity_id
+    AND existing_source.customer_id = p_customer_id
+    AND existing_source.master_specification_version_id = p_master_specification_version_id
+  FOR UPDATE;
+  IF FOUND THEN
+    RAISE EXCEPTION 'An existing feasibility handover already owns this source; reopen it instead';
+  END IF;
 
   INSERT INTO public.customer_requirements (
     requirement_number, opportunity_id, customer_id, title, status, current_revision,
