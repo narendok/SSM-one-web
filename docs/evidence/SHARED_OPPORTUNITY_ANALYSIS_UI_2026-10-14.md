@@ -31,3 +31,7 @@ The first UI commit was observed in the original Lovable project's GitHub-update
 A final UI isolation refinement places the pre-existing handover/review-status panels inside the internal projection, so they are omitted in Client preview. The integration test covers this host-panel boundary; other tests cover private findings, internal notes and private posted discussion. Unsent internal message drafts are cleared when switching audience. This is a preview inside an existing internal session, not proof of external client identity/RLS acceptance. No external client invitation was created.
 
 Final isolation refinement validation: all 13 focused tests passed again, full TypeScript check passed, and production Vite/Nitro build passed. No runtime/backend gate or unrelated generated route was changed.
+
+Original-project final confirmation: Lovable history showed the client-isolation fix as the previewed source. The existing opportunity opened its linked Master revision, and the example client projection showed four Department remarks headings with Assigned reviews and Review status absent. This confirms UI projection in the existing internal preview, not external client authorization. No record edits or notifications were sent.
+
+[Original project requirements](ssm-analysis-lovable-top-20261015.png) · [Original department columns](ssm-analysis-lovable-departments-20261015.png) · [Final client highlights](ssm-analysis-lovable-client-20261015.png)
