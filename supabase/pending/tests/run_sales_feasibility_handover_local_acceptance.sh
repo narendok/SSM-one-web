@@ -43,6 +43,7 @@ psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_di
 psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 13); SELECT pg_advisory_unlock(20261015, 13);' >/dev/null
 psql "${args[@]}" -f "$root/supabase/pending/tests/sales_feasibility_handover_different_key_b.sql" >"$log_dir/root-different-key-writer.log" 2>&1 & root_different_writer_pid=$!
 psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 14); SELECT pg_advisory_unlock(20261015, 14);' >/dev/null
+psql "${args[@]}" -c 'SELECT pg_advisory_lock(20261015, 17); SELECT pg_advisory_unlock(20261015, 17);' >/dev/null
 wait "$root_different_holder_pid"; wait "$root_different_writer_pid"
 cat "$log_dir/root-different-key-holder.log" "$log_dir/root-different-key-writer.log"
 printf 'SALES_FEASIBILITY_HANDOVER_ROOT_DIFFERENT_KEY_PASS protected_assignment_serialized=true\n'
