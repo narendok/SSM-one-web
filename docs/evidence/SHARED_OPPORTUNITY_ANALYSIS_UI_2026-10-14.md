@@ -63,3 +63,11 @@ Added a compact internal Before project start summary above department cards: cu
 
 All 15 focused shared-analysis, opportunity-detail and pipeline tests passed, including recorded-source rendering and client exclusion. Local actual-component browser observation verified the truthful empty state and five fields: [readiness summary](ssm-readiness-summary-20261015.png). No backend reads/writes, approvals, fixtures, notification or project creation were added by this change.
 TypeScript no-emit and production Vite/Nitro build passed for the read-only start summary.
+
+## Compact opportunity table and row shortcuts - 15 October 2026
+
+Replaced the stacked button rows with a contained semantic table: opportunity/customer, status/stage, feasibility/team, next action and accessible icon actions. Long content wraps within cells; narrow screens scroll inside the table. Search/status filtering, active-opportunity order, sample labels and actual linked review counts remain. Removed the invented always-unassigned owner column. Next-action fallback suggests preparation without claiming routing success.
+
+The actual Sales route now opens the selected opportunity directly in shared analysis or directly in the existing handover preparation dialog. Row details still open Overview. Handover Send remains disabled under the current explicit backend availability gate; this change does not activate routing, notifications, permissions or project creation. No fixture was saved or duplicated.
+
+Focused tests: 12 shared-analysis/list/details tests passed, followed by 5 direct-shortcut/list tests including both initial views and disabled Send. TypeScript no-emit and production Vite/Nitro build passed. Local actual-component browser evidence: [compact opportunity table](ssm-opportunity-table-20261015.png). Local preview callbacks are inert; real route shortcut behavior is tested in the integration suite, not claimed from the visual harness. Original-project browser readback after sync remains a separate check.
