@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fictional Project Analysis Preview — Industrial Sensor Gateway</title>
+  <style>
+    :root {
+      --ink: #15241d;
+      --muted: #66746c;
+      --line: #d9e1dc;
+      --canvas: #f3f6f2;
+      --paper: #ffffff;
+      --pine: #1d4d38;
+      --pine-soft: #e6f0ea;
+      --sky: #dcedf0;
+      --amber: #f7e7bd;
+      --rose: #f4d9d3;
+      --slate: #edf1ef;
+      --shadow: 0 12px 34px rgba(25, 52, 40, .08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--canvas); font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button { font: inherit; color: inherit; }
+    .shell { width: min(1480px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 46px; }
+    .eyebrow { margin: 0; color: var(--pine); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 2px 22px; }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: .02em; }
+    .brand-mark { display: grid; width: 30px; height: 30px; place-items: center; color: white; background: var(--pine); border-radius: 7px; font-size: 16px; }
+    .fictional { border: 1px solid #b7c9bc; border-radius: 999px; padding: 5px 9px; color: #486152; background: #f6faf6; font-size: 11px; font-weight: 700; }
+    .header { display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end; padding: 24px 28px; color: #f7fbf8; background: var(--pine); border-radius: 10px 10px 0 0; }
+    h1 { margin: 4px 0 7px; font-size: clamp(25px, 4vw, 42px); line-height: 1; letter-spacing: -.035em; }
+    .subtitle { margin: 0; max-width: 690px; color: #dce9e0; }
+    .phase { border-left: 1px solid #6e937f; padding-left: 20px; min-width: 150px; }
+    .phase strong { display: block; font-size: 20px; }
+    .phase span { color: #dce9e0; font-size: 12px; }
+    .requirements { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 28px; background: #173d2d; color: #f5fbf6; border-bottom: 1px solid #396451; }
+    .lock { color: #bed7c7; font-weight: 700; margin-right: 4px; }
+    .chip { padding: 5px 9px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; font-size: 12px; }
+    .chip.proposal { margin-left: auto; color: #382c0d; background: var(--amber); border-color: transparent; font-weight: 700; }
+    .workspace { display: grid; grid-template-columns: 250px minmax(0, 1fr) 300px; gap: 16px; margin-top: 16px; }
+    .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+    .side-title { padding: 15px 16px 10px; margin: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .department-list { padding: 0 8px 9px; }
+    .dept-button { width: 100%; display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 9px; padding: 10px 8px; border: 0; border-radius: 5px; background: transparent; cursor: pointer; text-align: left; }
+    .dept-button:hover, .dept-button[aria-pressed="true"] { background: var(--pine-soft); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #7b9081; }
+    .dot.watch { background: #c68719; } .dot.blocked { background: #b85348; } .dot.ready { background: #358462; }
+    .dept-button strong { font-size: 13px; }.dept-button small { color: var(--muted); font-size: 11px; }
+    .view-controls { border-top: 1px solid var(--line); padding: 13px 16px 16px; }
+    .view-controls p { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+    .segmented { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #b9c8be; border-radius: 6px; overflow: hidden; }
+    .segmented button { border: 0; padding: 8px; background: white; cursor: pointer; font-size: 12px; font-weight: 700; }
+    .segmented button.active { color: white; background: var(--pine); }
+    .main { min-width: 0; }
+    .concept { display: grid; grid-template-columns: minmax(270px, 1.05fr) minmax(260px, .95fr); gap: 18px; padding: 21px; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    h2 { margin: 0; font-size: 17px; letter-spacing: -.015em; } .caption { margin: 0; color: var(--muted); font-size: 11px; }
+    .drawing { min-height: 267px; display: grid; place-items: center; background: #f6f8f5; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+    svg { max-width: 100%; height: auto; }
+    .diagram { padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfb; }
+    .diagram-grid { display: grid; grid-template-columns: 1fr 23px 1fr; gap: 7px; align-items: center; margin-top: 14px; }
+    .block { min-height: 48px; padding: 8px; border: 1px solid #b8c8bd; border-radius: 4px; background: white; font-size: 11px; text-align: center; display: grid; place-items: center; }
+    .block.primary { color: white; background: var(--pine); border-color: var(--pine); font-weight: 800; }.arrow { color: var(--pine); text-align: center; font-size: 18px; }
+    .block.full { grid-column: 1 / -1; min-height: 40px; background: var(--sky); }
+    .notice { margin-top: 12px; padding: 10px; border-left: 3px solid #bd564d; background: #fcf1ef; font-size: 12px; }.notice strong { display: block; }
+    .flow { margin: 0 21px 21px; border-top: 1px solid var(--line); padding-top: 18px; }.flow-list { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 4px; }.flow-step { min-width: 150px; flex: 1; padding: 11px; border: 1px solid var(--line); background: white; }.flow-step + .flow-step { border-left: 0; }.flow-step small { color: var(--muted); display: block; }.flow-step strong { display: block; margin-top: 4px; }.flow-step.blocker { background: #fcf1ef; border-color: #e8c1ba; }.flow-arrow { align-self: center; margin: 0 -1px; z-index: 1; color: var(--pine); background: var(--canvas); padding: 0 4px; }
+    .details { padding: 18px; }.status-line { display: flex; justify-content: space-between; gap: 12px; align-items: center; }.badge { padding: 4px 7px; border-radius: 99px; color: #724e08; background: var(--amber); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }.detail-grid div { border-top: 1px solid var(--line); padding-top: 8px; }.detail-grid span { display:block; color:var(--muted); font-size:10px; text-transform: uppercase; letter-spacing:.07em; }.detail-grid p { margin: 4px 0 0; font-size: 12px; }
+    .remark { margin-top: 14px; padding: 10px; border-radius: 5px; background: var(--slate); font-size: 12px; }.remark strong { display:block; margin-bottom:3px; }.client-highlight { margin-top: 14px; padding: 10px; border-radius: 5px; border: 1px solid #bfd7c6; color: #19452f; background: #f3f9f4; font-size: 12px; }.client-highlight strong { display:block; margin-bottom:3px; }
+    .hidden { display: none !important; }
+    .references { padding: 18px; border-top: 1px solid var(--line); }.gallery { display: grid; gap: 9px; margin-top: 12px; }.ref { display: grid; grid-template-columns: 44px 1fr; gap: 9px; align-items: center; width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 5px; background: white; cursor: pointer; text-align: left; }.ref[aria-pressed="true"] { border-color: var(--pine); box-shadow: inset 0 0 0 1px var(--pine); }.thumb { width: 44px; height: 32px; display: grid; place-items: center; background: #eef3ef; border-radius: 3px; }.ref strong { display:block; font-size:12px; }.ref span { display:block; color:var(--muted); font-size:10px; margin-top:2px; }.ref-preview { margin-top: 12px; min-height: 96px; padding: 10px; border-radius: 5px; background: #f6f8f5; color: var(--muted); font-size: 12px; }.ref-preview strong { color:var(--ink); display:block; margin-bottom:3px; }
+    .footer-note { margin: 18px 2px 0; color: var(--muted); font-size: 11px; text-align: center; }
+    @media (max-width: 1120px) { .workspace { grid-template-columns: 220px minmax(0, 1fr); }.right { grid-column: 1 / -1; display:grid; grid-template-columns: 1fr 1fr; }.references { border-top:0; border-left:1px solid var(--line); } }
+    @media (max-width: 760px) { .shell { width: min(100% - 20px, 1480px); padding-top: 12px; }.topbar { padding-bottom: 12px; }.header { grid-template-columns: 1fr; padding: 20px; }.phase { border-left:0; padding-left:0; border-top:1px solid #6e937f; padding-top:12px; }.requirements { padding: 12px 20px; }.chip.proposal { margin-left:0; }.workspace { grid-template-columns: 1fr; }.department-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; }.right { grid-column:auto; display:block; }.references { border-top:1px solid var(--line); border-left:0; }.concept { grid-template-columns: 1fr; padding:15px; }.flow { margin:0 15px 15px; }.detail-grid { grid-template-columns:1fr; gap:8px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar"><div class="brand"><span class="brand-mark">S</span> Shared Analysis</div><span class="fictional">Fictional UI example · in-memory only</span></div>
+    <header class="header"><div><p class="eyebrow" style="color:#bed7c7">Project overview / shared analysis</p><h1>Industrial Sensor Gateway</h1><p class="subtitle">A compact cross-functional view of the Pilot phase for a rugged, networked sensor gateway.</p></div><div class="phase"><span>Recorded phase</span><strong>Pilot</strong><span>Controlled sample workspace</span></div></header>
+    <section class="requirements" aria-label="Requirement revision summary"><span class="lock">▣ Requirements locked · R1</span><span class="chip">24V input</span><span class="chip">IP65 enclosure</span><span class="chip">RS485</span><span class="chip">100 units</span><span class="chip proposal">Latest client proposal · IP67 pending review</span></section>
+    <div class="workspace">
+      <aside class="panel"><h2 class="side-title">Departments</h2><div class="department-list" id="departmentList"></div><div class="view-controls"><p>Analysis perspective</p><div class="segmented" role="group" aria-label="Preview perspective"><button class="active" id="internalToggle" aria-pressed="true">Internal</button><button id="clientToggle" aria-pressed="false">Client preview</button></div></div></aside>
+      <section class="main panel">
+        <div class="concept"><div><div class="section-head"><h2>Product concept</h2><p class="caption">Conceptual mechanical drawing</p></div><div class="drawing" aria-label="Conceptual industrial sensor gateway drawing"><svg viewBox="0 0 420 270" role="img" aria-label="Illustrated sensor gateway enclosure"><rect x="92" y="64" width="236" height="140" rx="14" fill="#e4ece5" stroke="#1d4d38" stroke-width="3"/><rect x="115" y="87" width="190" height="94" rx="7" fill="#f9fbf8" stroke="#8fa795" stroke-width="2"/><rect x="71" y="111" width="22" height="48" rx="4" fill="#c8d7cc" stroke="#1d4d38" stroke-width="2"/><rect x="328" y="111" width="22" height="48" rx="4" fill="#c8d7cc" stroke="#1d4d38" stroke-width="2"/><circle cx="136" cy="111" r="7" fill="#1d4d38"/><circle cx="282" cy="111" r="7" fill="#1d4d38"/><path d="M143 149h134M143 158h98M143 167h70" stroke="#71917c" stroke-width="3" stroke-linecap="round"/><path d="M100 217h221" stroke="#78917f" stroke-width="1"/><path d="M100 210v14M321 210v14" stroke="#78917f" stroke-width="1"/><text x="192" y="243" fill="#526b5a" font-size="12" text-anchor="middle">Rugged gateway enclosure · conceptual</text><text x="210" y="139" fill="#1d4d38" font-size="15" font-weight="700" text-anchor="middle">ISG — PILOT</text></svg></div></div>
+          <div><div class="section-head"><h2>Shared system block</h2><p class="caption">Pilot architecture</p></div><div class="diagram"><div class="diagram-grid"><div class="block">24V protected input</div><div class="arrow">→</div><div class="block primary">STM32 MCU<br><small>proposed</small></div><div class="block full">RS485 interface · sensor I/O · field diagnostics</div><div class="block">IP65 enclosure<br><small>current requirement</small></div><div class="arrow">→</div><div class="block">Firmware &amp; software<br><small>compatibility pending</small></div></div></div><div class="notice"><strong>Main blocker: enclosure sealing test</strong>Mechanical must close the sealing test before Quality can complete evidence review for Pilot release.</div></div>
+        </div>
+        <section class="flow"><div class="section-head"><h2>Dependency path</h2><p class="caption">Selected blocker chain</p></div><div class="flow-list" aria-label="Mechanical to quality to pilot release dependency"><div class="flow-step blocker"><small>01 · Mechanical</small><strong>Sealing test</strong><small>Open blocker</small></div><span class="flow-arrow">→</span><div class="flow-step"><small>02 · Quality</small><strong>Evidence review</strong><small>Waiting on test result</small></div><span class="flow-arrow">→</span><div class="flow-step"><small>03 · Pilot release</small><strong>Readiness decision</strong><small>Not yet available</small></div></div></section>
+      </section>
+      <aside class="right panel"><section class="details" id="departmentDetails" aria-live="polite"></section><section class="references"><div class="section-head"><h2>Reference gallery</h2><p class="caption">Published only in client view</p></div><div class="gallery" id="referenceGallery"></div><div class="ref-preview" id="referencePreview"><strong>Select a reference</strong>Conceptual preview only; no source files are connected.</div></section></aside>
+    </div>
+    <p class="footer-note">This is a fictional comparison prototype. It contains sample data only, stores nothing, and makes no network requests.</p>
+  </main>
+  <script>
+    const departments = [
+      { name:'Hardware', status:'In review', tone:'watch', role:'Hardware Lead', next:'Confirm STM32 peripheral allocation', deps:'Firmware compatibility review', remark:'Board routing margin is narrow near the isolated RS485 section.', highlight:'Published: Proposed STM32-based control architecture is under technical review.' },
+      { name:'Firmware', status:'Pending', tone:'watch', role:'Firmware Engineer', next:'Validate STM32 driver compatibility', deps:'Hardware peripheral map', remark:'Internal test harness cannot be sized until the exact MCU package is frozen.', highlight:'Published: Firmware compatibility assessment is pending the hardware selection review.' },
+      { name:'Software', status:'Watching', tone:'watch', role:'Software Lead', next:'Map field diagnostic payloads', deps:'Firmware message contract', remark:'Diagnostic payload naming is not yet suitable for external documentation.', highlight:'Published: Field diagnostics integration is being assessed for the Pilot phase.' },
+      { name:'Mechanical', status:'Blocked', tone:'blocked', role:'Mechanical Engineer', next:'Run enclosure sealing test', deps:'Quality evidence review', remark:'Internal: gasket compression variance must be resolved before repeating the spray test.', highlight:'Published: Enclosure sealing validation is in progress.' },
+      { name:'Procurement', status:'Waiting', tone:'watch', role:'Procurement Specialist', next:'Prepare costing after BOM freeze', deps:'Engineering BOM freeze', remark:'Internal cost comparison remains incomplete; supplier quotes are not client material.', highlight:'Published: Supply planning will begin after the engineering BOM is approved.' },
+      { name:'Quality', status:'Queued', tone:'ready', role:'Quality Engineer', next:'Review sealing test evidence', deps:'Mechanical sealing test', remark:'Internal: evidence package must include the sample traceability log.', highlight:'Published: Quality review is scheduled after enclosure test evidence is available.' }
+    ];
+    const references = [
+      { title:'Gateway concept', type:'Concept illustration', published:true, preview:'A conceptual external view of the rugged gateway enclosure; illustrative only.' },
+      { title:'Interface block', type:'Published reference R1', published:true, preview:'A simplified reference showing the planned 24V, RS485 and controller interfaces.' },
+      { title:'Sealing test matrix', type:'Internal work paper', published:false, preview:'Internal sample test conditions and observations — not client-visible.' },
+      { title:'Supplier quote worksheet', type:'Internal costing', published:false, preview:'Commercial comparison material — not client-visible.' }
+    ];
+    let selectedDepartment = 3, selectedReference = 0, clientMode = false;
+    const list = document.getElementById('departmentList'); const details = document.getElementById('departmentDetails'); const gallery = document.getElementById('referenceGallery'); const preview = document.getElementById('referencePreview');
+    function renderDepartments(){ list.innerHTML = departments.map((d,i)=>`<button class="dept-button" aria-pressed="${i===selectedDepartment}" data-dept="${i}"><span class="dot ${d.tone}"></span><span><strong>${d.name}</strong><small>${d.status}</small></span><span aria-hidden="true">›</span></button>`).join(''); list.querySelectorAll('[data-dept]').forEach(b=>b.addEventListener('click',()=>{selectedDepartment=Number(b.dataset.dept);renderDepartments();renderDetails();})); }
+    function renderDetails(){ const d=departments[selectedDepartment]; details.innerHTML = `<div class="status-line"><div><p class="eyebrow">Selected department</p><h2>${d.name}</h2></div><span class="badge">${d.status}</span></div><div class="detail-grid"><div><span>Assigned role</span><p>${clientMode?'Assigned team':'Fictional · '+d.role}</p></div><div><span>Next action</span><p>${d.next}</p></div><div><span>Depends on</span><p>${d.deps}</p></div><div><span>Delivery note</span><p>${d.name==='Procurement'?'Final BOM requires engineering and procurement signoff.':'Pilot analysis detail'}</p></div></div><div class="remark ${clientMode?'hidden':''}"><strong>Internal remark</strong>${d.remark}</div><div class="client-highlight"><strong>Client-visible highlight</strong>${d.highlight}</div>`; }
+    function renderReferences(){ const visible = references.filter(r=>!clientMode || r.published); if(!visible.some(r=>r.title===references[selectedReference]?.title)) selectedReference=0; gallery.innerHTML=visible.map((r,i)=>`<button class="ref" aria-pressed="${r.title===references[selectedReference]?.title}" data-ref="${r.title}"><span class="thumb">⌁</span><span><strong>${r.title}</strong><span>${r.type}</span></span></button>`).join(''); gallery.querySelectorAll('[data-ref]').forEach(b=>b.addEventListener('click',()=>{selectedReference=references.findIndex(r=>r.title===b.dataset.ref);renderReferences();})); const r=references[selectedReference]; preview.innerHTML=`<strong>${r.title}</strong>${r.preview}`; }
+    function setMode(next){ clientMode=next; document.getElementById('internalToggle').classList.toggle('active',!next); document.getElementById('internalToggle').setAttribute('aria-pressed',String(!next)); document.getElementById('clientToggle').classList.toggle('active',next); document.getElementById('clientToggle').setAttribute('aria-pressed',String(next)); renderDetails();renderReferences(); }
+    document.getElementById('internalToggle').addEventListener('click',()=>setMode(false)); document.getElementById('clientToggle').addEventListener('click',()=>setMode(true)); renderDepartments();renderDetails();renderReferences();
+  </script>
+</body>
+</html>
