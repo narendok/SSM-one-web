@@ -28,13 +28,13 @@ const tasks = [{
   project: { id: "project-123", name: "Project One", code: "PROJECT-2026-0005", color: "blue" },
 }];
 
-function renderBoard(initialEntry: string, embedded: boolean, setupFetch: () => void = () => fetchTasks.mockResolvedValue(tasks)) {
+function renderBoard(initialEntry: string, embedded: boolean, setupFetch: () => void = () => fetchTasks.mockResolvedValue(tasks), departmentId?: string) {
   setupFetch();
   const root = createRootRoute({ component: Outlet });
   const authenticated = createRoute({ getParentRoute: () => root, id: "_authenticated", component: Outlet });
   const tasksLayout = createRoute({ getParentRoute: () => authenticated, path: "tasks", component: Outlet });
   const globalTasks = createRoute({ getParentRoute: () => tasksLayout, path: "/", validateSearch: (search) => search as { assignee?: string; task?: string }, component: () => <TaskBoard /> });
-  const projectTasks = createRoute({ getParentRoute: () => root, path: "projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact /> : null });
+  const projectTasks = createRoute({ getParentRoute: () => root, path: "projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact departmentId={departmentId} /> : null });
   const router = createRouter({ routeTree: root.addChildren([authenticated.addChildren([tasksLayout.addChildren([globalTasks])]), projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
@@ -125,5 +125,18 @@ describe("TaskBoard task reads", () => {
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("These records could not be refreshed. Refresh unavailable"));
     expect(screen.getByText("Project route task")).toBeTruthy();
     expect(screen.getByText("1 task · refresh failed")).toBeTruthy();
+  });
+});
+describe('TaskBoard canonical department scope', () => {
+  it('excludes other and unassigned departments from the project workspace and summary', async () => {
+    renderBoard('/projects/project-123', true, () => fetchTasks.mockResolvedValue([
+      { ...tasks[0], department_id: 'department-hardware', title: 'Hardware scoped work' },
+      { ...tasks[0], id: 'other', department_id: 'department-production', title: 'Other department work' },
+      { ...tasks[0], id: 'legacy', department_id: null, title: 'Unresolved department work' },
+    ]), 'department-hardware');
+    await screen.findAllByText('Hardware scoped work');
+    expect(screen.queryByText('Other department work')).toBeNull();
+    expect(screen.queryByText('Unresolved department work')).toBeNull();
+    expect(fetchTasks).toHaveBeenCalledWith('project-123');
   });
 });

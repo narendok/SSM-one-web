@@ -21,12 +21,13 @@ import type { RDMember } from "@/lib/inventory";
 const NONE = "__none";
 
 export function TaskDialog({
-  open, onOpenChange, task, projectId,
+  open, onOpenChange, task, projectId, defaultDepartmentId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   task?: ProjectTask | null;
   projectId?: string;
+  defaultDepartmentId?: string;
 }) {
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -54,7 +55,7 @@ export function TaskDialog({
     setForm({
       title: task?.title ?? "",
       description: task?.description ?? "",
-      department: task?.department ?? "hardware", department_id: task?.department_id ?? NONE,
+      department: task?.department ?? "hardware", department_id: task?.department_id ?? defaultDepartmentId ?? NONE,
       priority: task?.priority ?? "medium",
       status: task?.status ?? "todo",
       assignee_id: task?.assignee_id ?? NONE,
@@ -64,7 +65,7 @@ export function TaskDialog({
       logged_hours: task?.logged_hours != null ? String(task.logged_hours) : "", ppap_element: task?.ppap_element ?? "",
       purchase_request_id: task?.purchase_request_id ?? NONE, qms_capa_id: task?.qms_capa_id ?? NONE, customer_complaint_id: task?.customer_complaint_id ?? NONE,
     });
-  }, [open, task, projectId]);
+  }, [open, task, projectId, defaultDepartmentId]);
 
   async function save() {
     if (!form.title.trim()) return toast.error("Give the task a title");

@@ -18,13 +18,13 @@ import {
 import { TaskDialog } from "./TaskDialog";
 import { TaskDrawer } from "./TaskDrawer";
 
-export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTaskChange }: { projectId?: string; compact?: boolean; assigneeId?: string; taskId?: string; onTaskChange?: (taskId: string | undefined) => void }) {
+export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTaskChange, departmentId, initialView = "table" }: { departmentId?: string; initialView?: "board" | "table"; projectId?: string; compact?: boolean; assigneeId?: string; taskId?: string; onTaskChange?: (taskId: string | undefined) => void }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const routeSearch = useRouterState({ select: (state) => state.location.search }) as { assignee?: string; task?: string };
   const activeAssigneeId = assigneeId ?? (projectId ? undefined : routeSearch.assignee);
   const activeTaskId = taskId ?? (projectId ? undefined : routeSearch.task);
-  const [view, setView] = useState<"board" | "table">("table");
+  const [view, setView] = useState<"board" | "table">(initialView);
   const [deps, setDeps] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
@@ -36,7 +36,8 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
     queryKey: ["project_tasks", projectId ?? "all"],
     queryFn: () => fetchTasks(projectId),
   });
-  const tasks = data ?? [];
+  // Presentation scope only; backend RLS remains authoritative.
+  const tasks = useMemo(() => (data ?? []).filter(task => !departmentId || task.department_id === departmentId), [data, departmentId]);
   const hasTaskData = data !== undefined;
   const initialReadFailed = isError && !hasTaskData;
   const readError = error instanceof Error ? error.message : "Read unavailable";
@@ -261,11 +262,12 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
         </Card>
       )}
 
-      <TaskDialog open={creating} onOpenChange={setCreating} projectId={projectId} />
+      <TaskDialog open={creating} onOpenChange={setCreating} projectId={projectId} defaultDepartmentId={departmentId} />
       <TaskDialog
         open={!!editing}
         onOpenChange={(v) => { if (!v) setEditing(null); }}
         task={editing}
+        defaultDepartmentId={departmentId}
         projectId={projectId}
       />
       <TaskDrawer
