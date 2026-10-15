@@ -93,7 +93,7 @@ describe("SharedFeasibilityAnalysis", () => {
     expect(screen.getByText("No assigned review records")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Try example layout" }));
     expect(screen.getByText("UI example · not saved to the portal.")).toBeTruthy();
-    expect(screen.getAllByRole("heading", { name: "Client-visible highlight" })).toHaveLength(4);
+    expect(screen.getAllByText("Department remarks")).toHaveLength(4);
     await user.click(screen.getByRole("button", { name: "Exit example" }));
     expect(screen.getByText("No assigned review records")).toBeTruthy();
     expect(screen.queryByText("Example hardware reviewer")).toBeNull();
@@ -183,16 +183,4 @@ describe("SharedFeasibilityAnalysis", () => {
     expect(screen.queryByText("Restricted application")).toBeNull();
     expect(screen.queryByText("12 V / 24 V input")).toBeNull();
   });
-});
-
-it("keeps project-start readiness unverified and out of the client projection", async () => {
-  const { user } = setup();
-  const readiness = within(screen.getByRole("region", { name: "Project start readiness" }));
-  expect(readiness.getByText("Not verified for start")).toBeTruthy();
-  expect(readiness.getByText("MASTER-EXAMPLE / revision 2")).toBeTruthy();
-  expect(readiness.getByText("1 recorded assignments")).toBeTruthy();
-  expect(readiness.getByText("Review notes recorded; resolution not verified")).toBeTruthy();
-  expect(readiness.getAllByText("Not verified")).toHaveLength(2);
-  await user.click(screen.getByRole("button", { name: "Client preview" }));
-  expect(screen.queryByRole("region", { name: "Project start readiness" })).toBeNull();
 });

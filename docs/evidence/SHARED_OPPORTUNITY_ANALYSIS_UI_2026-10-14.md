@@ -49,17 +49,3 @@ Inspection found the pure read-only feasibility composer counted a source-pinned
 
 Original Lovable preview of the prior remarks commit was inspected using existing OPPORTUNITY-2026-0013: four Internal remarks headings and four Edit internal remark controls appeared in the opt-in example; Client preview excluded those internal headings while retaining Department highlights. No fixtures or live records were changed. Protected submit_sales_feasibility_handover remains source-only pending installation and caller-authenticated acceptance.
 Validation completed: 14 feasibility-planning tests, TypeScript no-emit check and production Vite/Nitro build passed. The production build was rerun after the previous run was interrupted; no business changes were made during verification.
-
-## Compact highlight layout - 15 October 2026
-
-Applied two bounded suggestions from Lovable's requested design review: the client footer heading now explicitly says Client-visible highlight, and the department grid uses two columns at normal desktop widths with four columns reserved for extra-wide screens. Internal remarks remain separately labelled and excluded from the client projection. No persistence, notifications or live approval behavior changed.
-
-All 14 focused shared-analysis, opportunity-detail and pipeline tests passed after updating the intentional heading expectations. The existing local-only browser harness showed the actual component with two cards per row and separate audience footer headings, with no backend records accessed. Screenshot: [local compact highlights](ssm-compact-highlights-20261015.png). This is local UI evidence, not original-project browser acceptance or a working client portal.
-TypeScript no-emit and production Vite/Nitro build passed for the compact highlight layout.
-
-## Read-only start summary - 15 October 2026
-
-Added a compact internal Before project start summary above department cards: current Master identifier/revision where read, count of recorded department/person assignments, whether review notes exist without claiming condition resolution, client approval and baseline lock. The latter two remain Not verified because no accepted approval/lock read contract is supplied. Missing source remains Not linked or Source not verified. Example mode is explicit, no fake approval. Client projection excludes the entire internal summary.
-
-All 15 focused shared-analysis, opportunity-detail and pipeline tests passed, including recorded-source rendering and client exclusion. Local actual-component browser observation verified the truthful empty state and five fields: [readiness summary](ssm-readiness-summary-20261015.png). No backend reads/writes, approvals, fixtures, notification or project creation were added by this change.
-TypeScript no-emit and production Vite/Nitro build passed for the read-only start summary.
