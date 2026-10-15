@@ -17,3 +17,5 @@ Team/task follow-up: compact prototype now includes six fictional department tas
 Removed duplicated workstream remarks; browser detail readback now contains department and next action only. Remarks use aligned full-width department/internal/client columns; fixed CSS precedence after initial visual inspection. Scripts parse. Screenshot compact-columns-20261015.png. UI-only limits unchanged.
 
 Combined workstream/remarks UI: browser confirmed task-cards class, visually inspected bordered filter boxes and six task cards. Selected Mechanical workstream shows next action and separate internal/client notes once in the same card. Screenshot compact-combined-20261015.png. Inline scripts parse; no backend behavior changed.
+
+Dependency progress trial: inline scripts parse; browser progressbar reports 25, details expansion exposes Release condition and collapses again. Screenshot compact-progress-20261015.png visually checked: four aligned arrow-linked steps, green completed, orange blocked and muted waiting, progress bar and collapsed details. Fictional UI only; no live progress or project approval implied.
