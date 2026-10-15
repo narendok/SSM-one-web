@@ -50,16 +50,13 @@ Inspection found the pure read-only feasibility composer counted a source-pinned
 Original Lovable preview of the prior remarks commit was inspected using existing OPPORTUNITY-2026-0013: four Internal remarks headings and four Edit internal remark controls appeared in the opt-in example; Client preview excluded those internal headings while retaining Department highlights. No fixtures or live records were changed. Protected submit_sales_feasibility_handover remains source-only pending installation and caller-authenticated acceptance.
 Validation completed: 14 feasibility-planning tests, TypeScript no-emit check and production Vite/Nitro build passed. The production build was rerun after the previous run was interrupted; no business changes were made during verification.
 
-## Compact highlight layout - 15 October 2026
+## Source-only compact-table reconciliation review — 15 October 2026
 
-Applied two bounded suggestions from Lovable's requested design review: the client footer heading now explicitly says Client-visible highlight, and the department grid uses two columns at normal desktop widths with four columns reserved for extra-wide screens. Internal remarks remain separately labelled and excluded from the client projection. No persistence, notifications or live approval behavior changed.
+The original project remains on private source HEAD `7e18929246f91854c8d9a28c4fb0bb82b5eaba3d`; public main UI commit `6685732ccb28e43e3208148a333d0cee562e1718` shares base `a8ed88b2cec0cb5b6f27acabb9c692f2070003a3`. The managed workspace cannot create a review branch or merge, so a disposable exported private-head tree received the public parent diff only. Its UI source applied cleanly; the two overlapping evidence/plan hunks were retained by preserving private source-only verification text and appending the public UI checkpoint. No public/private remote was pushed or changed.
 
-All 14 focused shared-analysis, opportunity-detail and pipeline tests passed after updating the intentional heading expectations. The existing local-only browser harness showed the actual component with two cards per row and separate audience footer headings, with no backend records accessed. Screenshot: [local compact highlights](ssm-compact-highlights-20261015.png). This is local UI evidence, not original-project browser acceptance or a working client portal.
-TypeScript no-emit and production Vite/Nitro build passed for the compact highlight layout.
+The disposable candidate passed `EnquiriesWorkspace`, direct-entry and shared-analysis DOM tests (13 tests), TypeScript and one production build. This does not alter the preview or claim a live sync. The canonical plan contains the exact preservation, checksums and safe normal-clone merge sequence.
 
-## Read-only start summary - 15 October 2026
 
-Added a compact internal Before project start summary above department cards: current Master identifier/revision where read, count of recorded department/person assignments, whether review notes exist without claiming condition resolution, client approval and baseline lock. The latter two remain Not verified because no accepted approval/lock read contract is supplied. Missing source remains Not linked or Source not verified. Example mode is explicit, no fake approval. Client projection excludes the entire internal summary.
 
 All 15 focused shared-analysis, opportunity-detail and pipeline tests passed, including recorded-source rendering and client exclusion. Local actual-component browser observation verified the truthful empty state and five fields: [readiness summary](ssm-readiness-summary-20261015.png). No backend reads/writes, approvals, fixtures, notification or project creation were added by this change.
 TypeScript no-emit and production Vite/Nitro build passed for the read-only start summary.
@@ -88,3 +85,8 @@ Follow-up source inspection: phase10.functions.ts/sendExternalInvitation invokes
 
 Original-project read-only review reported by Lovable at source HEAD 2435f5cd50a704ff6e50e2b639b4421eb079c0c2: recipient replacement and repeat acceptance remain possible in the inspected handlers; acceptance omits deactivated_at, although later portal authorization checks deactivation. No opportunity-scoped copy-only resolver was found. File/BOM sharing and pending external requirement intake are not substitutes. These are tool-reported original-source/schema findings, not an independently exercised live invitation exploit or permission acceptance test. No invitation was issued or accepted. Next safe source group: design a side-effect-free opportunity/client/revision resolver and projected client payload, retaining explicit deployment gates and recipient-binding repair prerequisites.
 
+## Managed source application — 15 October 2026
+
+The exact UI-only source candidate from public commit `6685732ccb28e43e3208148a333d0cee562e1718` was applied to the original managed project through normal source edits. The applied `EnquiriesWorkspace.tsx`, its DOM test, `OpportunityDetail.tsx`, direct-entry test and Sales enquiries route wiring are byte-equivalent to that candidate. The compact table exposes direct row icons for details, shared analysis and team-handover preparation. The team-handover Send action remains disabled.
+
+This is source equivalence only, not a two-parent history reconciliation: public GitHub connection and private managed history remain separate. No remote history, connection, SQL, permissions, records, UI enablement or publishing was changed.

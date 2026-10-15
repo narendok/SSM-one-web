@@ -232,6 +232,8 @@ Recipients come from current authorized assignments, not every department member
 
 Client/vendor collaboration uses scoped, expiring/revocable invitations and exact published revisions/actions. Editable intake differs from progress/download/approval. Do not expose internal Drive, other customers/vendors, private costing or HR records. Client confirmation, legal signing, engineering release and Finance approval remain distinct explicit decisions. Uploaded evidence is validated/quarantined as required before release.
 
+**Source-only Sales Copy projection checkpoint:** `src/lib/client-opportunity-copy.ts` now defines a pure typed allowlist for a future opportunity-scoped client copy. It emits only selected customer requirement values, separately supplied published highlights, and exact Master/requirement source-revision pins; it excludes internal remarks, costing, staff details and attachments. It neither resolves a link nor treats the shared-analysis example highlights as published. Link resolution remains unavailable until an accepted recipient-bound opportunity scope, expiry/revocation/deactivation, publication/audit and narrow resolver contract exists. Evidence: `docs/evidence/20261015_sales_copy_client_projection_source_only.md`.
+
 ## 9. Remaining web portal work and backend handoff
 
 Preserve existing useful screens and controlled stock transactions. Complete department work queues/actions for HR/recruitment/training, Facility/assets/maintenance/security, Finance/matching/aging, Operations/QMS/audit/CAPA and customer service. Recurring work, KPI/OEE/MTBF/MTTR/yield and escalation use reviewed formulas/calendar/timezone/actual events; targets are not achieved values. Audit export is a permitted point-in-time manifest of exact evidence/decisions/missing items, not a certification.
@@ -249,7 +251,8 @@ Status definitions: **Verified** = actual stated evidence; **Reported** = implem
 | Order | Bounded group | Latest known boundary / next work |
 |---|---|---|
 | 1 — current | Feasibility handover and reviewer workflow | Combined Sales list/details/customer/Master reads and truthful no-assignment states were browser-verified. Overflow repair and checks reported, visible updated layout observed. A consolidated requirement-by-department feasibility comparison, prominent departmental remarks/client-visible highlights, scoped shared discussion and human conflict resolution are agreed pending work. Protected source-bound requirement + department/reviewer + durable notification handover remains pending; latest source/form work was dispatched, not accepted live. Finish exact contracts, wiring and checks before any deployment gate |
-| 1a � source-only writer lock review | Read-only inventory found direct write privileges and Sales manage policies on requirements, revisions, and feasibility reviews, with no installed protected handover/assignment/response route. Pending handover replay and pending assignment/response now share a requirement-root key; disposable same-key, different-key and guarded phantom schedules passed. The reviewable original-target proposal at `supabase/pending/20261015_requirement_feasibility_original_target_compatibility.sql` removes only direct I/U/D and the three verified broad Sales policies, retaining protected source-bound creation/assignment/response operations. Original-target inspection confirmed separate Sales/Engineering/Admin SELECT policies for all three tables; the corrected proposal fails closed on named-policy drift and preserves those exact predicates rather than relying on removed FOR ALL policies. Synthetic ordinary-caller evidence now covers Sales read preservation before/after, anon read denial, protected handover, and authenticated/anon direct-write denial. Protected assignment/response still need their own prerequisite and target-bound caller/RLS acceptance. A different request key for the same opportunity/customer/Master/title source now serializes then rejects, preventing duplicate handovers. Direct writers remain outside this protocol, so installation and the Sales action remain blocked until exact target compatibility, complete restore capture, and real caller evidence are approved. Evidence: `docs/evidence/20261015_sales_feasibility_handover_writer_root_lock_inventory.md` |
+| 1a � source-only writer lock review | Read-only inventory found direct write privileges and Sales manage policies on requirements, revisions, and feasibility reviews, with no installed protected handover/assignment/response route. Pending handover replay and pending assignment/response now share a requirement-root key; disposable same-key, different-key and guarded phantom schedules passed. The reviewable original-target proposal at `supabase/pending/20261015_requirement_feasibility_original_target_compatibility.sql` removes only direct I/U/D and the three verified broad Sales policies, retaining protected source-bound creation/assignment/response operations. Original-target inspection confirmed separate Sales/Engineering/Admin SELECT policies for all three tables; the corrected proposal fails closed on named-policy drift and preserves those exact predicates rather than relying on removed FOR ALL policies. Synthetic ordinary-caller evidence now covers nonempty before/after reads for Sales-manage, Sales-view, Engineering-manage and Engineering-view, denied unauthorized authenticated/anon reads, all authenticated/anon direct I/U/D combinations on each graph table, and protected handover/assignment/response on accepted local prerequisites. The synthetic drift case rejects altered named policy text; the synthetic rollback-capture shape records grants plus exact policy command/roles/USING/WITH CHECK fields. This does not prove target JWT/RLS, target rollback capture/restore, unknown writers, or every protected caller path. A different request key for the same opportunity/customer/Master/title source now serializes then rejects, preventing duplicate handovers. Direct writers remain outside this protocol, so installation and the Sales action remain blocked until exact target compatibility, complete restore capture, and real caller evidence are approved. Evidence: `docs/evidence/20261015_sales_feasibility_handover_writer_root_lock_inventory.md` |
+| 1b � source-only Sales Copy | A pure typed, exact-revision client projection is available only as local source preparation; it has no resolver, link, token, publication or authorization effect. It allowlists customer requirement values and separately published highlights while excluding internal remarks, costing, staff details and attachments. Recipient-bound opportunity scope, active/revoked/deactivated/expired checks, publication authority, audit and external caller/RLS acceptance remain mandatory before any client link can exist. Evidence: `docs/evidence/20261015_sales_copy_client_projection_source_only.md` |
 | 2 | Controlled project start / baseline | Preserve enquiry/opportunity/Master/review source; verify explicit approval conversion, one project/root, retries and history. No verdict-only automatic project creation |
 | 3 | Private DOCX and responsibility | Local renderer/export and private historical HTML evidence exist. Five-file DOCX backend package and responsibility extension are pending/source-only; specific access/deployment approval and real restricted callers remain required. Do not treat local export as saved DOCX |
 | 4 | Drive/register completion | Four-group/filter source and UI checkpoints exist; verify all departments, PPAP/favorites placement, same revisions and useful register reads. Customer XLSX automatic private storage/refresh is pending, not established by export foundation |
@@ -328,13 +331,14 @@ Latest agreed shared-analysis refinement: participating departments contribute t
 
 Latest agreed collaboration refinement: prominent departmental remarks and client-visible highlights; deliberate Edit plus Save/Cancel without an extra change-request confirmation; optional Research/POC with recorded client terms and phase-linked analysis; and separate review-ready versus finally locked BOM checkpoints. These are English planning refinements only, with no application deployment, permission changes or new department records.
 
-### Current scheduled completion boundary - 15 October 2026
+### Current scheduled completion boundary � 15 October 2026
 
 Complete the discussed Sales flow through selected-department handover, durable notifications, shared departmental analysis with separate internal remarks and client-visible highlights, conflict resolution and feasibility pass against the exact Master revision. Obtain recorded client approval of the final requirements revision, then lock that approved baseline before an authorized project-start decision selects optional Research/POC or a justified direct Pilot path. Changes to that revision must invalidate stale approvals/reviews as applicable; notifications alone are not approval. Keep client edits simple: read-only by default, deliberate Edit and Save/Cancel, latest input separate from the approved baseline. No automatic project start from a feasibility status or client edit.
 
 The scheduled follow-up targets this bounded operational flow first. UI examples are not persisted remarks, delivered notifications, client approval or baseline-lock evidence. Inspect/develop the protected contracts and continue unaffected source/UI work while any deployment or identity gate awaits specific authorization. Android implementation remains outside this queue.
 Readiness correction checkpoint (15 October): a completed not-feasible verdict must remain a blocker, even with exact source pins; completion is not feasibility pass. The read-only composer now enforces this, with a regression test. Backend installation and operational acceptance remain pending.
 Handover replay review (15 October): the pending source now pins immutable requirement/review identities and replay source facts, then locks mutable validation rows with FOR SHARE in the documented order before returning. Disposable two-session checks use coordinated plain updates for replay-held and writer-held graph changes. Installation remains blocked: row locks do not prevent new-review phantoms or direct writers that bypass an accepted requirement-root serialization path. Required production-like direct-write/RLS and writer-path evidence remains pending; do not substitute production execution or claim the deployment accepted.
+## Source-only repository reconciliation review — 15 October 2026
 
 UI checkpoint (15 October): commit 777ea64 clarifies Client-visible highlight headings and reserves four department columns for extra-wide screens. All 14 focused UI tests, TypeScript and production build passed; local browser evidence is linked in docs/evidence/SHARED_OPPORTUNITY_ANALYSIS_UI_2026-10-14.md. Original-project readback of this final styling remains unverified. Lovable-backed disposable assignment/response and full caller/read checks remain pending because the available session reached its credit limit; this does not authorize a purchase. Live installation, policy/grant changes and UI enablement remain blocked pending the exact compatibility/restore and real-caller evidence. Continue local unaffected work without repeated unchanged verification.
 Read-only UI checkpoint (15 October): the internal shared-analysis view now includes a compact Before project start summary. It reports recorded source/assignment facts while condition resolution, client approval and baseline lock remain explicitly unverified. Client preview excludes it. Fifteen focused UI tests, TypeScript, production build and local-browser verification passed; this does not implement live feasibility approval or project start.
@@ -356,4 +360,79 @@ Original-project client-link inspection (15 October, reported source 2435f5c): n
 
 
 GitHub-first reconciliation (15 October): downloaded original Lovable source ZIP SHA256 415140696b36574376e2a58f0d55e595d0e6a39be61ab2d8212429e7ee15cecd and retained it outside the active repository in SSMOneWebBackups/sync-review-20261015-1105. Imported new source-only client projection and original compatibility fixture improvements. Preserved local readiness summary, explicit Client-visible highlight labels, wider responsive breakpoint, and corresponding tests instead of regressing them to older original-source equivalents. Detailed private source history remains in the backup; this snapshot import is not a two-parent Git merge or proof of Lovable connection repair. Scheduler is active and future implementation uses local source/GitHub; Lovable consultation is limited to current sync recovery. Client projection remains unavailable for external access pending protected resolver and publication contracts.
+
+Status: **review candidate only**. No remote push, connected-repository setting,
+GitHub permission, database, policy/grant, live record, handover enablement, or Publish action
+occurred. The original Lovable workspace stays at private HEAD
+`7e18929246f91854c8d9a28c4fb0bb82b5eaba3d`.
+
+### Preserved histories and merge basis
+
+- Private head: `7e18929246f91854c8d9a28c4fb0bb82b5eaba3d` (`Verified policy drift guard`), parent `a8ed88b2cec0cb5b6f27acabb9c692f2070003a3`.
+- Private compatibility lineage retained unchanged: `e7e00c4`, `bd6770f`, `3bd0a3a`, `dce054f`, `d90d1e4`, `dd0e011`, `7e18929`.
+- Public main candidate: `6685732ccb28e43e3208148a333d0cee562e1718` (`Compact sales pipeline with direct analysis and team handover shortcuts`), parent `a8ed88b2cec0cb5b6f27acabb9c692f2070003a3`.
+- Exact common base: `a8ed88b2cec0cb5b6f27acabb9c692f2070003a3`.
+
+The managed workspace prohibits branch/merge operations, so no review branch or merge commit
+can be created there. An exported private-head tree was reconciled only under `/tmp` by applying
+the public commit's exact parent diff; this leaves the managed checkout and both histories intact.
+The exact public patch SHA-256 is
+`b107ad852c47131b5dbd7d6e3240f5164c30444381230798d2a108af36b085cb`.
+
+### Reconciled candidate scope
+
+The public UI source applied cleanly to the exported private tree:
+
+- `src/components/sales/EnquiriesWorkspace.tsx`
+- `src/components/sales/EnquiriesWorkspace.dom.test.tsx` (new)
+- `src/components/sales/OpportunityDetail.tsx`
+- `src/components/sales/OpportunityDetail.dom.test.tsx`
+- `src/routes/_authenticated/sales.enquiries.tsx`
+
+The public image was copied only into the disposable candidate as
+`docs/evidence/ssm-opportunity-table-20261015.png`; its extracted blob SHA-256 is
+`ff524653f21278a7da87e88d3f13172edc17ab14dd1f024bdbf012322a4121fe`.
+
+Two documentation hunks overlapped private source-only verification wording and were resolved in
+the disposable candidate by retaining the complete private documents and appending the public UI
+checkpoint verbatim:
+
+- `docs/evidence/SHARED_OPPORTUNITY_ANALYSIS_UI_2026-10-14.md`
+- this canonical plan
+
+No pending SQL file was altered. Frozen pending-source checksums remain:
+
+- `supabase/pending/20261015_requirement_feasibility_original_target_compatibility.sql` — `34713394369e38e87f0c968e47c6f3eb6a78aaf3e29527b6c867698bc62f413f`
+- `supabase/pending/20261013_sales_feasibility_handover.sql` — `a5f8b0b5fce1be565bfc6e8ea3e3c97e58020bd2d61a922f401e4aff2a3dfbab`
+
+### Disposable verification
+
+Against the reconciled temporary candidate only:
+
+- `bunx vitest run src/components/sales/EnquiriesWorkspace.dom.test.tsx src/components/sales/OpportunityDetail.dom.test.tsx src/components/sales/SharedFeasibilityAnalysis.dom.test.tsx` — exit `0`; 3 files / 13 tests passed.
+- `bunx tsgo --noEmit` — exit `0`.
+- `bun run build` — exit `0`.
+
+### Safe application after review
+
+1. Keep private `7e189292` and public `6685732` immutable.
+2. In a normal writable clone that contains both objects, create a named review branch from private `7e189292`.
+3. Merge public `6685732` with a normal two-parent merge (no reset, rebase, cherry-pick, or force update).
+4. Preserve the two documentation additions described above; do not replace the private compatibility evidence or canonical-plan checkpoint.
+5. Repeat the three checks above, then have an authorized maintainer review the merge commit and connect that merged commit to the original project. Only then should the preview be expected to render the compact table.
+
+This is source-only reconciliation guidance. It neither authorizes nor performs a push, connection change, SQL installation, policy/grant change, live data write, UI enablement, project start, or Publish.
+
+
+
+### Managed source application � compact Sales table, 15 October 2026
+
+The verified UI-only source from public commit `6685732ccb28e43e3208148a333d0cee562e1718` was copied into the original managed project using ordinary source edits: `EnquiriesWorkspace.tsx`, its DOM test, `OpportunityDetail.tsx`, its direct-entry test, and the Sales enquiries route wiring. The applied UI files match the public candidate byte-for-byte; private feasibility compatibility source, tests and prior documentation remain unchanged. This makes the compact table and its direct shared-analysis/team-handover row actions visible in the original preview. The handover send action remains disabled pending separately approved backend installation.
+
+This source equivalence is not a two-parent Git history reconciliation. The public GitHub connection and the private managed history remain separate; no remote, connection, rebase, reset, cherry-pick, force push, SQL, grants, policies, records or publishing action occurred.
+
+Sync recovery merge resolution: preserved both Git histories using origin/lovable-sync, combined both documentation checkpoints, and retained newer local shared-analysis UI/tests and screenshots. Deferred unrelated Lovable Vite-config dependency upgrade 2.25.3 to 2.26.5; current validated dependency version remains 2.25.3. Recovery branch commits remain ancestors of the merge, not squashed or rebased.
+
+
+Reconciliation validation: 17 focused projection/list/detail/shared-analysis tests passed; TypeScript no-emit and production build exited 0. SQL fixture additions are retained as source-only; no local PostgreSQL execution or live backend deployment occurred.
 
