@@ -13,10 +13,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchProjects } from "@/lib/projects";
 import {
-  TASK_PRIORITIES, TASK_STATUSES, createTask, fetchCanonicalDepartments, updateTask,
+  TASK_PRIORITIES, TASK_STATUSES, createTask, fetchCanonicalDepartments, fetchTaskMembers, updateTask,
   type ProjectTask,
 } from "@/lib/tasks";
-import type { RDMember } from "@/lib/inventory";
+
 
 const NONE = "__none";
 
@@ -39,12 +39,8 @@ export function TaskDialog({
 
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
   const { data: departments = [] } = useQuery({ queryKey: ["canonical_departments"], queryFn: fetchCanonicalDepartments });
-  const { data: members = [] } = useQuery({
-    queryKey: ["rd_members"],
-    queryFn: async () => {
-      const { data } = await supabase.from("rd_members").select("*").eq("active", true).order("name");
-      return (data ?? []) as RDMember[];
-    },
+  const { data: members = [], isError: memberReadFailed, refetch: retryMembers } = useQuery({
+    queryKey: ["rd_members"], queryFn: fetchTaskMembers,
   });
   const { data: purchaseRequests = [] } = useQuery({ queryKey: ["purchase_requests", "task-link"], queryFn: async () => { const { data, error } = await supabase.from("purchase_requests").select("id,request_number,status").order("created_at", { ascending: false }).limit(100); if (error) throw error; return data ?? []; } });
   const { data: capas = [] } = useQuery({ queryKey: ["qms_capas", "task-link"], queryFn: async () => { const { data, error } = await supabase.from("qms_capas").select("id,capa_code,title,status").order("created_at", { ascending: false }).limit(100); if (error) throw error; return data ?? []; } });
@@ -69,6 +65,7 @@ export function TaskDialog({
 
   async function save() {
     if (!form.title.trim()) return toast.error("Give the task a title");
+    if (memberReadFailed && form.assignee_id !== (task?.assignee_id ?? NONE)) return toast.error("Retry the member list before changing assignment.");
     setSaving(true);
     const payload: any = {
       title: form.title.trim(),
@@ -131,14 +128,15 @@ export function TaskDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Assignee</Label>
-              <Select value={form.assignee_id} onValueChange={(v) => setForm({ ...form, assignee_id: v })}>
+              {memberReadFailed && <div role="alert" className="text-sm text-destructive">Member list unavailable. Existing assignment is preserved; retry before reassigning. <Button type="button" variant="link" onClick={() => void retryMembers()}>Retry members</Button></div>}
+              <Select disabled={memberReadFailed} value={form.assignee_id} onValueChange={(v) => setForm({ ...form, assignee_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE}>Unassigned</SelectItem>
                   {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {members.length === 0 && <Button asChild variant="link" size="sm" className="h-auto p-0"><Link to="/rd-team">Create an R&amp;D member</Link></Button>}
+              {!memberReadFailed && members.length === 0 && <Button asChild variant="link" size="sm" className="h-auto p-0"><Link to="/rd-team">Create an R&amp;D member</Link></Button>}
             </div>
             <div className="space-y-1.5">
               <Label>Priority</Label>

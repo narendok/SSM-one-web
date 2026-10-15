@@ -1,3 +1,4 @@
+import type { RDMember } from "@/lib/inventory";
 import { supabase } from "@/integrations/supabase/client";
 
 const sb = supabase as any;
@@ -197,4 +198,11 @@ export async function addComment(taskId: string, body: string) {
     .from("project_task_activity")
     .insert({ task_id: taskId, kind: "comment", body, actor_id: session.user?.id ?? null });
   if (error) throw error;
+}
+
+/** Caller-visible active identities only. A denied read must not look like an empty team. */
+export async function fetchTaskMembers(): Promise<RDMember[]> {
+  const { data, error } = await sb.from('rd_members').select('*').eq('active', true).order('name');
+  if (error) throw error;
+  return (data ?? []) as RDMember[];
 }

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ from: vi.fn(), getUser: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: mocks.from, auth: { getUser: mocks.getUser } } }));
-import { createTask, updateTask } from './tasks';
+import { createTask, updateTask, fetchTaskMembers } from './tasks';
 const result = vi.fn();
 const select = vi.fn(() => ({ single: result, maybeSingle: result }));
 const eq = vi.fn(() => ({ select }));
@@ -15,4 +15,15 @@ describe('task mutation acknowledgements', () => {
  it('does not insert without an authenticated actor', async () => { mocks.getUser.mockResolvedValue({ data: { user: null }, error: null }); await expect(createTask({ title: 'Example' })).rejects.toThrow('Sign in'); expect(insert).not.toHaveBeenCalled(); });
  it('requires a returned creation identity and pins the authenticated actor', async () => { result.mockResolvedValue({ data: { id: 'new-task' }, error: null }); await expect(createTask({ title: 'Example', created_by: 'spoof' })).resolves.toEqual({ id: 'new-task' }); expect(insert).toHaveBeenCalledWith({ title: 'Example', created_by: 'actor' }); });
  it('rejects an unconfirmed creation', async () => { result.mockResolvedValue({ data: null, error: null }); await expect(createTask({ title: 'Example' })).rejects.toThrow('not confirmed'); });
+});
+
+describe('task member catalogue', () => {
+ it('propagates denied reads instead of returning an empty team', async () => {
+   mocks.from.mockReturnValue({ select: () => ({ eq: () => ({ order: async () => ({ data: null, error: new Error('member read denied') }) }) }) });
+   await expect(fetchTaskMembers()).rejects.toThrow('member read denied');
+ });
+ it('returns permitted member identities', async () => {
+   mocks.from.mockReturnValue({ select: () => ({ eq: () => ({ order: async () => ({ data: [{ id: 'member-1', name: 'Example' }], error: null }) }) }) });
+   await expect(fetchTaskMembers()).resolves.toEqual([{ id: 'member-1', name: 'Example' }]);
+ });
 });
