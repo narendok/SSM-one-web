@@ -445,3 +445,8 @@ Multi-department handover preparation (15 October): opportunity handover now acc
 
 Original preview now displays the multi-team preparation controls from 4027eb1 for existing OPPORTUNITY-2026-0013; detailed evidence and screenshot are in docs/evidence/SHARED_OPPORTUNITY_ANALYSIS_UI_2026-10-14.md. Backend sending remains unavailable.
 
+
+## Implementation ownership and economical Lovable assistance
+
+User direction (15 October): Codex performs most coding, feature implementation and verification locally, with GitHub as the primary workflow. Use Lovable only for a concrete difficult blocker or managed-environment check unavailable locally, in one bounded request with explicit success criteria. After Lovable completes such work, fetch/reconcile the resulting GitHub changes into the same local web repository before continuing; avoid concurrent unsynchronized edits. Minimize Lovable credit use and prioritize working features rather than repeated planning or unchanged validation. Demonstrate each successful usable increment in the actual browser using the existing labelled sample opportunity, Master revision, enquiry and customer, without duplicate fixtures. State which actions persist and which are preparation/source-only. Keep completed decisions and evidence in this master plan for future reuse. Existing data/access/deployment approval boundaries remain applicable. The active scheduler has been updated to follow this approach.
+
