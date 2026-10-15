@@ -85,10 +85,11 @@ not an approved rollback.
 
 Disposable synthetic ordinary-caller evidence applies the exact proposed statements after
 first modelling the verified broad authenticated/anon grants and named Sales policies. It
-allows an `authenticated` Sales caller through `submit_sales_feasibility_handover`, then
-denies authenticated direct header insert, revision update, review delete, and anon header
-insert. This is synthetic policy/grant evidence only; it does not certify the managed target's
-JWT, deployed policy text, or all callers.
+uses a nonempty historical review and tests all six read identities before/after, then permits
+the three protected operations with accepted synthetic prerequisites and denies all eighteen
+direct authenticated/anon × three-table × I/U/D combinations. This is synthetic policy/grant
+evidence only; it does not certify the managed target's JWT, deployed policy text, or all
+callers.
 
 The handover source also now serializes an exact enquiry/opportunity/customer/Master source
 tuple and rejects a different request key once one receipt owns that tuple. The local two-
