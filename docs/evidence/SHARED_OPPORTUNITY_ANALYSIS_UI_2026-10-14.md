@@ -56,3 +56,10 @@ The original project remains on private source HEAD `7e18929246f91854c8d9a28c4fb
 
 The disposable candidate passed `EnquiriesWorkspace`, direct-entry and shared-analysis DOM tests (13 tests), TypeScript and one production build. This does not alter the preview or claim a live sync. The canonical plan contains the exact preservation, checksums and safe normal-clone merge sequence.
 
+
+
+## Managed source application — 15 October 2026
+
+The exact UI-only source candidate from public commit `6685732ccb28e43e3208148a333d0cee562e1718` was applied to the original managed project through normal source edits. The applied `EnquiriesWorkspace.tsx`, its DOM test, `OpportunityDetail.tsx`, direct-entry test and Sales enquiries route wiring are byte-equivalent to that candidate. The compact table exposes direct row icons for details, shared analysis and team-handover preparation. The team-handover Send action remains disabled.
+
+This is source equivalence only, not a two-parent history reconciliation: public GitHub connection and private managed history remain separate. No remote history, connection, SQL, permissions, records, UI enablement or publishing was changed.
