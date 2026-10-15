@@ -628,3 +628,5 @@ Filters: period/financial year, department, project, member where permitted, cat
 4. Add protected versioned budget approvals/transfers/forecasts only after accepted backend contracts, then reconciliation, exports and threshold notifications. No payment execution, payroll expansion, production identities or privileged changes are authorized by this roadmap addition.
 
 Keep this work in the same master plan, with evidence under docs/evidence. Continue the previously prioritized bounded feasibility/client-approval delivery; budgeting is an added portal workstream, not a claim that the existing trial or Finance module already implements it. Android receives verified contract handoff separately and retains its own build plan.
+
+Task write acknowledgement checkpoint (16 October): existing task create/update helpers now require caller-visible returned identities; zero-row update no longer reports success and signed-out creation fails before insert. Six focused tests, TypeScript and build passed. Source-only validation; exact field readback, accepted delegated permissions and live browser verification remain pending. Feasibility gate unchanged.

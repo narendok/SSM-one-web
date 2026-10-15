@@ -125,9 +125,13 @@ export async function fetchOpenTaskCount(): Promise<number> {
 export type TaskInput = Partial<Omit<ProjectTask, "assignee" | "project">> & { title: string };
 
 export async function createTask(input: TaskInput) {
-  const { data: session } = await supabase.auth.getUser();
-  const { error } = await sb.from("project_tasks").insert({ ...input, created_by: session.user?.id ?? null });
+  const { data: session, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!session.user) throw new Error("Sign in before creating a task.");
+  const { data, error } = await sb.from("project_tasks").insert({ ...input, created_by: session.user.id }).select("id").single();
   if (error) throw error;
+  if (!data?.id) throw new Error("Task creation was not confirmed. Refresh before retrying.");
+  return data;
 }
 
 export async function updateTask(id: string, patch: Partial<ProjectTask>) {
@@ -138,8 +142,10 @@ export async function updateTask(id: string, patch: Partial<ProjectTask>) {
   delete (clean as any).purchase_request;
   delete (clean as any).qms_capa;
   delete (clean as any).customer_complaint;
-  const { error } = await sb.from("project_tasks").update(clean).eq("id", id);
+  const { data, error } = await sb.from("project_tasks").update(clean).eq("id", id).select("id").maybeSingle();
   if (error) throw error;
+  if (data?.id !== id) throw new Error("Task update was not confirmed. Refresh and check your access before retrying.");
+  return data;
 }
 
 export async function deleteTask(id: string) {
