@@ -532,3 +532,5 @@ Dependency UI refinement: replace list/diagram switching with a compact arrow se
 Department UI default: show all department workstreams as compact closed cards with status and two-line excerpts of internal remarks/client highlights. Deliberate expansion shows next action and full notes, replacing excerpts while open to avoid repetition. Excerpts are clipped source text, not AI summaries. Client preview omits internal excerpts and notes. UI-only prototype.
 
 Approved compact UI polish: subtle bordered uppercase section headings, compact uppercase department labels and right-side directional chevrons. Department cards remain closed by default with note excerpts visible; opening reverses chevron and shows full details. No extra decorative punctuation needed. Prototype presentation only.
+
+Main section disclosures: Progress & dependencies, Team & tasks, and Department workstreams & remarks now have heading chevron buttons with aria-expanded/aria-controls. Whole sections start expanded and collapse independently; individual department cards stay closed by default. Prototype UI only.

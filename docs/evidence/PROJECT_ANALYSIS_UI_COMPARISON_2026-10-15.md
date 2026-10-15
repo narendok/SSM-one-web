@@ -23,3 +23,5 @@ Dependency progress trial: inline scripts parse; browser progressbar reports 25,
 Collapsed department cards verified in browser: initially zero open details; opening Hardware gives one, then closes successfully. All departments show compact two-line note excerpts without selecting or expanding. Full notes replace previews when expanded. Scripts parse; screenshot compact-collapsed-20261015.png. No persistence changes.
 
 Heading polish: browser confirmed zero department cards open initially, one after summary click and closed again. Screenshot compact-headings-20261015.png visually inspected for bordered uppercase headings and compact directional chevrons. CSS-only change; backend and persistence unchanged.
+
+Main-section arrows: inline scripts parse. Browser clicked all three heading buttons and read aria-expanded=false for each, then reopened all three for user review. Screenshot main-section-arrows-20261015.png captures compact collapsed sections. No persistence changes.
