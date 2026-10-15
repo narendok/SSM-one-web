@@ -348,3 +348,6 @@ Client-link placement refinement (15 October): provide a Copy client link action
 
 User instruction (15 October 2026): keep this master plan current after each meaningful discussion or implementation group, including completed work for future reference and reuse in other projects. Update the relevant requirements and delivery status in place. Retain a concise completed-work record with the behavior delivered, actual verification boundary, evidence/source references and any remaining dependency. Clearly distinguish agreed, implemented locally, visible in original preview, deployed and operationally verified states. Do not remove completed requirements merely because they are done, or mark a planned/example feature as working. Keep detailed dated evidence in docs/evidence and exact technical contracts separately; do not create competing dated master plans. Android implementation continues to use its separate Android build plan.
 
+
+Client-link prerequisite review (15 October): the existing token invitation handler needs verified intended-recipient/existing-account binding and deactivation checks before reuse from Sales. Source-review details are retained in the existing shared-analysis evidence. No invitation was generated, copied, accepted or sent, and no authentication/permission change was made.
+
