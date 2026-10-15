@@ -335,3 +335,67 @@ Complete the discussed Sales flow through selected-department handover, durable 
 The scheduled follow-up targets this bounded operational flow first. UI examples are not persisted remarks, delivered notifications, client approval or baseline-lock evidence. Inspect/develop the protected contracts and continue unaffected source/UI work while any deployment or identity gate awaits specific authorization. Android implementation remains outside this queue.
 Readiness correction checkpoint (15 October): a completed not-feasible verdict must remain a blocker, even with exact source pins; completion is not feasibility pass. The read-only composer now enforces this, with a regression test. Backend installation and operational acceptance remain pending.
 Handover replay review (15 October): the pending source now pins immutable requirement/review identities and replay source facts, then locks mutable validation rows with FOR SHARE in the documented order before returning. Disposable two-session checks use coordinated plain updates for replay-held and writer-held graph changes. Installation remains blocked: row locks do not prevent new-review phantoms or direct writers that bypass an accepted requirement-root serialization path. Required production-like direct-write/RLS and writer-path evidence remains pending; do not substitute production execution or claim the deployment accepted.
+## Source-only repository reconciliation review — 15 October 2026
+
+Status: **review candidate only**. No remote push, connected-repository setting,
+GitHub permission, database, policy/grant, live record, handover enablement, or Publish action
+occurred. The original Lovable workspace stays at private HEAD
+`7e18929246f91854c8d9a28c4fb0bb82b5eaba3d`.
+
+### Preserved histories and merge basis
+
+- Private head: `7e18929246f91854c8d9a28c4fb0bb82b5eaba3d` (`Verified policy drift guard`), parent `a8ed88b2cec0cb5b6f27acabb9c692f2070003a3`.
+- Private compatibility lineage retained unchanged: `e7e00c4`, `bd6770f`, `3bd0a3a`, `dce054f`, `d90d1e4`, `dd0e011`, `7e18929`.
+- Public main candidate: `6685732ccb28e43e3208148a333d0cee562e1718` (`Compact sales pipeline with direct analysis and team handover shortcuts`), parent `a8ed88b2cec0cb5b6f27acabb9c692f2070003a3`.
+- Exact common base: `a8ed88b2cec0cb5b6f27acabb9c692f2070003a3`.
+
+The managed workspace prohibits branch/merge operations, so no review branch or merge commit
+can be created there. An exported private-head tree was reconciled only under `/tmp` by applying
+the public commit's exact parent diff; this leaves the managed checkout and both histories intact.
+The exact public patch SHA-256 is
+`b107ad852c47131b5dbd7d6e3240f5164c30444381230798d2a108af36b085cb`.
+
+### Reconciled candidate scope
+
+The public UI source applied cleanly to the exported private tree:
+
+- `src/components/sales/EnquiriesWorkspace.tsx`
+- `src/components/sales/EnquiriesWorkspace.dom.test.tsx` (new)
+- `src/components/sales/OpportunityDetail.tsx`
+- `src/components/sales/OpportunityDetail.dom.test.tsx`
+- `src/routes/_authenticated/sales.enquiries.tsx`
+
+The public image was copied only into the disposable candidate as
+`docs/evidence/ssm-opportunity-table-20261015.png`; its extracted blob SHA-256 is
+`ff524653f21278a7da87e88d3f13172edc17ab14dd1f024bdbf012322a4121fe`.
+
+Two documentation hunks overlapped private source-only verification wording and were resolved in
+the disposable candidate by retaining the complete private documents and appending the public UI
+checkpoint verbatim:
+
+- `docs/evidence/SHARED_OPPORTUNITY_ANALYSIS_UI_2026-10-14.md`
+- this canonical plan
+
+No pending SQL file was altered. Frozen pending-source checksums remain:
+
+- `supabase/pending/20261015_requirement_feasibility_original_target_compatibility.sql` — `34713394369e38e87f0c968e47c6f3eb6a78aaf3e29527b6c867698bc62f413f`
+- `supabase/pending/20261013_sales_feasibility_handover.sql` — `a5f8b0b5fce1be565bfc6e8ea3e3c97e58020bd2d61a922f401e4aff2a3dfbab`
+
+### Disposable verification
+
+Against the reconciled temporary candidate only:
+
+- `bunx vitest run src/components/sales/EnquiriesWorkspace.dom.test.tsx src/components/sales/OpportunityDetail.dom.test.tsx src/components/sales/SharedFeasibilityAnalysis.dom.test.tsx` — exit `0`; 3 files / 13 tests passed.
+- `bunx tsgo --noEmit` — exit `0`.
+- `bun run build` — exit `0`.
+
+### Safe application after review
+
+1. Keep private `7e189292` and public `6685732` immutable.
+2. In a normal writable clone that contains both objects, create a named review branch from private `7e189292`.
+3. Merge public `6685732` with a normal two-parent merge (no reset, rebase, cherry-pick, or force update).
+4. Preserve the two documentation additions described above; do not replace the private compatibility evidence or canonical-plan checkpoint.
+5. Repeat the three checks above, then have an authorized maintainer review the merge commit and connect that merged commit to the original project. Only then should the preview be expected to render the compact table.
+
+This is source-only reconciliation guidance. It neither authorizes nor performs a push, connection change, SQL installation, policy/grant change, live data write, UI enablement, project start, or Publish.
+
