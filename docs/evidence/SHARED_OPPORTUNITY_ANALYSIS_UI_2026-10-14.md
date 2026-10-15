@@ -90,3 +90,7 @@ Original-project read-only review reported by Lovable at source HEAD 2435f5cd50a
 The exact UI-only source candidate from public commit `6685732ccb28e43e3208148a333d0cee562e1718` was applied to the original managed project through normal source edits. The applied `EnquiriesWorkspace.tsx`, its DOM test, `OpportunityDetail.tsx`, direct-entry test and Sales enquiries route wiring are byte-equivalent to that candidate. The compact table exposes direct row icons for details, shared analysis and team-handover preparation. The team-handover Send action remains disabled.
 
 This is source equivalence only, not a two-parent history reconciliation: public GitHub connection and private managed history remain separate. No remote history, connection, SQL, permissions, records, UI enablement or publishing was changed.
+
+## Multiple-team preparation preview - 15 October
+Original-project browser readback of existing OPPORTUNITY-2026-0013 now shows Team 1, numbered department/reviewer controls, Add department and the local-preparation warning from commit 4027eb1. Send remains disabled. Focused interaction tests cover adding distinct pairs, duplicate options and removal (5 detail tests passed); TypeScript and production build passed. Screenshot: ssm-multi-team-preparation-20261015.png. Browser observation verifies the rendered controls, not durable routing or notifications; no fixture or live assignment was saved.
+
