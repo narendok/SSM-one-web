@@ -96,14 +96,87 @@ it("opens the integrated shared analysis and its explicit UI example from the op
   expect(screen.queryByRole("heading", { name: "Review status" })).toBeNull();
 });
 
-it.each(["feasibility", "handover"] as const)("opens directly at the %s row shortcut", (initialView) => {
+it.each(["feasibility", "handover"] as const)(
+  "opens directly at the %s row shortcut",
+  (initialView) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <OpportunityDetail
+          initialView={initialView}
+          opportunity={opportunity}
+          specification={null}
+          requirements={[]}
+          reviews={[]}
+          departments={[]}
+          employees={[]}
+          feasibilityProvenance={{ available: false, error: "Not installed" }}
+          onViewSpecification={() => undefined}
+          onOpenChange={() => undefined}
+        />
+      </QueryClientProvider>,
+    );
+    if (initialView === "handover") {
+      expect(screen.getByRole("dialog", { name: "Send for feasibility" })).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Send for feasibility" }).hasAttribute("disabled"),
+      ).toBe(true);
+    } else {
+      expect(screen.getByRole("tab", { name: "Feasibility" }).getAttribute("aria-selected")).toBe(
+        "true",
+      );
+      expect(
+        screen.getByRole("heading", { name: "Requirements to a shared decision" }),
+      ).toBeTruthy();
+    }
+  },
+);
+
+it("prepares multiple distinct teams without enabling submission", async () => {
+  const user = userEvent.setup();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><OpportunityDetail initialView={initialView} opportunity={opportunity} specification={null} requirements={[]} reviews={[]} departments={[]} employees={[]} feasibilityProvenance={{ available: false, error: "Not installed" }} onViewSpecification={() => undefined} onOpenChange={() => undefined} /></QueryClientProvider>);
-  if (initialView === "handover") {
-    expect(screen.getByRole("dialog", { name: "Send for feasibility" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Send for feasibility" }).hasAttribute("disabled")).toBe(true);
-  } else {
-    expect(screen.getByRole("tab", { name: "Feasibility" }).getAttribute("aria-selected")).toBe("true");
-    expect(screen.getByRole("heading", { name: "Requirements to a shared decision" })).toBeTruthy();
-  }
+  render(
+    <QueryClientProvider client={client}>
+      <OpportunityDetail
+        initialView="handover"
+        opportunity={opportunity}
+        specification={null}
+        requirements={[]}
+        reviews={[]}
+        departments={[
+          { id: "hardware", name: "Hardware", code: null },
+          { id: "firmware", name: "Firmware", code: null },
+        ]}
+        employees={[
+          { user_id: "reviewer-a", display_name: "Reviewer A", official_email: null },
+          { user_id: "reviewer-b", display_name: "Reviewer B", official_email: null },
+        ]}
+        feasibilityProvenance={{ available: false, error: "Not installed" }}
+        onViewSpecification={() => undefined}
+        onOpenChange={() => undefined}
+      />
+    </QueryClientProvider>,
+  );
+  expect(
+    (screen.getByRole("button", { name: "Add department" }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  await user.selectOptions(screen.getByLabelText("Department 1"), "hardware");
+  await user.selectOptions(screen.getByLabelText("Intended reviewer 1"), "reviewer-a");
+  await user.click(screen.getByRole("button", { name: "Add department" }));
+  const secondDepartment = screen.getByLabelText("Department 2") as HTMLSelectElement;
+  expect(
+    secondDepartment.querySelector<HTMLOptionElement>('option[value="hardware"]')?.disabled,
+  ).toBe(true);
+  const secondReviewer = screen.getByLabelText("Intended reviewer 2") as HTMLSelectElement;
+  expect(
+    secondReviewer.querySelector<HTMLOptionElement>('option[value="reviewer-a"]')?.disabled,
+  ).toBe(true);
+  await user.selectOptions(secondDepartment, "firmware");
+  await user.selectOptions(secondReviewer, "reviewer-b");
+  expect(
+    (screen.getByRole("button", { name: "Send for feasibility" }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  await user.click(screen.getByRole("button", { name: "Remove team 1" }));
+  expect((screen.getByLabelText("Department 1") as HTMLSelectElement).value).toBe("firmware");
+  expect(screen.queryByLabelText("Department 2")).toBeNull();
 });

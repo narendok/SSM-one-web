@@ -439,3 +439,6 @@ Reconciliation validation: 17 focused projection/list/detail/shared-analysis tes
 
 Sync recovery completed (15 October): normal two-parent merge 81eccfd42651feef9ece0ed76647079a54671047 includes origin/lovable-sync c8e7ee8907ea5ade1d38bf754108750dfccf2f23 as an ancestor and was pushed to narendok/ssmone1 main. Original Lovable Git settings re-check displayed In sync with GitHub. Screenshot: docs/evidence/ssm-github-in-sync-20261015.png. Both histories and latest client projection are now retained; future feature implementation continues locally through GitHub under the active scheduler. No SQL deployment or live business/access mutations were performed.
 
+
+Multi-department handover preparation (15 October): opportunity handover now accepts multiple intended department/reviewer pairs, prevents duplicate selections and supports removing teams. Closing clears the local preparation. Five focused detail tests, TypeScript and production build passed. This is UI preparation only; membership verification, atomic persistence and durable notifications remain gated by the protected backend deployment. No fixture or live routing was saved. Original-preview readback follows GitHub sync.
+

@@ -259,56 +259,108 @@ function FeasibilityHandoverDialog({
   departments: Props["departments"];
   employees: Props["employees"];
 }) {
-  const [departmentId, setDepartmentId] = useState("");
-  const [reviewerUserId, setReviewerUserId] = useState("");
+  const [routing, setRouting] = useState([{ departmentId: "", reviewerUserId: "" }]);
+  useEffect(() => {
+    if (!open) setRouting([{ departmentId: "", reviewerUserId: "" }]);
+  }, [open]);
+  const updateRouting = (index: number, field: "departmentId" | "reviewerUserId", value: string) =>
+    setRouting((rows) => rows.map((row, at) => (at === index ? { ...row, [field]: value } : row)));
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] w-[calc(100%-1rem)] max-w-lg overflow-y-auto sm:w-full">
         <DialogHeader>
           <DialogTitle>Send for feasibility</DialogTitle>
           <DialogDescription>
-            Prepare a selected department and intended reviewer. Sending remains unavailable until
-            the protected handover is approved.
+            Prepare selected departments and their intended reviewers. Sending remains unavailable
+            until the protected handover is approved.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="feasibility-department">Department</Label>
-            <select
-              id="feasibility-department"
-              className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm"
-              value={departmentId}
-              onChange={(event) => setDepartmentId(event.target.value)}
-            >
-              <option value="">Choose a department</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                  {department.code ? ` · ${department.code}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="feasibility-reviewer">Intended reviewer</Label>
-            <select
-              id="feasibility-reviewer"
-              className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm"
-              value={reviewerUserId}
-              onChange={(event) => setReviewerUserId(event.target.value)}
-            >
-              <option value="">Choose an intended reviewer</option>
-              {employees.map((employee) => (
-                <option key={employee.user_id} value={employee.user_id}>
-                  {employee.display_name ?? employee.official_email ?? "Employee"}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              This list is not a membership decision. The protected action must verify active
-              department membership before it can save.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Local preparation only. Closing this form clears these selections; no team has been
+            notified.
+          </p>
+          {routing.map((row, index) => (
+            <fieldset key={index} className="space-y-3 rounded-md border p-3">
+              <legend className="px-1 text-sm font-medium">Team {index + 1}</legend>
+              <div>
+                <Label htmlFor={`feasibility-department-${index}`}>Department {index + 1}</Label>
+                <select
+                  id={`feasibility-department-${index}`}
+                  className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={row.departmentId}
+                  onChange={(event) => updateRouting(index, "departmentId", event.target.value)}
+                >
+                  <option value="">Choose a department</option>
+                  {departments.map((department) => (
+                    <option
+                      key={department.id}
+                      value={department.id}
+                      disabled={routing.some(
+                        (other, at) => at !== index && other.departmentId === department.id,
+                      )}
+                    >
+                      {department.name}
+                      {department.code ? ` · ${department.code}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor={`feasibility-reviewer-${index}`}>
+                  Intended reviewer {index + 1}
+                </Label>
+                <select
+                  id={`feasibility-reviewer-${index}`}
+                  className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={row.reviewerUserId}
+                  onChange={(event) => updateRouting(index, "reviewerUserId", event.target.value)}
+                >
+                  <option value="">Choose an intended reviewer</option>
+                  {employees.map((employee) => (
+                    <option
+                      key={employee.user_id}
+                      value={employee.user_id}
+                      disabled={routing.some(
+                        (other, at) => at !== index && other.reviewerUserId === employee.user_id,
+                      )}
+                    >
+                      {employee.display_name ?? employee.official_email ?? "Employee"}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  This list is not a membership decision. The protected action must verify active
+                  department membership before it can save.
+                </p>
+              </div>
+              {routing.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Remove team ${index + 1}`}
+                  onClick={() => setRouting((rows) => rows.filter((_, at) => at !== index))}
+                >
+                  Remove team
+                </Button>
+              )}
+            </fieldset>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={
+              routing.length >= departments.length ||
+              routing.some((row) => !row.departmentId || !row.reviewerUserId)
+            }
+            onClick={() =>
+              setRouting((rows) => [...rows, { departmentId: "", reviewerUserId: "" }])
+            }
+          >
+            Add department
+          </Button>
           <div>
             <Label htmlFor="feasibility-due">Due date</Label>
             <Input id="feasibility-due" disabled placeholder="Not available" />
