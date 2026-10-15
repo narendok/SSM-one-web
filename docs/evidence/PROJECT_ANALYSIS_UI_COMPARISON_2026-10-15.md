@@ -21,3 +21,5 @@ Combined workstream/remarks UI: browser confirmed task-cards class, visually ins
 Dependency progress trial: inline scripts parse; browser progressbar reports 25, details expansion exposes Release condition and collapses again. Screenshot compact-progress-20261015.png visually checked: four aligned arrow-linked steps, green completed, orange blocked and muted waiting, progress bar and collapsed details. Fictional UI only; no live progress or project approval implied.
 
 Collapsed department cards verified in browser: initially zero open details; opening Hardware gives one, then closes successfully. All departments show compact two-line note excerpts without selecting or expanding. Full notes replace previews when expanded. Scripts parse; screenshot compact-collapsed-20261015.png. No persistence changes.
+
+Heading polish: browser confirmed zero department cards open initially, one after summary click and closed again. Screenshot compact-headings-20261015.png visually inspected for bordered uppercase headings and compact directional chevrons. CSS-only change; backend and persistence unchanged.
