@@ -89,9 +89,21 @@ it("opens the integrated shared analysis and its explicit UI example from the op
   await user.click(screen.getByRole("button", { name: "Open shared analysis" }));
   expect(screen.getByRole("heading", { name: "Requirements to a shared decision" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Try example layout" }));
-  expect(screen.getAllByRole("heading", { name: "Department remarks" })).toHaveLength(4);
+  expect(screen.getAllByRole("heading", { name: "Client-visible highlight" })).toHaveLength(4);
   expect(screen.getByText("UI example · not saved to the portal.")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Client preview" }));
   expect(screen.queryByRole("heading", { name: "Assigned reviews" })).toBeNull();
   expect(screen.queryByRole("heading", { name: "Review status" })).toBeNull();
+});
+
+it.each(["feasibility", "handover"] as const)("opens directly at the %s row shortcut", (initialView) => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><OpportunityDetail initialView={initialView} opportunity={opportunity} specification={null} requirements={[]} reviews={[]} departments={[]} employees={[]} feasibilityProvenance={{ available: false, error: "Not installed" }} onViewSpecification={() => undefined} onOpenChange={() => undefined} /></QueryClientProvider>);
+  if (initialView === "handover") {
+    expect(screen.getByRole("dialog", { name: "Send for feasibility" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send for feasibility" }).hasAttribute("disabled")).toBe(true);
+  } else {
+    expect(screen.getByRole("tab", { name: "Feasibility" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("heading", { name: "Requirements to a shared decision" })).toBeTruthy();
+  }
 });

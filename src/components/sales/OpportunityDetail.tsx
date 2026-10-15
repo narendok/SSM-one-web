@@ -6,11 +6,29 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { saveMasterSpecification } from "@/lib/master-specifications.functions";
 import { salesFeasibilityHandoverAvailability } from "@/lib/client-requirement-intake";
-import { MASTER_SPECIFICATION_TBC, draftFromSpecificationData, masterSpecificationDraftSchema, type MasterSpecificationDraft } from "@/lib/master-specification";
-import type { CustomerRequirement, FeasibilityProvenanceState, FeasibilityReview, MasterSpecificationSummary, SalesOpportunity } from "@/lib/sales";
+import {
+  MASTER_SPECIFICATION_TBC,
+  draftFromSpecificationData,
+  masterSpecificationDraftSchema,
+  type MasterSpecificationDraft,
+} from "@/lib/master-specification";
+import type {
+  CustomerRequirement,
+  FeasibilityProvenanceState,
+  FeasibilityReview,
+  MasterSpecificationSummary,
+  SalesOpportunity,
+} from "@/lib/sales";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 type Props = {
   opportunity: SalesOpportunity | null;
+  initialView?: "overview" | "feasibility" | "handover";
   specification: MasterSpecificationSummary | null;
   requirements: CustomerRequirement[];
   reviews: FeasibilityReview[];
@@ -28,7 +47,13 @@ type Props = {
   onOpenChange: (open: boolean) => void;
 };
 
-type Version = { id: string; version_number: number; change_summary: string | null; created_at: string; specification_data: unknown };
+type Version = {
+  id: string;
+  version_number: number;
+  change_summary: string | null;
+  created_at: string;
+  specification_data: unknown;
+};
 
 const label = (value: string) => value.replaceAll("_", " ");
 const text = (value: string | null | undefined) => value?.trim() || "Not recorded";
@@ -55,29 +80,516 @@ function initialDraft(opportunity: SalesOpportunity, existing: unknown): MasterS
   };
 }
 
-function WorkspaceField({ label: fieldLabel, value }: { label: string; value: string | null | undefined }) {
-  return <div><p className="text-xs font-medium text-muted-foreground">{fieldLabel}</p><p className="mt-1 whitespace-pre-wrap text-sm">{text(value)}</p></div>;
+function WorkspaceField({
+  label: fieldLabel,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-muted-foreground">{fieldLabel}</p>
+      <p className="mt-1 whitespace-pre-wrap text-sm">{text(value)}</p>
+    </div>
+  );
 }
 
-function SpecificationEditor({ opportunity, specification, version, onSaved }: { opportunity: SalesOpportunity; specification: MasterSpecificationSummary | null; version: Version | null; onSaved: () => void }) {
+function SpecificationEditor({
+  opportunity,
+  specification,
+  version,
+  onSaved,
+}: {
+  opportunity: SalesOpportunity;
+  specification: MasterSpecificationSummary | null;
+  version: Version | null;
+  onSaved: () => void;
+}) {
   const save = useServerFn(saveMasterSpecification);
   const [saving, setSaving] = useState(false);
-  const draft = useMemo(() => initialDraft(opportunity, version?.specification_data), [opportunity, version?.specification_data]);
+  const draft = useMemo(
+    () => initialDraft(opportunity, version?.specification_data),
+    [opportunity, version?.specification_data],
+  );
   const [workstreams, setWorkstreams] = useState<string[]>(draft.workstreams);
   useEffect(() => setWorkstreams(draft.workstreams), [draft.workstreams]);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (saving) return;
+    event.preventDefault();
+    if (saving) return;
     const form = new FormData(event.currentTarget);
     try {
-      const nextDraft = masterSpecificationDraftSchema.parse({ proposedName: String(form.get("proposedName") ?? "").trim(), customerOrInternalOwner: String(form.get("customerOrInternalOwner") ?? "").trim(), industryApplication: String(form.get("industryApplication") ?? "").trim(), productFamily: String(form.get("productFamily") ?? "").trim(), developmentScope: String(form.get("developmentScope") ?? "").trim(), workstreams, requirementSummary: String(form.get("requirementSummary") ?? "").trim(), powerAndUnits: String(form.get("powerAndUnits") ?? "").trim(), interfaces: String(form.get("interfaces") ?? "").trim(), connectivityAndGnss: String(form.get("connectivityAndGnss") ?? "").trim(), environmentAndIp: String(form.get("environmentAndIp") ?? "").trim(), volumes: String(form.get("volumes") ?? "").trim(), schedule: String(form.get("schedule") ?? "").trim(), requestedStandards: String(form.get("requestedStandards") ?? "").trim(), exclusions: String(form.get("exclusions") ?? "").trim() });
-      const changeSummary = String(form.get("changeSummary") ?? "").trim(); if (!changeSummary) return toast.error("Add a short description of this revision.");
-      setSaving(true); const receipt = await save({ data: { specificationId: specification?.id ?? null, opportunityId: opportunity.id, expectedVersion: specification?.current_version ?? 0, changeSummary, draft: nextDraft } }); toast.success(`${receipt.specificationNumber} revision ${receipt.versionNumber} saved`); onSaved();
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not save the specification revision."); } finally { setSaving(false); }
+      const nextDraft = masterSpecificationDraftSchema.parse({
+        proposedName: String(form.get("proposedName") ?? "").trim(),
+        customerOrInternalOwner: String(form.get("customerOrInternalOwner") ?? "").trim(),
+        industryApplication: String(form.get("industryApplication") ?? "").trim(),
+        productFamily: String(form.get("productFamily") ?? "").trim(),
+        developmentScope: String(form.get("developmentScope") ?? "").trim(),
+        workstreams,
+        requirementSummary: String(form.get("requirementSummary") ?? "").trim(),
+        powerAndUnits: String(form.get("powerAndUnits") ?? "").trim(),
+        interfaces: String(form.get("interfaces") ?? "").trim(),
+        connectivityAndGnss: String(form.get("connectivityAndGnss") ?? "").trim(),
+        environmentAndIp: String(form.get("environmentAndIp") ?? "").trim(),
+        volumes: String(form.get("volumes") ?? "").trim(),
+        schedule: String(form.get("schedule") ?? "").trim(),
+        requestedStandards: String(form.get("requestedStandards") ?? "").trim(),
+        exclusions: String(form.get("exclusions") ?? "").trim(),
+      });
+      const changeSummary = String(form.get("changeSummary") ?? "").trim();
+      if (!changeSummary) return toast.error("Add a short description of this revision.");
+      setSaving(true);
+      const receipt = await save({
+        data: {
+          specificationId: specification?.id ?? null,
+          opportunityId: opportunity.id,
+          expectedVersion: specification?.current_version ?? 0,
+          changeSummary,
+          draft: nextDraft,
+        },
+      });
+      toast.success(`${receipt.specificationNumber} revision ${receipt.versionNumber} saved`);
+      onSaved();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not save the specification revision.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
-  return <form className="space-y-4" onSubmit={(event) => void submit(event)}><div className="grid gap-3 sm:grid-cols-2"><TextInput name="proposedName" label="Proposed name" defaultValue={draft.proposedName} /><TextInput name="customerOrInternalOwner" label="Customer / owner" defaultValue={draft.customerOrInternalOwner} /><TextInput name="industryApplication" label="Industry / application" defaultValue={draft.industryApplication} /><TextInput name="productFamily" label="Product family" defaultValue={draft.productFamily} /></div><TextAreaInput name="developmentScope" label="Development scope" defaultValue={draft.developmentScope} /><fieldset><legend className="text-sm font-medium">Engineering workstreams</legend><div className="mt-2 flex flex-wrap gap-3">{["HARDWARE", "FIRMWARE", "MECHANICAL", "TEST", "MANUFACTURING"].map((item) => <label className="flex items-center gap-2 text-sm" key={item}><input type="checkbox" checked={workstreams.includes(item)} onChange={(event) => setWorkstreams((current) => event.target.checked ? [...current, item] : current.filter((value) => value !== item))} />{label(item)}</label>)}</div></fieldset><TextAreaInput name="requirementSummary" label="Requirement summary" defaultValue={draft.requirementSummary} /><TextAreaInput name="changeSummary" label="What changed in this revision?" defaultValue="" /><Button type="submit" disabled={saving || workstreams.length === 0}>{saving ? "Saving revision…" : specification ? "Save new revision" : "Add Master Specification"}</Button></form>;
+  return (
+    <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <TextInput name="proposedName" label="Proposed name" defaultValue={draft.proposedName} />
+        <TextInput
+          name="customerOrInternalOwner"
+          label="Customer / owner"
+          defaultValue={draft.customerOrInternalOwner}
+        />
+        <TextInput
+          name="industryApplication"
+          label="Industry / application"
+          defaultValue={draft.industryApplication}
+        />
+        <TextInput name="productFamily" label="Product family" defaultValue={draft.productFamily} />
+      </div>
+      <TextAreaInput
+        name="developmentScope"
+        label="Development scope"
+        defaultValue={draft.developmentScope}
+      />
+      <fieldset>
+        <legend className="text-sm font-medium">Engineering workstreams</legend>
+        <div className="mt-2 flex flex-wrap gap-3">
+          {["HARDWARE", "FIRMWARE", "MECHANICAL", "TEST", "MANUFACTURING"].map((item) => (
+            <label className="flex items-center gap-2 text-sm" key={item}>
+              <input
+                type="checkbox"
+                checked={workstreams.includes(item)}
+                onChange={(event) =>
+                  setWorkstreams((current) =>
+                    event.target.checked
+                      ? [...current, item]
+                      : current.filter((value) => value !== item),
+                  )
+                }
+              />
+              {label(item)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <TextAreaInput
+        name="requirementSummary"
+        label="Requirement summary"
+        defaultValue={draft.requirementSummary}
+      />
+      <TextAreaInput name="changeSummary" label="What changed in this revision?" defaultValue="" />
+      <Button type="submit" disabled={saving || workstreams.length === 0}>
+        {saving
+          ? "Saving revision…"
+          : specification
+            ? "Save new revision"
+            : "Add Master Specification"}
+      </Button>
+    </form>
+  );
 }
-function TextInput({ name, label: fieldLabel, defaultValue }: { name: string; label: string; defaultValue: string }) { return <div><Label htmlFor={name}>{fieldLabel}</Label><Input id={name} name={name} defaultValue={defaultValue} maxLength={2000} required /></div>; }
-function TextAreaInput({ name, label: fieldLabel, defaultValue }: { name: string; label: string; defaultValue: string }) { return <div><Label htmlFor={name}>{fieldLabel}</Label><Textarea id={name} name={name} defaultValue={defaultValue} maxLength={12000} required /></div>; }
-function FeasibilityHandoverDialog({ open, onOpenChange, departments, employees }: { open: boolean; onOpenChange: (open: boolean) => void; departments: Props["departments"]; employees: Props["employees"] }) { const [departmentId, setDepartmentId] = useState(""); const [reviewerUserId, setReviewerUserId] = useState(""); return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[90vh] w-[calc(100%-1rem)] max-w-lg overflow-y-auto sm:w-full"><DialogHeader><DialogTitle>Send for feasibility</DialogTitle><DialogDescription>Prepare a selected department and intended reviewer. Sending remains unavailable until the protected handover is approved.</DialogDescription></DialogHeader><div className="space-y-4"><div><Label htmlFor="feasibility-department">Department</Label><select id="feasibility-department" className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="">Choose a department</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}{department.code ? ` · ${department.code}` : ""}</option>)}</select></div><div><Label htmlFor="feasibility-reviewer">Intended reviewer</Label><select id="feasibility-reviewer" className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={reviewerUserId} onChange={(event) => setReviewerUserId(event.target.value)}><option value="">Choose an intended reviewer</option>{employees.map((employee) => <option key={employee.user_id} value={employee.user_id}>{employee.display_name ?? employee.official_email ?? "Employee"}</option>)}</select><p className="mt-1 text-xs text-muted-foreground">This list is not a membership decision. The protected action must verify active department membership before it can save.</p></div><div><Label htmlFor="feasibility-due">Due date</Label><Input id="feasibility-due" disabled placeholder="Not available" /><p className="mt-1 text-xs text-muted-foreground">{salesFeasibilityHandoverAvailability.dueDateDetail}</p></div><section className="border p-3 text-sm"><p className="font-medium">Not ready to send</p><p className="mt-1 text-muted-foreground">{salesFeasibilityHandoverAvailability.detail}</p></section><DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button><Button disabled type="button" title={salesFeasibilityHandoverAvailability.reason}>Send for feasibility</Button></DialogFooter></div></DialogContent></Dialog>; }
-export function OpportunityDetail({ opportunity, specification, requirements, reviews, departments, employees, feasibilityProvenance, onViewSpecification, onOpenChange }: Props) { const queryClient = useQueryClient(); const [activeTab, setActiveTab] = useState("overview"); const [editingSpecification, setEditingSpecification] = useState(false); const [handoverOpen, setHandoverOpen] = useState(false); const version = useQuery({ queryKey: ["opportunity-specification-version", specification?.id, specification?.current_version], queryFn: async () => { const { data, error } = await (supabase as any).from("master_specification_versions").select("id,version_number,change_summary,created_at,specification_data").eq("specification_id", specification?.id).eq("version_number", specification?.current_version).single(); if (error) throw error; return data as Version; }, enabled: Boolean(specification?.id), retry: false }); const linkedRequirements = requirements.filter((item) => item.opportunity_id === opportunity?.id); const linkedReviews = reviews.filter((review) => linkedRequirements.some((requirement) => requirement.id === review.requirement_id)); useEffect(() => { setActiveTab("overview"); setEditingSpecification(false); }, [opportunity?.id]); const saveComplete = async () => { setEditingSpecification(false); await queryClient.invalidateQueries({ queryKey: ["sales_overview"] }); };
-return <><Dialog open={Boolean(opportunity)} onOpenChange={onOpenChange}><DialogContent className="max-h-[92vh] w-[calc(100%-1rem)] max-w-7xl overflow-x-hidden overflow-y-auto sm:w-full sm:max-w-7xl"><DialogHeader><DialogTitle>{opportunity?.opportunity_number ?? "Opportunity"}</DialogTitle><DialogDescription>{opportunity?.customer?.legal_name ?? "Customer not linked"} · {opportunity?.name}</DialogDescription></DialogHeader>{opportunity && <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 space-y-4"><TabsList className="h-auto max-w-full overflow-x-auto"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="customer-inputs">Customer inputs</TabsTrigger><TabsTrigger value="feasibility">Feasibility</TabsTrigger><TabsTrigger value="history">History</TabsTrigger></TabsList><TabsContent value="overview"><section className="grid gap-3 border p-3 sm:grid-cols-2"><WorkspaceField label="Customer" value={opportunity.customer?.legal_name} /><WorkspaceField label="Status" value={label(opportunity.status)} /><WorkspaceField label="Stage" value={label(opportunity.stage)} /><WorkspaceField label="Owner" value="Not assigned" /><WorkspaceField label="Next action" value={opportunity.next_action} /></section><section className="mt-4 border p-3"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-medium">Project status</h3><Button type="button" size="sm" variant="outline" onClick={() => setActiveTab("feasibility")}>Open shared analysis</Button></div><p className="mt-1 text-sm text-muted-foreground">This is a proposed opportunity, not a project. A project can only be created through the approved baseline and required-review path; a feasibility verdict alone does not convert it.</p></section></TabsContent><TabsContent value="customer-inputs"><section className="border p-3"><h3 className="font-medium">Master Specification</h3><p className="mt-1 text-sm text-muted-foreground">{specification ? `${specification.specification_number} · revision ${specification.current_version}` : "No saved specification is linked to this opportunity."}</p>{specification && <Button type="button" size="sm" className="mt-3" variant="outline" onClick={onViewSpecification}>Open source view</Button>}{editingSpecification ? <SpecificationEditor opportunity={opportunity} specification={specification} version={version.data ?? null} onSaved={() => void saveComplete()} /> : <Button type="button" className="mt-3" variant="outline" onClick={() => setEditingSpecification(true)}>{specification ? "Edit as new revision" : "Add Master Specification"}</Button>}</section></TabsContent><TabsContent value="feasibility" className="min-w-0"><SharedFeasibilityAnalysis key={opportunity.id} specification={specification} specificationData={version.data?.specification_data} sourceLoading={version.isLoading} sourceError={version.isError} reviews={linkedReviews} departments={departments} employees={employees} onOpenSource={() => setActiveTab("customer-inputs")} internalDetails={<><section className="mt-5 rounded-lg border p-3"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-medium">Assigned reviews</h3><Button type="button" size="sm" variant="outline" onClick={() => setHandoverOpen(true)}>Prepare feasibility handover</Button></div>{linkedRequirements.length === 0 ? <div className="mt-3 space-y-2"><p className="text-sm text-muted-foreground">Not sent for feasibility; no assigned team.</p><Button disabled type="button" title={salesFeasibilityHandoverAvailability.reason}>Send for feasibility</Button><p className="text-xs text-muted-foreground">{salesFeasibilityHandoverAvailability.detail}</p></div> : linkedReviews.map((review) => { const reviewer = employees.find((employee) => employee.user_id === review.reviewer_user_id); return <div key={review.id} className="mt-3 grid gap-2 border-l-2 border-primary/30 pl-3 sm:grid-cols-2"><WorkspaceField label="Department" value={review.department?.name ?? departments.find((department) => department.id === review.department_id)?.name} /><WorkspaceField label="Assigned person" value={reviewer?.display_name ?? reviewer?.official_email ?? "Not assigned"} /><WorkspaceField label="Reviewer status" value={label(review.status)} /><WorkspaceField label="Conditions" value={review.assumptions || review.risks} /></div>; })}</section><section className="mt-4 border p-3"><h3 className="font-medium">Review status</h3><p className="mt-1 text-sm text-muted-foreground">{feasibilityProvenance.available ? "Immutable feasibility source pins are available for read-only planning." : feasibilityProvenance.error ?? "Immutable feasibility source pins are not available."}</p><p className="mt-2 text-xs text-muted-foreground">Reviewer decisions are displayed only from linked review records. Baseline approval and project start remain separate controlled steps.</p></section></>} /></TabsContent><TabsContent value="history"><section className="border p-3"><h3 className="font-medium">Source and history</h3><div className="mt-3 grid gap-3 sm:grid-cols-2"><WorkspaceField label="Opportunity" value={opportunity.opportunity_number} /><WorkspaceField label="Master Specification" value={specification ? `${specification.specification_number} · rev ${specification.current_version}` : "Not linked"} /></div></section></TabsContent></Tabs>}</DialogContent></Dialog><FeasibilityHandoverDialog open={handoverOpen} onOpenChange={setHandoverOpen} departments={departments} employees={employees} /></>; }
+function TextInput({
+  name,
+  label: fieldLabel,
+  defaultValue,
+}: {
+  name: string;
+  label: string;
+  defaultValue: string;
+}) {
+  return (
+    <div>
+      <Label htmlFor={name}>{fieldLabel}</Label>
+      <Input id={name} name={name} defaultValue={defaultValue} maxLength={2000} required />
+    </div>
+  );
+}
+function TextAreaInput({
+  name,
+  label: fieldLabel,
+  defaultValue,
+}: {
+  name: string;
+  label: string;
+  defaultValue: string;
+}) {
+  return (
+    <div>
+      <Label htmlFor={name}>{fieldLabel}</Label>
+      <Textarea id={name} name={name} defaultValue={defaultValue} maxLength={12000} required />
+    </div>
+  );
+}
+function FeasibilityHandoverDialog({
+  open,
+  onOpenChange,
+  departments,
+  employees,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  departments: Props["departments"];
+  employees: Props["employees"];
+}) {
+  const [departmentId, setDepartmentId] = useState("");
+  const [reviewerUserId, setReviewerUserId] = useState("");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] w-[calc(100%-1rem)] max-w-lg overflow-y-auto sm:w-full">
+        <DialogHeader>
+          <DialogTitle>Send for feasibility</DialogTitle>
+          <DialogDescription>
+            Prepare a selected department and intended reviewer. Sending remains unavailable until
+            the protected handover is approved.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="feasibility-department">Department</Label>
+            <select
+              id="feasibility-department"
+              className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+              value={departmentId}
+              onChange={(event) => setDepartmentId(event.target.value)}
+            >
+              <option value="">Choose a department</option>
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                  {department.code ? ` · ${department.code}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="feasibility-reviewer">Intended reviewer</Label>
+            <select
+              id="feasibility-reviewer"
+              className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+              value={reviewerUserId}
+              onChange={(event) => setReviewerUserId(event.target.value)}
+            >
+              <option value="">Choose an intended reviewer</option>
+              {employees.map((employee) => (
+                <option key={employee.user_id} value={employee.user_id}>
+                  {employee.display_name ?? employee.official_email ?? "Employee"}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              This list is not a membership decision. The protected action must verify active
+              department membership before it can save.
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="feasibility-due">Due date</Label>
+            <Input id="feasibility-due" disabled placeholder="Not available" />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {salesFeasibilityHandoverAvailability.dueDateDetail}
+            </p>
+          </div>
+          <section className="border p-3 text-sm">
+            <p className="font-medium">Not ready to send</p>
+            <p className="mt-1 text-muted-foreground">
+              {salesFeasibilityHandoverAvailability.detail}
+            </p>
+          </section>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+            <Button disabled type="button" title={salesFeasibilityHandoverAvailability.reason}>
+              Send for feasibility
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+export function OpportunityDetail({
+  initialView = "overview",
+  opportunity,
+  specification,
+  requirements,
+  reviews,
+  departments,
+  employees,
+  feasibilityProvenance,
+  onViewSpecification,
+  onOpenChange,
+}: Props) {
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [editingSpecification, setEditingSpecification] = useState(false);
+  const [handoverOpen, setHandoverOpen] = useState(false);
+  const version = useQuery({
+    queryKey: [
+      "opportunity-specification-version",
+      specification?.id,
+      specification?.current_version,
+    ],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("master_specification_versions")
+        .select("id,version_number,change_summary,created_at,specification_data")
+        .eq("specification_id", specification?.id)
+        .eq("version_number", specification?.current_version)
+        .single();
+      if (error) throw error;
+      return data as Version;
+    },
+    enabled: Boolean(specification?.id),
+    retry: false,
+  });
+  const linkedRequirements = requirements.filter((item) => item.opportunity_id === opportunity?.id);
+  const linkedReviews = reviews.filter((review) =>
+    linkedRequirements.some((requirement) => requirement.id === review.requirement_id),
+  );
+  useEffect(() => {
+    setActiveTab(initialView === "overview" ? "overview" : "feasibility");
+    setHandoverOpen(Boolean(opportunity) && initialView === "handover");
+    setEditingSpecification(false);
+  }, [opportunity?.id, initialView]);
+  const saveComplete = async () => {
+    setEditingSpecification(false);
+    await queryClient.invalidateQueries({ queryKey: ["sales_overview"] });
+  };
+  return (
+    <>
+      <Dialog open={Boolean(opportunity)} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[92vh] w-[calc(100%-1rem)] max-w-7xl overflow-x-hidden overflow-y-auto sm:w-full sm:max-w-7xl">
+          <DialogHeader>
+            <DialogTitle>{opportunity?.opportunity_number ?? "Opportunity"}</DialogTitle>
+            <DialogDescription>
+              {opportunity?.customer?.legal_name ?? "Customer not linked"} · {opportunity?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {opportunity && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 space-y-4">
+              <TabsList className="h-auto max-w-full overflow-x-auto">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="customer-inputs">Customer inputs</TabsTrigger>
+                <TabsTrigger value="feasibility">Feasibility</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
+              <TabsContent value="overview">
+                <section className="grid gap-3 border p-3 sm:grid-cols-2">
+                  <WorkspaceField label="Customer" value={opportunity.customer?.legal_name} />
+                  <WorkspaceField label="Status" value={label(opportunity.status)} />
+                  <WorkspaceField label="Stage" value={label(opportunity.stage)} />
+                  <WorkspaceField label="Owner" value="Not assigned" />
+                  <WorkspaceField label="Next action" value={opportunity.next_action} />
+                </section>
+                <section className="mt-4 border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="font-medium">Project status</h3>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setActiveTab("feasibility")}
+                    >
+                      Open shared analysis
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    This is a proposed opportunity, not a project. A project can only be created
+                    through the approved baseline and required-review path; a feasibility verdict
+                    alone does not convert it.
+                  </p>
+                </section>
+              </TabsContent>
+              <TabsContent value="customer-inputs">
+                <section className="border p-3">
+                  <h3 className="font-medium">Master Specification</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {specification
+                      ? `${specification.specification_number} · revision ${specification.current_version}`
+                      : "No saved specification is linked to this opportunity."}
+                  </p>
+                  {specification && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="mt-3"
+                      variant="outline"
+                      onClick={onViewSpecification}
+                    >
+                      Open source view
+                    </Button>
+                  )}
+                  {editingSpecification ? (
+                    <SpecificationEditor
+                      opportunity={opportunity}
+                      specification={specification}
+                      version={version.data ?? null}
+                      onSaved={() => void saveComplete()}
+                    />
+                  ) : (
+                    <Button
+                      type="button"
+                      className="mt-3"
+                      variant="outline"
+                      onClick={() => setEditingSpecification(true)}
+                    >
+                      {specification ? "Edit as new revision" : "Add Master Specification"}
+                    </Button>
+                  )}
+                </section>
+              </TabsContent>
+              <TabsContent value="feasibility" className="min-w-0">
+                <SharedFeasibilityAnalysis
+                  key={opportunity.id}
+                  specification={specification}
+                  specificationData={version.data?.specification_data}
+                  sourceLoading={version.isLoading}
+                  sourceError={version.isError}
+                  reviews={linkedReviews}
+                  departments={departments}
+                  employees={employees}
+                  onOpenSource={() => setActiveTab("customer-inputs")}
+                  internalDetails={
+                    <>
+                      <section className="mt-5 rounded-lg border p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <h3 className="font-medium">Assigned reviews</h3>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setHandoverOpen(true)}
+                          >
+                            Prepare feasibility handover
+                          </Button>
+                        </div>
+                        {linkedRequirements.length === 0 ? (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                              Not sent for feasibility; no assigned team.
+                            </p>
+                            <Button
+                              disabled
+                              type="button"
+                              title={salesFeasibilityHandoverAvailability.reason}
+                            >
+                              Send for feasibility
+                            </Button>
+                            <p className="text-xs text-muted-foreground">
+                              {salesFeasibilityHandoverAvailability.detail}
+                            </p>
+                          </div>
+                        ) : (
+                          linkedReviews.map((review) => {
+                            const reviewer = employees.find(
+                              (employee) => employee.user_id === review.reviewer_user_id,
+                            );
+                            return (
+                              <div
+                                key={review.id}
+                                className="mt-3 grid gap-2 border-l-2 border-primary/30 pl-3 sm:grid-cols-2"
+                              >
+                                <WorkspaceField
+                                  label="Department"
+                                  value={
+                                    review.department?.name ??
+                                    departments.find(
+                                      (department) => department.id === review.department_id,
+                                    )?.name
+                                  }
+                                />
+                                <WorkspaceField
+                                  label="Assigned person"
+                                  value={
+                                    reviewer?.display_name ??
+                                    reviewer?.official_email ??
+                                    "Not assigned"
+                                  }
+                                />
+                                <WorkspaceField
+                                  label="Reviewer status"
+                                  value={label(review.status)}
+                                />
+                                <WorkspaceField
+                                  label="Conditions"
+                                  value={review.assumptions || review.risks}
+                                />
+                              </div>
+                            );
+                          })
+                        )}
+                      </section>
+                      <section className="mt-4 border p-3">
+                        <h3 className="font-medium">Review status</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {feasibilityProvenance.available
+                            ? "Immutable feasibility source pins are available for read-only planning."
+                            : (feasibilityProvenance.error ??
+                              "Immutable feasibility source pins are not available.")}
+                        </p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Reviewer decisions are displayed only from linked review records. Baseline
+                          approval and project start remain separate controlled steps.
+                        </p>
+                      </section>
+                    </>
+                  }
+                />
+              </TabsContent>
+              <TabsContent value="history">
+                <section className="border p-3">
+                  <h3 className="font-medium">Source and history</h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <WorkspaceField label="Opportunity" value={opportunity.opportunity_number} />
+                    <WorkspaceField
+                      label="Master Specification"
+                      value={
+                        specification
+                          ? `${specification.specification_number} · rev ${specification.current_version}`
+                          : "Not linked"
+                      }
+                    />
+                  </div>
+                </section>
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
+      <FeasibilityHandoverDialog
+        open={handoverOpen}
+        onOpenChange={setHandoverOpen}
+        departments={departments}
+        employees={employees}
+      />
+    </>
+  );
+}
