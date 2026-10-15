@@ -19,3 +19,5 @@ Removed duplicated workstream remarks; browser detail readback now contains depa
 Combined workstream/remarks UI: browser confirmed task-cards class, visually inspected bordered filter boxes and six task cards. Selected Mechanical workstream shows next action and separate internal/client notes once in the same card. Screenshot compact-combined-20261015.png. Inline scripts parse; no backend behavior changed.
 
 Dependency progress trial: inline scripts parse; browser progressbar reports 25, details expansion exposes Release condition and collapses again. Screenshot compact-progress-20261015.png visually checked: four aligned arrow-linked steps, green completed, orange blocked and muted waiting, progress bar and collapsed details. Fictional UI only; no live progress or project approval implied.
+
+Collapsed department cards verified in browser: initially zero open details; opening Hardware gives one, then closes successfully. All departments show compact two-line note excerpts without selecting or expanding. Full notes replace previews when expanded. Scripts parse; screenshot compact-collapsed-20261015.png. No persistence changes.
