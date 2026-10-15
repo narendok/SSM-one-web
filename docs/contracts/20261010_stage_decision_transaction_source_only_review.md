@@ -33,7 +33,7 @@ The following absent or unverified authority blocks an executable decision contr
 3. **Baseline/amendment applicability:** no verified predicate binds an approved requirement baseline and any applicable amendment/change record to the exact stage and expected revision.
 4. **Evidence authority:** no verified rule establishes the required evidence collection, revision freshness, ownership, or access scope; a nullable Drive node link is insufficient.
 5. **Recipient intent and deep-link authority:** no verified recipient resolver or authorized Review Handoff/View Stage route contract exists for a decision.
-6. **Durable outbox and append-only decision audit:** neither a transactional outbox nor an immutable decision/audit schema was found in deployed-source migrations. The earlier official-decision document is explicitly proposal-only (`docs/planning/20261010_project_official_decision_log_contract.md:1-5,111-121`).
+6. **Durable outbox and append-only decision audit:** neither a transactional outbox nor an immutable decision/audit schema was found in deployed-source migrations. The earlier official-decision document is explicitly proposal-only (`docs/contracts/20261010_project_official_decision_log_contract.md:1-5,111-121`).
 7. **Managed acceptance:** deployment/catalog identity, grants, RLS behavior, rollback, replay/concurrency, and non-admin acceptance remain unverified. Repository migrations alone do not prove managed deployment.
 
 ## Proposed protected transaction shape (non-executable)

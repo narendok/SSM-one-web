@@ -7,6 +7,6 @@ This is the single active documentation folder for the web portal and its backen
 - [Evidence](evidence/README.md): web verification reports and implementation checkpoints; dated claims retain their original scope.
 - Android build plan (`SSMApplication3/docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md`): separate mobile implementation/build queue in the Android project.
 
-Technical interface contracts and pending SQL remain in their established source locations; do not treat proposals as installed operations. Original source/reference data remains under planning/sources. Dated backup snapshots retain their original docs layout and are immutable.
+Technical review packages and preflights are indexed in [contracts/README.md](contracts/README.md); executable pending backend packages remain under supabase/pending. Do not treat proposals as installed operations. Original source/reference data remains under planning/sources. Dated backup snapshots retain their original docs layout and are immutable.
 
 SSMOneWeb is the full Git repository root. This docs/ folder is tracked alongside portal application code, directly synchronized by normal Git operations with GitHub/Lovable. There is no nested source checkout or separate documentation mirror. Historical backups live outside the repository in sibling SSMOneWebBackups; Android planning stays in its own repository.

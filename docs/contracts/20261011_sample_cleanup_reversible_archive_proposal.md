@@ -13,7 +13,7 @@ No supported, end-to-end archive/restore contract has been verified for the cand
 - Controlled requirements by display number only: `CUSTOMER-2026-0003` through `CUSTOMER-2026-0007`. These are `customer_requirements.requirement_number` values, not customer IDs. The inspected records are draft `testcust` items for the existing ITL Sonalika customer; the customer record is never an archive target.
 - Sales opportunities by display number only: `OPPORTUNITY-2026-0006` through `OPPORTUNITY-2026-0010`. The five inspected records have the matching synthetic title, but the number list—not title—is the selector.
 - `OPPORTUNITY-2026-0013` / `MASTER-2026-0001` revision 1 and its saved history are retained even though its name/customer resemble the synthetic candidates.
-- The exact read-only inventory is `docs/planning/20261011_sample_cleanup_inventory_read_only.sql`.
+- The exact read-only inventory is `docs/contracts/20261011_sample_cleanup_inventory_read_only.sql`.
 
 ## Read-only evidence at review time
 
