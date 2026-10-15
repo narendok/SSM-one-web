@@ -61,7 +61,7 @@ WHERE policy.polrelid IN ('public.customer_requirements'::regclass, 'public.cust
   AND policy.polname IN ('Sales users manage requirements', 'Sales users view requirements', 'Sales users manage requirement revisions', 'Sales users view requirement revisions', 'Sales users manage feasibility reviews', 'Authenticated users view feasibility reviews');
 DO $$
 BEGIN
-  IF (SELECT count(*) FROM rollback_policy_capture) <> 6 THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL rollback policy capture is incomplete'; END IF;
+  IF (SELECT count(*) FROM rollback_policy_capture) <> 3 THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL rollback policy capture is incomplete after proposal'; END IF;
   IF (SELECT count(*) FROM rollback_capture WHERE grantee IN ('authenticated', 'anon')) < 6 THEN RAISE EXCEPTION 'LOCAL_CASE_FAIL rollback grant capture is incomplete'; END IF;
 END;
 $$;
