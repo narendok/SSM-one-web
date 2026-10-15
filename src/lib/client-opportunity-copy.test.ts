@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { clientOpportunityCopyInputSchema, clientOpportunityCopyLinkAvailability, projectClientOpportunityCopy } from "./client-opportunity-copy";
+import { clientOpportunityCopyInputSchema, clientOpportunityCopyLinkAvailability, projectClientOpportunityCopy, type ClientOpportunityCopyInput } from "./client-opportunity-copy";
 
-const input = {
+const input: ClientOpportunityCopyInput = {
   opportunity: { id: "a0c80d22-1007-4a60-b8cf-9c20a6c4f1a8", opportunityNumber: "OPPORTUNITY-2026-0013", customerId: "dfd5f3f8-0caf-46cb-bf16-436a1c063650", customerName: "OEM Tracker" },
   masterRevision: {
     id: "9ce5a383-9ebf-430e-9bba-2e550c20fe3e", number: 1, specificationNumber: "MASTER-2026-0001",
