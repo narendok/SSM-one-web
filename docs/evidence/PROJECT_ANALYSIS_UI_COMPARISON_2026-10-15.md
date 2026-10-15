@@ -25,3 +25,5 @@ Collapsed department cards verified in browser: initially zero open details; ope
 Heading polish: browser confirmed zero department cards open initially, one after summary click and closed again. Screenshot compact-headings-20261015.png visually inspected for bordered uppercase headings and compact directional chevrons. CSS-only change; backend and persistence unchanged.
 
 Main-section arrows: inline scripts parse. Browser clicked all three heading buttons and read aria-expanded=false for each, then reopened all three for user review. Screenshot main-section-arrows-20261015.png captures compact collapsed sections. No persistence changes.
+
+Navigation prototype verified: requirements dialog shows R1 and separates pending input; department workspace dialog opens; Task details opens Confirm MCU peripheral mapping; asset link opens PCB-CTRL R3 x 1. Inline scripts parse. Sample-only contextual dialogs, not live navigation or accepted access. Screenshot compact-links-20261015.png.
