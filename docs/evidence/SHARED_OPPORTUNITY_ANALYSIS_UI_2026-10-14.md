@@ -56,3 +56,10 @@ Applied two bounded suggestions from Lovable's requested design review: the clie
 
 All 14 focused shared-analysis, opportunity-detail and pipeline tests passed after updating the intentional heading expectations. The existing local-only browser harness showed the actual component with two cards per row and separate audience footer headings, with no backend records accessed. Screenshot: [local compact highlights](ssm-compact-highlights-20261015.png). This is local UI evidence, not original-project browser acceptance or a working client portal.
 TypeScript no-emit and production Vite/Nitro build passed for the compact highlight layout.
+
+## Read-only start summary - 15 October 2026
+
+Added a compact internal Before project start summary above department cards: current Master identifier/revision where read, count of recorded department/person assignments, whether review notes exist without claiming condition resolution, client approval and baseline lock. The latter two remain Not verified because no accepted approval/lock read contract is supplied. Missing source remains Not linked or Source not verified. Example mode is explicit, no fake approval. Client projection excludes the entire internal summary.
+
+All 15 focused shared-analysis, opportunity-detail and pipeline tests passed, including recorded-source rendering and client exclusion. Local actual-component browser observation verified the truthful empty state and five fields: [readiness summary](ssm-readiness-summary-20261015.png). No backend reads/writes, approvals, fixtures, notification or project creation were added by this change.
+TypeScript no-emit and production Vite/Nitro build passed for the read-only start summary.

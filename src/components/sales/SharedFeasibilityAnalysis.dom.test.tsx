@@ -184,3 +184,15 @@ describe("SharedFeasibilityAnalysis", () => {
     expect(screen.queryByText("12 V / 24 V input")).toBeNull();
   });
 });
+
+it("keeps project-start readiness unverified and out of the client projection", async () => {
+  const { user } = setup();
+  const readiness = within(screen.getByRole("region", { name: "Project start readiness" }));
+  expect(readiness.getByText("Not verified for start")).toBeTruthy();
+  expect(readiness.getByText("MASTER-EXAMPLE / revision 2")).toBeTruthy();
+  expect(readiness.getByText("1 recorded assignments")).toBeTruthy();
+  expect(readiness.getByText("Review notes recorded; resolution not verified")).toBeTruthy();
+  expect(readiness.getAllByText("Not verified")).toHaveLength(2);
+  await user.click(screen.getByRole("button", { name: "Client preview" }));
+  expect(screen.queryByRole("region", { name: "Project start readiness" })).toBeNull();
+});

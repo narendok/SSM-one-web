@@ -487,6 +487,54 @@ export function SharedFeasibilityAnalysis({
         </section>
       )}
 
+      {!client && (
+        <section aria-label="Project start readiness" className="rounded-xl border bg-muted/20 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold">Before project start</h4>
+            <Badge variant="outline">{example ? "Example only" : "Not verified for start"}</Badge>
+          </div>
+          <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2 xl:grid-cols-5">
+            {[
+              [
+                "Master revision",
+                example
+                  ? "Illustrative snapshot"
+                  : sourceError || sourceLoading
+                    ? "Source not verified"
+                    : specification
+                      ? `${specification.specification_number} / revision ${specification.current_version}`
+                      : "Not linked",
+              ],
+              [
+                "Assigned reviews",
+                example
+                  ? "4 example disciplines"
+                  : `${reviews.filter((review) => review.department_id && review.reviewer_user_id).length} recorded assignments`,
+              ],
+              [
+                "Conditions",
+                example
+                  ? "Example conditions need review"
+                  : reviews.some((review) => review.assumptions?.trim() || review.risks?.trim())
+                    ? "Review notes recorded; resolution not verified"
+                    : "Resolution not verified",
+              ],
+              ["Client approval", "Not verified"],
+              ["Baseline lock", "Not verified"],
+            ].map(([name, value]) => (
+              <div key={name} className="min-w-0">
+                <dt className="font-medium text-muted-foreground">{name}</dt>
+                <dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Required reviews, resolved conditions and client approval must match the final
+            requirements revision. An authorized start needs a locked approved baseline; this
+            summary does not approve or start a project.
+          </p>
+        </section>
+      )}
       <section aria-label="Department comparison" className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
