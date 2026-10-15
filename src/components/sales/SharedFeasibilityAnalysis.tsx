@@ -519,7 +519,7 @@ export function SharedFeasibilityAnalysis({
             No client-visible highlights have been verified for this opportunity.
           </div>
         ) : (
-          <div className="grid min-w-0 items-stretch gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid min-w-0 items-stretch gap-3 md:grid-cols-2 2xl:grid-cols-4">
             {columns.map((column) => (
               <article
                 key={column.id}
@@ -625,7 +625,7 @@ export function SharedFeasibilityAnalysis({
 
                   <div className="flex items-center gap-1.5">
                     <MessageSquare className="size-3.5 text-primary" />
-                    <h6 className="text-xs font-semibold">Department remarks</h6>
+                    <h6 className="text-xs font-semibold">Client-visible highlight</h6>
                   </div>
                   <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                     {example

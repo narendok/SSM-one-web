@@ -93,7 +93,7 @@ describe("SharedFeasibilityAnalysis", () => {
     expect(screen.getByText("No assigned review records")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Try example layout" }));
     expect(screen.getByText("UI example · not saved to the portal.")).toBeTruthy();
-    expect(screen.getAllByText("Department remarks")).toHaveLength(4);
+    expect(screen.getAllByRole("heading", { name: "Client-visible highlight" })).toHaveLength(4);
     await user.click(screen.getByRole("button", { name: "Exit example" }));
     expect(screen.getByText("No assigned review records")).toBeTruthy();
     expect(screen.queryByText("Example hardware reviewer")).toBeNull();

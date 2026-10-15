@@ -49,3 +49,10 @@ Inspection found the pure read-only feasibility composer counted a source-pinned
 
 Original Lovable preview of the prior remarks commit was inspected using existing OPPORTUNITY-2026-0013: four Internal remarks headings and four Edit internal remark controls appeared in the opt-in example; Client preview excluded those internal headings while retaining Department highlights. No fixtures or live records were changed. Protected submit_sales_feasibility_handover remains source-only pending installation and caller-authenticated acceptance.
 Validation completed: 14 feasibility-planning tests, TypeScript no-emit check and production Vite/Nitro build passed. The production build was rerun after the previous run was interrupted; no business changes were made during verification.
+
+## Compact highlight layout - 15 October 2026
+
+Applied two bounded suggestions from Lovable's requested design review: the client footer heading now explicitly says Client-visible highlight, and the department grid uses two columns at normal desktop widths with four columns reserved for extra-wide screens. Internal remarks remain separately labelled and excluded from the client projection. No persistence, notifications or live approval behavior changed.
+
+All 14 focused shared-analysis, opportunity-detail and pipeline tests passed after updating the intentional heading expectations. The existing local-only browser harness showed the actual component with two cards per row and separate audience footer headings, with no backend records accessed. Screenshot: [local compact highlights](ssm-compact-highlights-20261015.png). This is local UI evidence, not original-project browser acceptance or a working client portal.
+TypeScript no-emit and production Vite/Nitro build passed for the compact highlight layout.
