@@ -49,3 +49,10 @@ Inspection found the pure read-only feasibility composer counted a source-pinned
 
 Original Lovable preview of the prior remarks commit was inspected using existing OPPORTUNITY-2026-0013: four Internal remarks headings and four Edit internal remark controls appeared in the opt-in example; Client preview excluded those internal headings while retaining Department highlights. No fixtures or live records were changed. Protected submit_sales_feasibility_handover remains source-only pending installation and caller-authenticated acceptance.
 Validation completed: 14 feasibility-planning tests, TypeScript no-emit check and production Vite/Nitro build passed. The production build was rerun after the previous run was interrupted; no business changes were made during verification.
+
+## Source-only compact-table reconciliation review — 15 October 2026
+
+The original project remains on private source HEAD `7e18929246f91854c8d9a28c4fb0bb82b5eaba3d`; public main UI commit `6685732ccb28e43e3208148a333d0cee562e1718` shares base `a8ed88b2cec0cb5b6f27acabb9c692f2070003a3`. The managed workspace cannot create a review branch or merge, so a disposable exported private-head tree received the public parent diff only. Its UI source applied cleanly; the two overlapping evidence/plan hunks were retained by preserving private source-only verification text and appending the public UI checkpoint. No public/private remote was pushed or changed.
+
+The disposable candidate passed `EnquiriesWorkspace`, direct-entry and shared-analysis DOM tests (13 tests), TypeScript and one production build. This does not alter the preview or claim a live sync. The canonical plan contains the exact preservation, checksums and safe normal-clone merge sequence.
+
