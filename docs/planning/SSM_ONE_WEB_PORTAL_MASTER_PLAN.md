@@ -351,3 +351,6 @@ User instruction (15 October 2026): keep this master plan current after each mea
 
 Client-link prerequisite review (15 October): the existing token invitation handler needs verified intended-recipient/existing-account binding and deactivation checks before reuse from Sales. Source-review details are retained in the existing shared-analysis evidence. No invitation was generated, copied, accepted or sent, and no authentication/permission change was made.
 
+
+Original-project client-link inspection (15 October, reported source 2435f5c): no opportunity-scoped copy-only resolver exists; recipient replacement, repeat acceptance and missing acceptance-time deactivation checks must be addressed before exposing invitations from Sales. Existing file/BOM links and pending intake do not satisfy this feature. Prepare a source-only resolver/projection contract first; preserve the separate specific authorization gate for access/deployment changes.
+
