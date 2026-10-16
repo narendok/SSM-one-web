@@ -34,6 +34,20 @@ try {
   & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -f $source *> $log
   if($LASTEXITCODE -ne 0){throw "Fixture failed: $file; inspect $log"}
  }
+ # Rebuild only this disposable fixture to match the handover harness schema.
+ # The intake-provenance migration imposes stronger pins than the replay-tamper cases model.
+ foreach($file in @('supabase/pending/tests/client_requirement_intake_local_fixture.sql','supabase/pending/20261013_sales_feasibility_handover.sql')){
+  & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -f (Join-Path $repoRoot $file) *> (Join-Path $work ((Split-Path $file -Leaf)+'.handover-setup.log'))
+  if($LASTEXITCODE -ne 0){throw "Handover fixture setup failed: $file"}
+ }
+ # Fixture-only grant, never applied to a managed target.
+ & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -c 'GRANT EXECUTE ON FUNCTION public.submit_sales_feasibility_handover(uuid, uuid, uuid, uuid, text, text, text, uuid[], uuid[], timestamptz, uuid) TO authenticated;' *> (Join-Path $work 'fixture-execute-grant.log')
+ if($LASTEXITCODE -ne 0){throw 'Fixture-only execution grant failed'}
+ foreach($name in @('sales_feasibility_handover_local_acceptance.sql','sales_feasibility_handover_graph_lock_local_acceptance.sql','sales_feasibility_handover_root_serialization_local_acceptance.sql')){
+  & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -f (Join-Path $PSScriptRoot $name) *> (Join-Path $work ($name+'.log'))
+  if($LASTEXITCODE -ne 0){throw "Local handover acceptance failed: $name; inspect $work"}
+ }
+ Write-Output "LOCAL_HANDOVER_SEQUENTIAL_SQL_PASS logs=$work"
  Write-Output "LOCAL_COMPATIBILITY_SQL_PASS logs=$work"
  Write-Output 'Synthetic local evidence only; no target JWT, live deployment or managed restore acceptance.'
 } finally {
@@ -43,5 +57,3 @@ try {
  if(Test-Path -LiteralPath $passwordFile){Remove-Item -LiteralPath $passwordFile}
  Write-Output "LOCAL_FIXTURE_STOPPED_OR_NOT_STARTED work=$work"
 }
-
-
