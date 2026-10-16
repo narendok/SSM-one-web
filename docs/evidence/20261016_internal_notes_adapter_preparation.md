@@ -1,0 +1,7 @@
+# Private note adapter preparation — 16 October 2026
+
+Added strict exact-source save/read schemas and caller-authenticated TanStack server entry points using context.supabase and context.userId. Deployment gate remains false before RPC invocation. No admin/service client, actor parameter from the browser, installed grant or UI edit control is introduced.
+
+Internal adapters validate the returned note's author, review, requirement revision, Master version, expected/version pair, request key and exact SQL-btrim-normalized text. Save then performs an independent own-note read and requires the same saved identity/version/body/request. Changed/concurrent or denied readback is not success and must prompt refresh/review: it does not imply that the already-issued write rolled back and must not automatically replay with a new key. A successful null read is distinguishable from denied/error reads.
+
+Thirteen focused tests passed: closed gate, strict authority exclusion, explicit clear, separate readback, mismatched author/source/request fields, concurrent later version, read denial, null record and whitespace behavior. TypeScript noEmit and production build passed. Unrelated generated routes restored. RPC transport is mocked in these adapter tests; SQL persistence/role tests are recorded separately. No browser/live feature acceptance or screenshot claimed. UI wiring, target deployment/caller acceptance and shared/client publication remain pending.

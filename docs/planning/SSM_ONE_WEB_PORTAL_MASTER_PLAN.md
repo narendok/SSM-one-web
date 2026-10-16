@@ -666,3 +666,5 @@ Internal note caller checkpoint (16 October): disposable authenticated-role exec
 Own-note readback checkpoint (16 October): pending author-only exact-source resolver passes separate local authenticated-role readback and wrong-source/unauthorized denial. Counters bind review/author/requirement revision/Master. Shared discovery/publication, UI integration and managed acceptance remain pending; no gate enabled.
 
 Private note history checkpoint (16 October): synthetic repin/clear SQL now verifies old-source denial, preserved historical notes, independent new-source version 1 and versioned explicit clear with exact latest readback. Live revision editing and portal acceptance remain gated.
+
+Private note adapter checkpoint (16 October): caller-authenticated save/read server adapters now validate exact author/source/version/request receipts and require separate matching readback. Deployment gate remains false and no UI edit enabled. Thirteen focused tests, typecheck and production build pass. Evidence: docs/evidence/20261016_internal_notes_adapter_preparation.md.
