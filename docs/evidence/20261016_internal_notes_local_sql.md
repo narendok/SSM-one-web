@@ -1,0 +1,7 @@
+# Internal notes local SQL verification — 16 October 2026
+
+Prepared an atomic, source-only private reviewer-note save transaction with retained versions, exact requirement/Master pins, current assigned-reviewer/membership checks, optimistic version conflict and actor/payload-bound request replay. Audit excludes note contents. No public/client read or execution access enabled. See pending contract for explicitly missing read/publication/delegation and target race acceptance.
+
+Fresh PostgreSQL 17.11 fixture run: C:/Users/Admin/AppData/Local/Temp/ssm-feasibility-25077d6468914e57a3b095e10a939b9c. Internal-note SQL passed: two retained versions, identical replay, stale expected-version rejection, changed replay-payload rejection, wrong source pin rejection, revoked membership rejection before replay, unauthorized actor rejection and default authenticated table/function access unavailable. Existing compatibility, handover/replay and root-contention suites passed in the same run. This proves synthetic SQL behavior under owner execution and configured helper identities, not actual non-admin JWT/RLS callers. Independent status confirms no server running and password file absent.
+
+No app integration, managed install/grants, independent shared-read resolver, notification/publication or live persistence is claimed. No UI screenshot/build needed for pending SQL-only changes. New objects and their removal/data retention require reviewed deployment/restore planning before target installation.

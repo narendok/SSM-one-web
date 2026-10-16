@@ -62,6 +62,11 @@ try {
  if($LASTEXITCODE -ne 0){throw 'Concurrent replay probe failed'}
  $holder.WaitForExit()
  if($holder.ExitCode -ne 0){throw 'Concurrent holder failed'}
+ foreach($file in @('supabase/pending/20261016_requirement_internal_notes.sql','supabase/pending/tests/requirement_internal_notes_local_acceptance.sql')){
+  & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -f (Join-Path $repoRoot $file) *> (Join-Path $work ((Split-Path $file -Leaf)+'.log'))
+  if($LASTEXITCODE -ne 0){throw "Internal note local acceptance failed: $file"}
+ }
+ Write-Output "LOCAL_INTERNAL_NOTE_SQL_PASS logs=$work"
  Write-Output "LOCAL_ROOT_CONTENTION_SQL_PASS logs=$work"
  Write-Output "LOCAL_HANDOVER_SEQUENTIAL_SQL_PASS logs=$work"
  Write-Output "LOCAL_COMPATIBILITY_SQL_PASS logs=$work"
