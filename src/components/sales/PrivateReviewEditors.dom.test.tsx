@@ -1,0 +1,32 @@
+/** @vitest-environment jsdom */
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+const mocks=vi.hoisted(()=>({readNote:vi.fn(),saveNote:vi.fn(),readDraft:vi.fn(),saveDraft:vi.fn()}));
+vi.mock("@/hooks/useAuth",()=>({useAuth:()=>({user:{id:"actor"},loading:false})}));
+vi.mock("@/lib/requirement-internal-notes",()=>({internalNoteAvailability:{available:true}}));
+vi.mock("@/lib/requirement-highlight-drafts",()=>({highlightDraftAvailability:{available:true}}));
+vi.mock("@/lib/requirement-internal-notes.functions",()=>({readOwnRequirementInternalNote:mocks.readNote,saveOwnRequirementInternalNote:mocks.saveNote}));
+vi.mock("@/lib/requirement-highlight-drafts.functions",()=>({readOwnRequirementHighlightDraft:mocks.readDraft,saveOwnRequirementHighlightDraft:mocks.saveDraft}));
+import { OwnFeasibilityNoteEditor } from "./OwnFeasibilityNoteEditor";
+import { OwnFeasibilityHighlightDraftEditor } from "./OwnFeasibilityHighlightDraftEditor";
+afterEach(cleanup);
+it("keeps internal note and highlight draft edits, versions and saves independent",async()=>{
+ const scope={reviewId:"review",sourceRevisionId:"revision",masterVersionId:"master"};
+ mocks.readNote.mockResolvedValue({id:"note",body:"Private costing",version_number:4,saved_at:"today"});
+ mocks.readDraft.mockResolvedValue({id:"draft",body:"Confirm connector",version_number:1,saved_at:"today"});
+ mocks.saveNote.mockResolvedValue({id:"note-next",body:"Updated private costing",version_number:5,saved_at:"today"});
+ mocks.saveDraft.mockResolvedValue({id:"draft-next",body:"Updated connector question",version_number:2,saved_at:"today"});
+ render(<><OwnFeasibilityNoteEditor scope={scope}/><OwnFeasibilityHighlightDraftEditor scope={scope}/></>);
+ await screen.findByText("Private costing"); await screen.findByText("Confirm connector");
+ fireEvent.click(screen.getByText("Edit my note")); fireEvent.click(screen.getByText("Edit highlight draft"));
+ fireEvent.change(screen.getByRole("textbox",{name:"Your internal note"}),{target:{value:"Updated private costing"}});
+ fireEvent.change(screen.getByRole("textbox",{name:"Your highlight draft"}),{target:{value:"Updated connector question"}});
+ fireEvent.click(screen.getByText("Save note")); await screen.findByText("Updated private costing");
+ expect((screen.getByRole("textbox",{name:"Your highlight draft"}) as HTMLTextAreaElement).value).toBe("Updated connector question");
+ expect(mocks.saveDraft).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByText("Save draft")); await screen.findByText("Updated connector question");
+ expect(mocks.saveNote).toHaveBeenCalledWith({data:{...scope,expectedVersion:4,body:"Updated private costing",requestKey:expect.any(String)}});
+ expect(mocks.saveDraft).toHaveBeenCalledWith({data:{...scope,expectedVersion:1,body:"Updated connector question",requestKey:expect.any(String)}});
+ expect(mocks.saveNote.mock.calls[0][0].data.requestKey).not.toBe(mocks.saveDraft.mock.calls[0][0].data.requestKey);
+ expect(screen.getByText("Private highlight draft · saving does not publish or notify the client")).toBeTruthy();
+});

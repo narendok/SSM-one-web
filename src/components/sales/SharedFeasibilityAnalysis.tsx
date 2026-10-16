@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { OwnFeasibilityNoteEditor } from "./OwnFeasibilityNoteEditor";
+import { OwnFeasibilityHighlightDraftEditor } from "./OwnFeasibilityHighlightDraftEditor";
 import type { InternalNoteScope } from "@/lib/requirement-internal-notes";
 
 type Department = { id: string; name: string; code: string | null };
@@ -735,6 +736,7 @@ export function SharedFeasibilityAnalysis({
                           column.highlight ??
                           "No published department remarks recorded."}
                       </p>
+                      {!example && !client && column.noteScope && <OwnFeasibilityHighlightDraftEditor scope={column.noteScope} />}
                       {example && !client && (
                         <Button
                           type="button"

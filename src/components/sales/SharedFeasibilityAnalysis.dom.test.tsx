@@ -71,6 +71,8 @@ describe("SharedFeasibilityAnalysis", () => {
     setup([{ ...review, source_revision_id: "source-revision", master_specification_version_id: "master-version" }]);
     expect(screen.getByText("Private note saving is pending protected deployment and caller acceptance.")).toBeTruthy();
     expect(screen.queryByText("Edit my note")).toBeNull();
+    expect(screen.queryByText("Edit highlight draft")).toBeNull();
+    expect(screen.getByText("Highlight draft saving is pending protected deployment and caller acceptance.")).toBeTruthy();
   });
   it("shows caller-provided records without inventing approval or client highlights", () => {
     setup();
