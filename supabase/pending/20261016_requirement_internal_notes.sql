@@ -12,7 +12,7 @@ CREATE TABLE public.requirement_internal_note_versions (
  body text NOT NULL CHECK(length(body)<=12000),
  request_key uuid NOT NULL UNIQUE,
  saved_at timestamptz NOT NULL DEFAULT now(),
- UNIQUE(review_id,author_user_id,version_number)
+ UNIQUE(review_id,author_user_id,source_revision_id,master_version_id,version_number)
 );
 ALTER TABLE public.requirement_internal_note_versions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.requirement_internal_note_versions FROM PUBLIC,anon,authenticated,service_role;
@@ -67,7 +67,7 @@ BEGIN
   RETURN to_jsonb(v_prior);
  END IF;
  SELECT coalesce(max(version_number),0) INTO v_latest FROM public.requirement_internal_note_versions
- WHERE review_id=p_review_id AND author_user_id=auth.uid();
+ WHERE review_id=p_review_id AND author_user_id=auth.uid() AND source_revision_id=p_source_revision_id AND master_version_id=p_master_version_id;
  IF v_latest<>p_expected_version THEN RAISE EXCEPTION 'Internal note changed; reload before saving'; END IF;
  INSERT INTO public.requirement_internal_note_versions(review_id,author_user_id,source_revision_id,master_version_id,version_number,expected_version,body,request_key)
  VALUES(p_review_id,auth.uid(),p_source_revision_id,p_master_version_id,v_latest+1,p_expected_version,btrim(p_body),p_request_key) RETURNING * INTO v_saved;
@@ -79,4 +79,39 @@ BEGIN
 END;
 $$;
 REVOKE ALL ON FUNCTION public.save_requirement_internal_note(uuid,uuid,uuid,integer,text,uuid) FROM PUBLIC,anon,authenticated,service_role;
+-- Narrow author read only. This is not the shared department/client resolver.
+CREATE FUNCTION public.read_own_requirement_internal_note(p_review_id uuid,p_source_revision_id uuid,p_master_version_id uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE r public.requirement_feasibility_reviews%ROWTYPE; q public.customer_requirements%ROWTYPE; n public.requirement_internal_note_versions%ROWTYPE;
+BEGIN
+ IF auth.uid() IS NULL OR NOT public.has_permission(auth.uid(),'engineering.manage') THEN RAISE EXCEPTION 'Engineering management permission is required'; END IF;
+ SELECT * INTO r FROM public.requirement_feasibility_reviews WHERE id=p_review_id;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Review unavailable'; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-requirement-root:'||r.requirement_id::text,0));
+ SELECT * INTO q FROM public.customer_requirements WHERE id=r.requirement_id FOR KEY SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Requirement unavailable'; END IF;
+ SELECT * INTO r FROM public.requirement_feasibility_reviews WHERE id=p_review_id FOR KEY SHARE;
+ IF NOT FOUND OR r.requirement_id IS DISTINCT FROM q.id THEN RAISE EXCEPTION 'Review source changed'; END IF;
+ IF r.reviewer_user_id IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'Only the assigned reviewer may read this note'; END IF;
+ PERFORM 1 FROM public.employees e JOIN public.employee_departments m ON m.employee_id=e.id
+ WHERE e.user_id=auth.uid() AND e.employment_status='ACTIVE' AND m.department_id=r.department_id FOR KEY SHARE OF e,m;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Active assigned department membership is required'; END IF;
+ PERFORM 1 FROM public.departments WHERE id=r.department_id AND is_active FOR KEY SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Review department is unavailable'; END IF;
+ IF p_source_revision_id IS DISTINCT FROM r.source_revision_id OR p_master_version_id IS DISTINCT FROM r.master_specification_version_id
+ OR r.source_revision_number IS DISTINCT FROM q.current_revision THEN RAISE EXCEPTION 'Note source revision is stale'; END IF;
+ PERFORM 1 FROM public.customer_requirement_revisions WHERE id=p_source_revision_id AND requirement_id=q.id AND revision_number=r.source_revision_number FOR KEY SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Pinned requirement revision unavailable'; END IF;
+ PERFORM 1 FROM public.master_specification_versions v JOIN public.master_specifications s ON s.id=v.specification_id
+ WHERE v.id=p_master_version_id AND v.version_number=r.master_specification_version_number
+ AND s.opportunity_id=q.opportunity_id AND s.customer_id=q.customer_id FOR KEY SHARE OF v,s;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Pinned Master revision unavailable'; END IF;
+ SELECT * INTO n FROM public.requirement_internal_note_versions
+ WHERE review_id=p_review_id AND author_user_id=auth.uid() AND source_revision_id=p_source_revision_id AND master_version_id=p_master_version_id
+ ORDER BY version_number DESC LIMIT 1;
+ IF NOT FOUND THEN RETURN NULL; END IF;
+ RETURN to_jsonb(n);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.read_own_requirement_internal_note(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
 COMMIT;

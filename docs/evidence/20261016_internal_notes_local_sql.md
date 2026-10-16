@@ -13,3 +13,9 @@ Extended runner with requirement_internal_notes_caller_rollback_local_acceptance
 Run C:/Users/Admin/AppData/Local/Temp/ssm-feasibility-ff91edc8b14f496a814f94c270c6144b passed with INTERNAL_NOTE_CALLER_ROLLBACK_PASS role=authenticated direct_read=denied audit_failure=atomic unauthorized=denied. All preceding local suites passed; server status after completion reports no server running.
 
 This advances local role/atomicity evidence beyond owner-only calls. Identity still comes from synthetic auth.uid/GUC helpers; no managed JWT, live users, target RLS/publication or production grants are accepted. No UI feature success claimed or screenshot captured.
+
+## Author-only exact-source readback
+
+Pending read_own_requirement_internal_note now rechecks current assigned reviewer, engineering permission, active membership/department and exact requirement/Master provenance under the same root before returning only that author's latest note for the requested tuple. No cross-department discovery/client access is introduced. No note returns null; no raw table access is granted. Note version counters now include source revision and Master identity so a future repin starts an independent note stream without overwriting history.
+
+Final local run: C:/Users/Admin/AppData/Local/Temp/ssm-feasibility-3c4b76dab1e041e5adabdd178ea63c49. Existing role/rollback test additionally verifies a separate resolver call equals the saved note and rejects a wrong-source read and unauthorized actor. All preceding SQL suites pass and runner reports shutdown. This remains a pending contract; no installed resolver, UI save/read or managed JWT acceptance claimed. Revision-stream reset semantics are source-reviewed but not yet covered by a multi-revision fixture case.

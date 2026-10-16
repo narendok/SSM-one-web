@@ -2,6 +2,7 @@
 \set ON_ERROR_STOP on
 BEGIN;
 GRANT USAGE ON SCHEMA public,auth TO authenticated;
+GRANT EXECUTE ON FUNCTION public.read_own_requirement_internal_note(uuid,uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.save_requirement_internal_note(uuid,uuid,uuid,integer,text,uuid) TO authenticated;
 SELECT set_config('note_test.review',review.id::text,true),set_config('note_test.revision',review.source_revision_id::text,true),set_config('note_test.master',review.master_specification_version_id::text,true)
 FROM public.requirement_feasibility_reviews review JOIN public.sales_feasibility_handover_requests receipt ON receipt.requirement_id=review.requirement_id
@@ -13,6 +14,11 @@ DECLARE saved jsonb;
 BEGIN
  IF current_user<>'authenticated' THEN RAISE EXCEPTION 'Caller role not applied'; END IF;
  saved:=public.save_requirement_internal_note(current_setting('note_test.review')::uuid,current_setting('note_test.revision')::uuid,current_setting('note_test.master')::uuid,0,'Caller-owned private note','00000000-0000-4000-8000-000000000311');
+ BEGIN
+  PERFORM public.read_own_requirement_internal_note(current_setting('note_test.review')::uuid,'00000000-0000-4000-8000-000000000081',current_setting('note_test.master')::uuid);
+  RAISE EXCEPTION 'Wrong-source read unexpectedly allowed';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Note source revision is stale' THEN RAISE; END IF; END;
+ IF public.read_own_requirement_internal_note(current_setting('note_test.review')::uuid,current_setting('note_test.revision')::uuid,current_setting('note_test.master')::uuid) IS DISTINCT FROM saved THEN RAISE EXCEPTION 'Independent readback mismatch'; END IF;
  IF saved->>'body'<>'Caller-owned private note' OR saved->>'version_number'<>'1' THEN RAISE EXCEPTION 'Caller save representation mismatch'; END IF;
  BEGIN
   PERFORM 1 FROM public.requirement_internal_note_versions;
@@ -37,6 +43,7 @@ BEGIN
  EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'LOCAL_NOTE_AUDIT_FAILPOINT' THEN RAISE; END IF; END;
  PERFORM set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000064',true);
  BEGIN
+  PERFORM public.read_own_requirement_internal_note(current_setting('note_test.review')::uuid,current_setting('note_test.revision')::uuid,current_setting('note_test.master')::uuid);
   PERFORM public.save_requirement_internal_note(current_setting('note_test.review')::uuid,current_setting('note_test.revision')::uuid,current_setting('note_test.master')::uuid,1,'Unauthorized','00000000-0000-4000-8000-000000000313');
   RAISE EXCEPTION 'Unauthorized caller unexpectedly saved';
  EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Engineering management permission is required' THEN RAISE; END IF; END;
