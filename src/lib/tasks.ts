@@ -126,13 +126,21 @@ export async function fetchOpenTaskCount(): Promise<number> {
 
 export type TaskInput = Partial<Omit<ProjectTask, "assignee" | "project">> & { title: string };
 
+/** Verify the server-returned representation, not merely an affected row identity. */
+function confirmTaskValues(saved: Record<string, unknown>, expected: Record<string, unknown>) {
+  const differs = Object.entries(expected).some(([key, value]) => value !== undefined && !Object.is(saved[key], value));
+  if (differs) throw new Error("Task values were not confirmed. Refresh and review the saved record before retrying.");
+}
 export async function createTask(input: TaskInput) {
   const { data: session, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!session.user) throw new Error("Sign in before creating a task.");
-  const { data, error } = await sb.from("project_tasks").insert({ ...input, created_by: session.user.id }).select("id").single();
+  const values = { ...input, created_by: session.user.id };
+  const fields = ["id", ...Object.keys(values).filter((key) => values[key as keyof typeof values] !== undefined)];
+  const { data, error } = await sb.from("project_tasks").insert(values).select([...new Set(fields)].join(",")).single();
   if (error) throw error;
   if (!data?.id) throw new Error("Task creation was not confirmed. Refresh before retrying.");
+  confirmTaskValues(data, values);
   return data;
 }
 
@@ -144,9 +152,10 @@ export async function updateTask(id: string, patch: Partial<ProjectTask>) {
   delete (clean as any).purchase_request;
   delete (clean as any).qms_capa;
   delete (clean as any).customer_complaint;
-  const { data, error } = await sb.from("project_tasks").update(clean).eq("id", id).select("id").maybeSingle();
+  const { data, error } = await sb.from("project_tasks").update(clean).eq("id", id).select([...new Set(["id", ...Object.keys(clean).filter((key) => clean[key as keyof typeof clean] !== undefined)])].join(",")).maybeSingle();
   if (error) throw error;
   if (data?.id !== id) throw new Error("Task update was not confirmed. Refresh and check your access before retrying.");
+  confirmTaskValues(data, clean);
   return data;
 }
 
