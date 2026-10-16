@@ -137,6 +137,6 @@ describe('TaskBoard canonical department scope', () => {
     await screen.findAllByText('Hardware scoped work');
     expect(screen.queryByText('Other department work')).toBeNull();
     expect(screen.queryByText('Unresolved department work')).toBeNull();
-    expect(fetchTasks).toHaveBeenCalledWith('project-123');
+    expect(fetchTasks).toHaveBeenCalledWith('project-123', 'department-hardware');
   });
 });

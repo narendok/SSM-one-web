@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ from: vi.fn(), getUser: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: mocks.from, auth: { getUser: mocks.getUser } } }));
-import { createTask, updateTask, fetchTaskMembers } from './tasks';
+import { createTask, updateTask, fetchTaskMembers, fetchTasks } from './tasks';
 const result = vi.fn();
 const select = vi.fn(() => ({ single: result, maybeSingle: result }));
 const eq = vi.fn(() => ({ select }));
@@ -25,5 +25,21 @@ describe('task member catalogue', () => {
  it('returns permitted member identities', async () => {
    mocks.from.mockReturnValue({ select: () => ({ eq: () => ({ order: async () => ({ data: [{ id: 'member-1', name: 'Example' }], error: null }) }) }) });
    await expect(fetchTaskMembers()).resolves.toEqual([{ id: 'member-1', name: 'Example' }]);
+ });
+});
+describe('department task reads', () => {
+ it('binds project and canonical department to the existing caller query', async () => {
+   const query: any = { order: vi.fn(), eq: vi.fn(), then: (resolve: any) => resolve({ data: [], error: null }) };
+   query.order.mockReturnValue(query); query.eq.mockReturnValue(query);
+   mocks.from.mockReturnValue({ select: () => query });
+   await expect(fetchTasks('project-1', 'department-1')).resolves.toEqual([]);
+   expect(query.eq.mock.calls).toEqual([['project_id', 'project-1'], ['department_id', 'department-1']]);
+ });
+ it('preserves common task reads without inventing a department', async () => {
+   const query: any = { order: vi.fn(), eq: vi.fn(), then: (resolve: any) => resolve({ data: [], error: null }) };
+   query.order.mockReturnValue(query); query.eq.mockReturnValue(query);
+   mocks.from.mockReturnValue({ select: () => query });
+   await fetchTasks('project-1');
+   expect(query.eq.mock.calls).toEqual([['project_id', 'project-1']]);
  });
 });

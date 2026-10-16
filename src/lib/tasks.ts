@@ -106,9 +106,10 @@ export async function fetchCanonicalDepartments(): Promise<CanonicalDepartment[]
   return (data ?? []) as CanonicalDepartment[];
 }
 
-export async function fetchTasks(projectId?: string): Promise<ProjectTask[]> {
+export async function fetchTasks(projectId?: string, departmentId?: string): Promise<ProjectTask[]> {
   let q = sb.from("project_tasks").select(SELECT).order("sort_order").order("created_at", { ascending: false });
   if (projectId) q = q.eq("project_id", projectId);
+  if (departmentId) q = q.eq("department_id", departmentId);
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as ProjectTask[];

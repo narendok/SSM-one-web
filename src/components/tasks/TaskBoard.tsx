@@ -33,8 +33,8 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
   const [dragId, setDragId] = useState<string | null>(null);
 
   const { data, error, isError, isLoading, refetch } = useQuery({
-    queryKey: ["project_tasks", projectId ?? "all"],
-    queryFn: () => fetchTasks(projectId),
+    queryKey: ["project_tasks", projectId ?? "all", departmentId ?? "all-departments"],
+    queryFn: () => departmentId ? fetchTasks(projectId, departmentId) : fetchTasks(projectId),
   });
   // Presentation scope only; backend RLS remains authoritative.
   const tasks = useMemo(() => (data ?? []).filter(task => !departmentId || task.department_id === departmentId), [data, departmentId]);
