@@ -84,6 +84,22 @@ try {
  if($LASTEXITCODE -ne 0){throw 'Concurrent note loser acceptance failed'}
  $first.WaitForExit()
  if($first.ExitCode -ne 0){throw 'Concurrent note first writer failed'}
+ $firstPath=Join-Path $PSScriptRoot 'requirement_highlight_drafts_concurrent_first.sql'
+ $first=Start-Process -FilePath (Join-Path $bin 'psql.exe') -ArgumentList ($connection+@('--dbname=ssm_feasibility_fixture','--set=ON_ERROR_STOP=1','-f',('"'+$firstPath+'"'))) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $work 'highlight-first.log') -RedirectStandardError (Join-Path $work 'highlight-first-error.log')
+ $ready=$false
+ for($attempt=0;$attempt -lt 30;$attempt++){
+  $marker=& (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture -Atqc "SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND classid=20261016 AND objid=41 AND granted"
+  if($LASTEXITCODE -ne 0){throw 'Highlight writer readiness query failed'}
+  if($marker -eq '1'){$ready=$true;break}
+  if($first.HasExited){break}
+  Start-Sleep -Milliseconds 100
+ }
+ if(-not $ready){throw 'Concurrent highlight writer readiness not observed'}
+ & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -f (Join-Path $PSScriptRoot 'requirement_highlight_drafts_concurrent_second.sql') *> (Join-Path $work 'highlight-second.log')
+ if($LASTEXITCODE -ne 0){throw 'Concurrent highlight loser acceptance failed'}
+ $first.WaitForExit()
+ if($first.ExitCode -ne 0){throw 'Concurrent highlight first writer failed'}
+ Write-Output "LOCAL_HIGHLIGHT_DRAFT_CONCURRENT_PASS logs=$work"
  Write-Output "LOCAL_INTERNAL_NOTE_CONCURRENT_PASS logs=$work"
  Write-Output "LOCAL_INTERNAL_NOTE_SQL_PASS logs=$work"
  Write-Output "LOCAL_ROOT_CONTENTION_SQL_PASS logs=$work"
