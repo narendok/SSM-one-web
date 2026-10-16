@@ -99,6 +99,22 @@ try {
  if($LASTEXITCODE -ne 0){throw 'Concurrent highlight loser acceptance failed'}
  $first.WaitForExit()
  if($first.ExitCode -ne 0){throw 'Concurrent highlight first writer failed'}
+ $firstPath=Join-Path $PSScriptRoot 'requirement_private_draft_authority_holder.sql'
+ $first=Start-Process -FilePath (Join-Path $bin 'psql.exe') -ArgumentList ($connection+@('--dbname=ssm_feasibility_fixture','--set=ON_ERROR_STOP=1','-f',('"'+$firstPath+'"'))) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $work 'authority-holder.log') -RedirectStandardError (Join-Path $work 'authority-holder-error.log')
+ $ready=$false
+ for($attempt=0;$attempt -lt 30;$attempt++){
+  $marker=& (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture -Atqc "SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND classid=20261016 AND objid=42 AND granted"
+  if($LASTEXITCODE -ne 0){throw 'Authority holder readiness query failed'}
+  if($marker -eq '1'){$ready=$true;break}
+  if($first.HasExited){break}
+  Start-Sleep -Milliseconds 100
+ }
+ if(-not $ready){throw 'Concurrent authority holder readiness not observed'}
+ & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -f (Join-Path $PSScriptRoot 'requirement_private_draft_authority_probe.sql') *> (Join-Path $work 'authority-probe.log')
+ if($LASTEXITCODE -ne 0){throw 'Concurrent authority probe acceptance failed'}
+ $first.WaitForExit()
+ if($first.ExitCode -ne 0){throw 'Concurrent authority holder failed'}
+ Write-Output "LOCAL_PRIVATE_DRAFT_AUTHORITY_LOCK_PASS logs=$work"
  Write-Output "LOCAL_HIGHLIGHT_DRAFT_CONCURRENT_PASS logs=$work"
  Write-Output "LOCAL_INTERNAL_NOTE_CONCURRENT_PASS logs=$work"
  Write-Output "LOCAL_INTERNAL_NOTE_SQL_PASS logs=$work"

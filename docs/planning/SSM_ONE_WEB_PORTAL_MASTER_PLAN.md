@@ -686,3 +686,5 @@ Highlight draft editor preparation (16 October): internal exact-source cards now
 Disposable test lifecycle checkpoint (16 October): local runner now verifies stop, removes only its own validated temporary data child by default and retains diagnostic logs (-KeepData is opt-in). Full SQL run and independent data/password absence checks pass, preventing repeat fixture growth. Existing publication/deployment/push gates unchanged.
 
 Highlight draft concurrency checkpoint (16 October): dedicated observed overlapping draft saves preserve the winner, reject the stale request and independently read back the winning version. Full local SQL suites and stopped-data cleanup pass. Publication/live authority remains gated; source stays local pending existing push approval.
+
+Private draft authority row-lock checkpoint (16 October): stronger share locks prevent overlapping employee/department deactivation and membership deletion during checked private draft operations. Observed local SQL test and prior suites pass. Capability-helper/target lock ordering and live acceptance remain pending; changes local only.

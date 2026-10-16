@@ -32,18 +32,18 @@ BEGIN
  IF NOT FOUND OR v_review.requirement_id IS DISTINCT FROM v_requirement.id THEN RAISE EXCEPTION 'Review source changed'; END IF;
  IF v_review.reviewer_user_id IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'Only the assigned reviewer may save this note'; END IF;
  PERFORM 1 FROM public.employees e JOIN public.employee_departments m ON m.employee_id=e.id
- WHERE e.user_id=auth.uid() AND e.employment_status='ACTIVE' AND m.department_id=v_review.department_id FOR KEY SHARE OF e,m;
+ WHERE e.user_id=auth.uid() AND e.employment_status='ACTIVE' AND m.department_id=v_review.department_id FOR SHARE OF e,m;
  IF NOT FOUND THEN RAISE EXCEPTION 'Active assigned department membership is required'; END IF;
- PERFORM 1 FROM public.departments WHERE id=v_review.department_id AND is_active FOR KEY SHARE;
+ PERFORM 1 FROM public.departments WHERE id=v_review.department_id AND is_active FOR SHARE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Review department is unavailable'; END IF;
  IF p_source_revision_id IS DISTINCT FROM v_review.source_revision_id OR p_master_version_id IS DISTINCT FROM v_review.master_specification_version_id
  OR v_review.source_revision_number IS DISTINCT FROM v_requirement.current_revision THEN RAISE EXCEPTION 'Note source revision is stale'; END IF;
  PERFORM 1 FROM public.customer_requirement_revisions WHERE id=p_source_revision_id AND requirement_id=v_requirement.id
- AND revision_number=v_review.source_revision_number FOR KEY SHARE;
+ AND revision_number=v_review.source_revision_number FOR SHARE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Pinned requirement revision unavailable'; END IF;
  PERFORM 1 FROM public.master_specification_versions v JOIN public.master_specifications s ON s.id=v.specification_id
  WHERE v.id=p_master_version_id AND v.version_number=v_review.master_specification_version_number
- AND s.opportunity_id=v_requirement.opportunity_id AND s.customer_id=v_requirement.customer_id FOR KEY SHARE OF v,s;
+ AND s.opportunity_id=v_requirement.opportunity_id AND s.customer_id=v_requirement.customer_id FOR SHARE OF v,s;
  IF NOT FOUND THEN RAISE EXCEPTION 'Pinned Master revision unavailable'; END IF;
  RETURN v_review;
 END;
