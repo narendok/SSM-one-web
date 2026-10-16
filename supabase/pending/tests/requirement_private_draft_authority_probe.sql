@@ -18,7 +18,15 @@ BEGIN
   DELETE FROM public.employee_departments WHERE department_id=r.department_id;
   RAISE EXCEPTION 'Membership deletion bypassed held authority';
  EXCEPTION WHEN lock_not_available THEN NULL; END;
- RAISE NOTICE 'PRIVATE_DRAFT_AUTHORITY_LOCK_PASS overlap=observed employee_status,department_active,membership_delete=blocked sqlstate=55P03';
+ BEGIN
+  UPDATE public.customer_requirement_revisions SET requirement_data='{"tampered":true}'::jsonb WHERE id=r.source_revision_id;
+  RAISE EXCEPTION 'Pinned requirement body mutation bypassed held source';
+ EXCEPTION WHEN lock_not_available THEN NULL; END;
+ BEGIN
+  UPDATE public.master_specification_versions SET specification_data='{"tampered":true}'::jsonb WHERE id=r.master_specification_version_id;
+  RAISE EXCEPTION 'Pinned Master body mutation bypassed held source';
+ EXCEPTION WHEN lock_not_available THEN NULL; END;
+ RAISE NOTICE 'PRIVATE_DRAFT_AUTHORITY_LOCK_PASS overlap=observed employee_status,department_active,membership_delete,pinned_requirement,pinned_master=blocked sqlstate=55P03';
 END;
 $probe$;
 ROLLBACK;
