@@ -40,6 +40,7 @@ type Column = {
   status: string;
   findings: string;
   conditions: string;
+  risks?: string;
   internal: string;
   highlight: string | null;
   tone: "blue" | "amber" | "green" | "violet";
@@ -166,11 +167,9 @@ export function SharedFeasibilityAnalysis({
                 ?.display_name ?? "Reviewer not recorded",
             status: readable(review.status),
             findings: recorded(review.findings),
-            conditions: recorded(review.assumptions || review.risks),
-            internal:
-              review.assumptions && review.risks
-                ? review.risks
-                : "No additional internal notes recorded.",
+            conditions: recorded(review.assumptions),
+            risks: recorded(review.risks),
+            internal: "Independent internal remarks are not available yet.",
             // Existing findings are NOT an accepted client-publication contract.
             highlight: null,
             tone: (["blue", "violet", "amber", "green"] as const)[index % 4],
@@ -596,11 +595,17 @@ export function SharedFeasibilityAnalysis({
                       </p>
                     </div>
                     <div>
-                      <p className="font-medium text-muted-foreground">Conditions / dependencies</p>
+                      <p className="font-medium text-muted-foreground">{example ? "Conditions / dependencies" : "Recorded assumptions"}</p>
                       <p className="mt-1.5 whitespace-pre-wrap break-words leading-relaxed">
                         {column.conditions}
                       </p>
                     </div>
+                    {!example && (
+                      <div>
+                        <p className="font-medium text-muted-foreground">Recorded risks</p>
+                        <p className="mt-1.5 whitespace-pre-wrap break-words leading-relaxed">{column.risks}</p>
+                      </div>
+                    )}
                   </div>
                 )}
                 <footer className="mt-auto border-t bg-primary/[0.04] p-4">

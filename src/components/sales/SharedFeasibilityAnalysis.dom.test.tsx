@@ -70,6 +70,10 @@ describe("SharedFeasibilityAnalysis", () => {
   it("shows caller-provided records without inventing approval or client highlights", () => {
     setup();
     expect(screen.getByText("Restricted technical finding")).toBeTruthy();
+    expect(screen.getByText("Recorded assumptions")).toBeTruthy();
+    expect(screen.getByText("Recorded risks")).toBeTruthy();
+    expect(screen.getByText("Independent internal remarks are not available yet.")).toBeTruthy();
+    expect(screen.getAllByText("Private supplier concern")).toHaveLength(1);
     expect(screen.getByText(/revision 2 · approval not verified/)).toBeTruthy();
     expect(screen.getByText("No published department remarks recorded.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Edit highlight" })).toBeNull();
