@@ -17,24 +17,12 @@ CREATE TABLE public.requirement_internal_note_versions (
 ALTER TABLE public.requirement_internal_note_versions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.requirement_internal_note_versions FROM PUBLIC,anon,authenticated,service_role;
 
-CREATE FUNCTION public.save_requirement_internal_note(
- p_review_id uuid,p_source_revision_id uuid,p_master_version_id uuid,
- p_expected_version integer,p_body text,p_request_key uuid
-) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE
- v_review public.requirement_feasibility_reviews%ROWTYPE;
- v_requirement public.customer_requirements%ROWTYPE;
- v_prior public.requirement_internal_note_versions%ROWTYPE;
- v_saved public.requirement_internal_note_versions%ROWTYPE;
- v_latest integer;
+-- Shared private draft authority only; does not authorize client publication.
+CREATE FUNCTION public.requirement_review_private_draft_context(p_review_id uuid,p_source_revision_id uuid,p_master_version_id uuid)
+RETURNS public.requirement_feasibility_reviews LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE v_review public.requirement_feasibility_reviews%ROWTYPE; v_requirement public.customer_requirements%ROWTYPE;
 BEGIN
- IF auth.uid() IS NULL OR NOT public.has_permission(auth.uid(),'engineering.manage') THEN
-  RAISE EXCEPTION 'Engineering management permission is required';
- END IF;
- IF p_request_key IS NULL OR p_expected_version IS NULL OR p_expected_version<0
- OR p_body IS NULL OR length(p_body)>12000 THEN RAISE EXCEPTION 'Invalid internal note request'; END IF;
- -- Same actor-request then requirement-root lock order as protected handover.
- PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text,0));
+ IF auth.uid() IS NULL OR NOT public.has_permission(auth.uid(),'engineering.manage') THEN RAISE EXCEPTION 'Engineering management permission is required'; END IF;
  SELECT * INTO v_review FROM public.requirement_feasibility_reviews WHERE id=p_review_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'Review unavailable'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-requirement-root:'||v_review.requirement_id::text,0));
@@ -57,6 +45,30 @@ BEGIN
  WHERE v.id=p_master_version_id AND v.version_number=v_review.master_specification_version_number
  AND s.opportunity_id=v_requirement.opportunity_id AND s.customer_id=v_requirement.customer_id FOR KEY SHARE OF v,s;
  IF NOT FOUND THEN RAISE EXCEPTION 'Pinned Master revision unavailable'; END IF;
+ RETURN v_review;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.requirement_review_private_draft_context(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION public.save_requirement_internal_note(
+ p_review_id uuid,p_source_revision_id uuid,p_master_version_id uuid,
+ p_expected_version integer,p_body text,p_request_key uuid
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE
+ v_review public.requirement_feasibility_reviews%ROWTYPE;
+ v_requirement public.customer_requirements%ROWTYPE;
+ v_prior public.requirement_internal_note_versions%ROWTYPE;
+ v_saved public.requirement_internal_note_versions%ROWTYPE;
+ v_latest integer;
+BEGIN
+ IF auth.uid() IS NULL OR NOT public.has_permission(auth.uid(),'engineering.manage') THEN
+  RAISE EXCEPTION 'Engineering management permission is required';
+ END IF;
+ IF p_request_key IS NULL OR p_expected_version IS NULL OR p_expected_version<0
+ OR p_body IS NULL OR length(p_body)>12000 THEN RAISE EXCEPTION 'Invalid internal note request'; END IF;
+ -- Same actor-request then requirement-root lock order as protected handover.
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_request_key::text,0));
+ SELECT * INTO v_review FROM public.requirement_review_private_draft_context(p_review_id,p_source_revision_id,p_master_version_id);
  SELECT * INTO v_prior FROM public.requirement_internal_note_versions WHERE request_key=p_request_key;
  IF FOUND THEN
   IF v_prior.author_user_id IS DISTINCT FROM auth.uid() OR v_prior.review_id IS DISTINCT FROM p_review_id
@@ -85,27 +97,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp A
 DECLARE r public.requirement_feasibility_reviews%ROWTYPE; q public.customer_requirements%ROWTYPE; n public.requirement_internal_note_versions%ROWTYPE;
 BEGIN
  IF auth.uid() IS NULL OR NOT public.has_permission(auth.uid(),'engineering.manage') THEN RAISE EXCEPTION 'Engineering management permission is required'; END IF;
- SELECT * INTO r FROM public.requirement_feasibility_reviews WHERE id=p_review_id;
- IF NOT FOUND THEN RAISE EXCEPTION 'Review unavailable'; END IF;
- PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-requirement-root:'||r.requirement_id::text,0));
- SELECT * INTO q FROM public.customer_requirements WHERE id=r.requirement_id FOR KEY SHARE;
- IF NOT FOUND THEN RAISE EXCEPTION 'Requirement unavailable'; END IF;
- SELECT * INTO r FROM public.requirement_feasibility_reviews WHERE id=p_review_id FOR KEY SHARE;
- IF NOT FOUND OR r.requirement_id IS DISTINCT FROM q.id THEN RAISE EXCEPTION 'Review source changed'; END IF;
- IF r.reviewer_user_id IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'Only the assigned reviewer may read this note'; END IF;
- PERFORM 1 FROM public.employees e JOIN public.employee_departments m ON m.employee_id=e.id
- WHERE e.user_id=auth.uid() AND e.employment_status='ACTIVE' AND m.department_id=r.department_id FOR KEY SHARE OF e,m;
- IF NOT FOUND THEN RAISE EXCEPTION 'Active assigned department membership is required'; END IF;
- PERFORM 1 FROM public.departments WHERE id=r.department_id AND is_active FOR KEY SHARE;
- IF NOT FOUND THEN RAISE EXCEPTION 'Review department is unavailable'; END IF;
- IF p_source_revision_id IS DISTINCT FROM r.source_revision_id OR p_master_version_id IS DISTINCT FROM r.master_specification_version_id
- OR r.source_revision_number IS DISTINCT FROM q.current_revision THEN RAISE EXCEPTION 'Note source revision is stale'; END IF;
- PERFORM 1 FROM public.customer_requirement_revisions WHERE id=p_source_revision_id AND requirement_id=q.id AND revision_number=r.source_revision_number FOR KEY SHARE;
- IF NOT FOUND THEN RAISE EXCEPTION 'Pinned requirement revision unavailable'; END IF;
- PERFORM 1 FROM public.master_specification_versions v JOIN public.master_specifications s ON s.id=v.specification_id
- WHERE v.id=p_master_version_id AND v.version_number=r.master_specification_version_number
- AND s.opportunity_id=q.opportunity_id AND s.customer_id=q.customer_id FOR KEY SHARE OF v,s;
- IF NOT FOUND THEN RAISE EXCEPTION 'Pinned Master revision unavailable'; END IF;
+ SELECT * INTO r FROM public.requirement_review_private_draft_context(p_review_id,p_source_revision_id,p_master_version_id);
  SELECT * INTO n FROM public.requirement_internal_note_versions
  WHERE review_id=p_review_id AND author_user_id=auth.uid() AND source_revision_id=p_source_revision_id AND master_version_id=p_master_version_id
  ORDER BY version_number DESC LIMIT 1;
