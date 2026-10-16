@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { OwnFeasibilityNoteEditor } from "./OwnFeasibilityNoteEditor";
+import type { InternalNoteScope } from "@/lib/requirement-internal-notes";
 
 type Department = { id: string; name: string; code: string | null };
 type Employee = { user_id: string; display_name: string | null; official_email: string | null };
@@ -41,6 +43,7 @@ type Column = {
   findings: string;
   conditions: string;
   risks?: string;
+  noteScope?: InternalNoteScope;
   internal: string;
   highlight: string | null;
   tone: "blue" | "amber" | "green" | "violet";
@@ -170,6 +173,7 @@ export function SharedFeasibilityAnalysis({
             conditions: recorded(review.assumptions),
             risks: recorded(review.risks),
             internal: "Independent internal remarks are not available yet.",
+            noteScope: review.source_revision_id && review.master_specification_version_id ? { reviewId: review.id, sourceRevisionId: review.source_revision_id, masterVersionId: review.master_specification_version_id } : undefined,
             // Existing findings are NOT an accepted client-publication contract.
             highlight: null,
             tone: (["blue", "violet", "amber", "green"] as const)[index % 4],
@@ -654,9 +658,11 @@ export function SharedFeasibilityAnalysis({
                         </form>
                       ) : (
                         <>
-                          <p className="mt-2.5 whitespace-pre-wrap break-words text-xs leading-relaxed">
-                            {internalRemarks[column.id] ?? column.internal}
-                          </p>
+                          {!example && column.noteScope ? <OwnFeasibilityNoteEditor scope={column.noteScope} /> : (
+                            <p className="mt-2.5 whitespace-pre-wrap break-words text-xs leading-relaxed">
+                              {internalRemarks[column.id] ?? column.internal}
+                            </p>
+                          )}
                           {example && (
                             <Button
                               type="button"

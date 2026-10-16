@@ -67,6 +67,11 @@ function setup(reviews: FeasibilityReview[] = [review], sourceError = false) {
 }
 
 describe("SharedFeasibilityAnalysis", () => {
+  it("keeps pinned review notes gated instead of exposing source-only save controls", () => {
+    setup([{ ...review, source_revision_id: "source-revision", master_specification_version_id: "master-version" }]);
+    expect(screen.getByText("Private note saving is pending protected deployment and caller acceptance.")).toBeTruthy();
+    expect(screen.queryByText("Edit my note")).toBeNull();
+  });
   it("shows caller-provided records without inventing approval or client highlights", () => {
     setup();
     expect(screen.getByText("Restricted technical finding")).toBeTruthy();

@@ -1,0 +1,9 @@
+# Gated own-note editor — 16 October 2026
+
+The actual shared feasibility department card now places an own-note editor only inside its internal view when the review has exact requirement/Master IDs. Client preview never mounts it. The production deployment gate remains false: the component displays the pending-deployment explanation and makes no read or save call. This is reviewable integration preparation, not working live persistence.
+
+Prepared behavior behind the gate: read-only initial state; deliberate Edit; exact loaded version and stable request key on Save; Cancel without mutation; private local state keyed by authenticated identity and full source tuple; stale load results ignored after unmount. Authentication identity isolates state only and never grants authority. On uncertain save/readback failure the draft remains visible and retry is disabled until explicit Reload and discard draft, avoiding blind duplicate writes. Denied reads remain errors rather than editable empty notes. Confirmed adapter readback is the only route to a successful displayed version. This author-only editor does not implement shared colleague discovery or client publication.
+
+Validation: 16 component DOM checks passed across shared view/editor, including closed-gate no-read behavior, Edit/Cancel, submitted version/scope, failed save retention/retry block, denied read and identity-state reset. Initial combined run had two existing interaction tests exceed the default five-second timeout; serial rerun with a 15-second limit passed without changing assertions. TypeScript noEmit and production Vite build passed. Build-generated unrelated route edits restored.
+
+Server operations are mocked in DOM tests; separate local SQL evidence covers persistence. No managed deployment, real non-admin session/browser acceptance or successful-feature screenshot is claimed. No new live sample data or users.
