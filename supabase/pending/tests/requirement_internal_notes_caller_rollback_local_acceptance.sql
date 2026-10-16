@@ -44,6 +44,9 @@ BEGIN
  PERFORM set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000064',true);
  BEGIN
   PERFORM public.read_own_requirement_internal_note(current_setting('note_test.review')::uuid,current_setting('note_test.revision')::uuid,current_setting('note_test.master')::uuid);
+  RAISE EXCEPTION 'Unauthorized caller unexpectedly read';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Engineering management permission is required' THEN RAISE; END IF; END;
+ BEGIN
   PERFORM public.save_requirement_internal_note(current_setting('note_test.review')::uuid,current_setting('note_test.revision')::uuid,current_setting('note_test.master')::uuid,1,'Unauthorized','00000000-0000-4000-8000-000000000313');
   RAISE EXCEPTION 'Unauthorized caller unexpectedly saved';
  EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Engineering management permission is required' THEN RAISE; END IF; END;
