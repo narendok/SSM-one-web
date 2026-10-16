@@ -1,5 +1,5 @@
 # Disposable local PostgreSQL only. No managed connection string is accepted.
-param([Parameter(Mandatory=$true)][string]$PostgresBin)
+param([Parameter(Mandatory=$true)][string]$PostgresBin,[switch]$KeepData)
 $ErrorActionPreference='Stop'
 $repoRoot=(Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $bin=(Resolve-Path -LiteralPath $PostgresBin).Path
@@ -13,6 +13,7 @@ $password=[guid]::NewGuid().ToString('N')+[guid]::NewGuid().ToString('N')
 $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0)
 $listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
 $started=$false
+$startupAttempted=$false
 $oldPassword=$env:PGPASSWORD
 $oldService=$env:PGSERVICE
 $oldOptions=$env:PGOPTIONS
@@ -21,6 +22,7 @@ try {
  $env:PGPASSWORD=$password;$env:PGSERVICE=$null;$env:PGOPTIONS=$null;$env:PGHOSTADDR='127.0.0.1'
  & (Join-Path $bin 'initdb.exe') -D $data -U ssm_fixture --encoding=UTF8 --no-locale --auth-host=scram-sha-256 --auth-local=scram-sha-256 --pwfile=$passwordFile *> (Join-Path $work 'initdb.log')
  if($LASTEXITCODE -ne 0){throw "initdb failed; inspect $work/initdb.log"}
+ $startupAttempted=$true
   $startup=Start-Process -FilePath (Join-Path $bin 'pg_ctl.exe') -ArgumentList @('-D',('"'+$data+'"'),'-l',('"'+(Join-Path $work 'server.log')+'"'),'-o',('"-h 127.0.0.1 -p '+$port+'"'),'-w','start') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $work 'startup.log') -RedirectStandardError (Join-Path $work 'startup-error.log')
  $startup.WaitForExit()
  if($startup.ExitCode -ne 0){throw "Local server startup failed; inspect $work/startup.log"}
@@ -89,9 +91,25 @@ try {
  Write-Output "LOCAL_COMPATIBILITY_SQL_PASS logs=$work"
  Write-Output 'Synthetic local evidence only; no target JWT, live deployment or managed restore acceptance.'
 } finally {
- if($started){& (Join-Path $bin 'pg_ctl.exe') -D $data -m fast -w stop *> (Join-Path $work 'shutdown.log')}
- $env:PGPASSWORD=$oldPassword;$env:PGSERVICE=$oldService;$env:PGOPTIONS=$oldOptions;$env:PGHOSTADDR=$oldHostAddress
- # Retain stopped disposable data/logs for diagnosis; no recursive deletion.
- if(Test-Path -LiteralPath $passwordFile){Remove-Item -LiteralPath $passwordFile}
- Write-Output "LOCAL_FIXTURE_STOPPED_OR_NOT_STARTED work=$work"
+ $cleanupError=$null
+ try {
+  if($startupAttempted){
+   & (Join-Path $bin 'pg_ctl.exe') -D $data -m fast -w stop *> (Join-Path $work 'shutdown.log')
+   & (Join-Path $bin 'pg_ctl.exe') -D $data status *> (Join-Path $work 'shutdown-status.log')
+   if($LASTEXITCODE -ne 3){throw "Disposable server stop was not verified; data retained at $data"}
+  }
+  if(-not $KeepData -and (Test-Path -LiteralPath $data)){
+   $tempRoot=[IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+   $resolvedWork=[IO.Path]::GetFullPath($work)
+   $resolvedData=[IO.Path]::GetFullPath($data)
+   if(-not $resolvedWork.StartsWith($tempRoot,[StringComparison]::OrdinalIgnoreCase) -or (Split-Path $resolvedWork -Leaf) -notmatch '^ssm-feasibility-[a-f0-9]{32}$' -or [IO.Path]::GetDirectoryName($resolvedData) -ne $resolvedWork -or (Split-Path $resolvedData -Leaf) -ne 'data'){throw 'Disposable data cleanup path validation failed'}
+   Remove-Item -LiteralPath $resolvedData -Recurse -Force
+  }
+ } catch {$cleanupError=$_}
+ finally {
+  $env:PGPASSWORD=$oldPassword;$env:PGSERVICE=$oldService;$env:PGOPTIONS=$oldOptions;$env:PGHOSTADDR=$oldHostAddress
+  if(Test-Path -LiteralPath $passwordFile){Remove-Item -LiteralPath $passwordFile}
+ }
+ if($cleanupError){throw $cleanupError}
+ Write-Output "LOCAL_FIXTURE_CLEANUP_VERIFIED data_retained=$([bool]$KeepData) logs=$work"
 }
