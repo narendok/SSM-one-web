@@ -664,3 +664,5 @@ Internal note persistence source checkpoint (16 October): private assigned-revie
 Internal note caller checkpoint (16 October): disposable authenticated-role execution and injected audit-failure rollback now pass; direct private-table read and unauthorized save are denied. Temporary fixture grants roll back. This is synthetic local authority evidence, not managed JWT/caller acceptance; no application gate changed.
 
 Own-note readback checkpoint (16 October): pending author-only exact-source resolver passes separate local authenticated-role readback and wrong-source/unauthorized denial. Counters bind review/author/requirement revision/Master. Shared discovery/publication, UI integration and managed acceptance remain pending; no gate enabled.
+
+Private note history checkpoint (16 October): synthetic repin/clear SQL now verifies old-source denial, preserved historical notes, independent new-source version 1 and versioned explicit clear with exact latest readback. Live revision editing and portal acceptance remain gated.
