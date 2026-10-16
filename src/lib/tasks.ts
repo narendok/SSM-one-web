@@ -75,6 +75,12 @@ export interface ProjectTask {
   customer_complaint?: { id: string; complaint_code: string; title: string; status: string } | null;
 }
 
+/** A hidden/unavailable member join does not mean the task is unassigned. */
+export function taskAssigneeLabel(task: Pick<ProjectTask, "assignee_id" | "assignee">): string {
+  if (!task.assignee_id) return "Unassigned";
+  return task.assignee?.id === task.assignee_id && task.assignee.name?.trim()
+    ? task.assignee.name : "Assigned member unavailable";
+}
 export interface TaskChecklistItem {
   id: string;
   task_id: string;

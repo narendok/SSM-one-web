@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import {
   DEPARTMENTS, TASK_PRIORITIES, TASK_STATUSES, department as findDepartment,
-  fetchTasks, statusLabel, updateTask, type ProjectTask, type TaskStatus,
+  fetchTasks, statusLabel, taskAssigneeLabel, updateTask, type ProjectTask, type TaskStatus,
 } from "@/lib/tasks";
 import { TaskDialog } from "./TaskDialog";
 import { TaskDrawer } from "./TaskDrawer";
@@ -74,7 +74,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
 
     return {
       statusCounts,
-      unassignedCount: tasks.filter((task) => !task.assignee).length,
+      unassignedCount: tasks.filter((task) => !task.assignee_id).length,
       datedTasks: datedTasks.slice(0, 3),
     };
   }, [tasks]);
@@ -207,7 +207,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1"><User className="h-3 w-3" />{t.assignee?.name ?? "Unassigned"}</span>
+                      <span className="flex items-center gap-1"><User className="h-3 w-3" />{taskAssigneeLabel(t)}</span>
                       {t.due_date && <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{t.due_date}</span>}
                       <span className={cn("ml-auto", TASK_PRIORITIES.find((p) => p.value === t.priority)?.color)}>
                         {TASK_PRIORITIES.find((p) => p.value === t.priority)?.label}
@@ -244,7 +244,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
                     <TableCell className="font-medium">{t.title}</TableCell>
                     <TableCell>{dep && <Badge variant="outline" className={dep.pill}>{dep.label}</Badge>}</TableCell>
                     <TableCell className="font-mono text-xs">{t.project?.code ?? "—"}</TableCell>
-                    <TableCell>{t.assignee?.name ?? "—"}</TableCell>
+                    <TableCell>{taskAssigneeLabel(t)}</TableCell>
                     <TableCell>{t.drive_node_id ? <span className="inline-flex items-center gap-1 text-muted-foreground"><FileText className="size-3.5" /> Linked</span> : "—"}</TableCell>
                     <TableCell className={TASK_PRIORITIES.find((p) => p.value === t.priority)?.color}>
                       {TASK_PRIORITIES.find((p) => p.value === t.priority)?.label}
@@ -341,7 +341,7 @@ function ProjectTaskSummary({
           summary.datedTasks.map((task) => (
             <div key={task.id} className="grid gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-3">
               <span className="min-w-0 truncate font-medium">{task.title}</span>
-              <span className="text-muted-foreground">{task.assignee?.name ?? "Unassigned"}</span>
+              <span className="text-muted-foreground">{taskAssigneeLabel(task)}</span>
               <span className="text-muted-foreground">Due {task.due_date}</span>
             </div>
           ))

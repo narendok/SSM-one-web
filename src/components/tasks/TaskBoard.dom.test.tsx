@@ -70,6 +70,12 @@ describe("TaskBoard route ownership", () => {
 });
 
 describe("TaskBoard task reads", () => {
+  it("does not count an inaccessible assignee join as an unassigned task", async () => {
+    renderBoard("/projects/project-123", true, () => fetchTasks.mockResolvedValue([{ ...tasks[0], assignee: null }]));
+    await screen.findByText("0 unassigned");
+    expect(screen.getAllByText("Assigned member unavailable").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Ada")).toBeNull();
+  });
   it("summarizes only visible project task statuses, assignees, and due dates", async () => {
     renderBoard("/projects/project-123", true);
 

@@ -1,3 +1,4 @@
+import { taskAssigneeLabel } from "@/lib/tasks";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -102,7 +103,7 @@ export function TaskDrawer({
             </div>
             <div className="space-y-1.5 text-sm">
               <span className="text-xs text-muted-foreground">Details</span>
-              <div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{task.assignee?.name ?? "Unassigned"}</div>
+              <div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-muted-foreground" />{taskAssigneeLabel(task)}</div>
               <div className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />{task.due_date ?? "No due date"}</div>
               <div className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 {Number(task.logged_hours ?? 0)}h logged{task.estimated_hours ? ` of ${Number(task.estimated_hours)}h` : ""}
