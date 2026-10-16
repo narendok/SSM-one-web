@@ -16,8 +16,9 @@ $started=$false
 $oldPassword=$env:PGPASSWORD
 $oldService=$env:PGSERVICE
 $oldOptions=$env:PGOPTIONS
+$oldHostAddress=$env:PGHOSTADDR
 try {
- $env:PGPASSWORD=$password;$env:PGSERVICE=$null;$env:PGOPTIONS=$null
+ $env:PGPASSWORD=$password;$env:PGSERVICE=$null;$env:PGOPTIONS=$null;$env:PGHOSTADDR='127.0.0.1'
  & (Join-Path $bin 'initdb.exe') -D $data -U ssm_fixture --encoding=UTF8 --no-locale --auth-host=scram-sha-256 --auth-local=scram-sha-256 --pwfile=$passwordFile *> (Join-Path $work 'initdb.log')
  if($LASTEXITCODE -ne 0){throw "initdb failed; inspect $work/initdb.log"}
   $startup=Start-Process -FilePath (Join-Path $bin 'pg_ctl.exe') -ArgumentList @('-D',('"'+$data+'"'),'-l',('"'+(Join-Path $work 'server.log')+'"'),'-o',('"-h 127.0.0.1 -p '+$port+'"'),'-w','start') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $work 'startup.log') -RedirectStandardError (Join-Path $work 'startup-error.log')
@@ -89,7 +90,7 @@ try {
  Write-Output 'Synthetic local evidence only; no target JWT, live deployment or managed restore acceptance.'
 } finally {
  if($started){& (Join-Path $bin 'pg_ctl.exe') -D $data -m fast -w stop *> (Join-Path $work 'shutdown.log')}
- $env:PGPASSWORD=$oldPassword;$env:PGSERVICE=$oldService;$env:PGOPTIONS=$oldOptions
+ $env:PGPASSWORD=$oldPassword;$env:PGSERVICE=$oldService;$env:PGOPTIONS=$oldOptions;$env:PGHOSTADDR=$oldHostAddress
  # Retain stopped disposable data/logs for diagnosis; no recursive deletion.
  if(Test-Path -LiteralPath $passwordFile){Remove-Item -LiteralPath $passwordFile}
  Write-Output "LOCAL_FIXTURE_STOPPED_OR_NOT_STARTED work=$work"

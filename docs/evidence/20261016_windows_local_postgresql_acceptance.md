@@ -33,3 +33,9 @@ Independent final pg_ctl status: no server running; temporary password absent. N
 Added Windows holder/probe SQL. Holder locks the exact seeded requirement root, then exposes a separate advisory readiness marker; runner observes that marker before launching the replay probe. Probe accepts only PostgreSQL `lock_not_available` (55P03) under a 500 ms lock timeout; arbitrary exceptions fail. It asserts notification and receipt counts are unchanged. Holder has a bounded statement timeout and exits normally. This verifies one real overlapping-session lock case, not full concurrency or non-admin target acceptance.
 
 Run `C:/Users/Admin/AppData/Local/Temp/ssm-feasibility-cd68260183ec4630bbd5d712742157c8`: `WINDOWS_ROOT_CONTENTION_PASS expected_sqlstate=55P03 notices_receipts_unchanged=true`. Compatibility and sequential handover suites also passed in this run. Shutdown log confirms server stopped. No production changes, UI screenshots or app build.
+
+## Inherited host-address isolation
+
+Runner explicitly pins PGHOSTADDR to 127.0.0.1 for every child libpq tool and restores the caller's prior value in finally. An inherited PGHOSTADDR can otherwise take precedence over a supplied host name; the disposable harness must never inherit a different address.
+
+Verified with an intentionally invalid inherited value (invalid-fixture-hostaddr), which cannot contact a remote server. Full local fixture suite passed at C:/Users/Admin/AppData/Local/Temp/ssm-feasibility-00df5dd824f942a0bdc143b131b4abb6 and LOCAL_HOSTADDR_ISOLATION_PASS confirmed the caller's value was restored. Parent test wrapper then restored its own original environment. No production connection, browser feature or screenshot. Latest work remains local pending the previously requested GitHub egress approval.
