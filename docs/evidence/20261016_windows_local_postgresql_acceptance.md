@@ -27,3 +27,9 @@ Actual SQL markers confirmed headers=2, revisions=2, reviews=1, notifications=1,
 An initial combined-schema attempt passed the first atomicity block but correctly failed a replay-tamper setup because intake provenance constraints reject its deliberately incomplete pin. The runner now rebuilds only its disposable schema between suites, matching the existing Linux harnesses; it does not relax the migration or acceptance assertions. Compatibility acceptance still runs first with intake constraints installed. Graph-lock/root-serialization scripts currently prepare seeds only: executing them is not concurrency acceptance. Parallel interleaving cases remain to be ported and run.
 
 Independent final pg_ctl status: no server running; temporary password absent. No live users or managed backend changes. No app build or screenshots needed for SQL harness-only work.
+
+## Deterministic two-session root contention
+
+Added Windows holder/probe SQL. Holder locks the exact seeded requirement root, then exposes a separate advisory readiness marker; runner observes that marker before launching the replay probe. Probe accepts only PostgreSQL `lock_not_available` (55P03) under a 500 ms lock timeout; arbitrary exceptions fail. It asserts notification and receipt counts are unchanged. Holder has a bounded statement timeout and exits normally. This verifies one real overlapping-session lock case, not full concurrency or non-admin target acceptance.
+
+Run `C:/Users/Admin/AppData/Local/Temp/ssm-feasibility-cd68260183ec4630bbd5d712742157c8`: `WINDOWS_ROOT_CONTENTION_PASS expected_sqlstate=55P03 notices_receipts_unchanged=true`. Compatibility and sequential handover suites also passed in this run. Shutdown log confirms server stopped. No production changes, UI screenshots or app build.

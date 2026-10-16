@@ -47,6 +47,22 @@ try {
   & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -f (Join-Path $PSScriptRoot $name) *> (Join-Path $work ($name+'.log'))
   if($LASTEXITCODE -ne 0){throw "Local handover acceptance failed: $name; inspect $work"}
  }
+ $holderPath=Join-Path $PSScriptRoot 'sales_feasibility_windows_root_holder.sql'
+ $holder=Start-Process -FilePath (Join-Path $bin 'psql.exe') -ArgumentList ($connection+@('--dbname=ssm_feasibility_fixture','--set=ON_ERROR_STOP=1','-f',('"'+$holderPath+'"'))) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $work 'root-holder.log') -RedirectStandardError (Join-Path $work 'root-holder-error.log')
+ $ready=$false
+ for($attempt=0;$attempt -lt 30;$attempt++){
+  $marker=& (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture -Atqc "SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND classid=20261016 AND objid=36 AND granted"
+  if($LASTEXITCODE -ne 0){throw 'Root readiness query failed'}
+  if($marker -eq '1'){$ready=$true;break}
+  if($holder.HasExited){break}
+  Start-Sleep -Milliseconds 100
+ }
+ if(-not $ready){throw 'Concurrent root holder readiness not observed'}
+ & (Join-Path $bin 'psql.exe') @connection --dbname=ssm_feasibility_fixture --set=ON_ERROR_STOP=1 -f (Join-Path $PSScriptRoot 'sales_feasibility_windows_root_probe.sql') *> (Join-Path $work 'root-probe.log')
+ if($LASTEXITCODE -ne 0){throw 'Concurrent replay probe failed'}
+ $holder.WaitForExit()
+ if($holder.ExitCode -ne 0){throw 'Concurrent holder failed'}
+ Write-Output "LOCAL_ROOT_CONTENTION_SQL_PASS logs=$work"
  Write-Output "LOCAL_HANDOVER_SEQUENTIAL_SQL_PASS logs=$work"
  Write-Output "LOCAL_COMPATIBILITY_SQL_PASS logs=$work"
  Write-Output 'Synthetic local evidence only; no target JWT, live deployment or managed restore acceptance.'
