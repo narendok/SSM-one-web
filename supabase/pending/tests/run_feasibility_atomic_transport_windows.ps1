@@ -1,5 +1,5 @@
 # Loopback-only disposable PostgreSQL verification; no managed connection accepted.
-param([Parameter(Mandatory=$true)][string]$PostgresBin,[switch]$DirectEditor,[switch]$PrivateDrafts,[switch]$HandoverReadback)
+param([Parameter(Mandatory=$true)][string]$PostgresBin,[switch]$DirectEditor,[switch]$PrivateDrafts,[switch]$HandoverReadback,[switch]$TruncateBoundary)
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $bin=(Resolve-Path -LiteralPath $PostgresBin).Path
@@ -72,6 +72,7 @@ try {
   Write-Output 'PRIVATE_REVIEW_DRAFT_COMBINED_LOCAL_PASS source=installed_first_bundle own_author_save_readback=true caller_denial=true replay_conflict=true audit_rollback=true publication=false'
  }
  Run-SqlFile (Join-Path $repo 'supabase/migrations/tests/20261017053400_feasibility_access_transition_local_acceptance.sql') 'access-acceptance'
+ if($TruncateBoundary){ Run-SqlFile (Join-Path $repo 'supabase/pending/tests/feasibility_truncate_boundary_local_acceptance.sql') 'truncate-boundary-acceptance'; Run-SqlFile (Join-Path $repo 'supabase/pending/tests/feasibility_truncate_restore_local_acceptance.sql') 'truncate-restore-acceptance' }
  Write-Output 'FEASIBILITY_ATOMIC_TRANSPORT_LOCAL_PASS private_stage=true corrupt_hash_denied=true missing_chunk_denied=true unchanged_after_failure=true full_install=true cleanup=true handover_access_acceptance=true'
 } finally {
  if($startupAttempted){ & (Join-Path $bin 'pg_ctl.exe') -D $data -m fast -w stop *> (Join-Path $work 'stop.log') }
