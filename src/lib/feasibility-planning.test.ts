@@ -41,3 +41,23 @@ describe("negative feasibility decision", () => {
     expect(baseline.blockers).toContain("HARDWARE feasibility is not feasible.");
   });
 });
+
+describe("all-review readiness conflicts", () => {
+  const snapshot = (status: string) => buildFeasibilityPlanningSnapshot({ review: { ...pinnedReview, status }, requirements: [requirement], revisions: [revision], masterSpecifications: [specification] });
+  const readiness = (planning: ReturnType<typeof snapshot>[], requiredDepartments = ["HARDWARE"]) => buildBaselineReadinessSnapshot({ planning, requiredDepartments, commercialStatus: "customer_authorized", customerAuthorizedAt: "2026-10-17T00:00:00Z", unresolvedConditions: [] });
+  it.each(["not_feasible", "pending", "in_review"])("does not let a feasible review hide a %s peer in either order", status => {
+    const positive = snapshot("feasible"), other = snapshot(status);
+    for (const planning of [[positive, other], [other, positive]]) {
+      expect(readiness(planning)).toMatchObject({ state: "BLOCKED", canApprove: false });
+    }
+  });
+  it("requires a nonempty verified scope instead of vacuous readiness", () => {
+    expect(readiness([], [])).toMatchObject({ state: "BLOCKED", canApprove: false, blockers: ["Required feasibility scope is unavailable."] });
+  });
+  it("retains read-only readiness when every matching review is positive", () => {
+    expect(readiness([snapshot("feasible"), snapshot("feasible")])).toMatchObject({ state: "READY", canApprove: false });
+  });
+  it("deduplicates the same blocker without dropping a distinct peer blocker", () => {
+    expect(readiness([snapshot("not_feasible"), snapshot("not_feasible"), snapshot("pending")], ["HARDWARE", "HARDWARE"]).blockers).toEqual(["HARDWARE feasibility is not feasible.", "HARDWARE feasibility is pending."]);
+  });
+});

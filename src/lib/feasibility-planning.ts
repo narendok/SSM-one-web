@@ -169,11 +169,19 @@ export function buildBaselineReadinessSnapshot(input: {
   }
 
   const blockers: string[] = [];
-  for (const department of input.requiredDepartments) {
-    const matching = input.planning.find((item) => item.applicableWorkstreams?.includes(department));
-    if (!matching) blockers.push(`${department} feasibility review is missing.`);
-    else if (!matching.canSatisfyPlanningGate) blockers.push(`${department} feasibility is ${matching.state.replaceAll("_", " ").toLowerCase()}.`);
-    else if (!matching.isTerminalVerdict) blockers.push(`${department} feasibility verdict is pending.`);
+  if (input.requiredDepartments.length === 0) {
+    blockers.push("Required feasibility scope is unavailable.");
+  }
+  for (const department of new Set(input.requiredDepartments)) {
+    const matching = input.planning.filter((item) => item.applicableWorkstreams?.includes(department));
+    if (matching.length === 0) blockers.push(`${department} feasibility review is missing.`);
+    // Every selected review matters; a positive review must not mask a conflict or pending peer.
+    for (const review of matching) {
+      const blocker = !review.canSatisfyPlanningGate
+        ? `${department} feasibility is ${review.state.replaceAll("_", " ").toLowerCase()}.`
+        : !review.isTerminalVerdict ? `${department} feasibility verdict is pending.` : null;
+      if (blocker && !blockers.includes(blocker)) blockers.push(blocker);
+    }
   }
   if (input.commercialStatus !== "customer_authorized" || !input.customerAuthorizedAt) {
     blockers.push("Customer commercial authorization is missing.");
