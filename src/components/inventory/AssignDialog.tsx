@@ -50,6 +50,47 @@ export function AssignDialog({ open, onOpenChange, components, onSaved }: Props)
 
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
 
+  const { data: projectTeam = [] } = useQuery({
+    queryKey: ["project_team_members", projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("project_team_members")
+        .select("id, employee_id, project_role, discipline, employee:employees(id, display_name, official_email)")
+        .eq("project_id", projectId);
+      if (error) return [];
+      return (data ?? []) as any[];
+    },
+  });
+
+  const partIds = useMemo(() => lines.map((l) => l.part.id), [lines]);
+  const { data: heldLotsMap = new Map<string, number>() } = useQuery({
+    queryKey: ["assign_held_lots", partIds.sort().join(",")],
+    enabled: partIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("inventory_lots")
+        .select("component_id, location_id, quality_status, quantity_available")
+        .in("component_id", partIds)
+        .in("quality_status", ["HOLD", "REJECTED", "QUARANTINED"]);
+      if (error) return new Map();
+      const map = new Map<string, number>();
+      for (const item of (data ?? [])) {
+        const key = `${item.component_id}::${item.location_id ?? "none"}`;
+        map.set(key, (map.get(key) ?? 0) + Number(item.quantity_available ?? 0));
+      }
+      return map;
+    },
+  });
+
+  const eligibleMembers = useMemo(() => {
+    if (!projectId || projectTeam.length === 0) return members;
+    const teamEmails = new Set(projectTeam.map((pt: any) => pt.employee?.official_email?.toLowerCase()).filter(Boolean));
+    const teamNames = new Set(projectTeam.map((pt: any) => pt.employee?.display_name?.toLowerCase()).filter(Boolean));
+    const matched = members.filter((m) => teamEmails.has(m.email.toLowerCase()) || teamNames.has(m.name.toLowerCase()));
+    return matched.length > 0 ? matched : members;
+  }, [members, projectId, projectTeam]);
+
   const { data: allParts = [] } = useQuery({
     queryKey: ["assignable_parts"],
     queryFn: async () => {
@@ -89,7 +130,14 @@ export function AssignDialog({ open, onOpenChange, components, onSaved }: Props)
     for (const l of lines) {
       const loc = l.part.locations.find((x) => x.id === l.locationId);
       if (!loc) return toast.error(`Choose a location for ${l.part.name}`);
-      if (l.qty <= 0 || l.qty > loc.quantity) return toast.error(`${l.part.name}: quantity must be 1–${loc.quantity}`);
+      const heldQty = heldLotsMap.get(`${l.part.id}::${l.locationId}`) ?? 0;
+      const releasedQty = Math.max(0, loc.quantity - heldQty);
+      if (l.qty <= 0) return toast.error(`${l.part.name}: quantity must be at least 1`);
+      if (l.qty > releasedQty) {
+        return toast.error(
+          `${l.part.name}: only ${releasedQty} pcs are released for issue at this location (${heldQty} pcs on QC hold).`
+        );
+      }
     }
 
     setSaving(true);
@@ -122,31 +170,49 @@ export function AssignDialog({ open, onOpenChange, components, onSaved }: Props)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Assign to R&amp;D</DialogTitle>
+          <DialogTitle>Controlled Material Issue</DialogTitle>
           <DialogDescription>
-            Everything here goes out together as one bundle with a shared ID. They can be returned item by item or all at once.
+            Issue parts or wire harnesses to an active project team member from verified released stock.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs">Assignee</Label>
-              <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger><SelectValue placeholder="Choose team member" /></SelectTrigger>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Linked Project</Label>
+                <span className="text-[10px] text-muted-foreground">Scope authority</span>
+              </div>
+              <Select value={projectId} onValueChange={(pId) => { setProjectId(pId); setAssigneeId(""); }}>
+                <SelectTrigger><SelectValue placeholder="Choose project" /></SelectTrigger>
                 <SelectContent>
-                  {members.length === 0 && <div className="p-2 text-xs text-muted-foreground">No active R&amp;D members yet.</div>}
-                  {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} {m.role ? `— ${m.role}` : ""}</SelectItem>)}
+                  {projects.length === 0 && <div className="p-2 text-xs text-muted-foreground">No active projects found.</div>}
+                  {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.code} — {p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Project</Label>
-              <Select value={projectId} onValueChange={setProjectId}>
-                <SelectTrigger><SelectValue placeholder="Choose project (optional)" /></SelectTrigger>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Project-Team Recipient</Label>
+                {projectId && projectTeam.length > 0 && (
+                  <span className="text-[10px] text-primary font-medium">{eligibleMembers.length} authorized</span>
+                )}
+              </div>
+              <Select value={assigneeId} onValueChange={setAssigneeId}>
+                <SelectTrigger><SelectValue placeholder={projectId ? "Choose eligible team member" : "Select project first"} /></SelectTrigger>
                 <SelectContent>
-                  {projects.length === 0 && <div className="p-2 text-xs text-muted-foreground">Create projects in Settings → Projects.</div>}
-                  {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — {p.code}</SelectItem>)}
+                  {eligibleMembers.length === 0 && <div className="p-2 text-xs text-muted-foreground">No active team members for this project.</div>}
+                  {eligibleMembers.map((m) => {
+                    const teamEntry = projectTeam.find((pt: any) =>
+                      pt.employee?.official_email?.toLowerCase() === m.email.toLowerCase() ||
+                      pt.employee?.display_name?.toLowerCase() === m.name.toLowerCase()
+                    );
+                    return (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name} {teamEntry?.project_role ? `— ${teamEntry.project_role}` : m.role ? `— ${m.role}` : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

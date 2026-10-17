@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Package, Repeat2, AlertTriangle, XCircle, CheckCircle2, ArrowUpDown, Box, Factory, FolderTree, MapPin, FolderKanban, Activity, X } from "lucide-react";
+import { Plus, Search, Package, Repeat2, AlertTriangle, XCircle, CheckCircle2, ArrowUpDown, Box, Factory, FolderTree, MapPin, FolderKanban, Activity, X, Layers, Cpu, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card } from "@/components/ui/card";
-import type { Category, Component, Location } from "@/lib/inventory";
-import { stockStatus } from "@/lib/inventory";
+import type { Category, Component, Location, InventoryDiscipline } from "@/lib/inventory";
+import { stockStatus, getComponentDisciplineTags } from "@/lib/inventory";
 import { fetchProjects, fetchAllComponentProjectMap, type Project } from "@/lib/projects";
 import { fetchAllSubstituteMap, type SubstituteRef } from "@/lib/substitutes";
 import { shareRows } from "@/lib/bom-share";
@@ -46,6 +46,8 @@ export function InventoryView({ categorySlug, title, subtitle }: Props) {
   const [catFilter, setCatFilter] = useState<string>("all");
   const [locFilter, setLocFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [disciplineFilter, setDisciplineFilter] = useState<InventoryDiscipline>("all");
+  const [stockReleaseFilter, setStockReleaseFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("name");
   const [editing, setEditing] = useState<Row | null>(null);
@@ -114,6 +116,25 @@ export function InventoryView({ categorySlug, title, subtitle }: Props) {
     queryFn: fetchAllSubstituteMap,
   });
 
+  const { data: lotStockMap = new Map<string, { released: number; held: number; rejected: number }>() } = useQuery({
+    queryKey: ["inventory_lots_summary"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("inventory_lots").select("component_id, quality_status, quantity_available");
+      if (error) return new Map();
+      const map = new Map<string, { released: number; held: number; rejected: number }>();
+      for (const item of (data ?? [])) {
+        if (!item.component_id) continue;
+        const curr = map.get(item.component_id) ?? { released: 0, held: 0, rejected: 0 };
+        const qty = Number(item.quantity_available ?? 0);
+        if (item.quality_status === "HOLD") curr.held += qty;
+        else if (item.quality_status === "REJECTED" || item.quality_status === "QUARANTINED") curr.rejected += qty;
+        else curr.released += qty;
+        map.set(item.component_id, curr);
+      }
+      return map;
+    },
+  });
+
   const categoryGroups = useMemo(() => {
     const parents = allCategories.filter((c) => !c.parent_id);
     return parents
@@ -160,6 +181,27 @@ export function InventoryView({ categorySlug, title, subtitle }: Props) {
           const ps = projectMap.get(r.id) ?? [];
           if (!ps.some((p) => p.id === projectFilter)) return false;
         }
+
+        // Discipline / Department cross-tag filter
+        if (disciplineFilter !== "all") {
+          const tags = getComponentDisciplineTags(r, r.category);
+          if (disciplineFilter === "electronics" && !tags.includes("Electrical")) return false;
+          if (disciplineFilter === "mechanical" && !tags.includes("Mechanical")) return false;
+          if (disciplineFilter === "wire_harness" && (!tags.includes("Electrical") || !tags.includes("Mechanical"))) return false;
+          if (disciplineFilter === "production_tools" && !tags.includes("Production")) return false;
+        }
+
+        // Stock Release State filter
+        if (stockReleaseFilter !== "all") {
+          const lotInfo = lotStockMap.get(r.id);
+          const held = lotInfo?.held ?? 0;
+          const rejected = lotInfo?.rejected ?? 0;
+          const released = lotInfo?.released ?? (held === 0 ? r.total_quantity : Math.max(0, r.total_quantity - held));
+          if (stockReleaseFilter === "released_only" && released <= 0) return false;
+          if (stockReleaseFilter === "quality_hold" && held <= 0) return false;
+          if (stockReleaseFilter === "quarantined" && rejected <= 0) return false;
+        }
+
         const status = stockStatus(r.total_quantity, r.low_stock_threshold);
         if (statusFilter === "needs_review") {
           if (!r.needs_review) return false;
@@ -181,7 +223,7 @@ export function InventoryView({ categorySlug, title, subtitle }: Props) {
         if (sortBy === "manufacturer") return (a.manufacturer ?? "").localeCompare(b.manufacturer ?? "");
         return a.name.localeCompare(b.name);
       });
-  }, [rows, pkgFilter, mfrFilter, catFilter, locFilter, projectFilter, statusFilter, search, sortBy, allCategories, projectMap]);
+  }, [rows, pkgFilter, mfrFilter, catFilter, locFilter, projectFilter, disciplineFilter, stockReleaseFilter, statusFilter, search, sortBy, allCategories, projectMap, lotStockMap]);
 
   const reviewCount = useMemo(() => rows.filter((r) => r.needs_review).length, [rows]);
 
@@ -206,11 +248,13 @@ export function InventoryView({ categorySlug, title, subtitle }: Props) {
   const anyFilterActive =
     pkgFilter !== "all" || mfrFilter !== "all" || catFilter !== "all" ||
     locFilter !== "all" || projectFilter !== "all" || statusFilter !== "all" ||
+    disciplineFilter !== "all" || stockReleaseFilter !== "all" ||
     sortBy !== "name" || search !== "";
 
   function clearFilters() {
     setPkgFilter("all"); setMfrFilter("all"); setCatFilter("all");
     setLocFilter("all"); setProjectFilter("all"); setStatusFilter("all");
+    setDisciplineFilter("all"); setStockReleaseFilter("all");
     setSortBy("name"); setSearch("");
   }
 
@@ -299,6 +343,22 @@ export function InventoryView({ categorySlug, title, subtitle }: Props) {
               <FilterSelect icon={Factory} label="Mfr" value={mfrFilter} onValueChange={setMfrFilter} active={mfrFilter !== "all"}>
                 <SelectItem value="all">All manufacturers</SelectItem>
                 {manufacturers.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </FilterSelect>
+
+              <FilterSelect icon={Layers} label="Discipline" value={disciplineFilter} onValueChange={(v) => setDisciplineFilter(v as InventoryDiscipline)} active={disciplineFilter !== "all"}>
+                <SelectItem value="all">All disciplines</SelectItem>
+                <SelectItem value="electronics">⚡ Electronics / Electrical</SelectItem>
+                <SelectItem value="mechanical">⚙️ Mechanical & Enclosures</SelectItem>
+                <SelectItem value="wire_harness">🔌 Wire Harness Assemblies</SelectItem>
+                <SelectItem value="procurement">📦 Stores & Procurement</SelectItem>
+                <SelectItem value="production_tools">🛠️ Production Tools</SelectItem>
+              </FilterSelect>
+
+              <FilterSelect icon={ShieldCheck} label="QC Release" value={stockReleaseFilter} onValueChange={setStockReleaseFilter} active={stockReleaseFilter !== "all"}>
+                <SelectItem value="all">All stock</SelectItem>
+                <SelectItem value="released_only">Released stock only</SelectItem>
+                <SelectItem value="quality_hold">Quality Hold (QC pending)</SelectItem>
+                <SelectItem value="quarantined">Quarantined / Rejected</SelectItem>
               </FilterSelect>
 
               <FilterSelect icon={FolderTree} label="Category" value={catFilter} onValueChange={setCatFilter} active={catFilter !== "all"} contentClassName="max-h-[360px]">
@@ -416,7 +476,23 @@ export function InventoryView({ categorySlug, title, subtitle }: Props) {
                       <PermissionGate permission={["inventory.manage", "engineering.edit"]} fallback={<span className="font-medium">{r.name}</span>}>
                         <button onClick={() => setEditing(r)} className="font-medium hover:text-primary text-left">{r.name}</button>
                       </PermissionGate>
-                      <div className="text-xs text-muted-foreground">{r.category.name}</div>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span className="text-xs text-muted-foreground">{r.category.name}</span>
+                        {getComponentDisciplineTags(r, r.category).map((tag) => (
+                          <span
+                            key={tag}
+                            className={`rounded px-1.5 py-0.2 text-[9px] font-semibold border ${
+                              tag === "Electrical"
+                                ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800"
+                                : tag === "Mechanical"
+                                ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+                                : "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800"
+                            }`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                       {(r.voltage_rating || r.current_rating || r.temperature_rating || r.cost != null) && (
                         <div className="mt-0.5 flex flex-wrap gap-1 text-[10px] text-muted-foreground">
                           {r.voltage_rating && <span className="rounded bg-muted px-1 py-px">{r.voltage_rating}</span>}
@@ -429,7 +505,14 @@ export function InventoryView({ categorySlug, title, subtitle }: Props) {
                     <TableCell className="font-mono text-xs">{r.part_number}</TableCell>
                     <TableCell>{r.manufacturer ?? "—"}</TableCell>
                     <TableCell>{r.package_case ?? "—"}</TableCell>
-                    <TableCell className="text-right font-semibold">{r.total_quantity}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="font-semibold">{r.total_quantity}</div>
+                      {lotStockMap.get(r.id)?.held ? (
+                        <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium whitespace-nowrap">
+                          ({lotStockMap.get(r.id)!.held} on QC hold)
+                        </div>
+                      ) : null}
+                    </TableCell>
                     <TableCell>
                       <Tooltip>
                         <TooltipTrigger asChild>

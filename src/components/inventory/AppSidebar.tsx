@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CircuitBoard, LayoutGrid, Users, ClipboardList, History, Zap, Activity, Cpu, Triangle, GitBranch, Box, MapPin, Wrench, ChevronRight, FileSpreadsheet, ShoppingCart, PackageCheck, Truck, FolderOpen, FolderKanban, ListChecks, Building2, AlarmClock } from "lucide-react";
+import { CircuitBoard, LayoutGrid, Users, ClipboardList, History, Zap, Activity, Cpu, Triangle, GitBranch, Box, MapPin, Wrench, ChevronRight, FileSpreadsheet, ShoppingCart, PackageCheck, Truck, FolderOpen, FolderKanban, ListChecks, Building2, AlarmClock, Factory } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub,
@@ -265,6 +265,21 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <PermissionGate permission="assets.view">
+          <SidebarGroup>
+            <SidebarGroupLabel>Assets &amp; Equipment</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/assets")}>
+                    <Link to="/assets"><Factory className="h-4 w-4" /><span>Assets &amp; Machinery</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </PermissionGate>
       </SidebarContent>
     </Sidebar>
   );

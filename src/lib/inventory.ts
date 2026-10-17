@@ -80,3 +80,51 @@ export interface Assignment {
   assigned_at: string;
   returned_at: string | null;
 }
+
+export type InventoryDiscipline = "all" | "electronics" | "mechanical" | "wire_harness" | "procurement" | "production_tools";
+
+export interface WireHarnessSpecs {
+  connector_a?: string;
+  connector_b?: string;
+  pin_count?: number;
+  wire_gauge_awg?: string;
+  length_mm?: number;
+  pinout_drawing_ref?: string;
+  compatible_jigs?: string[];
+  cross_tags?: ("Electrical" | "Mechanical")[];
+}
+
+export type LotQualityStatus = "AVAILABLE" | "HOLD" | "REJECTED" | "QUARANTINED";
+
+export interface ComponentStockBreakdown {
+  totalQuantity: number;
+  releasedQuantity: number;
+  heldQuantity: number;
+  rejectedQuantity: number;
+}
+
+export function getComponentDisciplineTags(c: Component, category?: Category): ("Electrical" | "Mechanical" | "Production" | "Procurement")[] {
+  const catSlug = (category?.slug ?? "").toLowerCase();
+  const catName = (category?.name ?? "").toLowerCase();
+  const name = c.name.toLowerCase();
+  const notes = (c.notes ?? "").toLowerCase();
+
+  const isHarness = catSlug.includes("harness") || catName.includes("harness") || name.includes("harness") || notes.includes("wire harness");
+  if (isHarness) {
+    return ["Electrical", "Mechanical"];
+  }
+
+  const isMechanical = catSlug.includes("mechanical") || catSlug.includes("enclosure") || catName.includes("mechanical") ||
+    catName.includes("enclosure") || catName.includes("fastener") || name.includes("enclosure") || name.includes("bracket");
+  if (isMechanical) {
+    return ["Mechanical"];
+  }
+
+  const isProduction = catSlug.includes("tool") || catName.includes("tool") || name.includes("jig") || name.includes("crimping");
+  if (isProduction) {
+    return ["Production"];
+  }
+
+  return ["Electrical"];
+}
+

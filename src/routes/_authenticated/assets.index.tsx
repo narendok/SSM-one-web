@@ -1,3 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PermissionGate } from "@/components/PermissionGate"; import { Phase8ListPage } from "@/components/phase8/Phase8ListPage";
-export const Route=createFileRoute("/_authenticated/assets/")({component:()=> <PermissionGate permission="assets.view"><Phase8ListPage config={{title:"Asset register",description:"QR-first assets with human approval, traceable custody, location, and source purchasing data.",table:"assets",columns:[{key:"asset_code",label:"Asset ID"},{key:"name",label:"Asset"},{key:"status",label:"Status"},{key:"serial_number",label:"Serial"}],inputs:[{key:"name",label:"Asset name",required:true},{key:"manufacturer",label:"Manufacturer"},{key:"model_number",label:"Model number"},{key:"serial_number",label:"Serial number"},{key:"status",label:"Status",required:true,options:[{value:"PENDING_APPROVAL",label:"Pending approval"},{value:"ACTIVE",label:"Active"},{value:"IN_SERVICE",label:"In service"},{value:"UNDER_MAINTENANCE",label:"Under maintenance"},{value:"QUARANTINED",label:"Quarantined"},{value:"RETIRED",label:"Retired"}]},{key:"acquisition_date",label:"Acquisition date",type:"date"}],createLabel:"Register asset"}} /></PermissionGate>});
+import { PermissionGate } from "@/components/PermissionGate";
+import { AssetRegisterWorkspace } from "@/components/assets/AssetRegisterWorkspace";
+
+export const Route = createFileRoute("/_authenticated/assets/")({
+  head: () => ({
+    meta: [
+      { title: "Assets & Machinery — SSM One" },
+      { name: "description", content: "Production machinery, service & maintenance equipment, and calibrated instruments." },
+      { property: "og:title", content: "Assets & Machinery — SSM One" },
+    ],
+  }),
+  component: () => (
+    <PermissionGate permission="assets.view" fallback={<div className="p-6 text-sm text-muted-foreground">You do not have access to asset and machinery records.</div>}>
+      <AssetRegisterWorkspace />
+    </PermissionGate>
+  ),
+});
