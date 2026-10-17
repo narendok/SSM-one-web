@@ -1,5 +1,5 @@
 # Loopback-only disposable PostgreSQL verification; no managed connection accepted.
-param([Parameter(Mandatory=$true)][string]$PostgresBin)
+param([Parameter(Mandatory=$true)][string]$PostgresBin,[switch]$DirectEditor)
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $bin=(Resolve-Path -LiteralPath $PostgresBin).Path
@@ -43,7 +43,8 @@ try {
  Run-SqlFile (Join-Path $transport '99_execute.sql') 'missing-chunk-denied' $true
  Run-SqlText $unchanged 'missing-rollback-check'
  Run-SqlFile (Join-Path $transport '09_chunk.sql') 'restore-last-chunk'
- Run-SqlFile (Join-Path $transport '99_execute.sql') 'atomic-install'
+ $finalFile=if($DirectEditor){'98_direct_editor.sql'}else{'99_execute.sql'}
+ Run-SqlFile (Join-Path $transport $finalFile) 'atomic-install'
  Run-SqlText 'DO $$ BEGIN IF to_regnamespace(''_ssm_feasibility_install_20261017'') IS NOT NULL THEN RAISE EXCEPTION ''Transport retained''; END IF; END $$;' 'staging-cleanup-check'
  Run-SqlFile (Join-Path $repo 'supabase/migrations/tests/20261017053400_feasibility_protected_handover_local_acceptance.sql') 'handover-acceptance'
  Run-SqlFile (Join-Path $repo 'supabase/migrations/tests/20261017053400_feasibility_access_transition_local_acceptance.sql') 'access-acceptance'
