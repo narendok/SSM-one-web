@@ -264,6 +264,16 @@ BEGIN
   IF char_length(btrim(coalesce(p_reason,''))) NOT BETWEEN 3 AND 500 OR p_request_key IS NULL THEN RAISE EXCEPTION 'Archive reason and request key are required'; END IF;
   v_hash := encode(extensions.digest(convert_to(jsonb_build_object('action','ARCHIVE','roots',v_roots,'reason',btrim(p_reason))::text, 'UTF8'), 'sha256'), 'hex');
   PERFORM pg_advisory_xact_lock(hashtextextended('reviewed-sales-sample-archive', 0));
+  -- Shared graph order: archive receipt -> requirement-root -> requirement row.
+  -- Canonical roots make this UUID ordering deterministic across equivalent archive calls.
+  FOR v_root IN
+    SELECT roots.value
+    FROM jsonb_array_elements(v_roots) AS roots(value)
+    WHERE roots.value->>'kind' = 'REQUIREMENT'
+    ORDER BY (roots.value->>'id')::uuid
+  LOOP
+    PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-requirement-root:' || (v_root->>'id'), 0));
+  END LOOP;
   SELECT * INTO v_receipt FROM public.sales_sample_archive_manifests WHERE request_key=p_request_key FOR UPDATE;
   IF FOUND THEN
     IF v_receipt.actor_user_id=v_actor AND v_receipt.action='ARCHIVE' AND v_receipt.payload_hash=v_hash THEN RETURN QUERY SELECT v_receipt.id, true; RETURN; END IF;
@@ -303,6 +313,18 @@ BEGIN
   PERFORM pg_advisory_xact_lock(hashtextextended('reviewed-sales-sample-archive', 0));
   SELECT * INTO v_prior FROM public.sales_sample_archive_manifests WHERE id=p_archive_manifest_id AND action='ARCHIVE' FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Archive manifest was not found'; END IF;
+  -- Shared graph order: archive receipt -> requirement-root -> requirement row.
+  -- Lock manifest requirement items by root UUID before a replay can return or a
+  -- restore can read/mutate any requirement root.
+  FOR v_item IN
+    SELECT item.root_id
+    FROM public.sales_sample_archive_manifest_items AS item
+    WHERE item.manifest_id = p_archive_manifest_id
+      AND item.root_kind = 'REQUIREMENT'
+    ORDER BY item.root_id
+  LOOP
+    PERFORM pg_advisory_xact_lock(hashtextextended('sales-feasibility-requirement-root:' || v_item.root_id::text, 0));
+  END LOOP;
   v_hash:=encode(extensions.digest(convert_to(jsonb_build_object('action','RESTORE','archiveManifestId',p_archive_manifest_id,'reason',btrim(p_reason))::text,'UTF8'),'sha256'),'hex');
   SELECT * INTO v_receipt FROM public.sales_sample_archive_manifests WHERE request_key=p_request_key FOR UPDATE;
   IF FOUND THEN
