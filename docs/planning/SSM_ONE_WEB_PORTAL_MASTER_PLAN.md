@@ -648,6 +648,7 @@ This status replaces the repeated chronological checkpoints below the budget req
 
 - Managed catalog, authority and restore preparation: docs/evidence/20261016_managed_feasibility_task_authority_audit.md.
 - Preview dependency reconciliation and its limits: docs/evidence/20261016_managed_preview_dependency_alignment.md.
+- Archive/restore root-lock source and validation limits: docs/evidence/20261017_archive_requirement_root_locks.md.
 - Independent task readback and managed sample inspection: docs/evidence/20261017_task_independent_readback.md.
 - Task save representation and member-visibility display: docs/evidence/20261016_task_save_representation_verification.md; docs/evidence/20261016_task_assignee_visibility.md. Earlier task/form checks remain in source tests and Git history; do not rerun unchanged checks for reporting alone.
 - Overview common-board route integration and UI approval: docs/evidence/20261017_project_overview_common_board.md.

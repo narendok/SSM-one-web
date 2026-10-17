@@ -1,0 +1,13 @@
+# Archive/restore requirement-root locks — 17 October 2026
+
+Retrieved original project codebase ssmone1 (4).zip after the previous snapshot (3) was confirmed identical per file to (2). Imported exactly two changed files: supabase/pending/20261012_sales_sample_archive_restore_contract.sql and supabase/pending/tests/run_sales_sample_archive_restore_local_concurrency_acceptance.sh. No auth, instruction, dependency, privilege or live backend changes imported.
+
+Archive now locks canonical REQUIREMENT UUIDs in deterministic UUID order after the archive advisory mutex and before replay receipt return or mutable root row access. Restore locks manifest REQUIREMENT UUIDs in UUID order after validating/locking its prior manifest and before replay/mutation. Canonicalization converts incoming root IDs through uuid, so lock keys agree with the feasibility namespace. Existing authority/reason/request checks and revoked execution remain intact. This contract applies only to the previously enumerated sample set, not arbitrary business archival.
+
+Independent verification: existing Python static safeguards passed (SALES_SAMPLE_ARCHIVE_RESTORE_STATIC_PASS=true). Actual local PostgreSQL 17.11 loaded the archive fixture, patched contract, and existing sales_sample_archive_restore_local_acceptance.sql with ON_ERROR_STOP; all exited zero. Logs: C:/Users/Admin/AppData/Local/Temp/ssm-archive-lock-review-61ba270942aa438e8fffa26b5faf181d. Synthetic server stopped, password file removed, inherited libpq settings restored; data/logs retained.
+
+Lovable separately reports its Linux disposable concurrency runner and base acceptance passed, including held requirement-root versus archive/restore and restore replay. This was not independently rerun as a Windows concurrency test; runner checks process liveness during holder sleep, so stronger explicit waiting-lock evidence remains desirable. Do not present this as live JWT/RLS or all-writer compatibility acceptance.
+
+Lovable confirmed no concrete department-remapping routine was found. Local repository search also did not find remap SQL. Earlier static no-go listing remapping is not proof of an installed writer. Managed installation status of archive/restore is not established by pending source; execution stays revoked in this contract.
+
+No managed migration, policy/grant/user/data changes, UI activation, client publication, baseline approval, project start or Publish occurred. First activation bundle already has independent local SQL acceptance; exact managed catalog/aggregate evidence and controlled installation/ordinary-caller acceptance remain pending.
