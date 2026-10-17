@@ -127,7 +127,7 @@ function BomPage() {
     enabled: Boolean(projectId && projectId !== "__none"),
     queryFn: async () => {
       const res = await projectBomsFn({ data: { projectId } });
-      return res.boms;
+      return res;
     },
   });
 
@@ -817,6 +817,7 @@ function BomPage() {
             </Button>
           </div>
         </DialogContent>
+      </Dialog>
       <Dialog open={diffDialogOpen} onOpenChange={setDiffDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>

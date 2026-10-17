@@ -23,7 +23,7 @@ export function DepartmentsPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from("rd_members").select("*").order("name");
       if (error) throw error;
-      return (data ?? []) as RDMember[];
+      return (data ?? []) as (RDMember & { department_id: string | null })[];
     },
   });
   return <div className="space-y-5">

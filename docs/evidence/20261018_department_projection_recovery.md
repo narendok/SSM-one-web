@@ -1,0 +1,11 @@
+# Canonical department projection recovery — 18 October 2026
+
+Recovered the interrupted department workload increment after automatic approval review had failed because of account usage limits. The pending test had targeted a file moved while it was running; that run discovered no tests and failed. The new test location is src/components/tasks/DepartmentsPage.dom.test.tsx. The pending typecheck separately found RDMember lacked department_id. Generated managed schema types confirm rd_members.department_id exists and is nullable. The page now explicitly types that read projection, preserving the shared legacy RDMember contract.
+
+Current remote history, including user/Lovable inventory, BOM and asset work, was reconciled by normal fast-forward from 96212ea to ca780f5. No private work or historical commits were reset/deleted. No managed SQL or installed RPC was rerun.
+
+Four focused DOM cases passed: canonical IDs override conflicting legacy labels and retain in_review; failed task reads never render zero workload; failed member reads remain unavailable and do not suggest creating a member; canonical department failure never falls back to seven legacy groups. These tests use synthetic mocked reads. The page is a read-only projection and grants no membership, delegation or editing authority. Live ordinary-caller browser acceptance remains pending. No screenshot was captured because newly operational browser behavior has not been established.
+
+Subsequent full compilation exposed two errors in the newly reconciled BOM work: an unclosed Save Dialog before the comparison Dialog, and a caller expecting res.boms although fetchProjectBoms returns ProjectBomSummary[]. Repairs are limited to the missing closing tag and returning the established array directly. They preserve the new BOM lifecycle/import/export work and do not change backend behavior. Typecheck/build are rerun after these corrections; no additional feature work is accumulated while compilation is unresolved.
+
+Final validation: four focused DOM tests passed at the correct test path; TypeScript noEmit passed after both BOM compatibility repairs; production Vite build passed. Build log: C:/Users/Admin/AppData/Local/Temp/ssm-department-projection-build.log. Initially clean generated route/MCP files were restored. No live save, backend permission change or Publish occurred.

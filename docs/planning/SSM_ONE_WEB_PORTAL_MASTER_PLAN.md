@@ -796,3 +796,7 @@ Refined the BOM and purchase-import architecture to fulfill multi-stage engineer
    - Bulk CSV/Excel onboarding and export for Production Machinery, Service Equipment, and IMTE/Calibration instruments.
    - Connects machine-to-component compatibility mappings (`compatible_component_ids`) distinct from custody assignments.
 
+
+### Interrupted department projection recovered — 18 October 2026
+
+Reconciled current user/Lovable inventory/BOM/asset source through ca780f5 without history rewrite. Repaired the canonical department page member projection type using verified rd_members.department_id; four DOM tests passed at their moved, non-route test location. Full compilation also exposed two newly synced BOM issues: an unclosed Save Dialog and an array-returning fetchProjectBoms caller incorrectly reading res.boms. Minimal repairs preserve the new BOM behavior. TypeScript and production build passed. Evidence: docs/evidence/20261018_department_projection_recovery.md. This is source/compile recovery; ordinary caller browser acceptance, delegated department editing, feasibility UI and remaining lifecycle gates stay pending. No managed SQL, grants, business records or Publish changed.
