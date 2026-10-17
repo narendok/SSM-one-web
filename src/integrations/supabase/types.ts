@@ -13784,6 +13784,26 @@ export type Database = {
           source_revision_id: string
         }[]
       }
+      read_sales_feasibility_handover_receipt: {
+        Args: {
+          p_customer_id: string
+          p_enquiry_id: string
+          p_master_specification_version_id: string
+          p_opportunity_id: string
+          p_request_key: string
+        }
+        Returns: {
+          audit_id: string
+          master_specification_version_id: string
+          master_specification_version_number: number
+          notification_ids: string[]
+          request_key: string
+          requirement_id: string
+          review_pins: Json
+          source_revision_id: string
+          source_revision_number: number
+        }[]
+      }
       record_phase7_unit_execution: {
         Args: {
           _notes?: string
