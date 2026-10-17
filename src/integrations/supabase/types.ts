@@ -10199,50 +10199,134 @@ export type Database = {
           },
         ]
       }
+      requirement_feasibility_response_requests: {
+        Row: {
+          master_specification_version_id: string
+          payload_canonical: Json
+          payload_hash: string
+          request_key: string
+          requested_by: string
+          requirement_id: string
+          review_id: string
+          source_revision_id: string
+        }
+        Insert: {
+          master_specification_version_id: string
+          payload_canonical: Json
+          payload_hash: string
+          request_key: string
+          requested_by: string
+          requirement_id: string
+          review_id: string
+          source_revision_id: string
+        }
+        Update: {
+          master_specification_version_id?: string
+          payload_canonical?: Json
+          payload_hash?: string
+          request_key?: string
+          requested_by?: string
+          requirement_id?: string
+          review_id?: string
+          source_revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_feasibility_respo_master_specification_version_fkey"
+            columns: ["master_specification_version_id"]
+            isOneToOne: false
+            referencedRelation: "master_specification_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_feasibility_response_reques_source_revision_id_fkey"
+            columns: ["source_revision_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requirement_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_feasibility_response_requests_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_feasibility_response_requests_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "requirement_feasibility_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       requirement_feasibility_reviews: {
         Row: {
+          applicable_workstreams: Json | null
           assumptions: string | null
           created_at: string
           created_by: string | null
           department_id: string | null
           findings: string | null
           id: string
+          master_specification_version_id: string | null
+          master_specification_version_number: number | null
           requirement_id: string
           reviewed_at: string | null
           reviewer_user_id: string | null
           risks: string | null
+          source_revision_id: string | null
+          source_revision_number: number | null
           status: string
           updated_at: string
         }
         Insert: {
+          applicable_workstreams?: Json | null
           assumptions?: string | null
           created_at?: string
           created_by?: string | null
           department_id?: string | null
           findings?: string | null
           id?: string
+          master_specification_version_id?: string | null
+          master_specification_version_number?: number | null
           requirement_id: string
           reviewed_at?: string | null
           reviewer_user_id?: string | null
           risks?: string | null
+          source_revision_id?: string | null
+          source_revision_number?: number | null
           status?: string
           updated_at?: string
         }
         Update: {
+          applicable_workstreams?: Json | null
           assumptions?: string | null
           created_at?: string
           created_by?: string | null
           department_id?: string | null
           findings?: string | null
           id?: string
+          master_specification_version_id?: string | null
+          master_specification_version_number?: number | null
           requirement_id?: string
           reviewed_at?: string | null
           reviewer_user_id?: string | null
           risks?: string | null
+          source_revision_id?: string | null
+          source_revision_number?: number | null
           status?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "requirement_feasibility_revie_master_specification_version_fkey"
+            columns: ["master_specification_version_id"]
+            isOneToOne: false
+            referencedRelation: "master_specification_versions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "requirement_feasibility_reviews_department_id_fkey"
             columns: ["department_id"]
@@ -10255,6 +10339,135 @@ export type Database = {
             columns: ["requirement_id"]
             isOneToOne: false
             referencedRelation: "customer_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_feasibility_reviews_source_revision_id_fkey"
+            columns: ["source_revision_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requirement_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirement_highlight_draft_versions: {
+        Row: {
+          author_user_id: string
+          body: string
+          expected_version: number
+          id: string
+          master_version_id: string
+          request_key: string
+          review_id: string
+          saved_at: string
+          source_revision_id: string
+          version_number: number
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          expected_version: number
+          id?: string
+          master_version_id: string
+          request_key: string
+          review_id: string
+          saved_at?: string
+          source_revision_id: string
+          version_number: number
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          expected_version?: number
+          id?: string
+          master_version_id?: string
+          request_key?: string
+          review_id?: string
+          saved_at?: string
+          source_revision_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_highlight_draft_versions_master_version_id_fkey"
+            columns: ["master_version_id"]
+            isOneToOne: false
+            referencedRelation: "master_specification_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_highlight_draft_versions_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_feasibility_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_highlight_draft_versions_source_revision_id_fkey"
+            columns: ["source_revision_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requirement_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirement_internal_note_versions: {
+        Row: {
+          author_user_id: string
+          body: string
+          expected_version: number
+          id: string
+          master_version_id: string
+          request_key: string
+          review_id: string
+          saved_at: string
+          source_revision_id: string
+          version_number: number
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          expected_version: number
+          id?: string
+          master_version_id: string
+          request_key: string
+          review_id: string
+          saved_at?: string
+          source_revision_id: string
+          version_number: number
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          expected_version?: number
+          id?: string
+          master_version_id?: string
+          request_key?: string
+          review_id?: string
+          saved_at?: string
+          source_revision_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_internal_note_versions_master_version_id_fkey"
+            columns: ["master_version_id"]
+            isOneToOne: false
+            referencedRelation: "master_specification_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_internal_note_versions_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_feasibility_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_internal_note_versions_source_revision_id_fkey"
+            columns: ["source_revision_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requirement_revisions"
             referencedColumns: ["id"]
           },
         ]
@@ -10595,6 +10808,103 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_feasibility_handover_requests: {
+        Row: {
+          applicable_workstreams: Json
+          created_at: string
+          customer_id: string
+          enquiry_id: string
+          master_specification_version_id: string
+          master_specification_version_number: number
+          opportunity_id: string
+          payload_canonical: Json
+          payload_hash: string
+          request_key: string
+          requested_by: string
+          requirement_id: string
+          review_pins: Json
+          source_revision_id: string
+          source_revision_number: number
+        }
+        Insert: {
+          applicable_workstreams: Json
+          created_at?: string
+          customer_id: string
+          enquiry_id: string
+          master_specification_version_id: string
+          master_specification_version_number: number
+          opportunity_id: string
+          payload_canonical: Json
+          payload_hash: string
+          request_key: string
+          requested_by: string
+          requirement_id: string
+          review_pins: Json
+          source_revision_id: string
+          source_revision_number: number
+        }
+        Update: {
+          applicable_workstreams?: Json
+          created_at?: string
+          customer_id?: string
+          enquiry_id?: string
+          master_specification_version_id?: string
+          master_specification_version_number?: number
+          opportunity_id?: string
+          payload_canonical?: Json
+          payload_hash?: string
+          request_key?: string
+          requested_by?: string
+          requirement_id?: string
+          review_pins?: Json
+          source_revision_id?: string
+          source_revision_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_feasibility_handover_re_master_specification_version_fkey"
+            columns: ["master_specification_version_id"]
+            isOneToOne: false
+            referencedRelation: "master_specification_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_feasibility_handover_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_feasibility_handover_requests_enquiry_id_fkey"
+            columns: ["enquiry_id"]
+            isOneToOne: false
+            referencedRelation: "sales_enquiries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_feasibility_handover_requests_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "sales_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_feasibility_handover_requests_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: true
+            referencedRelation: "customer_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_feasibility_handover_requests_source_revision_id_fkey"
+            columns: ["source_revision_id"]
+            isOneToOne: false
+            referencedRelation: "customer_requirement_revisions"
             referencedColumns: ["id"]
           },
         ]
@@ -12986,6 +13296,14 @@ export type Database = {
         }
         Returns: Json
       }
+      assign_requirement_feasibility_review: {
+        Args: {
+          p_department_id: string
+          p_requirement_id: string
+          p_reviewer_user_id: string
+        }
+        Returns: string
+      }
       can_access_department_drive: {
         Args: { _department_id: string; _project_id: string; _user_id: string }
         Returns: boolean
@@ -13433,6 +13751,39 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: undefined
       }
+      read_own_requirement_highlight_draft: {
+        Args: {
+          p_master_version_id: string
+          p_review_id: string
+          p_source_revision_id: string
+        }
+        Returns: Json
+      }
+      read_own_requirement_internal_note: {
+        Args: {
+          p_master_version_id: string
+          p_review_id: string
+          p_source_revision_id: string
+        }
+        Returns: Json
+      }
+      read_requirement_feasibility_response_receipt: {
+        Args: {
+          p_master_specification_version_id: string
+          p_request_key: string
+          p_requirement_id: string
+          p_review_id: string
+          p_source_revision_id: string
+        }
+        Returns: {
+          audit_id: string
+          master_specification_version_id: string
+          request_key: string
+          requirement_id: string
+          review_id: string
+          source_revision_id: string
+        }[]
+      }
       record_phase7_unit_execution: {
         Args: {
           _notes?: string
@@ -13463,6 +13814,17 @@ export type Database = {
         }
         Returns: string
       }
+      record_requirement_feasibility_response: {
+        Args: {
+          p_assumptions: string
+          p_findings: string
+          p_request_key: string
+          p_review_id: string
+          p_risks: string
+          p_status: string
+        }
+        Returns: string
+      }
       recover_historical_zero_stock_component: {
         Args: {
           _approved_by: string
@@ -13487,6 +13849,48 @@ export type Database = {
           p_storage_path: string
         }
         Returns: string
+      }
+      requirement_feasibility_response_canonical_payload: {
+        Args: {
+          p_assumptions: string
+          p_findings: string
+          p_review_id: string
+          p_risks: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      requirement_review_private_draft_context: {
+        Args: {
+          p_master_version_id: string
+          p_review_id: string
+          p_source_revision_id: string
+        }
+        Returns: {
+          applicable_workstreams: Json | null
+          assumptions: string | null
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          findings: string | null
+          id: string
+          master_specification_version_id: string | null
+          master_specification_version_number: number | null
+          requirement_id: string
+          reviewed_at: string | null
+          reviewer_user_id: string | null
+          risks: string | null
+          source_revision_id: string | null
+          source_revision_number: number | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "requirement_feasibility_reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       resolve_document_control_revision: {
         Args: { p_node_id: string; p_revision_number: number }
@@ -13518,6 +13922,21 @@ export type Database = {
           _record_type: string
         }
         Returns: undefined
+      }
+      sales_feasibility_handover_canonical_payload: {
+        Args: {
+          p_customer_id: string
+          p_customer_reference: string
+          p_department_ids: string[]
+          p_enquiry_id: string
+          p_expected_enquiry_updated_at: string
+          p_master_specification_version_id: string
+          p_opportunity_id: string
+          p_reviewer_user_ids: string[]
+          p_summary: string
+          p_title: string
+        }
+        Returns: Json
       }
       sales_opportunity_structured_draft_canonical_payload: {
         Args: { p_document_kind: string; p_payload: Json }
@@ -13557,6 +13976,28 @@ export type Database = {
           version_id: string
           version_number: number
         }[]
+      }
+      save_requirement_highlight_draft: {
+        Args: {
+          p_body: string
+          p_expected_version: number
+          p_master_version_id: string
+          p_request_key: string
+          p_review_id: string
+          p_source_revision_id: string
+        }
+        Returns: Json
+      }
+      save_requirement_internal_note: {
+        Args: {
+          p_body: string
+          p_expected_version: number
+          p_master_version_id: string
+          p_request_key: string
+          p_review_id: string
+          p_source_revision_id: string
+        }
+        Returns: Json
       }
       save_sales_opportunity_structured_draft_at_location: {
         Args: {
@@ -13636,6 +14077,26 @@ export type Database = {
             }
             Returns: Json
           }
+      submit_sales_feasibility_handover: {
+        Args: {
+          p_customer_id: string
+          p_customer_reference: string
+          p_department_ids: string[]
+          p_enquiry_id: string
+          p_expected_enquiry_updated_at: string
+          p_master_specification_version_id: string
+          p_opportunity_id: string
+          p_request_key: string
+          p_reviewer_user_ids: string[]
+          p_summary: string
+          p_title: string
+        }
+        Returns: {
+          replayed: boolean
+          requirement_id: string
+          review_ids: string[]
+        }[]
+      }
       toggle_node_star: { Args: { p_node_id: string }; Returns: boolean }
       transition_document_control: {
         Args: {
