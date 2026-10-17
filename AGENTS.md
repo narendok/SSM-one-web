@@ -20,6 +20,7 @@
 - Serialize project DOCX updates by actor/request key before the assignment root, then recheck manager authority and lock mutable target prerequisites; this preserves replay without stale authority or membership races.
 - Keep Sales feasibility handover behind one pending atomic source-bound requirement-and-routing contract; separate client calls must not create partial requirements, assignments, or notifications.
 - Keep Sales feasibility routing receipts private, replay-bound to the Sales actor and immutable enquiry/opportunity/Master source tuple; reviewer notifications must be generated inside the protected transaction, never by the client.
+- Keep reviewed feasibility activation SQL source-only until managed caller/RLS, writer-reconciliation, concurrency, notification-rollback and restore acceptance are explicitly approved; access restriction remains a separate non-automatic transition.
 
 ## Single planning entry point
 

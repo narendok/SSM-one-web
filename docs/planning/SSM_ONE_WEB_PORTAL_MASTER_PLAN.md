@@ -511,6 +511,11 @@ Pending handover adapter increment (15 October): added caller-authenticated subm
 
 TypeScript no-emit completed successfully for the pending handover adapter. No browser demo applies to this disabled server transport; the previously verified preparation UI remains the current visible behavior.
 
+
+### Source-only first feasibility activation bundle — 17 October 2026
+
+Prepared a reviewed source-only package for pinned review provenance, protected assignment/response and atomic Sales handover. It excludes external intake, private notes/highlights/publication, baseline approval, project start and direct-write restriction. The activation draft fails closed on missing dependencies, incompatible helper signatures, partially pinned legacy reviews and duplicate non-null revision/department review pairs. A separate non-automatic access-transition proposal retains the direct-write restriction for later target-bound approval. No migration was applied, no UI was enabled, and managed caller/RLS, concurrency, notification rollback, writer reconciliation and restore acceptance remain required. Evidence: `docs/evidence/20261017_feasibility_activation_bundle_source_review.md`.
+
 ### Two project-analysis UI alternatives — 15 October 2026
 
 User requested an independent Lovable versus Codex comparison before selecting a product layout. Both standalone fictional previews are retained under public/design-previews, with project-analysis-compare.html as the entry. Lovable source arrived in ac91e19 and was fast-forward reconciled before the independent Codex file was added. The incidental managed Vite configuration upgrade was deferred back to validated 2.25.3; no application route/backend changes were needed. Codex emphasizes wide visuals, workstream cards and a dependency/list toggle; Lovable uses a three-column department selector, system visual and analysis panel. Both illustrate internal remarks versus published highlights and a proposed change separate from the baseline. These are UI-only examples, not persistence, authorization, client publication, a project start or acceptance. Local browser navigation timed out, so visual/interaction verification and final user comparison remain pending; do not mark either design chosen or live.
