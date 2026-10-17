@@ -6,7 +6,6 @@
 -- synthetic. This proves the exact proposal's intended access shape, not managed-target RLS.
 \set ON_ERROR_STOP on
 
-BEGIN;
 CREATE ROLE local_sales_caller NOLOGIN IN ROLE authenticated;
 CREATE ROLE local_sales_view_caller NOLOGIN IN ROLE authenticated;
 CREATE ROLE local_engineering_caller NOLOGIN IN ROLE authenticated;
