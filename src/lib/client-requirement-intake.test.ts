@@ -198,7 +198,7 @@ describe("client requirement intake contract", () => {
     expect(pendingSql).toContain("UNIQUE (requirement_id, revision_number)");
     expect(pendingSql).toContain("applicable_workstreams IS NOT NULL");
     expect(pendingSql).toContain("Shared graph order: requirement-root -> requirement -> revision -> review -> version.");
-    expect(pendingSql).toContain("Match assignment's order: requirement, revision, review, version.");
+    expect(pendingSql).toContain("Shared graph order: requirement-root -> requirement -> revision -> review -> version.");
     expect(pendingSql).toContain("source_revision_id, source_revision_number,");
     expect(pendingSql).toContain("source_revision_id IS NULL");
     expect(salesRead).toContain("withUnavailableFeasibilityProvenance");
