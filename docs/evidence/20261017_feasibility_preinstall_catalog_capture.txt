@@ -1,0 +1,550 @@
+# Feasibility activation pre-install catalog capture
+# Read-only capture; no DDL, data, grant, policy, UI, or publish action.
+
+## Exact executed SQL
+```sql
+BEGIN TRANSACTION READ ONLY;
+WITH wanted_tables(table_name) AS (
+  VALUES
+    ('customer_requirements'),
+    ('customer_requirement_revisions'),
+    ('requirement_feasibility_reviews'),
+    ('requirement_feasibility_response_requests'),
+    ('requirement_feasibility_handover_receipts'),
+    ('requirement_feasibility_assignment_receipts'),
+    ('requirement_feasibility_response_receipts')
+), tables AS (
+  SELECT c.oid, n.nspname, c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS owner
+  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+  JOIN wanted_tables w ON w.table_name=c.relname
+  WHERE n.nspname='public' AND c.relkind IN ('r','p')
+), functions AS (
+  SELECT p.oid,n.nspname,p.proname,pg_get_function_identity_arguments(p.oid) AS arguments,pg_get_function_result(p.oid) AS result_type,p.prosecdef,p.proconfig
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.proname IN ('next_business_number','has_permission','enqueue_notification','submit_sales_feasibility_handover','assign_requirement_feasibility_review','record_requirement_feasibility_response','archive_reviewed_sales_samples','restore_reviewed_sales_samples')
+), table_json AS (
+  SELECT jsonb_build_object(
+    'table_name',t.nspname||'.'||t.relname,'rls_enabled',t.relrowsecurity,'force_rls',t.relforcerowsecurity,'owner',t.owner,
+    'columns',COALESCE((SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'not_null',a.attnotnull,'default',pg_get_expr(d.adbin,d.adrelid)) ORDER BY a.attnum) FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE a.attrelid=t.oid AND a.attnum>0 AND NOT a.attisdropped),'[]'::jsonb),
+    'constraints',COALESCE((SELECT jsonb_agg(jsonb_build_object('name',c.conname,'type',c.contype,'definition',pg_get_constraintdef(c.oid,true)) ORDER BY c.conname) FROM pg_constraint c WHERE c.conrelid=t.oid),'[]'::jsonb),
+    'effective_table_privileges',jsonb_build_object('authenticated',jsonb_build_object('select',has_table_privilege('authenticated',t.oid,'SELECT'),'insert',has_table_privilege('authenticated',t.oid,'INSERT'),'update',has_table_privilege('authenticated',t.oid,'UPDATE'),'delete',has_table_privilege('authenticated',t.oid,'DELETE')),'anon',jsonb_build_object('select',has_table_privilege('anon',t.oid,'SELECT'),'insert',has_table_privilege('anon',t.oid,'INSERT'),'update',has_table_privilege('anon',t.oid,'UPDATE'),'delete',has_table_privilege('anon',t.oid,'DELETE')))
+  ) AS item FROM tables t
+), review_pin_summary AS (
+  SELECT CASE WHEN to_regclass('public.requirement_feasibility_reviews') IS NULL THEN jsonb_build_object('table_exists',false)
+  ELSE (SELECT jsonb_build_object(
+    'table_exists',true,
+    'columns_present',jsonb_build_object('source_revision_id',bool_or(to_jsonb(r) ? 'source_revision_id'),'source_revision_number',bool_or(to_jsonb(r) ? 'source_revision_number'),'master_specification_version_id',bool_or(to_jsonb(r) ? 'master_specification_version_id'),'master_specification_version_number',bool_or(to_jsonb(r) ? 'master_specification_version_number'),'applicable_workstreams',bool_or(to_jsonb(r) ? 'applicable_workstreams')),
+    'row_count',count(*),
+    'all_five_non_null_count',count(*) FILTER (WHERE to_jsonb(r)->>'source_revision_id' IS NOT NULL AND to_jsonb(r)->>'source_revision_number' IS NOT NULL AND to_jsonb(r)->>'master_specification_version_id' IS NOT NULL AND to_jsonb(r)->>'master_specification_version_number' IS NOT NULL AND to_jsonb(r)->>'applicable_workstreams' IS NOT NULL),
+    'all_five_null_count',count(*) FILTER (WHERE to_jsonb(r)->>'source_revision_id' IS NULL AND to_jsonb(r)->>'source_revision_number' IS NULL AND to_jsonb(r)->>'master_specification_version_id' IS NULL AND to_jsonb(r)->>'master_specification_version_number' IS NULL AND to_jsonb(r)->>'applicable_workstreams' IS NULL),
+    'partial_or_incomplete_count',count(*) FILTER (WHERE NOT ((to_jsonb(r)->>'source_revision_id' IS NOT NULL AND to_jsonb(r)->>'source_revision_number' IS NOT NULL AND to_jsonb(r)->>'master_specification_version_id' IS NOT NULL AND to_jsonb(r)->>'master_specification_version_number' IS NOT NULL AND to_jsonb(r)->>'applicable_workstreams' IS NOT NULL) OR (to_jsonb(r)->>'source_revision_id' IS NULL AND to_jsonb(r)->>'source_revision_number' IS NULL AND to_jsonb(r)->>'master_specification_version_id' IS NULL AND to_jsonb(r)->>'master_specification_version_number' IS NULL AND to_jsonb(r)->>'applicable_workstreams' IS NULL)))
+  ) FROM public.requirement_feasibility_reviews r) END AS item
+), policy_json AS (
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('table_name',schemaname||'.'||tablename,'policy_name',policyname,'command',cmd,'roles',roles,'using',qual,'with_check',with_check) ORDER BY tablename,policyname),'[]'::jsonb) AS item FROM pg_policies WHERE schemaname='public' AND tablename IN (SELECT table_name FROM wanted_tables)
+), trigger_json AS (
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('table_name',c.oid::regclass::text,'trigger_name',t.tgname,'definition',pg_get_triggerdef(t.oid,true)) ORDER BY c.oid::regclass::text,t.tgname),'[]'::jsonb) AS item FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT t.tgisinternal AND n.nspname='public' AND c.relname IN (SELECT table_name FROM wanted_tables)
+)
+SELECT jsonb_pretty(jsonb_build_object(
+ 'capture_scope','schema_only_pre_install_catalog','expected_pin_columns',jsonb_build_array('source_revision_id','source_revision_number','master_specification_version_id','master_specification_version_number','applicable_workstreams'),
+ 'review_pin_summary',(SELECT item FROM review_pin_summary),
+ 'functions',COALESCE((SELECT jsonb_agg(jsonb_build_object('identity',nspname||'.'||proname||'('||arguments||')','result_type',result_type,'security_definer',prosecdef,'config',COALESCE(to_jsonb(proconfig),'[]'::jsonb),'execute_privileges',jsonb_build_object('authenticated',has_function_privilege('authenticated',oid,'EXECUTE'),'anon',has_function_privilege('anon',oid,'EXECUTE'))) ORDER BY proname,arguments) FROM functions),'[]'::jsonb),
+ 'tables',COALESCE((SELECT jsonb_agg(item ORDER BY item->>'table_name') FROM table_json),'[]'::jsonb),'policies',(SELECT item FROM policy_json),'triggers',(SELECT item FROM trigger_json)
+)) AS preflight_json;
+ROLLBACK;
+```
+
+## Raw JSON result
+{
+    "tables": [
+        {
+            "owner": "postgres",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "gen_random_uuid()",
+                    "not_null": true
+                },
+                {
+                    "name": "requirement_id",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": true
+                },
+                {
+                    "name": "revision_number",
+                    "type": "integer",
+                    "default": null,
+                    "not_null": true
+                },
+                {
+                    "name": "change_summary",
+                    "type": "text",
+                    "default": null,
+                    "not_null": true
+                },
+                {
+                    "name": "requirement_data",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "not_null": true
+                },
+                {
+                    "name": "status",
+                    "type": "text",
+                    "default": "'working'::text",
+                    "not_null": true
+                },
+                {
+                    "name": "created_by",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "not_null": true
+                }
+            ],
+            "force_rls": false,
+            "table_name": "public.customer_requirement_revisions",
+            "constraints": [
+                {
+                    "name": "customer_requirement_revision_requirement_id_revision_numbe_key",
+                    "type": "u",
+                    "definition": "UNIQUE (requirement_id, revision_number)"
+                },
+                {
+                    "name": "customer_requirement_revisions_pkey",
+                    "type": "p",
+                    "definition": "PRIMARY KEY (id)"
+                },
+                {
+                    "name": "customer_requirement_revisions_requirement_id_fkey",
+                    "type": "f",
+                    "definition": "FOREIGN KEY (requirement_id) REFERENCES customer_requirements(id) ON DELETE CASCADE"
+                },
+                {
+                    "name": "customer_requirement_revisions_status_check",
+                    "type": "c",
+                    "definition": "CHECK (status = ANY (ARRAY['working'::text, 'submitted'::text, 'approved'::text, 'superseded'::text]))"
+                }
+            ],
+            "rls_enabled": true,
+            "effective_table_privileges": {
+                "anon": {
+                    "delete": true,
+                    "insert": true,
+                    "select": true,
+                    "update": true
+                },
+                "authenticated": {
+                    "delete": true,
+                    "insert": true,
+                    "select": true,
+                    "update": true
+                }
+            }
+        },
+        {
+            "owner": "postgres",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "gen_random_uuid()",
+                    "not_null": true
+                },
+                {
+                    "name": "requirement_number",
+                    "type": "text",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "opportunity_id",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": true
+                },
+                {
+                    "name": "customer_id",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": true
+                },
+                {
+                    "name": "title",
+                    "type": "text",
+                    "default": null,
+                    "not_null": true
+                },
+                {
+                    "name": "status",
+                    "type": "text",
+                    "default": "'draft'::text",
+                    "not_null": true
+                },
+                {
+                    "name": "current_revision",
+                    "type": "integer",
+                    "default": "1",
+                    "not_null": true
+                },
+                {
+                    "name": "customer_reference",
+                    "type": "text",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "requirement_data",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "not_null": true
+                },
+                {
+                    "name": "submitted_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "approved_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "created_by",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "not_null": true
+                },
+                {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "not_null": true
+                }
+            ],
+            "force_rls": false,
+            "table_name": "public.customer_requirements",
+            "constraints": [
+                {
+                    "name": "customer_requirements_customer_id_fkey",
+                    "type": "f",
+                    "definition": "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT"
+                },
+                {
+                    "name": "customer_requirements_opportunity_id_fkey",
+                    "type": "f",
+                    "definition": "FOREIGN KEY (opportunity_id) REFERENCES sales_opportunities(id) ON DELETE CASCADE"
+                },
+                {
+                    "name": "customer_requirements_pkey",
+                    "type": "p",
+                    "definition": "PRIMARY KEY (id)"
+                },
+                {
+                    "name": "customer_requirements_requirement_number_key",
+                    "type": "u",
+                    "definition": "UNIQUE (requirement_number)"
+                },
+                {
+                    "name": "customer_requirements_status_check",
+                    "type": "c",
+                    "definition": "CHECK (status = ANY (ARRAY['draft'::text, 'submitted'::text, 'clarification_required'::text, 'under_review'::text, 'feasibility'::text, 'commercial_review'::text, 'customer_review'::text, 'approved'::text, 'baselined'::text, 'changed'::text, 'archived'::text]))"
+                }
+            ],
+            "rls_enabled": true,
+            "effective_table_privileges": {
+                "anon": {
+                    "delete": true,
+                    "insert": true,
+                    "select": true,
+                    "update": true
+                },
+                "authenticated": {
+                    "delete": true,
+                    "insert": true,
+                    "select": true,
+                    "update": true
+                }
+            }
+        },
+        {
+            "owner": "postgres",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "gen_random_uuid()",
+                    "not_null": true
+                },
+                {
+                    "name": "requirement_id",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": true
+                },
+                {
+                    "name": "department_id",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "reviewer_user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "status",
+                    "type": "text",
+                    "default": "'pending'::text",
+                    "not_null": true
+                },
+                {
+                    "name": "findings",
+                    "type": "text",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "assumptions",
+                    "type": "text",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "risks",
+                    "type": "text",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "reviewed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "created_by",
+                    "type": "uuid",
+                    "default": null,
+                    "not_null": false
+                },
+                {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "not_null": true
+                },
+                {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "not_null": true
+                }
+            ],
+            "force_rls": false,
+            "table_name": "public.requirement_feasibility_reviews",
+            "constraints": [
+                {
+                    "name": "requirement_feasibility_review_requirement_id_department_id_key",
+                    "type": "u",
+                    "definition": "UNIQUE (requirement_id, department_id)"
+                },
+                {
+                    "name": "requirement_feasibility_reviews_department_id_fkey",
+                    "type": "f",
+                    "definition": "FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL"
+                },
+                {
+                    "name": "requirement_feasibility_reviews_pkey",
+                    "type": "p",
+                    "definition": "PRIMARY KEY (id)"
+                },
+                {
+                    "name": "requirement_feasibility_reviews_requirement_id_fkey",
+                    "type": "f",
+                    "definition": "FOREIGN KEY (requirement_id) REFERENCES customer_requirements(id) ON DELETE CASCADE"
+                },
+                {
+                    "name": "requirement_feasibility_reviews_status_check",
+                    "type": "c",
+                    "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'in_review'::text, 'feasible'::text, 'feasible_with_conditions'::text, 'not_feasible'::text]))"
+                }
+            ],
+            "rls_enabled": true,
+            "effective_table_privileges": {
+                "anon": {
+                    "delete": true,
+                    "insert": true,
+                    "select": true,
+                    "update": true
+                },
+                "authenticated": {
+                    "delete": true,
+                    "insert": true,
+                    "select": true,
+                    "update": true
+                }
+            }
+        }
+    ],
+    "policies": [
+        {
+            "roles": [
+                "authenticated"
+            ],
+            "using": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "command": "ALL",
+            "table_name": "public.customer_requirement_revisions",
+            "with_check": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "policy_name": "Sales users manage requirement revisions"
+        },
+        {
+            "roles": [
+                "authenticated"
+            ],
+            "using": "(has_permission(auth.uid(), 'sales.view'::text) OR has_permission(auth.uid(), 'engineering.view'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "command": "SELECT",
+            "table_name": "public.customer_requirement_revisions",
+            "with_check": null,
+            "policy_name": "Sales users view requirement revisions"
+        },
+        {
+            "roles": [
+                "authenticated"
+            ],
+            "using": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "command": "ALL",
+            "table_name": "public.customer_requirements",
+            "with_check": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "policy_name": "Sales users manage requirements"
+        },
+        {
+            "roles": [
+                "authenticated"
+            ],
+            "using": "(has_permission(auth.uid(), 'sales.view'::text) OR has_permission(auth.uid(), 'engineering.view'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "command": "SELECT",
+            "table_name": "public.customer_requirements",
+            "with_check": null,
+            "policy_name": "Sales users view requirements"
+        },
+        {
+            "roles": [
+                "authenticated"
+            ],
+            "using": "(has_permission(auth.uid(), 'sales.view'::text) OR has_permission(auth.uid(), 'engineering.view'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "command": "SELECT",
+            "table_name": "public.requirement_feasibility_reviews",
+            "with_check": null,
+            "policy_name": "Authenticated users view feasibility reviews"
+        },
+        {
+            "roles": [
+                "authenticated"
+            ],
+            "using": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "command": "ALL",
+            "table_name": "public.requirement_feasibility_reviews",
+            "with_check": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+            "policy_name": "Sales users manage feasibility reviews"
+        }
+    ],
+    "triggers": [
+        {
+            "definition": "CREATE TRIGGER customer_requirements_assign_business_code BEFORE INSERT ON customer_requirements FOR EACH ROW EXECUTE FUNCTION assign_stabilization_codes()",
+            "table_name": "customer_requirements",
+            "trigger_name": "customer_requirements_assign_business_code"
+        },
+        {
+            "definition": "CREATE TRIGGER customer_requirements_touch_ssm BEFORE UPDATE ON customer_requirements FOR EACH ROW EXECUTE FUNCTION touch_ssm_updated_at()",
+            "table_name": "customer_requirements",
+            "trigger_name": "customer_requirements_touch_ssm"
+        },
+        {
+            "definition": "CREATE TRIGGER requirement_feasibility_reviews_touch_ssm BEFORE UPDATE ON requirement_feasibility_reviews FOR EACH ROW EXECUTE FUNCTION touch_ssm_updated_at()",
+            "table_name": "requirement_feasibility_reviews",
+            "trigger_name": "requirement_feasibility_reviews_touch_ssm"
+        }
+    ],
+    "functions": [
+        {
+            "config": [
+                "search_path=public"
+            ],
+            "identity": "public.enqueue_notification(_user_id uuid, _category text, _title text, _body text, _target_url text, _target_entity_type text, _target_entity_id uuid, _event_key text)",
+            "result_type": "void",
+            "security_definer": true,
+            "execute_privileges": {
+                "anon": false,
+                "authenticated": false
+            }
+        },
+        {
+            "config": [
+                "search_path=public"
+            ],
+            "identity": "public.has_permission(_user_id uuid, _permission_key text)",
+            "result_type": "boolean",
+            "security_definer": true,
+            "execute_privileges": {
+                "anon": false,
+                "authenticated": true
+            }
+        },
+        {
+            "config": [
+                "search_path=public"
+            ],
+            "identity": "public.next_business_number(_entity_type text, _department_code text, _project_code text)",
+            "result_type": "text",
+            "security_definer": true,
+            "execute_privileges": {
+                "anon": false,
+                "authenticated": true
+            }
+        }
+    ],
+    "capture_scope": "schema_only_pre_install_catalog",
+    "review_pin_summary": {
+        "row_count": 0,
+        "table_exists": true,
+        "columns_present": {
+            "source_revision_id": null,
+            "applicable_workstreams": null,
+            "source_revision_number": null,
+            "master_specification_version_id": null,
+            "master_specification_version_number": null
+        },
+        "all_five_null_count": 0,
+        "all_five_non_null_count": 0,
+        "partial_or_incomplete_count": 0
+    },
+    "expected_pin_columns": [
+        "source_revision_id",
+        "source_revision_number",
+        "master_specification_version_id",
+        "master_specification_version_number",
+        "applicable_workstreams"
+    ]
+}
+
+## Source and preview status captured separately
+source_head=b4c8311700dfdcc50be6194b369bcd446b5faad2
+source_status=0 changed_entries
+build_log=unavailable

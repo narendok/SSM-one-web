@@ -1,0 +1,8 @@
+{
+  "source": "supabase\\migrations\\20261017053400_feasibility_provenance_protected_handover_source_only.sql",
+  "sha256_lf": "a990777fe0c51ca4d12b6d3c6adcce3f35e0028fe4de5805d9303ae26ed12d9e",
+  "bytes_lf": 53542,
+  "chunks": 9,
+  "schema": "_ssm_feasibility_install_20261017",
+  "note": "Review only; one final transaction executes the unaltered whole source. Staging grants no application access."
+}
