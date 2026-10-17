@@ -773,3 +773,26 @@ User requested continuation with scheduler active. Thread heartbeat continue-ssm
 ### All-review readiness conflict guard — 17 October 2026
 
 Read-only baseline composition now inspects every matching workstream review rather than the first, so a positive result cannot hide a negative or pending peer. Empty required scope is unavailable, and distinct blockers are retained without duplicate text. Twenty focused tests, TypeScript and production build passed. Existing BaselineDialog still fails closed on missing immutable source verification; approval remains false. No persisted conflict resolution, UI activation, client approval or baseline lock is claimed. Evidence: docs/evidence/20261017_all_review_readiness.md. The status table now reflects previously verified installations while retaining outstanding real-JWT/operational gates.
+
+### Governed Smart BOM, Adaptive Purchase/Invoice Ingestion, and Asset Lifecycle Plan — 18 October 2026
+
+Refined the BOM and purchase-import architecture to fulfill multi-stage engineering, enterprise asset governance, and arbitrary document ingestion:
+1. **Dual-Lifecycle BOM Architecture**:
+   - **Tentative BOM**: Engineering/feasibility draft permitting provisional MPNs, unverified candidate components, generic placeholders, and live stock "what-if" shortage simulations without claiming reservations.
+   - **Released BOM**: Formally locked revision (Rev A, Rev B, etc.) bound to an approved baseline, requiring qualified catalog items, immutable without an authorized Engineering Change Order (ECO).
+   - Multi-format exports: Indented BOM, Flattened Production BOM with aggregated reference designators, and Procurement Shortage Requisitions.
+2. **Adaptive Purchase Order & Invoice Ingestion Engine**:
+   - Ingests arbitrary/random spreadsheet layouts (CSV, Excel) from any supplier/distributor via fuzzy column matching with extensive alias dictionaries.
+   - Leverages AI document extraction for PDF and image invoices to parse supplier, invoice, and line-item structures.
+   - Interactive preview mapper with confidence scores (`High`, `Low`, `Unmapped`) and inline correction before processing.
+3. **Governed Pre-Inventory Review Gate**:
+   - Mandatory staging workspace reconciling vendor identities against `procurement.vendors`, normalizing MPNs against the component catalog, and detecting quantity/price variances against existing POs.
+   - Human review actions (Accept, Reject/Ignore, Remap, Split) before generating drafts.
+   - Accepted lines create grouped Purchase Drafts or Inwarding (GRN) drafts only.
+4. **Controlled Receiving Boundary**:
+   - Absolute separation between import and active stock: zero inventory is added directly from an import.
+   - Material flows strictly through Stores Inwarding -> Inspection Lot (QC Hold) -> Quality Release before becoming issueable.
+5. **Asset Register Import, Export & Compatibility**:
+   - Bulk CSV/Excel onboarding and export for Production Machinery, Service Equipment, and IMTE/Calibration instruments.
+   - Connects machine-to-component compatibility mappings (`compatible_component_ids`) distinct from custody assignments.
+
