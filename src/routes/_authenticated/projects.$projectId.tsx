@@ -22,6 +22,7 @@ import { FirmwareVault } from "@/components/drive/FirmwareVault";
 import { CadVault } from "@/components/drive/CadVault";
 import { ProjectBomsTab } from "@/components/projects/ProjectBomsTab";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
+import { ProjectAnalysisSummary } from "@/components/projects/ProjectAnalysisSummary";
 import { ProjectTeamTab } from "@/components/projects/ProjectTeamTab";
 import { ProjectOperationalTab, ProjectRequirementContext } from "@/components/projects/ProjectOperationalTabs";
 import { SharedProductLifecycle } from "@/components/projects/SharedProductLifecycle";
@@ -168,6 +169,7 @@ function ProjectDetailPage() {
         </TabsList>
 
         <TabsContent value="overview" className="pt-4 space-y-5">
+          <ProjectAnalysisSummary project={project} />
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <SnapshotCard
               icon={GitPullRequest}
