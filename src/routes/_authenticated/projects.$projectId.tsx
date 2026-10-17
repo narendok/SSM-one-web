@@ -101,7 +101,7 @@ function ProjectDetailPage() {
     isLoading: areTasksLoading,
     isError: hasTaskError,
   } = useQuery({
-    queryKey: ["project_workspace_tasks", projectId],
+    queryKey: ["project_tasks", projectId, "all-departments"],
     queryFn: () => fetchTasks(projectId),
   });
 
@@ -281,6 +281,15 @@ function ProjectDetailPage() {
             </Card>
           </section>
 
+          <details open className="rounded-lg border bg-card p-4">
+            <summary className="cursor-pointer text-sm font-semibold">Project work · common board</summary>
+            <p className="mt-2 text-xs text-muted-foreground">
+              The same project tasks shown in Tasks. Completion reflects visible work, not stage approval.
+            </p>
+            <div className="mt-4">
+              <TaskBoard projectId={projectId} compact initialView="board" />
+            </div>
+          </details>
           <div className="grid gap-3 lg:grid-cols-3">
             <Card className="p-4 space-y-2 text-sm lg:col-span-2">
               <Row label="Code" value={project.code} />

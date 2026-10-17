@@ -137,6 +137,16 @@ function confirmTaskValues(saved: Record<string, unknown>, expected: Record<stri
   const differs = Object.entries(expected).some(([key, value]) => value !== undefined && !Object.is(saved[key], value));
   if (differs) throw new Error("Task values were not confirmed. Refresh and review the saved record before retrying.");
 }
+/** A write may already have committed when readback fails; never imply rollback or safe retry. */
+async function readBackTask(id: string, expected: Record<string, unknown>) {
+  const fields = [...new Set(["id", ...Object.keys(expected).filter((key) => expected[key] !== undefined)])].join(",");
+  const { data, error } = await sb.from("project_tasks").select(fields).eq("id", id).maybeSingle();
+  if (error || data?.id !== id) {
+    throw new Error("Task write may have saved, but readback is unavailable. Refresh and review the record before retrying.");
+  }
+  confirmTaskValues(data, expected);
+  return data;
+}
 export async function createTask(input: TaskInput) {
   const { data: session, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
@@ -147,7 +157,7 @@ export async function createTask(input: TaskInput) {
   if (error) throw error;
   if (!data?.id) throw new Error("Task creation was not confirmed. Refresh before retrying.");
   confirmTaskValues(data, values);
-  return data;
+  return readBackTask(data.id, values);
 }
 
 export async function updateTask(id: string, patch: Partial<ProjectTask>) {
@@ -162,7 +172,7 @@ export async function updateTask(id: string, patch: Partial<ProjectTask>) {
   if (error) throw error;
   if (data?.id !== id) throw new Error("Task update was not confirmed. Refresh and check your access before retrying.");
   confirmTaskValues(data, clean);
-  return data;
+  return readBackTask(id, clean);
 }
 
 export async function deleteTask(id: string) {
