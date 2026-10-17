@@ -511,6 +511,11 @@ Pending handover adapter increment (15 October): added caller-authenticated subm
 
 TypeScript no-emit completed successfully for the pending handover adapter. No browser demo applies to this disabled server transport; the previously verified preparation UI remains the current visible behavior.
 
+
+### Source-only first feasibility activation bundle — 17 October 2026
+
+Prepared a reviewed source-only package for pinned review provenance, protected assignment/response and atomic Sales handover. It excludes external intake, private notes/highlights/publication, baseline approval, project start and direct-write restriction. The activation draft fails closed on missing dependencies, incompatible helper signatures, partially pinned legacy reviews and duplicate non-null revision/department review pairs. On 17 October, a disposable PostgreSQL 17 run corrected the reserved `constraint` preflight alias, aligned only the synthetic `next_business_number(text,text,text)` helper to the managed signature, corrected the replay fixture to comply with complete provenance pins, verified the separate transition include, and passed handover/replay/stale/unauthorized/graph-drift/notification-rollback plus synthetic access-transition checks. No migration was applied and no UI was enabled. Managed caller/RLS, concurrency, notification rollback, writer reconciliation and restore acceptance remain required. Evidence: `docs/evidence/20261017_feasibility_activation_bundle_source_review.md`.
+
 ### Two project-analysis UI alternatives — 15 October 2026
 
 User requested an independent Lovable versus Codex comparison before selecting a product layout. Both standalone fictional previews are retained under public/design-previews, with project-analysis-compare.html as the entry. Lovable source arrived in ac91e19 and was fast-forward reconciled before the independent Codex file was added. The incidental managed Vite configuration upgrade was deferred back to validated 2.25.3; no application route/backend changes were needed. Codex emphasizes wide visuals, workstream cards and a dependency/list toggle; Lovable uses a three-column department selector, system visual and analysis panel. Both illustrate internal remarks versus published highlights and a proposed change separate from the baseline. These are UI-only examples, not persistence, authorization, client publication, a project start or acceptance. Local browser navigation timed out, so visual/interaction verification and final user comparison remain pending; do not mark either design chosen or live.
@@ -659,6 +664,10 @@ This status replaces the repeated chronological checkpoints below the budget req
 - Highlight draft adapters and independent editors: docs/evidence/20261016_highlight_draft_adapter_preparation.md; docs/evidence/20261016_gated_highlight_draft_editor.md.
 - Disposable PostgreSQL runtime, isolation, resource failures and cleanup: docs/evidence/20261016_windows_local_postgresql_acceptance.md.
 - Budget/expense/asset inventory and local chart trial: docs/evidence/20261016_budget_expense_asset_source_inventory.md.
+
+### Source synchronization — 17 October 2026
+
+User authorized full local/GitHub reconciliation. Local acceptance/root-lock commits and origin/lovable-sync through 524b088 are merged with history preserved; 38 focused tests passed, 2 skipped. Full root safeguards and existing plan are retained. Evidence: docs/evidence/20261017_github_local_reconciliation.md. Source sync is separate from managed deployment; pending SQL remains unapplied.
 
 ### Active delivery boundaries
 

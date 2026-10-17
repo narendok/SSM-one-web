@@ -1,6 +1,5 @@
-# Task roadmap
-
-- [ ] Review the corrected protected Sales feasibility handover replay pins and disposable concurrency evidence (source-only; no installation).
+- [ ] Review corrected feasibility activation package and local PostgreSQL 17 evidence before managed installation (source-only; no installation).
 - [ ] Provide a suggestions-only UX review of SharedFeasibilityAnalysis.
 - [ ] Await explicit approval before handover installation, grants/policies, UI enablement, or baseline-to-project deployment.
-- [x] Diagnose the original project's Git sync state read-only and prepare a complete current-source recovery archive.
+- [x] Diagnose the original project Git sync state read-only and prepare a complete current-source recovery archive.
+- [ ] Keep the Lovable Git connection available after one GitHub authorization; waiting for the user to complete the Git settings connection flow, subject to GitHub authorization expiry or revocation.

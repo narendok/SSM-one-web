@@ -1,0 +1,9 @@
+# Local / GitHub reconciliation — 17 October 2026
+
+User explicitly requested syncing everything between local SSMOneWeb and the existing public github.com/narendok/ssmone1 repository. Fetched main and lovable-sync. Preserved local activation acceptance and archive-root-lock commits and merged origin/lovable-sync through 524b088 without force, reset, history deletion or conflicts.
+
+Reviewed incoming application/database scoped safeguards, activation SQL/tests/fixture, planning and connection notes. Retained the full original root AGENTS.md and existing .lovable/plan.md rather than losing prior safeguards/history to the managed instruction consolidation. Kept scoped safeguards additively. Preview auth has no resulting incoming difference from validated local source. Activation SQL at supabase/migrations/20261017053400_feasibility_provenance_protected_handover_source_only.sql is byte-equivalent to the independently accepted pending corrected copy (ignoring Git newline representation). These files remain source-only: syncing does not apply migrations, grants, RLS or Publish.
+
+Focused merged tests: feasibility-activation-bundle.test.ts and client-requirement-intake.test.ts completed with 38 passed and 2 skipped. No unchanged build rerun was required for SQL/documentation/test-source reconciliation. Existing local SQL acceptance and archive/restore evidence remain applicable to their unchanged bodies.
+
+Final sync targets: main and lovable-sync receive the same reviewed merge commit through normal fast-forward pushes. Verify remote commit IDs and clean local status after push. This does not establish Lovable browser refresh, backend installation, caller/RLS acceptance, client publication, baseline approval or project start.
