@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -78,7 +79,10 @@ function AppLayout() {
           <header className="h-14 flex items-center gap-3 border-b bg-card px-4 sticky top-0 z-10">
             <SidebarTrigger />
              <div className="flex-1"><GlobalSearch /></div>
-              <div className="flex items-center gap-1"><WorkspaceSwitcher /><NotificationCenter />
+              <div className="flex items-center gap-1">
+                <ThemeToggle />
+                <WorkspaceSwitcher />
+                <NotificationCenter />
              <div className="hidden sm:flex flex-col items-end leading-tight">
                <span className="text-xs font-medium">{displayName ?? user?.email}</span>
                <span className="text-[11px] text-muted-foreground">{employeeStatus === "SUSPENDED" ? "Access suspended" : role === "admin" ? "Platform Owner" : "Employee"}</span>
