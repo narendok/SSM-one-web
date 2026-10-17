@@ -208,7 +208,7 @@ describe("client requirement intake contract", () => {
   it("keeps the legacy Sales feasibility save path from silently bypassing the pending protected contract", () => {
     const salesFunctions = readFileSync("src/lib/sales.functions.ts", "utf8");
     const lifecycleDialogs = readFileSync("src/components/sales/SalesLifecycleDialogs.tsx", "utf8");
-    expect(salesFunctions).toContain('sb.rpc("assign_requirement_feasibility_review"');
+    expect(salesFunctions).toContain("assignFeasibilityWithReadback(sb, data)");
     expect(salesFunctions).not.toContain('from("requirement_feasibility_reviews").upsert');
     expect(lifecycleDialogs).toContain("Protected assignment is pending database acceptance");
     expect(lifecycleDialogs).toContain("Assign reviewer</Button>");

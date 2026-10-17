@@ -1,3 +1,4 @@
+import { assignFeasibilityWithReadback, protectedAssignmentInputSchema } from "./feasibility-assignment-save";
 import { salesProjectStartAvailability } from "./sales-project-start";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -9,7 +10,7 @@ const contactSchema = z.object({ customerId: z.string().uuid(), fullName: z.stri
 const enquirySchema = z.object({ enquiryNumber: z.string().trim().max(64).nullable(), customerId: z.string().uuid().nullable(), contactId: z.string().uuid().nullable(), source: z.enum(["manual", "website", "email", "gmail", "referral", "existing_customer", "marketing", "other"]), enquiryDate: z.string().min(10), requirementSummary: z.string().trim().min(3).max(4000), application: nullable(240), productType: nullable(240), estimatedVolume: nullable(240), expectedTimeline: nullable(240), priority: z.enum(["low", "medium", "high", "urgent"]), salesOwnerUserId: z.string().uuid().nullable(), nextAction: nullable(1000), nextActionDate: z.string().min(10).nullable() });
 const opportunitySchema = z.object({ opportunityNumber: z.string().trim().max(64).nullable(), customerId: z.string().uuid(), contactId: z.string().uuid().nullable(), enquiryId: z.string().uuid().nullable(), name: z.string().trim().min(3).max(240), application: nullable(240), productType: nullable(240), primarySalesOwnerUserId: z.string().uuid().nullable(), ndaRequired: z.boolean(), estimatedVolume: nullable(240), targetTimeline: nullable(240), priority: z.enum(["low", "medium", "high", "urgent"]), nextAction: nullable(1000), nextActionDate: z.string().min(10).nullable() });
 const ndaSchema = z.object({ opportunityId: z.string().uuid(), status: z.enum(["not_required", "draft", "sent", "signed", "expired", "declined"]), signedByName: nullable(160), signedByEmail: z.string().trim().email().max(254).nullable(), expiryDate: z.string().min(10).nullable(), notes: nullable(4000) });
-const feasibilityAssignmentSchema = z.object({ requirementId: z.string().uuid(), departmentId: z.string().uuid(), reviewerUserId: z.string().uuid() });
+const feasibilityAssignmentSchema = protectedAssignmentInputSchema;
 const commercialSchema = z.object({ requirementId: z.string().uuid(), quotationReference: nullable(160), currency: z.string().trim().min(3).max(8), quotedAmount: z.number().nonnegative().nullable(), status: z.enum(["draft", "internal_review", "sent", "customer_authorized", "declined", "expired"]), authorizationReference: nullable(240), notes: nullable(4000) });
 const baselineSchema = z.object({ requirementId: z.string().uuid(), expectedRevisionNumber: z.number().int().positive(), requestKey: z.string().uuid() });
 const portalSchema = z.object({ customerId: z.string().uuid(), contactId: z.string().uuid().nullable(), label: z.string().trim().min(2).max(160), expiresAt: z.string().min(10).nullable() });
@@ -33,7 +34,7 @@ export const createCustomerRequirement = createServerFn({ method: "POST" })
   .handler(() => {
     throw new Error("Legacy customer requirement creation is retired. Use the protected source-bound requirement flow after database acceptance.");
   });
-export const assignFeasibilityReview = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((data) => feasibilityAssignmentSchema.parse(data)).handler(async ({ data, context }) => { const sb = context.supabase as any; await requireSales(sb, context.userId); const { data: reviewId, error } = await sb.rpc("assign_requirement_feasibility_review", { p_requirement_id: data.requirementId, p_department_id: data.departmentId, p_reviewer_user_id: data.reviewerUserId }); if (error || typeof reviewId !== "string") throw new Error(error?.message ?? "Could not assign feasibility review."); return { id: reviewId }; });
+export const assignFeasibilityReview = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((data) => feasibilityAssignmentSchema.parse(data)).handler(async ({ data, context }) => { const sb = context.supabase as any; await requireSales(sb, context.userId); return assignFeasibilityWithReadback(sb, data); });
 /**
  * Intentionally unavailable: the deployed commercial writer is a non-atomic upsert
  * without source locks, expected-version checks, immutable audit, or replay receipts.
