@@ -1,4 +1,4 @@
-import { submitSalesHandoverAcknowledgement } from "./sales-handover-save";
+import { submitSalesHandoverWithReadback } from "./sales-handover-save";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { salesFeasibilityHandoverAvailability } from "./client-requirement-intake";
@@ -12,5 +12,5 @@ export const submitSalesFeasibilityHandover = createServerFn({ method: "POST" })
     if (!salesFeasibilityHandoverAvailability.available) {
       throw new Error(salesFeasibilityHandoverAvailability.reason);
     }
-    return submitSalesHandoverAcknowledgement(context.supabase as any, data);
+    return submitSalesHandoverWithReadback(context.supabase as any, data);
   });

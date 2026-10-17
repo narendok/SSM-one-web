@@ -1,0 +1,5 @@
+expected;label;observed;verification
+1;Reader: stable definer, scoped path, authenticated only;1;PASS
+1;Private handover receipts: RLS and no direct caller access;1;PASS
+0;Existing handover receipts;0;PASS
+0;Null actor readback returns no rows;0;PASS
