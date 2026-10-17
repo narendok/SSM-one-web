@@ -1,89 +1,87 @@
-# Governed Smart BOM, Adaptive Purchase/Invoice Ingestion, and Asset Lifecycle Plan
+# Role-aware Sidebar Menu Plan
 
 ## Goal
-Create an enterprise-grade, inventory-aligned BOM, purchase-import, and asset lifecycle experience that combines the existing PartsBench workflow with multi-lifecycle BOMs (Tentative vs Released), arbitrary "random-style" purchase order/invoice ingestion via a governed review process, and end-to-end asset register import/export. It ensures full traceability across stock matching, purchasing decisions, project BOM baselines, and serialized equipment without ever allowing unreviewed, uninspected stock postings or automated approval bypasses.
+Create one clear sidebar that adapts to the signed-in person: a full-control administration view and focused department views. Everyone gets Favorites first, then only the grouped work areas they are allowed to open.
 
-## What users will be able to do
-1. **Dual-Lifecycle BOM Management**:
-   - Create and explore **Tentative BOMs** (provisional MPNs, design exploration, substitute evaluation, and "what-if" shortage simulations against live stock without claiming reservations).
-   - Formally approve and lock **Released BOMs** (production-ready, strict catalog-matching, versioned baseline under ECO change control).
-   - Compare BOM revisions side-by-side (identifying added/removed parts, quantity per board shifts, substitute changes, and cost deltas).
-   - Export BOMs in multiple formats: full Indented/Hierarchical BOM, Flattened Production BOM with aggregated reference designators, and Procurement Shortage Requisitions.
-2. **Adaptive Purchase Order & Invoice Ingestion ("Any-Style" Ingestion)**:
-   - Import arbitrary, non-standard tabular spreadsheets (CSV, Excel `.xlsx`/`.xls`, TSV) or document files (PDF/scans via AI extraction) from any supplier, distributor, or custom fabricator.
-   - Automatically normalize headers and values using fuzzy token matching across document IDs (PO #, Invoice #), vendor identities, line items (SKU, MPN, description, package), and commercial data (ordered/billed quantities, unit prices, taxes, totals).
-   - Review and correct detected columns on an interactive mapping screen with instant confidence ratings (`High`, `Low`, `Unmapped`) before processing.
-3. **Governed Pre-Inventory Review Process**:
-   - Reconcile imported lines against the approved Vendor Register (`procurement.vendors`) and component catalog (`components`).
-   - Flag unmatched parts, new vendor candidates, duplicate order/invoice rows, and PO line quantity/price variances in an interactive review staging table.
-   - Accept, reject, remap, or split lines individually or in bulk.
-   - Generate editable, grouped **Purchase Drafts** or **Inwarding (GRN) Drafts** from accepted lines while maintaining complete source file and row traceability.
-4. **Controlled Receiving, GRN & Quality Release Boundary**:
-   - Maintain strict separation: imported POs and invoices create drafts only; they NEVER directly increment available inventory.
-   - Stock becomes usable only through the governed pathway: Stores Inwarding -> Inspection Lot (QC Hold / Quarantine) -> Quality Release -> Active Stock Bins.
-   - Prevent any stock on QC hold or quarantine from being issued or allocated to BOMs.
-5. **Asset Register Import, Export & Machinery Compatibility**:
-   - Ingest and export serialized asset records (Production Machinery, Service & Maintenance Equipment, IMTE / Calibration Tools, and Enterprise Assets) via CSV/Excel.
-   - Validate asset tags, serial number uniqueness, facility locations, and custodian employee IDs before committing.
-   - Link machines and test jigs to the specific components, wire harnesses, and consumables they utilize (`compatible_component_ids`).
-   - Export comprehensive asset registers, maintenance histories, and upcoming calibration schedules.
+## Shared sidebar behavior
+- Keep a compact icon-only state and an always-visible control to expand it again.
+- Show Favorites at the top. Users can pin their most-used permitted pages; sensible role defaults appear before they personalize the list.
+- Group the remaining links into expandable work areas. Keep the group containing the current page open and highlight the current page.
+- On small screens, open navigation as an accessible overlay; retain the active page context and a clear close control.
+- Hide links without access. A visible link is navigation convenience only; every page and action continues to enforce its existing authorization independently.
+- Preserve the existing authenticated routes and avoid exposing unfinished or source-only workflows as operational menu items.
 
-## Delivery stages
+## Administrator sidebar
 
-### 1. Dual-Lifecycle BOM Workspace (Tentative vs. Released)
-- Audit and retain the current `/bom` import, mapping, stock matching, substitute selection, and sharing behavior.
-- Support **Tentative BOMs**: permit provisional MPNs, generic descriptors, alternative comparisons, supplier quotes exploration, and preliminary cost rollups without hard stock reservations.
-- Support **Released BOMs**: enforce full component resolution against approved catalog parts, lock revisions (Rev A, Rev B), and mandate change rationale for modifications.
-- Consolidate the line-level results view: source values, matched part, stock by location, shortages, approved substitutes, cost variance, and assignment eligibility.
-- Add deterministic matching explanations and manual override history so saved BOMs can be refreshed and audited safely.
-- Provide comprehensive export formats: Indented BOM, Flattened Production BOM (with aggregated designators), and Shortage Requisitions.
+### Favorites
+Default pins: Overview, Projects, Work queue, Inventory, Procurement, Quality, Documents, and People. Administrators can rearrange or remove these without losing access to the grouped menu.
 
-### 2. Smart Project BOM Management & Revision Comparison
-- Add project BOM revisioning with side-by-side diffing for quantity, part, cost, substitute, and lifecycle status changes.
-- Support line-level annotations, requested quantities, substitute rationale, and engineering approval flags without enabling premature stock deduction.
-- Re-run availability strictly against released, usable stock; separate available, reserved, and QC-held quantities.
-- Maintain persistent exports for resolved BOMs, shortages, and procurement-ready line requisitions.
+### Work groups
+1. **Overview**
+   - Dashboard / work queue
+   - Notifications and approvals that the current administrator is authorized to handle
+2. **Commercial & Projects**
+   - Customers, opportunities, projects, project analysis, project tasks, and customer service
+3. **Engineering & Delivery**
+   - Requirements, specifications, BOM, hardware, firmware, software, mechanical, engineering changes, and production planning where already available
+4. **Inventory & Procurement**
+   - Parts, stock, lots, material movements, purchase orders, suppliers, receiving / GRN, incoming quality, and assets
+   - Keep quality-held stock separate from available stock in labels and summaries; the sidebar does not imply release or issue authority.
+5. **Quality & Compliance**
+   - Quality workspace, inspections, non-conformances, warranty, calibrations, and controlled records where available
+6. **Documents & Collaboration**
+   - Drive, document registers, templates, shared collaboration, and approved external-contact administration
+7. **People & Organization**
+   - Employees, departments, hiring, roles, memberships, and assignments
+8. **Administration**
+   - Organization settings, permission administration, integrations, controlled reference data, and audit/history views that already have protected routes
 
-### 3. Adaptive Purchase Order & Invoice Ingestion Engine
-- Add a flexible, multi-format import parser for arbitrary CSV, Excel, and PDF/image supplier files.
-- Implement fuzzy column normalization with alias dictionaries covering varied naming conventions, date formats, and currencies.
-- Provide a pre-import mapping screen with confidence ratings (`High`, `Low`, `Unmapped`) and inline column remapping dropdowns.
-- Implement integrity and duplicate guards: flag repeated invoice numbers from the same vendor and duplicate PO line items.
+## Department sidebar
 
-### 4. Governed Review Staging & Reconciliation Gate
-- Build the interactive Review Staging Table:
-  - Match vendor names against `procurement.vendors`; flag unknown suppliers as candidates.
-  - Match parts against `components`; distinguish Exact Match, Known Substitute, Candidate Part, and Unmatched.
-  - Reconcile invoice lines against existing POs: detect quantity overages and price spikes.
-- Provide row-level review actions: Accept, Reject/Ignore, Remap, or Split.
-- Generate editable, grouped Purchase Drafts for PO imports and Inwarding (GRN) Drafts for invoice imports; retain source file and row metadata.
+### Department-focused Favorites
+Default pins will depend on the person’s active department and assigned work, for example: My work, department queue, active projects, and the department’s primary workspace. People who belong to more than one department can switch their active department context; the sidebar refreshes without revealing other departments’ restricted work.
 
-### 5. Controlled Receiving & Quality Release Boundary
-- Keep purchase import, PO drafting, receipt, incoming inspection, and stock release strictly decoupled.
-- Enforce the quality-hold invariant: incoming goods remain in QC Hold / Quarantine until formally accepted by inspection.
-- Prohibit allocation or issuance of uninspected lots to any project, BOM, or work order.
+### Shared department groups
+1. **My work**
+   - My tasks, assigned reviews, notifications, and permitted project work
+2. **Projects**
+   - Only the projects and project documents the person is authorized to view
+3. **Department workspace**
+   - The active department’s queue, work items, templates, controlled documents, and team members as permitted
+4. **Reference**
+   - Read-only parts, approved specifications, approved documents, and other shared records needed to do the job
 
-### 6. Asset Register Import, Export & Compatibility Mapping
-- Add bulk CSV/Excel import and export for assets across Production Machinery, Service Jigs, IMTE Instruments, and Facility Tooling.
-- Validate serial number uniqueness, facility location, and active custodian membership prior to commit.
-- Surface and maintain machine-to-component compatibility mappings (`compatible_component_ids`) in the Asset Register.
-- Provide exportable calibration schedules, maintenance logs, and asset custody reports.
+### Department-specific primary workspaces
+- **Sales:** customers, opportunities, quotations, handover status, and customer service.
+- **Hardware / Firmware / Software / Mechanical:** requirements, assigned project work, specifications, BOM visibility, change inputs, and department documents.
+- **Procurement / Stores:** parts, approved purchase work, supplier records, receiving, stock movements, and material issue/return duties that are explicitly granted.
+- **Quality:** inspections, incoming quality, quality holds/releases, non-conformances, and calibration/quality records.
+- **Production / Operations:** authorized project delivery work, production planning, controlled material requests, and process records.
+- **Finance / HR / Legal / Management:** only their existing authorized records and department tools; Legal documents remain separate from Sales navigation.
 
-## Verification gates
-- **BOM Verification**: Tentative BOM creation with provisional items, stock shortage simulation, transition to Released BOM with catalog resolution, revision diffing, and multi-format exports.
-- **Ingestion Verification**: Upload arbitrary supplier formats (different column names, orders, date formats); verify correct fuzzy detection and mapping confidence.
-- **Review Gate Verification**: Correctly flag duplicate invoices, detect PO price/quantity variances, stage unknown vendors/parts as candidates, and permit line acceptance/rejection.
-- **Stock Invariant Verification**: Verify that importing invoices/POs never increases usable stock until an official GRN is generated, inspected, and released by Quality.
-- **Asset Verification**: Bulk asset import with duplicate serial rejection, custodian verification, component compatibility linking, and register export.
+## Implementation stages
+1. **Navigation inventory and access matrix**
+   - Map every existing authenticated route to a work group, audience, icon, display name, and authorization source.
+   - Mark routes that must remain absent because their underlying contract is pending, source-only, or restricted.
+2. **Reusable navigation model**
+   - Introduce a typed menu catalogue with group, route, role/department eligibility, favorite eligibility, and feature status.
+   - Resolve the current user’s administrator authority, active department membership, and authorized route set on the server-backed authenticated path.
+3. **Sidebar experience**
+   - Build the responsive collapsible sidebar, active-link state, open-group behavior, and accessible mobile navigation.
+   - Add an active-department switcher only for verified multi-department memberships.
+4. **Favorites**
+   - Add per-user favorites with safe defaults, ordering, add/remove controls, and fallback behavior when access changes.
+   - Persist preferences only after confirming the existing department workspace-preference contract can safely support it; otherwise deliver the default-only sidebar first.
+5. **Role validation and rollout**
+   - Exercise representative administrator and department accounts, including a multi-department person, restricted department user, and unauthorised deep link.
+   - Verify that menu visibility changes correctly but direct route/server authorization remains the source of truth.
 
 ## Technical details
-- Reuse browser-side BOM parsing/matching utilities and project-BOM server contracts where authoritative.
-- Extend existing tabular mapping utilities (`guessInventoryMapping`, `InventoryCsvMapping`) and document extraction (`extractInvoice`) into unified review staging contracts.
-- Persist review staging drafts with source file, row index, match confidence, and user override records.
-- Integrate with existing `procurement.orders`, `procurement.inward`, `inventory_lots`, and `assets` schemas.
-- Write focused contract and unit tests for fuzzy mapping heuristics, revision comparison, duplicate detection, draft generation, and QC-hold enforcement.
+- Use the existing TanStack route links and authenticated layout; do not introduce a second router.
+- Keep navigation configuration separate from authorization decisions. The menu consumes verified permissions and department context rather than encoding broad client-side privileges.
+- Use the established sidebar component pattern, with explicit CSS variable syntax for width calculations so the content never sits behind the collapsed or expanded sidebar.
+- Add focused tests for concrete menu eligibility rules, default favorites, active-route group expansion, and access removal behavior.
 
 ## Boundaries
-- No automatic component creation, purchase-order issuance, stock posting, GRN approval, supplier communication, or project approval from an import.
-- Unrecognized suppliers or components become reviewable candidates, never silent auto-entries.
-- The existing Mouser part lookup will be retained for component enrichment (MPN, manufacturer, description, package, datasheet, and availability) and verified against its current integration before changes.
+- This is a navigation and visibility improvement, not a permissions rewrite. No existing backend authorization, document responsibility, inventory release, quality-hold, or feasibility approval rule is weakened.
+- No new operational links are added for pending feasibility, external-client copy, private document materialization, or other workflows that lack an accepted backend contract.
