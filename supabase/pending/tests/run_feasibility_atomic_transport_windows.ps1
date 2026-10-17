@@ -1,5 +1,5 @@
 # Loopback-only disposable PostgreSQL verification; no managed connection accepted.
-param([Parameter(Mandatory=$true)][string]$PostgresBin,[switch]$DirectEditor,[switch]$PrivateDrafts)
+param([Parameter(Mandatory=$true)][string]$PostgresBin,[switch]$DirectEditor,[switch]$PrivateDrafts,[switch]$HandoverReadback)
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $bin=(Resolve-Path -LiteralPath $PostgresBin).Path
@@ -47,6 +47,10 @@ try {
  Run-SqlFile (Join-Path $transport $finalFile) 'atomic-install'
  Run-SqlText 'DO $$ BEGIN IF to_regnamespace(''_ssm_feasibility_install_20261017'') IS NOT NULL THEN RAISE EXCEPTION ''Transport retained''; END IF; END $$;' 'staging-cleanup-check'
  Run-SqlFile (Join-Path $repo 'supabase/migrations/tests/20261017053400_feasibility_protected_handover_local_acceptance.sql') 'handover-acceptance'
+ if($HandoverReadback){
+  Run-SqlFile (Join-Path $repo 'supabase/pending/20261017_sales_handover_receipt_readback.sql') 'handover-readback-install'
+  Run-SqlFile (Join-Path $repo 'supabase/pending/tests/sales_handover_readback_local_acceptance.sql') 'handover-readback-acceptance'
+ }
  if($PrivateDrafts){
   Run-SqlFile (Join-Path $repo 'supabase/pending/tests/sales_feasibility_handover_root_serialization_local_acceptance.sql') 'private-root-seed'
   Run-SqlFile (Join-Path $repo 'supabase/pending/20261016_requirement_internal_notes.sql') 'closed-notes-install'
