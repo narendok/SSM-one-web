@@ -1,0 +1,136 @@
+{
+  "graph_policies": [
+    {
+      "check": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+      "command": "ALL",
+      "name": "Sales users manage requirement revisions",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "customer_requirement_revisions",
+      "using": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "Sales users view requirement revisions",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "customer_requirement_revisions",
+      "using": "(has_permission(auth.uid(), 'sales.view'::text) OR has_permission(auth.uid(), 'engineering.view'::text) OR has_role(auth.uid(), 'admin'::app_role))"
+    },
+    {
+      "check": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+      "command": "ALL",
+      "name": "Sales users manage requirements",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "customer_requirements",
+      "using": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "Sales users view requirements",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "customer_requirements",
+      "using": "(has_permission(auth.uid(), 'sales.view'::text) OR has_permission(auth.uid(), 'engineering.view'::text) OR has_role(auth.uid(), 'admin'::app_role))"
+    },
+    {
+      "check": null,
+      "command": "SELECT",
+      "name": "Authenticated users view feasibility reviews",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "requirement_feasibility_reviews",
+      "using": "(has_permission(auth.uid(), 'sales.view'::text) OR has_permission(auth.uid(), 'engineering.view'::text) OR has_role(auth.uid(), 'admin'::app_role))"
+    },
+    {
+      "check": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))",
+      "command": "ALL",
+      "name": "Sales users manage feasibility reviews",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "requirement_feasibility_reviews",
+      "using": "(has_permission(auth.uid(), 'sales.manage'::text) OR has_role(auth.uid(), 'admin'::app_role))"
+    }
+  ],
+  "handover_receipts": 0,
+  "pins": [
+    "applicable_workstreams",
+    "master_specification_version_id",
+    "master_specification_version_number",
+    "source_revision_id",
+    "source_revision_number"
+  ],
+  "receipts": [
+    {
+      "anon_access": false,
+      "authenticated_access": false,
+      "name": "requirement_feasibility_response_requests",
+      "rls": true
+    },
+    {
+      "anon_access": false,
+      "authenticated_access": false,
+      "name": "sales_feasibility_handover_requests",
+      "rls": true
+    }
+  ],
+  "response_receipts": 0,
+  "review_rows": 0,
+  "rpcs": [
+    {
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "service_execute": true,
+      "signature": "assign_requirement_feasibility_review(uuid,uuid,uuid)"
+    },
+    {
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "service_execute": true,
+      "signature": "read_requirement_feasibility_response_receipt(uuid,uuid,uuid,uuid,uuid)"
+    },
+    {
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "service_execute": true,
+      "signature": "record_requirement_feasibility_response(uuid,text,text,text,text,uuid)"
+    },
+    {
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ],
+      "definer": true,
+      "owner": "postgres",
+      "service_execute": true,
+      "signature": "submit_sales_feasibility_handover(uuid,uuid,uuid,uuid,text,text,text,uuid[],uuid[],timestamp with time zone,uuid)"
+    }
+  ],
+  "transport_removed": true,
+  "uniqueness": "UNIQUE (source_revision_id, department_id)"
+}

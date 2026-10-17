@@ -1,0 +1,9 @@
+# Reviewer response save/readback integration — 17 October 2026
+
+The existing authenticated recordAssignedFeasibility server action now validates immutable requirement/revision/Master/request scope and calls recordFeasibilityWithReadback. It still uses requireSupabaseAuth and the existing server-side Engineering permission check. No admin client or client-supplied actor is used.
+
+The write must return the exact submitted review ID. A separate caller-RLS read then uses the existing read_requirement_feasibility_response_receipt RPC and validates the exact request, review, requirement, source revision, Master version and audit identity. A successful mutation ID is not accepted as readback. Missing/denied/duplicate/malformed/mismatched receipt evidence reports an uncertain commit and asks for refresh, without retrying the write. Interrupted calls and transport-style error responses are also uncertain. Explicit transaction-aborting database errors retain their rejection messages. The input request key is preserved.
+
+Behavioral tests replace the previous source-string forwarding assertion: 45 passed, 2 preexisting skipped across feasibility-response-save.test.ts, reviewer-response-readback.test.ts and client-requirement-intake.test.ts. Typecheck passed. Production build passed; log C:/Users/Admin/AppData/Local/Temp/ssm-feasibility-response-build-b2706b28c4a74ce197fa7f01b4a36b26.log. Only three prechecked-clean generated files were restored after the build; manual edits were not overwritten.
+
+The handover availability text now accurately says the saved backend handover is installed while reviewer/end-to-end acceptance remains pending. UI availability remains false. This increment is tested source integration, not successful managed reviewer save or notification delivery. No business-record mutation or UI activation was performed. First-backend installation evidence is recorded separately.

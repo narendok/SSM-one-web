@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { clientRequirementIntakeSchema, feasibilityResponseSchema } from "./client-requirement-intake";
+import { clientRequirementIntakeSchema } from "./client-requirement-intake";
+import { recordFeasibilityWithReadback, scopedFeasibilityResponseSchema } from "./feasibility-response-save";
 
 async function requireEngineeringManage(sb: any, userId: string) {
   const { data, error } = await sb.rpc("has_permission", { _user_id: userId, _permission_key: "engineering.manage" });
@@ -25,18 +26,9 @@ export const submitClientRequirement = createServerFn({ method: "POST" })
 
 export const recordAssignedFeasibility = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => feasibilityResponseSchema.parse(data))
+  .inputValidator((data) => scopedFeasibilityResponseSchema.parse(data))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
     await requireEngineeringManage(sb, context.userId);
-    const { data: review, error } = await sb.rpc("record_requirement_feasibility_response", {
-      p_review_id: data.reviewId,
-      p_request_key: data.requestKey,
-      p_status: data.verdict,
-      p_findings: data.findings,
-      p_assumptions: data.assumptions,
-      p_risks: data.risks,
-    });
-    if (error || typeof review !== "string") throw new Error(error?.message ?? "Could not record the feasibility response.");
-    return { reviewId: review };
+    return recordFeasibilityWithReadback(sb, data);
   });

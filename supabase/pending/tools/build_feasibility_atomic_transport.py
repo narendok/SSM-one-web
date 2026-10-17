@@ -72,6 +72,11 @@ DROP SCHEMA {SCHEMA};
 COMMIT;
 """
     (output / "99_execute.sql").write_text(final, encoding="utf-8")
+    start = final.index("  SELECT decode(string_agg")
+    end = final.index("  IF v_count", start)
+    direct = final[:start] + "  v_payload := decode('" + base64.b64encode(payload).decode("ascii") + "','base64');\n" + final[end:]
+    direct = direct.replace(f"IF v_count <> {len(chunks)} OR v_min <> 1 OR v_max <> {len(chunks)}\n     OR octet_length(v_payload)", "IF octet_length(v_payload)")
+    (output / "98_direct_editor.sql").write_text(direct, encoding="utf-8")
     manifest = {"source": str(source), "sha256_lf": digest, "bytes_lf": len(payload), "chunks": len(chunks), "schema": SCHEMA,
                 "note": "Review only; one final transaction executes the unaltered whole source. Staging grants no application access."}
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2)+"\n", encoding="utf-8")

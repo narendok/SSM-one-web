@@ -88,14 +88,14 @@ export const controlledRequirementAvailability = {
 
 /**
  * The handover controls deliberately remain present but unavailable until the
- * source-only atomic contract has been installed and accepted. A due date is
+ * installed atomic contract passes caller and workflow acceptance. A due date is
  * not collected here because the existing feasibility-review record has no
  * due-date field; pretending it is saved would create a misleading workflow.
  */
 export const salesFeasibilityHandoverAvailability = {
   available: false,
   reason: "Sending for feasibility is not available yet.",
-  detail: "It needs one protected saved action that creates the controlled requirement, assigns every selected department reviewer, and sends their notices together.",
+  detail: "The saved handover is installed. Reviewer access and end-to-end delivery still need verification before sending is enabled.",
   dueDateDetail: "Due dates are not available because the current review record does not store a due date.",
 } as const;
 
@@ -121,3 +121,4 @@ export function mayExposeClientRequirement(input: { isActive: boolean; revokedAt
     && scope.opportunityIds.includes(input.opportunityId)
     && scope.customerIds.includes(input.customerId);
 }
+

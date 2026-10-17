@@ -1,0 +1,14 @@
+# Private reviewer draft bundle — review/approval 17 October 2026
+
+Prepared supabase/pending/20261017_private_review_drafts_atomic_review_only.sql by preserving the bodies of 20261016_requirement_internal_notes.sql and 20261016_requirement_highlight_drafts.sql, removing only their outer BEGIN/COMMIT wrappers and adding the separate reviewed 20261017_private_review_draft_access_review_only.sql. One transaction; 15263 LF bytes; SHA256 37dafce10dd3f1a700c77672e8e4e33d0e88979a5c4340b940b32b8d959b8216.
+
+Own-author versioned notes and separate private highlight drafts only. No client publication, colleague discovery, baseline/verdict approval or UI activation. Four public save/read-own wrappers receive authenticated execution; private context helper and both tables remain denied to PUBLIC, anon, authenticated and service_role. Existing source context requires Engineering management, assigned active reviewer/employee/department membership and exact revision/Master pins, and preserves root/request locking, optimistic versions, replay receipts and metadata-only atomic audit.
+
+Actual disposable PostgreSQL 17.11 tests used the exact first-bundle schema now installed. First database preserves source-only default-closed checks. Second database installs the combined bundle with its proposed grants, then exercises caller save/readback, own-only and unauthorized denial, replay/stale conflict and audit rollback. Initial test ordering applied grants before the old default-denial assertion and failed; corrected by retaining that assertion and using a distinct disposable database for the proposed granted configuration.
+
+PRIVATE_REVIEW_DRAFT_COMBINED_LOCAL_PASS source=installed_first_bundle own_author_save_readback=true caller_denial=true replay_conflict=true audit_rollback=true publication=false
+FEASIBILITY_ATOMIC_TRANSPORT_LOCAL_PASS private_stage=true corrupt_hash_denied=true missing_chunk_denied=true unchanged_after_failure=true full_install=true cleanup=true handover_access_acceptance=true
+
+Logs: C:/Users/Admin/AppData/Local/Temp/ssm-atomic-transport-b61f29d83ea74cb4811c44e08691350c. Local server stopped, password file removed, environment restored; data/logs retained. This is synthetic acceptance, not managed JWT testing.
+
+The user explicitly answered Approve private-draft backend installation to the action-time question listing the exact file, original backend and four new scoped permissions. Direct Cloud SQL installation and independent catalog verification are next; no managed private-draft installation has yet occurred at this checkpoint.
