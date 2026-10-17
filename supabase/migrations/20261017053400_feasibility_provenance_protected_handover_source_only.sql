@@ -289,7 +289,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.assign_requirement_feasibility_review(uuid, uuid, uuid) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.assign_requirement_feasibility_review(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.assign_requirement_feasibility_review(uuid, uuid, uuid) TO authenticated, service_role;
 
 -- A reviewer response needs its own immutable request receipt before a caller-RLS observer can
@@ -473,7 +473,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.record_requirement_feasibility_response(uuid, text, text, text, text, uuid) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.record_requirement_feasibility_response(uuid, text, text, text, text, uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.record_requirement_feasibility_response(uuid, text, text, text, text, uuid) TO authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.read_requirement_feasibility_response_receipt(
@@ -585,7 +585,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.read_requirement_feasibility_response_receipt(uuid, uuid, uuid, uuid, uuid) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.read_requirement_feasibility_response_receipt(uuid, uuid, uuid, uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.read_requirement_feasibility_response_receipt(uuid, uuid, uuid, uuid, uuid) TO authenticated, service_role;
 -- Empty results never prove response rollback, previous response history, or concurrency.
 
@@ -957,6 +957,6 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.submit_sales_feasibility_handover(uuid, uuid, uuid, uuid, text, text, text, uuid[], uuid[], timestamptz, uuid) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.submit_sales_feasibility_handover(uuid, uuid, uuid, uuid, text, text, text, uuid[], uuid[], timestamptz, uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.submit_sales_feasibility_handover(uuid, uuid, uuid, uuid, text, text, text, uuid[], uuid[], timestamptz, uuid) TO authenticated, service_role;
-REVOKE ALL ON FUNCTION public.sales_feasibility_handover_canonical_payload(uuid, uuid, uuid, uuid, text, text, text, uuid[], uuid[], timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.sales_feasibility_handover_canonical_payload(uuid, uuid, uuid, uuid, text, text, text, uuid[], uuid[], timestamptz) FROM PUBLIC, anon, authenticated, service_role;
