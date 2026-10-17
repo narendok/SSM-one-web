@@ -56,10 +56,10 @@ BEGIN
     RAISE EXCEPTION 'Feasibility review uniqueness is incompatible';
   END IF;
   IF EXISTS (
-    SELECT 1 FROM pg_constraint constraint
-    WHERE constraint.conrelid = 'public.requirement_feasibility_reviews'::regclass
-      AND constraint.contype = 'u'
-      AND constraint.conname NOT IN ('requirement_feasibility_reviews_revision_department_key', v_legacy_unique_name)
+    SELECT 1 FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid = 'public.requirement_feasibility_reviews'::regclass
+      AND constraint_row.contype = 'u'
+      AND constraint_row.conname NOT IN ('requirement_feasibility_reviews_revision_department_key', v_legacy_unique_name)
   ) THEN
     RAISE EXCEPTION 'Feasibility review uniqueness has an unreviewed constraint';
   END IF;

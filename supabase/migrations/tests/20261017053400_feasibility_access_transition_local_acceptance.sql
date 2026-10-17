@@ -6,7 +6,6 @@
 -- synthetic. This proves the exact proposal's intended access shape, not managed-target RLS.
 \set ON_ERROR_STOP on
 
-BEGIN;
 CREATE ROLE local_sales_caller NOLOGIN IN ROLE authenticated;
 CREATE ROLE local_sales_view_caller NOLOGIN IN ROLE authenticated;
 CREATE ROLE local_engineering_caller NOLOGIN IN ROLE authenticated;
@@ -59,7 +58,7 @@ RESET ROLE;
 COMMIT;
 
 -- Apply the exact source-only original-target proposal after modelling the verified legacy state.
-\ir ../20261015_requirement_feasibility_original_target_compatibility.sql
+\ir ../20261017053401_feasibility_graph_access_transition_review_only.sql
 
 BEGIN;
 SET ROLE local_sales_caller;

@@ -1,4 +1,4 @@
-# Feasibility activation bundle — source-only review
+# Feasibility activation bundle — verified source-only review
 
 ## Scope
 
@@ -6,42 +6,50 @@ Prepared for the original managed backend only. This package is source-only: no 
 
 Excluded: external client intake, private notes, highlight publication, client links, baseline approval, project start, and the direct-write access transition.
 
-## Package
+## Corrected package
 
 1. `supabase/migrations/20261017053400_feasibility_provenance_protected_handover_source_only.sql`
-   - Verifies exact prerequisite tables, helper signatures, and notification-helper authority.
-   - Adds nullable review provenance pins and fails closed for partial legacy pins or duplicate non-null revision/department pairs.
-   - Replaces only the historical `(requirement_id, department_id)` uniqueness after preflight, preserves fully-null legacy review pins, and adds the revision-scoped uniqueness/check.
-   - Adds the private reviewer-response receipt, protected assignment and response routines, private handover receipt, and atomic Sales handover routine.
-   - Grants only the reviewed RPC entry points to `authenticated` and `service_role`; it neither changes graph-table direct privileges nor RLS policies.
+   - Corrects the PostgreSQL-reserved `constraint` alias to `constraint_row` in the uniqueness preflight.
+   - Retains the production preflight for `next_business_number(text,text,text)`, matching the managed helper signature confirmed by catalog read; it was not weakened for the fixture.
+   - Adds nullable review provenance pins, fails closed for partial legacy pins and duplicate non-null revision/department pairs, and replaces only the historical `(requirement_id, department_id)` uniqueness after that preflight.
+   - Adds private reviewer-response and Sales-handover receipts, protected assignment/response, and atomic Sales handover routines. Narrow execution grants are limited to `authenticated` and `service_role`; graph-table direct grants/RLS remain unchanged.
 2. `supabase/migrations/20261017053401_feasibility_graph_access_transition_review_only.sql`
-   - Separate, non-automatic proposal to remove broad direct graph writes after target-bound writer and caller/RLS acceptance.
+   - Separate, non-automatic proposal that removes direct graph I/U/D only after target-bound writer, caller/RLS, concurrency, rollback, and restore acceptance.
 3. `supabase/migrations/tests/20261017053400_feasibility_protected_handover_local_acceptance.sql`
-   - Disposable local replay, source-pin, rollback and graph-integrity checks.
+   - Corrects replay fixtures to use complete provenance pins after the new all-null-or-all-present constraint.
+   - Covers handover, normalized exact replay, payload conflict, stale enquiry/Master, unauthorized caller, invalid reviewer, graph-drift replay denial, and injected notification-stage rollback.
 4. `supabase/migrations/tests/20261017053400_feasibility_access_transition_local_acceptance.sql`
-   - Disposable local access-transition checks; does not authorize a managed transition.
+   - Includes the exact new separate transition with `\ir ../20261017053401_feasibility_graph_access_transition_review_only.sql`.
+   - Verifies the synthetic read surface is preserved while authenticated and anon direct graph I/U/D are denied and protected handover/assignment/response remain callable.
+5. `supabase/migrations/tests/run_20261017053400_feasibility_protected_handover_local_acceptance.sh`
+   - Creates an isolated temporary PostgreSQL fixture, loads the fixture, activation migration, protected-handover checks, then separate transition checks. It never contacts a managed backend.
+6. `supabase/pending/tests/client_requirement_intake_local_fixture.sql`
+   - Aligns only the disposable `next_business_number` helper with the verified managed `text,text,text` signature.
 
-## Managed schema comparison
+## Executed local verification — 17 October 2026
 
-The generated schema snapshot shows that managed `requirement_feasibility_reviews` currently has no provenance columns, while requirement/revision table shapes and the notification helper signature support the proposed additive path. Read-only catalog evidence records the historical `(requirement_id, department_id)` uniqueness, broad direct graph writes, and no installed protected graph routines.
+Executed from repository root:
 
-The migration’s legacy-row preflight deliberately permits only all-null legacy provenance. It rejects partial pin sets and duplicate future `(source_revision_id, department_id)` pairs before dropping the historical uniqueness. Exact row counts and any repair decision remain managed acceptance work; no rows were read or changed in this source package.
+```text
+./supabase/migrations/tests/run_20261017053400_feasibility_protected_handover_local_acceptance.sh
+bunx vitest run src/lib/feasibility-activation-bundle.test.ts
+```
 
-## Reconciled writers and unresolved paths
+Results:
 
-| Writer | Status in this bundle | Root serialization |
-| --- | --- | --- |
-| Atomic Sales handover | Added as reviewed source draft | shared requirement root |
-| Protected assignment/reassignment | Added as reviewed source draft | shared requirement root |
-| Protected reviewer response | Added as reviewed source draft | shared requirement root |
-| Direct graph writes | unchanged; blocks activation | none |
-| External client intake | excluded | request/source only |
-| Sales-bound requirement creation | excluded | request/source only |
-| Baseline approval | excluded | existing-row locks only |
-| Sample archive/restore | excluded | archive-wide lock only |
+```text
+SALES_FEASIBILITY_HANDOVER_LOCAL_ACCEPTANCE_PASS headers=2 revisions=2 reviews=1 notifications=1 audits=1 receipts=1
+SALES_FEASIBILITY_HANDOVER_REPLAY_SCOPE_PASS ... inactive_reviewer=denied membership=denied department=denied stale_master=denied changed_source_revision=denied changed_master_number=denied changed_applicability=denied replacement_review_id=denied removed_review=denied extra_review=denied
+SALES_FEASIBILITY_HANDOVER_NOTIFICATION_ROLLBACK_PASS graph_and_receipt_unchanged=true
+ORIGINAL_TARGET_COMPATIBILITY_ACCESS_PASS ... protected_handover,assignment,response=allowed authenticated_anon_direct_iud_all_tables=denied
+FEASIBILITY_ACTIVATION_LOCAL_ACCEPTANCE_COMPLETE=true
+Vitest: 1 file passed, 3 tests passed.
+```
 
-The separate access-transition proposal must not run until every remaining writer either follows the shared root protocol or has an approved replacement. Dynamic/service writers and managed caller/RLS behavior remain unresolved.
+The runner uses a temporary local PostgreSQL cluster and removes it on exit. Results are saved at `supabase/migrations/tests/results/20261017_feasibility_activation_local_acceptance.log`; the log is source-review evidence, not a managed-target acceptance result.
 
-## Verification boundary
+## Managed-target facts and remaining gates
 
-Focused source tests must validate transport and package structure. The SQL acceptance scripts are fixture-backed local evidence only. Before any managed execution, obtain explicit approval and run target-bound schema/policy/grant capture, ordinary-caller RLS tests, concurrency tests, notification rollback checks, and reviewed restore evidence.
+Catalog read confirmed `public.next_business_number(text,text,text)` with a `SECURITY DEFINER` / `search_path=public` contract. This is the signature enforced by the production preflight.
+
+Managed activation remains blocked pending: exact target preflight for legacy pin counts/constraints and named-policy/grant capture; all remaining direct, dynamic and service writer reconciliation; ordinary-caller managed RLS and execution-grant checks; target concurrency schedules against the installed routines; notification rollback under the managed helper; reviewed restore capture/rehearsal; and explicit approval to install the first bundle. The separate access transition remains blocked until those gates have passed and a separate approval is issued.

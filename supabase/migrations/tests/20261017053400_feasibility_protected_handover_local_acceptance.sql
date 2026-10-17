@@ -138,9 +138,11 @@ BEGIN
     PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
     RAISE EXCEPTION 'LOCAL_CASE_FAIL removed review replay accepted';
   EXCEPTION WHEN OTHERS THEN IF SQLERRM <> 'Review graph has changed since this receipt was issued' THEN RAISE; END IF; END;
-  INSERT INTO public.requirement_feasibility_reviews (requirement_id, department_id, reviewer_user_id, status, created_by, source_revision_number, master_specification_version_id) VALUES (v_requirement, '00000000-0000-4000-8000-000000000060', '00000000-0000-4000-8000-000000000062', 'pending', '00000000-0000-4000-8000-000000000050', 1, '00000000-0000-4000-8000-000000000071');
+  INSERT INTO public.requirement_feasibility_reviews (requirement_id, department_id, reviewer_user_id, status, created_by, source_revision_id, source_revision_number, master_specification_version_id, master_specification_version_number, applicable_workstreams)
+  VALUES (v_requirement, '00000000-0000-4000-8000-000000000060', '00000000-0000-4000-8000-000000000062', 'pending', '00000000-0000-4000-8000-000000000050', v_original_revision, 1, '00000000-0000-4000-8000-000000000071', 1, '["HARDWARE"]'::jsonb);
   INSERT INTO public.departments (id, is_active) VALUES ('00000000-0000-4000-8000-000000000063', true);
-  INSERT INTO public.requirement_feasibility_reviews (requirement_id, department_id, reviewer_user_id, status, created_by, source_revision_number, master_specification_version_id) VALUES (v_requirement, '00000000-0000-4000-8000-000000000063', '00000000-0000-4000-8000-000000000062', 'pending', '00000000-0000-4000-8000-000000000050', 1, '00000000-0000-4000-8000-000000000071');
+  INSERT INTO public.requirement_feasibility_reviews (requirement_id, department_id, reviewer_user_id, status, created_by, source_revision_id, source_revision_number, master_specification_version_id, master_specification_version_number, applicable_workstreams)
+  VALUES (v_requirement, '00000000-0000-4000-8000-000000000063', '00000000-0000-4000-8000-000000000062', 'pending', '00000000-0000-4000-8000-000000000050', v_original_revision, 1, '00000000-0000-4000-8000-000000000071', 1, '["HARDWARE"]'::jsonb);
   BEGIN
     PERFORM * FROM public.submit_sales_feasibility_handover('00000000-0000-4000-8000-000000000095','00000000-0000-4000-8000-000000000020','00000000-0000-4000-8000-000000000010','00000000-0000-4000-8000-000000000071','Replay scope seed','REPLAY-LOCAL','Replay scope validation.',ARRAY['00000000-0000-4000-8000-000000000060'::uuid],ARRAY['00000000-0000-4000-8000-000000000062'::uuid],'2026-10-13 18:23:00+00'::timestamptz,'00000000-0000-4000-8000-000000000196');
     RAISE EXCEPTION 'LOCAL_CASE_FAIL expanded review graph replay accepted';
@@ -152,3 +154,55 @@ BEGIN
 END;
 $cases$;
 ROLLBACK;
+
+-- A later notification-stage failure must roll back every newly-created graph row.
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000050', true);
+CREATE OR REPLACE FUNCTION public.local_fail_handover_notification() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.action = 'feasibility_handover_submitted' THEN
+    RAISE EXCEPTION 'LOCAL_CASE_NOTIFICATION_FAIL';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER local_fail_handover_notification
+  BEFORE INSERT ON public.activity_log
+  FOR EACH ROW EXECUTE FUNCTION public.local_fail_handover_notification();
+DO $rollback_case$
+DECLARE
+  v_headers integer := (SELECT count(*) FROM public.customer_requirements);
+  v_revisions integer := (SELECT count(*) FROM public.customer_requirement_revisions);
+  v_reviews integer := (SELECT count(*) FROM public.requirement_feasibility_reviews);
+  v_notifications integer := (SELECT count(*) FROM public.notifications);
+  v_receipts integer := (SELECT count(*) FROM public.sales_feasibility_handover_requests);
+BEGIN
+  BEGIN
+    PERFORM * FROM public.submit_sales_feasibility_handover(
+      '00000000-0000-4000-8000-000000000095', '00000000-0000-4000-8000-000000000020',
+      '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000071',
+      'Notification rollback', 'ROLLBACK-LOCAL', 'Synthetic notification rollback.',
+      ARRAY['00000000-0000-4000-8000-000000000060'::uuid],
+      ARRAY['00000000-0000-4000-8000-000000000062'::uuid],
+      '2026-10-13 18:23:00+00'::timestamptz, '00000000-0000-4000-8000-000000000215'
+    );
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL notification failure accepted';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'LOCAL_CASE_NOTIFICATION_FAIL' THEN RAISE; END IF;
+  END;
+  IF (SELECT count(*) FROM public.customer_requirements) <> v_headers
+     OR (SELECT count(*) FROM public.customer_requirement_revisions) <> v_revisions
+     OR (SELECT count(*) FROM public.requirement_feasibility_reviews) <> v_reviews
+     OR (SELECT count(*) FROM public.notifications) <> v_notifications
+     OR (SELECT count(*) FROM public.sales_feasibility_handover_requests) <> v_receipts THEN
+    RAISE EXCEPTION 'LOCAL_CASE_FAIL notification failure left partial handover records';
+  END IF;
+  RAISE NOTICE 'SALES_FEASIBILITY_HANDOVER_NOTIFICATION_ROLLBACK_PASS graph_and_receipt_unchanged=true';
+END;
+$rollback_case$;
+DROP TRIGGER local_fail_handover_notification ON public.activity_log;
+DROP FUNCTION public.local_fail_handover_notification();
+COMMIT;

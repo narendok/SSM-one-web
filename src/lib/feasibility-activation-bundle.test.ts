@@ -8,6 +8,8 @@ describe("reviewed first feasibility activation bundle", () => {
   it("fails closed for incompatible legacy provenance before replacing uniqueness", () => {
     expect(activation).toContain("partially pinned legacy review rows require repair");
     expect(activation).toContain("duplicate revision/department review pairs require repair");
+    expect(activation).toContain("FROM pg_constraint constraint_row");
+    expect(activation).toContain("public.next_business_number(text,text,text)");
     expect(activation).toContain("requirement_feasibility_reviews_revision_department_key");
     expect(activation).toContain("UNIQUE (source_revision_id, department_id)");
   });
