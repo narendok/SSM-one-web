@@ -1,15 +1,14 @@
-# Sales feasibility handover source repair
+# Connect the project to GitHub
 
-## Scope
-- Repair and locally verify the pending feasibility handover replay safeguards only.
-- Do not install database changes, alter live grants or policies, enable the Sales action, or begin the baseline-to-project deployment path.
-- Provide a separate suggestions-only review of the shared feasibility interface.
+## Goal
+Connect this Lovable project to a GitHub repository so the selected branch can synchronize through the supported Git integration.
 
-## Delivery sequence
-1. Persist and recheck immutable requirement-revision and exact review identity/source pins before replay returns.
-2. Add disposable acceptance for replacement review IDs, changed source pins, Master applicability, and concurrent graph modification alongside existing scope checks.
-3. Run the local verification suite and report exact source and results for review.
+## Steps
+1. Open the Project settings Git connection flow.
+2. Authorize the intended GitHub account or organization if prompted.
+3. Create and select the new private repository required by the integration.
+4. Confirm the synchronized branch is `main` and re-check the reported sync status.
 
-## Technical details
-- The pending handover remains a source-only, single protected transaction with private exact graph pins.
-- Baseline approval, customer confirmation, project creation and document access remain unchanged.
+## Important limitation
+- Lovable’s Git integration creates a new private repository; it cannot attach or import an existing repository.
+- I cannot add a personal GitHub remote or retain GitHub credentials directly. The connection must be completed in the supported Git settings flow.
