@@ -1,15 +1,14 @@
-# Sales feasibility handover source repair
+# Keep the Lovable Git page connected
 
-## Scope
-- Repair and locally verify the pending feasibility handover replay safeguards only.
-- Do not install database changes, alter live grants or policies, enable the Sales action, or begin the baseline-to-project deployment path.
-- Provide a separate suggestions-only review of the shared feasibility interface.
+## Goal
+Help keep the project’s Lovable Git connection available without repeatedly signing in through the Git page.
 
-## Delivery sequence
-1. Persist and recheck immutable requirement-revision and exact review identity/source pins before replay returns.
-2. Add disposable acceptance for replacement review IDs, changed source pins, Master applicability, and concurrent graph modification alongside existing scope checks.
-3. Run the local verification suite and report exact source and results for review.
+## Plan
+1. Inspect the Git settings status in Lovable to determine whether the project has an active repository connection or an expired/removed authorization.
+2. If no connection is active, open the supported Git connection flow so you can authorize GitHub once and select the appropriate account or organization.
+3. Verify that the connection remains visible after the authorization flow completes, then explain any remaining limitation imposed by GitHub session or organization security policies.
 
-## Technical details
-- The pending handover remains a source-only, single protected transaction with private exact graph pins.
-- Baseline approval, customer confirmation, project creation and document access remain unchanged.
+## Important limitation
+- GitHub controls sign-in persistence, including expiration caused by browser privacy settings, device policy, two-factor authentication, or organization security rules.
+- I cannot store, retain, or reuse your GitHub password, session, or personal authorization outside GitHub’s approved connection flow.
+- If the project has no existing connection, Lovable’s Git sync creates a new private repository; it does not attach an existing repository.
