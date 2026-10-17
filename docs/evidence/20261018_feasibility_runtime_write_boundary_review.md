@@ -17,3 +17,11 @@ Disposable PostgreSQL final run: C:/Users/Admin/AppData/Local/Temp/ssm-atomic-tr
 Initial new regression failed because the preceding access test intentionally committed its restricted policy state. The new test now explicitly reconstructs the captured legacy surface in disposable transactions; target preflight assertions were retained. Further cases added manage-only read preservation. No application code changed in this increment, so unchanged TypeScript/build suites were not repeated. Pre-existing generated route/MCP working-tree edits were left untouched.
 
 Status: source-only, not installed. No backend grants/policies or business records changed. The proposed limited restriction deployment needs specific approval; ordinary managed caller/membership acceptance, operational notification delivery and UI activation remain pending. It does not approve client requirements, lock a baseline or start Research/POC/Pilot. No pending-work screenshot was taken.
+
+### Approved restriction installed — 18 October 2026
+
+The user specifically approved restriction and conditional restore at commit 19124c21a273ab29a119abda2faebe8c41e7396f. The exact pinned atomic SQL was loaded through the original Lovable Cloud SQL editor; clipboard equality verified the full payload. Execution returned Query succeeded. No restore was needed or run.
+
+Independent post-install catalog comparison passed: direct INSERT/UPDATE/DELETE/TRUNCATE denied for anon/authenticated on all three graph tables; six SELECT-only policies retain the original predicates/read audiences. Owners, RLS, force-RLS, column ACLs, constraints and triggers match pre-install. All other captured grants, including service_role, remain unchanged. Five protected RPC bodies, owners, definer settings, search paths and execution ACLs match the capture. No business records or users were modified. TRUNCATE was never executed.
+
+Evidence: 20261018_feasibility_graph_postinstall_catalog.csv/.json and 20261018_feasibility_runtime_boundary_installed.jpg. SQL verification returned FEASIBILITY_RUNTIME_WRITE_BOUNDARY_INSTALLED_PASS, three protected tables, six SELECT policies, RLS retained and runtime writes denied. This is managed catalog/privilege verification, not ordinary real-JWT operational acceptance. UI activation and ordinary-user positive/denied workflow acceptance remain pending.
