@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Factory, Wrench, Gauge, Building, Filter, CheckCircle2, AlertTriangle, ShieldAlert, Laptop, Eye, Tag, Link2 } from "lucide-react";
+import { Plus, Search, Factory, Wrench, Gauge, Building, Filter, CheckCircle2, AlertTriangle, ShieldAlert, Laptop, Eye, Tag, Link2, Download, Upload, Loader2, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { savePhase8Record } from "@/lib/phase8.functions";
+import { parseBomFile, downloadCsv } from "@/lib/bom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +43,31 @@ export function AssetRegisterWorkspace() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [detailAsset, setDetailAsset] = useState<AssetRecord | null>(null);
+
+  function exportAssetsCsv() {
+    if (!filtered.length) {
+      toast.error("No assets to export");
+      return;
+    }
+    const rows = filtered.map((a) => ({
+      "Asset Code": a.asset_code,
+      Name: a.name,
+      Class: a.specifications?.asset_class || "PRODUCTION_MACHINERY",
+      Manufacturer: a.manufacturer ?? "",
+      "Model Number": a.model_number ?? "",
+      "Serial Number": a.serial_number ?? "",
+      Status: a.status,
+      Location: a.location?.name ?? a.location?.code ?? "",
+      "Acquisition Date": a.acquisition_date ?? "",
+      "Acquisition Cost": a.acquisition_cost ?? "",
+      "Compatible Component IDs": (a.specifications?.compatible_component_ids ?? []).join("; "),
+      Notes: a.specifications?.notes ?? "",
+    }));
+    downloadCsv(rows, `assets-register-${activeTab.toLowerCase()}.csv`);
+    toast.success(`Exported ${rows.length} asset record(s)`);
+  }
 
   // Queries
   const { data: assets = [], isLoading } = useQuery({
@@ -136,11 +161,19 @@ export function AssetRegisterWorkspace() {
             Governed serialized equipment, production machinery for production leads, and maintenance/test assets for service teams.
           </p>
         </div>
-        <PermissionGate permission="assets.edit">
-          <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
-            <Plus className="h-4 w-4" /> Register New Asset / Machine
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportAssetsCsv} className="gap-1.5">
+            <Download className="h-4 w-4" /> Export CSV
           </Button>
-        </PermissionGate>
+          <PermissionGate permission="assets.edit">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
+              <Upload className="h-4 w-4" /> Import CSV / Excel
+            </Button>
+            <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Register New Asset
+            </Button>
+          </PermissionGate>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -271,6 +304,15 @@ export function AssetRegisterWorkspace() {
         onOpenChange={setCreateOpen}
         locations={locations}
         components={components}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["assets_workspace"] })}
+      />
+
+      {/* Bulk Import Modal */}
+      <ImportAssetsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        existingAssets={assets}
+        locations={locations}
         onSaved={() => qc.invalidateQueries({ queryKey: ["assets_workspace"] })}
       />
 
@@ -563,6 +605,320 @@ function AssetDetailDialog({ asset, open, onOpenChange, components, onUpdated }:
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ParsedAssetDraft {
+  key: number;
+  assetCode: string;
+  name: string;
+  assetClass: AssetClass;
+  manufacturer: string;
+  modelNumber: string;
+  serialNumber: string;
+  status: string;
+  facilityLocationId: string | null;
+  locationLabel: string;
+  acquisitionCost: number | null;
+  warnings: string[];
+}
+
+function ImportAssetsDialog({
+  open,
+  onOpenChange,
+  existingAssets,
+  locations,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  existingAssets: AssetRecord[];
+  locations: { id: string; name: string; code: string }[];
+  onSaved: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [drafts, setDrafts] = useState<ParsedAssetDraft[] | null>(null);
+
+  const existingSerials = useMemo(() => {
+    const s = new Set<string>();
+    existingAssets.forEach((a) => {
+      if (a.serial_number) s.add(a.serial_number.toLowerCase().trim());
+    });
+    return s;
+  }, [existingAssets]);
+
+  const existingCodes = useMemo(() => {
+    const s = new Set<string>();
+    existingAssets.forEach((a) => {
+      if (a.asset_code) s.add(a.asset_code.toLowerCase().trim());
+    });
+    return s;
+  }, [existingAssets]);
+
+  async function handleFile(file: File) {
+    setBusy(true);
+    setFileName(file.name);
+    try {
+      const sheet = await parseBomFile(file);
+      if (!sheet.rows.length) {
+        toast.error("No data rows found in this spreadsheet");
+        return;
+      }
+
+      const canonical = (val: string) => (val ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const findCol = (aliases: string[]) => {
+        for (const a of aliases) {
+          const hit = sheet.headers.find((h) => canonical(h) === a || canonical(h).includes(a));
+          if (hit) return hit;
+        }
+        return undefined;
+      };
+
+      const codeCol = findCol(["asset code", "asset id", "code", "tag", "asset tag"]);
+      const nameCol = findCol(["name", "asset name", "equipment name", "machine name", "description"]);
+      const classCol = findCol(["class", "asset class", "category", "type", "discipline"]);
+      const mfrCol = findCol(["manufacturer", "mfr", "mfg", "brand", "make"]);
+      const modelCol = findCol(["model number", "model no", "model", "type no"]);
+      const serialCol = findCol(["serial number", "serial no", "serial", "sn"]);
+      const statusCol = findCol(["status", "condition", "state"]);
+      const costCol = findCol(["cost", "acquisition cost", "price", "amount"]);
+      const locCol = findCol(["location", "facility location", "facility", "room", "floor"]);
+
+      const parsed: ParsedAssetDraft[] = [];
+      sheet.rows.forEach((r, i) => {
+        const rawName = (nameCol ? r[nameCol] : "") || `Equipment-${i + 1}`;
+        const rawCode = (codeCol ? r[codeCol] : "") || `AST-${Date.now().toString().slice(-4)}-${i + 1}`;
+        const rawSerial = (serialCol ? r[serialCol] : "").trim();
+        const rawMfr = (mfrCol ? r[mfrCol] : "").trim();
+        const rawModel = (modelCol ? r[modelCol] : "").trim();
+        const rawStatus = (statusCol ? r[statusCol] : "").toUpperCase().trim() || "ACTIVE";
+        const rawCost = costCol ? Number(String(r[costCol]).replace(/[^\d.-]/g, "")) : null;
+        const rawLoc = (locCol ? r[locCol] : "").trim();
+        const rawClass = (classCol ? r[classCol] : "").toUpperCase().trim();
+
+        const warnings: string[] = [];
+        if (!nameCol || !r[nameCol]) warnings.push("Missing name");
+        if (rawSerial && existingSerials.has(rawSerial.toLowerCase())) {
+          warnings.push("Duplicate serial number in database");
+        }
+        if (existingCodes.has(rawCode.toLowerCase())) {
+          warnings.push("Asset code collision");
+        }
+
+        // Determine class
+        let aClass: AssetClass = "FACILITY_OFFICE";
+        const nLow = rawName.toLowerCase();
+        if (rawClass.includes("PROD") || nLow.includes("smt") || nLow.includes("oven") || nLow.includes("crimp") || nLow.includes("machine") || nLow.includes("solder")) {
+          aClass = "PRODUCTION_MACHINERY";
+        } else if (rawClass.includes("SERV") || nLow.includes("jig") || nLow.includes("tester") || nLow.includes("scope") || nLow.includes("multimeter")) {
+          aClass = "SERVICE_MAINTENANCE";
+        } else if (rawClass.includes("CALIB") || rawClass.includes("IMTE") || nLow.includes("calibrat") || nLow.includes("gauge") || nLow.includes("torque")) {
+          aClass = "IMTE_CALIBRATION";
+        }
+
+        // Match location
+        const matchedLoc = locations.find((l) => canonical(l.name) === canonical(rawLoc) || canonical(l.code) === canonical(rawLoc));
+
+        parsed.push({
+          key: i,
+          assetCode: rawCode,
+          name: rawName,
+          assetClass: aClass,
+          manufacturer: rawMfr,
+          modelNumber: rawModel,
+          serialNumber: rawSerial,
+          status: rawStatus === "ACTIVE" || rawStatus === "IN_SERVICE" || rawStatus === "UNDER_MAINTENANCE" || rawStatus === "CALIBRATION_DUE" || rawStatus === "QUARANTINED" ? rawStatus : "ACTIVE",
+          facilityLocationId: matchedLoc?.id ?? null,
+          locationLabel: matchedLoc ? `${matchedLoc.code} — ${matchedLoc.name}` : (rawLoc || "Default Floor"),
+          acquisitionCost: Number.isFinite(rawCost) ? rawCost : null,
+          warnings,
+        });
+      });
+
+      setDrafts(parsed);
+      toast.success(`Read ${parsed.length} asset record(s) from ${file.name}`);
+    } catch (e: any) {
+      toast.error(`Could not read spreadsheet: ${e?.message ?? "Unknown error"}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleImportConfirm() {
+    if (!drafts?.length) return;
+    setImporting(true);
+    let successCount = 0;
+    const errors: string[] = [];
+
+    try {
+      for (const d of drafts) {
+        if (d.warnings.includes("Duplicate serial number in database")) {
+          errors.push(`Skipped ${d.name} (${d.serialNumber}): duplicate serial`);
+          continue;
+        }
+
+        const qrPayload = JSON.stringify({
+          code: d.assetCode,
+          type: "asset",
+          class: d.assetClass,
+          serial: d.serialNumber || null,
+        });
+
+        const payload = {
+          asset_code: d.assetCode,
+          name: d.name,
+          manufacturer: d.manufacturer || null,
+          model_number: d.modelNumber || null,
+          serial_number: d.serialNumber || null,
+          status: d.status,
+          facility_location_id: d.facilityLocationId || null,
+          acquisition_cost: d.acquisitionCost,
+          qr_payload: qrPayload,
+          specifications: {
+            asset_class: d.assetClass,
+            imported_from: fileName,
+            compatible_component_ids: [],
+          },
+        };
+
+        try {
+          await savePhase8Record({ data: { table: "assets", payload } });
+          successCount++;
+        } catch (err: any) {
+          errors.push(`${d.name}: ${err?.message ?? "Save error"}`);
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully registered ${successCount} asset(s) into database`);
+        onSaved();
+        onOpenChange(false);
+        setDrafts(null);
+      }
+      if (errors.length) {
+        toast.error(`${errors.length} item(s) had warnings or failed: ${errors[0]}`);
+      }
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) setDrafts(null); onOpenChange(o); }}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5 text-primary" /> Bulk Import Asset &amp; Machinery Records
+          </DialogTitle>
+          <DialogDescription>
+            Import serialized equipment, production machinery, test jigs, or calibration instruments from CSV or Excel spreadsheets.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!drafts ? (
+          <div className="space-y-4 py-4">
+            <div
+              className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => {
+                const el = document.getElementById("asset-import-file") as HTMLInputElement;
+                if (el) el.click();
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const f = e.dataTransfer.files?.[0];
+                if (f && !busy) handleFile(f);
+              }}
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+                  <div className="mt-2 font-medium">Reading {fileName}…</div>
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <div className="mt-2 font-medium">Drop an Asset CSV or Excel file here, or click to browse</div>
+                  <div className="text-xs text-muted-foreground">Supports .csv, .xlsx, .xls</div>
+                </>
+              )}
+              <input
+                id="asset-import-file"
+                type="file"
+                accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Columns detected: Name, Asset Code, Class/Category, Manufacturer, Model, Serial Number, Facility Location, Status, and Cost. Serial numbers are deduplicated automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{drafts.length} record(s) parsed from {fileName}</span>
+              <Button variant="ghost" size="sm" onClick={() => setDrafts(null)}>Pick another file</Button>
+            </div>
+
+            <div className="border rounded-md overflow-x-auto max-h-[50vh]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Asset Name</TableHead>
+                    <TableHead>Classification</TableHead>
+                    <TableHead>Model / Mfr</TableHead>
+                    <TableHead>Serial Number</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Issues</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {drafts.map((d) => (
+                    <TableRow key={d.key} className={d.warnings.length ? "bg-amber-50/30 dark:bg-amber-950/20" : ""}>
+                      <TableCell className="font-mono text-xs font-medium">{d.assetCode}</TableCell>
+                      <TableCell className="text-xs font-medium">{d.name}</TableCell>
+                      <TableCell className="text-xs">
+                        <Badge variant="outline" className="text-[10px]">
+                          {d.assetClass.replace(/_/g, " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{d.manufacturer} {d.modelNumber}</TableCell>
+                      <TableCell className="font-mono text-xs">{d.serialNumber || "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        <StatusBadge status={d.status} />
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {d.warnings.length ? (
+                          <span className="text-amber-600 dark:text-amber-400 font-medium">{d.warnings.join(", ")}</span>
+                        ) : (
+                          <span className="text-emerald-600 dark:text-emerald-400">Ready</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>Cancel</Button>
+              <Button onClick={handleImportConfirm} disabled={importing || !drafts.length}>
+                {importing && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+                Confirm Import {drafts.filter((d) => !d.warnings.includes("Duplicate serial number in database")).length} Assets
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

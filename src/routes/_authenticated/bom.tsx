@@ -3,7 +3,7 @@ import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Upload, FileSpreadsheet, Download, Link2, Search, RotateCcw, Copy, Share2, ShoppingCart, Sparkles, FolderPlus, Save, Loader2, ClipboardCheck, ArrowLeft, Eye, Unlink } from "lucide-react";
+import { Upload, FileSpreadsheet, Download, Link2, Search, RotateCcw, Copy, Share2, ShoppingCart, Sparkles, FolderPlus, Save, Loader2, ClipboardCheck, ArrowLeft, Eye, Unlink, Layers, Lock, Unlock, GitCompare, CheckCircle2, AlertCircle } from "lucide-react";
 import { saveProjectBom, loadProjectBom, fetchProjectBomItems, fetchProjectBoms, type ProjectBomDetailHeader, type ProjectBomItemRow } from "@/lib/project-bom.functions";
 import { fetchProjectFilesByType } from "@/lib/drive";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { fetchAllSubstituteMap, linkSubstitute, type SubstituteRef } from "@/lib/substitutes";
 import {
   parseBomFile,
@@ -24,6 +24,9 @@ import {
   matchBom,
   matchesToRows,
   shortageRows,
+  flattenedProductionRows,
+  compareBomRevisions,
+  isBomReleaseReady,
   inventoryRows,
   sampleTemplateRows,
   toCsv,
@@ -33,8 +36,11 @@ import {
   hasTotalCostMismatch,
   type BomMapping,
   type BomMatch,
+  type BomLifecycleState,
+  type BomRevisionDiffItem,
   type ParsedSheet,
   type StockPart,
+  type BomLine,
 } from "@/lib/bom";
 import { shareRows, rowsToMarkdown, type ShareRow } from "@/lib/bom-share";
 import { ShareLinkDialog } from "@/components/inventory/ShareLinkDialog";
@@ -101,6 +107,11 @@ function BomPage() {
   const [sourceDriveNodeId, setSourceDriveNodeId] = useState("none");
   const [saving, setSaving] = useState(false);
   const [savedLink, setSavedLink] = useState<{ bom_number: string; project_id: string } | null>(null);
+  const [lifecycleState, setLifecycleState] = useState<BomLifecycleState>("tentative");
+  const [diffDialogOpen, setDiffDialogOpen] = useState(false);
+  const [baselineBomId, setBaselineBomId] = useState<string>("__none");
+  const [baselineDiffs, setBaselineDiffs] = useState<BomRevisionDiffItem[] | null>(null);
+  const [loadingDiff, setLoadingDiff] = useState(false);
 
   const routeSearch = useSearch({ strict: false }) as any;
   const loadBomId = routeSearch?.loadBom as string | undefined;
@@ -110,6 +121,57 @@ function BomPage() {
   const saveFn = useServerFn(saveProjectBom);
   const bomDetailFn = useServerFn(fetchProjectBomItems);
   const projectBomsFn = useServerFn(fetchProjectBoms);
+
+  const { data: projectBomsList = [] } = useQuery({
+    queryKey: ["project_boms_list", projectId],
+    enabled: Boolean(projectId && projectId !== "__none"),
+    queryFn: async () => {
+      const res = await projectBomsFn({ data: { projectId } });
+      return res.boms;
+    },
+  });
+
+  async function runCompareRevisions() {
+    if (!baselineBomId || baselineBomId === "__none") {
+      toast.error("Select a baseline revision to compare against");
+      return;
+    }
+    setLoadingDiff(true);
+    try {
+      const baseBom = await loadFn({ data: { bomId: baselineBomId } });
+      const baseLines: BomLine[] = baseBom.lines.map((l, i) => ({
+        index: i + 1,
+        mpn: l.mpn ?? "",
+        manufacturer: l.manufacturer ?? "",
+        quantity: l.quantity,
+        refs: l.refs ?? "",
+        value: l.value ?? "",
+        description: l.description ?? "",
+        footprint: l.footprint ?? "",
+        remark: l.remark ?? "",
+        unitCost: l.unitCost,
+        totalCost: l.totalCost,
+      }));
+      const currentLines = resolved.map((m) => m.line);
+      const diffs = compareBomRevisions(currentLines, baseLines);
+      setBaselineDiffs(diffs);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not load baseline BOM revision");
+    } finally {
+      setLoadingDiff(false);
+    }
+  }
+
+  function handlePromoteToReleased() {
+    if (!resolved.length) return;
+    const check = isBomReleaseReady(resolved);
+    if (!check.ready) {
+      toast.error(`Cannot release BOM: ${check.reasons.join(" ")}`);
+      return;
+    }
+    setLifecycleState("released");
+    toast.success("BOM validated & promoted to Released (Production Baseline). All line items are resolved!");
+  }
 
   useEffect(() => {
     if (!loadBomId) return;
@@ -538,6 +600,38 @@ function BomPage() {
 
       {matches && (
         <>
+          {/* Lifecycle & Release Governance Banner */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Lifecycle State:</span>
+              {lifecycleState === "released" ? (
+                <Badge className="bg-emerald-600 text-white flex items-center gap-1.5 px-2.5 py-1">
+                  <Lock className="h-3.5 w-3.5" /> Released BOM (Production Baseline)
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 flex items-center gap-1.5 px-2.5 py-1">
+                  <Unlock className="h-3.5 w-3.5 text-amber-600" /> Tentative BOM (Engineering / Feasibility)
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {lifecycleState === "tentative" ? (
+                <Button size="sm" className="bg-emerald-700 hover:bg-emerald-800 text-white" onClick={handlePromoteToReleased}>
+                  <CheckCircle2 className="h-4 w-4 mr-1.5" /> Validate & Release
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => setLifecycleState("tentative")}>
+                  <Unlock className="h-4 w-4 mr-1.5" /> Switch to Tentative
+                </Button>
+              )}
+              {activeProject && (
+                <Button size="sm" variant="outline" onClick={() => setDiffDialogOpen(true)}>
+                  <GitCompare className="h-4 w-4 mr-1.5" /> Compare Revisions
+                </Button>
+              )}
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="bg-success text-success-foreground">{stats.exact} exact</Badge>
             <Badge variant="secondary">{stats.close} close</Badge>
@@ -550,6 +644,12 @@ function BomPage() {
               </Button>
               <Button variant="outline" size="sm" onClick={generatePo}>
                 <ShoppingCart className="h-4 w-4" /> Generate PO from shortages
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => downloadCsv(flattenedProductionRows(resolved), `${base}-production-flattened.csv`)}>
+                <Layers className="h-4 w-4" /> Flattened BOM CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => downloadXlsx(flattenedProductionRows(resolved), `${base}-production-flattened.xlsx`, "Production BOM")}>
+                <Layers className="h-4 w-4" /> Flattened BOM Excel
               </Button>
               <Button variant="outline" size="sm" onClick={() => downloadCsv(matchesToRows(resolved), `${base}-matched.csv`)}>
                 <Download className="h-4 w-4" /> Matched CSV
@@ -571,7 +671,7 @@ function BomPage() {
               <Button
                 size="sm"
                 disabled={!activeProject || saving}
-                onClick={() => { setSaveName(fileName.replace(/\.[^.]+$/, "") || "BOM"); setSaveRevision(""); setSaveOpen(true); }}
+                onClick={() => { setSaveName(fileName.replace(/\.[^.]+$/, "") || "BOM"); setSaveRevision(lifecycleState === "released" ? "Rev A" : "Draft-1"); setSaveOpen(true); }}
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save BOM to project
               </Button>
@@ -579,7 +679,6 @@ function BomPage() {
                 <Link2 className="h-4 w-4" /> Save substitute links
               </Button>
             </div>
-
           </div>
 
           <Card className="overflow-x-auto">
@@ -717,6 +816,94 @@ function BomPage() {
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save
             </Button>
           </div>
+        </DialogContent>
+      <Dialog open={diffDialogOpen} onOpenChange={setDiffDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitCompare className="h-5 w-5 text-primary" /> BOM Revision Comparison
+            </DialogTitle>
+            <DialogDescription>
+              Compare current working BOM lines against an authoritative saved project BOM revision.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1.5 flex-1 min-w-[240px]">
+                <div className="text-xs font-medium text-muted-foreground">Baseline Project Revision</div>
+                <Select value={baselineBomId} onValueChange={setBaselineBomId}>
+                  <SelectTrigger><SelectValue placeholder="Choose a baseline revision" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Select revision…</SelectItem>
+                    {projectBomsList.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.bom_number} · {b.name} {b.revision ? `(${b.revision})` : ""} · {new Date(b.created_at).toLocaleDateString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={runCompareRevisions} disabled={loadingDiff || baselineBomId === "__none"}>
+                {loadingDiff ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <GitCompare className="h-4 w-4 mr-1.5" />}
+                Compare Diffs
+              </Button>
+            </div>
+
+            {baselineDiffs && (
+              <div className="space-y-3">
+                <div className="flex gap-2 text-xs">
+                  <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    {baselineDiffs.filter((d) => d.changeType === "added").length} Added
+                  </Badge>
+                  <Badge variant="outline" className="border-rose-500 text-rose-700 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300">
+                    {baselineDiffs.filter((d) => d.changeType === "removed").length} Removed
+                  </Badge>
+                  <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300">
+                    {baselineDiffs.filter((d) => d.changeType === "modified").length} Modified
+                  </Badge>
+                  <Badge variant="secondary">
+                    {baselineDiffs.filter((d) => d.changeType === "unchanged").length} Unchanged
+                  </Badge>
+                </div>
+
+                <div className="border rounded-md overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Designators</TableHead>
+                        <TableHead>MPN</TableHead>
+                        <TableHead className="text-right">Baseline Qty</TableHead>
+                        <TableHead className="text-right">Current Qty</TableHead>
+                        <TableHead>Diff Details</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {baselineDiffs.map((diff, i) => (
+                        <TableRow key={i} className={diff.changeType === "added" ? "bg-emerald-50/40 dark:bg-emerald-950/20" : diff.changeType === "removed" ? "bg-rose-50/40 dark:bg-rose-950/20" : diff.changeType === "modified" ? "bg-amber-50/40 dark:bg-amber-950/20" : ""}>
+                          <TableCell>
+                            {diff.changeType === "added" && <Badge className="bg-emerald-600 text-white text-[10px]">Added</Badge>}
+                            {diff.changeType === "removed" && <Badge variant="destructive" className="text-[10px]">Removed</Badge>}
+                            {diff.changeType === "modified" && <Badge className="bg-amber-500 text-white text-[10px]">Modified</Badge>}
+                            {diff.changeType === "unchanged" && <Badge variant="secondary" className="text-[10px]">Match</Badge>}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{diff.refs || "—"}</TableCell>
+                          <TableCell className="font-mono text-xs font-medium">{diff.mpn}</TableCell>
+                          <TableCell className="text-right text-xs">{diff.oldQty ?? "—"}</TableCell>
+                          <TableCell className="text-right text-xs font-semibold">{diff.newQty ?? "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{diff.details}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDiffDialogOpen(false)}>Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

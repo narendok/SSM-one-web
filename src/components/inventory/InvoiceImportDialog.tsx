@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { extractInvoiceFile, applyInvoiceImport, type ApplyInvoiceLine } from "@/lib/invoice-import.functions";
-import { normalizeMpn, baseMpn, type StockPart } from "@/lib/bom";
+import { normalizeMpn, baseMpn, parseBomFile, type StockPart } from "@/lib/bom";
 import type { Project } from "@/lib/projects";
 
 interface CategoryOption {
@@ -82,6 +82,69 @@ export function InvoiceImportDialog({
     setBusy(true);
     setFileName(file.name);
     try {
+      const isSpreadsheet = Boolean(file.name.match(/\.(csv|tsv|txt|xlsx|xls)$/i));
+
+      if (isSpreadsheet) {
+        const sheet = await parseBomFile(file);
+        if (!sheet.rows.length) {
+          toast.error("No data rows found in this spreadsheet");
+          return;
+        }
+
+        const canonical = (val: string) => (val ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        const findCol = (aliases: string[]) => {
+          for (const a of aliases) {
+            const hit = sheet.headers.find((h) => canonical(h) === a || canonical(h).includes(a));
+            if (hit) return hit;
+          }
+          return undefined;
+        };
+
+        const mpnCol = findCol(["mpn", "part number", "part no", "part", "mfr part", "item no", "sku", "component"]);
+        const qtyCol = findCol(["quantity", "qty", "billed qty", "shipped qty", "ordered qty", "invoiced qty", "count"]);
+        const priceCol = findCol(["unit price", "price", "unit cost", "rate", "cost", "unit price inr", "unit price usd"]);
+        const descCol = findCol(["description", "item description", "product description", "details", "item name", "name"]);
+        const mfrCol = findCol(["manufacturer", "mfr", "mfg", "brand", "make"]);
+        const pkgCol = findCol(["package", "footprint", "case"]);
+
+        const cleanBaseName = file.name.replace(/\.[^.]+$/, "");
+        setVendorName(cleanBaseName.split(/[-_ ]/)[0] || "Supplier");
+        setInvoiceNumber(cleanBaseName);
+        setInvoiceDate(new Date().toISOString().slice(0, 10));
+
+        const parsedLines: DraftLine[] = [];
+        sheet.rows.forEach((r, i) => {
+          const rawMpn = (mpnCol ? r[mpnCol] : "") || (descCol ? r[descCol] : "") || `PART-${i + 1}`;
+          const rawDesc = descCol ? r[descCol] : "";
+          const rawQty = qtyCol ? Number(String(r[qtyCol]).replace(/[^\d.-]/g, "")) : 1;
+          const rawPrice = priceCol ? Number(String(r[priceCol]).replace(/[^\d.-]/g, "")) : null;
+          const qty = Number.isFinite(rawQty) && rawQty > 0 ? Math.round(rawQty) : 1;
+          const price = Number.isFinite(rawPrice) ? rawPrice : null;
+          const hit = byExact.get(normalizeMpn(rawMpn)) ?? byExact.get(baseMpn(rawMpn)) ?? null;
+
+          parsedLines.push({
+            key: i,
+            idempotency_key: crypto.randomUUID(),
+            component_id: hit?.id ?? null,
+            mpn: rawMpn.trim(),
+            name: hit?.name ?? (rawDesc.trim() || rawMpn.trim()),
+            manufacturer: (mfrCol ? r[mfrCol] : null) ?? hit?.manufacturer ?? null,
+            category_id: categories[0]?.id ?? null,
+            package: (pkgCol ? r[pkgCol] : null) ?? hit?.footprint ?? null,
+            quantity: qty,
+            unit_price: price,
+            location_type: locationType,
+            location_label: locationLabel,
+            matchedLabel: hit ? hit.part_number : null,
+          });
+        });
+
+        setLines(parsedLines);
+        toast.success(`Parsed ${parsedLines.length} item(s) from ${file.name}`);
+        return;
+      }
+
+      // PDF / Scanned Image flow via AI
       const dataUrl: string = await new Promise((resolve, reject) => {
         const fr = new FileReader();
         fr.onload = () => resolve(String(fr.result));
@@ -119,7 +182,7 @@ export function InvoiceImportDialog({
       );
       toast.success(`Read ${res.lines.length} line${res.lines.length === 1 ? "" : "s"} from ${file.name}`);
     } catch (e: any) {
-      toast.error(e?.message ?? "Could not read that invoice");
+      toast.error(e?.message ?? "Could not read that invoice / file");
     } finally {
       setBusy(false);
     }
@@ -204,16 +267,16 @@ export function InvoiceImportDialog({
               ) : (
                 <>
                   <FileUp className="h-8 w-8 mx-auto text-muted-foreground" />
-                  <div className="mt-2 font-medium">Drop a purchase invoice or click to browse</div>
+                  <div className="mt-2 font-medium">Drop an invoice, PO file, or spreadsheet</div>
                   <div className="text-xs text-muted-foreground">
-                    PDF or photo — DigiKey, Mouser, Robu, LCSC or a local bill
+                    PDF, image, CSV, or Excel (.xlsx / .xls) — DigiKey, Mouser, LCSC, Robu, or custom vendor sheets
                   </div>
                 </>
               )}
               <input
                 ref={fileRef}
                 type="file"
-                accept="application/pdf,image/*"
+                accept="application/pdf,image/*,.csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
               />

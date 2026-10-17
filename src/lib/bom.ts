@@ -451,3 +451,216 @@ function triggerDownload(blob: Blob, filename: string) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/* ----------------------------------------------------------- lifecycle & diffs */
+
+export type BomLifecycleState = "tentative" | "released";
+
+export interface FlattenedProductionRow {
+  "Primary Part / MPN": string;
+  Manufacturer: string;
+  "Total Qty": number;
+  "Reference Designators": string;
+  Description: string;
+  Footprint: string;
+  "Stock Match": string;
+  "On hand": number;
+  Shortage: number;
+  "Release Readiness": string;
+  "Unit-Cost": string;
+  "Total-Cost": string;
+}
+
+export function flattenedProductionRows(matches: BomMatch[]): Record<string, unknown>[] {
+  const grouped = new Map<
+    string,
+    {
+      mpn: string;
+      manufacturer: string;
+      totalQty: number;
+      refs: Set<string>;
+      descriptions: Set<string>;
+      footprints: Set<string>;
+      matchedPart: string;
+      onHand: number;
+      shortage: number;
+      kind: MatchKind;
+      unitCost: number | null;
+    }
+  >();
+
+  for (const m of matches) {
+    const key = (m.part?.part_number || m.line.mpn || m.line.value || m.line.description || "UNKNOWN").toUpperCase().trim();
+    const existing = grouped.get(key);
+    const lineRefs = m.line.refs
+      ? m.line.refs.split(/[,;\s]+/).map((r) => r.trim()).filter(Boolean)
+      : [];
+
+    if (!existing) {
+      grouped.set(key, {
+        mpn: m.part?.part_number || m.line.mpn,
+        manufacturer: m.part?.manufacturer || m.line.manufacturer,
+        totalQty: m.line.quantity,
+        refs: new Set(lineRefs),
+        descriptions: new Set(m.line.description ? [m.line.description] : []),
+        footprints: new Set(m.line.footprint ? [m.line.footprint] : []),
+        matchedPart: m.part?.part_number || "",
+        onHand: m.part?.total_quantity ?? 0,
+        shortage: m.shortage,
+        kind: m.kind,
+        unitCost: m.line.unitCost,
+      });
+    } else {
+      existing.totalQty += m.line.quantity;
+      existing.shortage = Math.max(0, existing.totalQty - existing.onHand);
+      lineRefs.forEach((r) => existing.refs.add(r));
+      if (m.line.description) existing.descriptions.add(m.line.description);
+      if (m.line.footprint) existing.footprints.add(m.line.footprint);
+      if (!existing.matchedPart && m.part?.part_number) {
+        existing.matchedPart = m.part.part_number;
+        existing.onHand = m.part.total_quantity;
+      }
+    }
+  }
+
+  // Sort natural by ref designators or MPN
+  const sorted = Array.from(grouped.values()).sort((a, b) => a.mpn.localeCompare(b.mpn));
+
+  return sorted.map((item) => {
+    const refsList = Array.from(item.refs).sort((a, b) => {
+      const numA = parseInt(a.replace(/[^\d]/g, ""), 10) || 0;
+      const numB = parseInt(b.replace(/[^\d]/g, ""), 10) || 0;
+      const preA = a.replace(/[\d]/g, "");
+      const preB = b.replace(/[\d]/g, "");
+      return preA === preB ? numA - numB : preA.localeCompare(preB);
+    });
+
+    const totalCost = item.unitCost != null ? Math.round(item.totalQty * item.unitCost * 100) / 100 : null;
+
+    return {
+      "Primary Part / MPN": item.mpn,
+      Manufacturer: item.manufacturer,
+      "Total Qty": item.totalQty,
+      "Reference Designators": refsList.join(", "),
+      Description: Array.from(item.descriptions).join(" | "),
+      Footprint: Array.from(item.footprints).join(" | "),
+      "Stock Match": item.matchedPart ? item.matchedPart : "Unmatched",
+      "On hand": item.onHand,
+      Shortage: item.shortage,
+      "Release Readiness": item.kind === "exact" ? "Qualified" : item.kind === "substitute" ? "Substitute Approved" : "Pending Resolution",
+      "Unit-Cost": item.unitCost ?? "",
+      "Total-Cost": totalCost ?? "",
+    };
+  });
+}
+
+export interface BomRevisionDiffItem {
+  changeType: "added" | "removed" | "modified" | "unchanged";
+  refs: string;
+  mpn: string;
+  oldMpn?: string;
+  oldQty?: number;
+  newQty?: number;
+  oldCost?: number | null;
+  newCost?: number | null;
+  details: string;
+}
+
+export function compareBomRevisions(currentLines: BomLine[], baselineLines: BomLine[]): BomRevisionDiffItem[] {
+  const diffs: BomRevisionDiffItem[] = [];
+  const baselineByRefOrMpn = new Map<string, BomLine>();
+
+  baselineLines.forEach((l) => {
+    const key = (l.refs || l.mpn || `${l.index}`).trim().toUpperCase();
+    baselineByRefOrMpn.set(key, l);
+  });
+
+  const matchedBaselineKeys = new Set<string>();
+
+  // Check current against baseline
+  currentLines.forEach((curr) => {
+    const key = (curr.refs || curr.mpn || `${curr.index}`).trim().toUpperCase();
+    const base = baselineByRefOrMpn.get(key);
+
+    if (!base) {
+      diffs.push({
+        changeType: "added",
+        refs: curr.refs,
+        mpn: curr.mpn,
+        newQty: curr.quantity,
+        newCost: calculatedLineCost(curr),
+        details: "New line item added in current revision",
+      });
+    } else {
+      matchedBaselineKeys.add(key);
+      const qtyChanged = base.quantity !== curr.quantity;
+      const mpnChanged = base.mpn.toUpperCase() !== curr.mpn.toUpperCase();
+      const costChanged = calculatedLineCost(base) !== calculatedLineCost(curr);
+
+      if (qtyChanged || mpnChanged || costChanged) {
+        const changes: string[] = [];
+        if (mpnChanged) changes.push(`MPN: ${base.mpn} -> ${curr.mpn}`);
+        if (qtyChanged) changes.push(`Qty: ${base.quantity} -> ${curr.quantity}`);
+        if (costChanged) changes.push(`Cost: ${calculatedLineCost(base)} -> ${calculatedLineCost(curr)}`);
+
+        diffs.push({
+          changeType: "modified",
+          refs: curr.refs,
+          mpn: curr.mpn,
+          oldMpn: base.mpn,
+          oldQty: base.quantity,
+          newQty: curr.quantity,
+          oldCost: calculatedLineCost(base),
+          newCost: calculatedLineCost(curr),
+          details: changes.join("; "),
+        });
+      } else {
+        diffs.push({
+          changeType: "unchanged",
+          refs: curr.refs,
+          mpn: curr.mpn,
+          newQty: curr.quantity,
+          newCost: calculatedLineCost(curr),
+          details: "Matches baseline revision",
+        });
+      }
+    }
+  });
+
+  // Check removed lines (present in baseline but not in current)
+  baselineLines.forEach((base) => {
+    const key = (base.refs || base.mpn || `${base.index}`).trim().toUpperCase();
+    if (!matchedBaselineKeys.has(key)) {
+      diffs.push({
+        changeType: "removed",
+        refs: base.refs,
+        mpn: base.mpn,
+        oldQty: base.quantity,
+        oldCost: calculatedLineCost(base),
+        details: "Item removed from baseline revision",
+      });
+    }
+  });
+
+  return diffs;
+}
+
+export function isBomReleaseReady(matches: BomMatch[]): {
+  ready: boolean;
+  unfulfilledCount: number;
+  reasons: string[];
+} {
+  const missing = matches.filter((m) => m.kind === "missing" || !m.part);
+  const unfulfilledCount = missing.length;
+  const reasons: string[] = [];
+
+  if (unfulfilledCount > 0) {
+    reasons.push(`${unfulfilledCount} line item(s) are not resolved to an approved stocked component or valid substitute.`);
+  }
+
+  return {
+    ready: unfulfilledCount === 0,
+    unfulfilledCount,
+    reasons,
+  };
+}
