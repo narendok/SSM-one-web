@@ -1,0 +1,6 @@
+expected;label;observed;verification
+4;Private draft wrappers: authenticated only, definer and scoped path;4;PASS
+2;Private version tables: RLS, no direct app-role access;2;PASS
+1;Private context helper: no app-role execution;1;PASS
+0;Private draft rows;0;PASS
+4;First feasibility RPCs retained;4;PASS
