@@ -56,6 +56,10 @@ wait "$root_holder_pid"; wait "$restore_pid"
 assert_eq "$(q "SELECT count(*) FROM public.customer_requirements WHERE archived_at IS NULL")" 5 'root-holder restore completed after lock release'
 assert_eq "$(PGOPTIONS="-c request.jwt.claim.sub=00000000-0000-4000-8000-000000000001" psql "${psql_args[@]}" -Atqc "SELECT replayed FROM public.restore_reviewed_sales_samples('$archive_manifest'::uuid,'shared root holder restore','00000000-0000-4000-8000-000000000042');")" t 'root-holder restore replay remains exact'
 
+# Restore the active baseline so existing writer-race assertions retain their
+# original zero-manifest expectations.
+q "DELETE FROM public.sales_sample_archive_audit_events; DELETE FROM public.sales_sample_archive_manifest_items; DELETE FROM public.sales_sample_archive_manifests;"
+
 # Writer-first: an unmodified direct child-table writer takes no archive advisory
 # lock. It commits first; the archive sees the new lineage and rolls back fully.
 psql "${psql_args[@]}" -Atqc "INSERT INTO public.sales_opportunity_structured_docx_assignments(id,opportunity_id) VALUES ('00000000-0000-4000-8000-000000000031','104fb9e2-7f83-40f9-a295-64b37aa8c7ee');"
