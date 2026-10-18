@@ -30,6 +30,3 @@ if(!(await scalar("SELECT relrowsecurity enabled FROM pg_class WHERE oid='_ssm_t
 console.log('TASK_IDENTITY_PRIVATE_PROPOSAL_LOCAL_PASS no_backfill=true app_access_denied=true duplicate_current_links_denied=true invalid_fk_denied=true source_delete_restricted=true revoked_history_retained=true managed_execution=false');
 console.log(JSON.stringify(await scalar('SELECT version()')));
 await db.close();
-
-
-
