@@ -1,10 +1,34 @@
 # SSM One — document catalogue
 
-Refined: 14 October 2026. **Reference for the web portal; not another implementation plan.**
+Refined: 18 October 2026. **Reference for the web portal; not another implementation plan.**
 
 The original 89 annexure item/note blocks are organized into **38 document/record families**, including the later Customer Register and Master/SOR clarifications. A family is a logical group, not one mandatory file. Unique subtypes and confidential scopes stay separate; no source requirement is discarded.
 
 Use [the web master plan](SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) for delivery order. The full source/code mapping is in [the catalogue JSON](SSM_ONE_DOCUMENT_CATALOGUE.json); original wording and aliases remain in [the source inventory](sources/ORIGINAL_DOCUMENT_CATALOGUE_2026-10-03.json).
+
+## Confirmed master-plan alignment — 18 October 2026
+
+This section aligns the existing 38-family reference with the confirmed newer master-plan decisions. It does not create 38 mandatory files, certify implementation, or add another delivery roadmap. The original 89-block coverage and stable family IDs are unchanged. New UI/workflow capabilities are mapped as overlays; not every feature becomes a DOCX template. JSON records the same mapping under confirmed_master_plan_alignment and each affected family.
+
+| Confirmed addition | Existing family IDs | Clarification |
+|---|---|---|
+| Template ownership and approval | D01 | Web-only scoped lead template editing; members fill/verify instances; authenticated Prepared by; lead review/return; configured CPO hardware/product, CTO software and CEO business/money routing; exact revision and separate release. |
+| Customer onboarding and requirement intake | D02 D03 D04 D05 D08 | Pending customer registration with Sales/Finance reviews; separate progressive technical intake, assigned feasibility/conflicts and exact baseline acceptance. Customer form submission is not automatic activation or project start. |
+| Research, visit testing and MOM | D13 D25 | Assigned R&D/Service mobile observations/readings/evidence generate reviewable report drafts. Service/complaint context remains distinct; not every visit is a nonconformance or DVP. Client-visible MOM is separately accepted/published with a notification; copy email subject/body only, manual sending. |
+| People policies, forms and monthly reviews | D01 D27 D28 D29 | Web policy/template administration; mobile applicable policy reads, assigned forms, training and monthly self-review/feedback; leave/calendar, attendance/travel rules and reviewer scope remain contract-dependent. HR case privacy stays separate. |
+| Timing matrix and reminders | D01 D27 D32 | Versioned configurable recurrence/event triggers, current assignees/reviewers, quiet hours, dedup and completion cancellation. Suggested defaults are organizational proposals, not IATF-mandated intervals. |
+| Newsletter draft and common summaries | D38 D01 | Reviewable period summary rendition from permitted verified milestones, source pins and manual-edit preservation. No automatic external sending or invented achievements; no separate authority or mandatory document per project. |
+| Client view, verification and feedback | D04 D13 D23 D25 D26 D38 | Published client project/order/service projection, company/individual isolation, required inputs, immediate eligible milestone feedback and independent support tickets. Scan/manual reference verifies permitted recorded device/document status, not physical authenticity. Keep internal costs/private remarks excluded. |
+| Department and project Process Flow | D01 D21 D32 | Main lifecycle overview and lead Process Flow menu. Diagram configuration editing reuses the same protected settings contract; draft/validate/review/activate, history and gate checks. Production PFD is a distinct technical subtype, not the portal workflow editor. |
+| Web/Android handoff | D01 | Separate web/backend master and Android build plan; explicit planned contract packet with caller scope, payloads, replay/version pins, receipts/readback and device acceptance. No mobile business backend or inferred installation. |
+
+**Template decision:** authorized department leads maintain controlled web templates/header/footer and revisions; assigned members verify auto-filled source data and complete permitted fields. Preparation, lead review/return, applicable management approval and release remain separate exact-revision receipts. A signature image is not approval. Shared templates require explicit ownership; lead status does not itself grant template or executive-route authority.
+
+**Drive placement:** blank policies/templates/definitions are Common; customer/internal project reports follow the matching project group; actual non-project training/review/service/case records are Other department work. Reuse one controlled template revision across instances. A policy, blank form, submitted response and completed review are different records, even within one family. Scope and confidentiality remain enforced independently of folder labels.
+
+**Selected scope exclusions:** Google Drive/Docs/Sheets API/provider integration remains outside the selected implementation decision. No automatic email sending or mailbox-draft integration; MOM subject/content is copied for manual sending. No automatic publication, test pass, client acceptance, spend decision or project start. New client layout approval is a design baseline only. Reference template folders are still pending actual user-supplied access.
+
+**Verification boundary:** this catalogue describes target behavior. Existing record APIs, template editors, private file persistence, source-calculation authority, ordinary employee/client/lead permissions, reminders, report generation and device flows require their own accepted contracts/evidence. The [web master plan](SSM_ONE_WEB_PORTAL_MASTER_PLAN.md) governs sequencing; the separate Android build plan and planned handoff govern mobile implementation.
 
 ## Current usable flow — prioritize these independently
 

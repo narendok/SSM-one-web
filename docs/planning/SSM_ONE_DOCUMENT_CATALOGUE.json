@@ -1,7 +1,7 @@
 {
   "title": "SSM One document catalogue",
   "status": "Optimized target/reference, not deployment or a database seed",
-  "refined": "2026-10-14",
+  "refined": "2026-10-18",
   "source_sha256": "7e8e008eba28db1b1f207d2d74583c0c0eab3589deae699eee391d05ba755612",
   "family_count": 38,
   "original_source_blocks": 89,
@@ -45,7 +45,33 @@
         "B0520"
       ],
       "delivery_scope": "Foundation, independently",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Template ownership and approval",
+          "scope": "Web-only scoped lead template editing; members fill/verify instances; authenticated Prepared by; lead review/return; configured CPO hardware/product, CTO software and CEO business/money routing; exact revision and separate release."
+        },
+        {
+          "topic": "People policies, forms and monthly reviews",
+          "scope": "Web policy/template administration; mobile applicable policy reads, assigned forms, training and monthly self-review/feedback; leave/calendar, attendance/travel rules and reviewer scope remain contract-dependent. HR case privacy stays separate."
+        },
+        {
+          "topic": "Timing matrix and reminders",
+          "scope": "Versioned configurable recurrence/event triggers, current assignees/reviewers, quiet hours, dedup and completion cancellation. Suggested defaults are organizational proposals, not IATF-mandated intervals."
+        },
+        {
+          "topic": "Newsletter draft and common summaries",
+          "scope": "Reviewable period summary rendition from permitted verified milestones, source pins and manual-edit preservation. No automatic external sending or invented achievements; no separate authority or mandatory document per project."
+        },
+        {
+          "topic": "Department and project Process Flow",
+          "scope": "Main lifecycle overview and lead Process Flow menu. Diagram configuration editing reuses the same protected settings contract; draft/validate/review/activate, history and gate checks. Production PFD is a distinct technical subtype, not the portal workflow editor."
+        },
+        {
+          "topic": "Web/Android handoff",
+          "scope": "Separate web/backend master and Android build plan; explicit planned contract packet with caller scope, payloads, replay/version pins, receipts/readback and device acceptance. No mobile business backend or inferred installation."
+        }
+      ]
     },
     {
       "id": "D02",
@@ -55,7 +81,13 @@
       "create_or_record_when": "One managed Customer Register.xlsx from Customer master; refresh additions/changes, retain revisions. Not one file per customer and not external Excel import.",
       "source_blocks": [],
       "delivery_scope": "Current flow",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Customer onboarding and requirement intake",
+          "scope": "Pending customer registration with Sales/Finance reviews; separate progressive technical intake, assigned feasibility/conflicts and exact baseline acceptance. Customer form submission is not automatic activation or project start."
+        }
+      ]
     },
     {
       "id": "D03",
@@ -68,7 +100,13 @@
         "B0454"
       ],
       "delivery_scope": "Current flow",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Customer onboarding and requirement intake",
+          "scope": "Pending customer registration with Sales/Finance reviews; separate progressive technical intake, assigned feasibility/conflicts and exact baseline acceptance. Customer form submission is not automatic activation or project start."
+        }
+      ]
     },
     {
       "id": "D04",
@@ -78,7 +116,17 @@
       "create_or_record_when": "Capture known requirements once, preserve source/customer/revision, reuse in feasibility and project start. SOR is a rendition, not another source of truth.",
       "source_blocks": [],
       "delivery_scope": "Current flow",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Customer onboarding and requirement intake",
+          "scope": "Pending customer registration with Sales/Finance reviews; separate progressive technical intake, assigned feasibility/conflicts and exact baseline acceptance. Customer form submission is not automatic activation or project start."
+        },
+        {
+          "topic": "Client view, verification and feedback",
+          "scope": "Published client project/order/service projection, company/individual isolation, required inputs, immediate eligible milestone feedback and independent support tickets. Scan/manual reference verifies permitted recorded device/document status, not physical authenticity. Keep internal costs/private remarks excluded."
+        }
+      ]
     },
     {
       "id": "D05",
@@ -90,7 +138,13 @@
         "B0458"
       ],
       "delivery_scope": "Current flow",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Customer onboarding and requirement intake",
+          "scope": "Pending customer registration with Sales/Finance reviews; separate progressive technical intake, assigned feasibility/conflicts and exact baseline acceptance. Customer form submission is not automatic activation or project start."
+        }
+      ]
     },
     {
       "id": "D06",
@@ -102,7 +156,8 @@
         "B0459"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D07",
@@ -114,7 +169,8 @@
         "B0451"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D08",
@@ -126,7 +182,13 @@
         "B0468"
       ],
       "delivery_scope": "Next gate",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Customer onboarding and requirement intake",
+          "scope": "Pending customer registration with Sales/Finance reviews; separate progressive technical intake, assigned feasibility/conflicts and exact baseline acceptance. Customer form submission is not automatic activation or project start."
+        }
+      ]
     },
     {
       "id": "D09",
@@ -139,7 +201,8 @@
         "B0484"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D10",
@@ -154,7 +217,8 @@
         "B0495"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D11",
@@ -166,7 +230,8 @@
         "B0472"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D12",
@@ -178,7 +243,8 @@
         "B0473"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D13",
@@ -191,7 +257,17 @@
         "B0485"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Research, visit testing and MOM",
+          "scope": "Assigned R&D/Service mobile observations/readings/evidence generate reviewable report drafts. Service/complaint context remains distinct; not every visit is a nonconformance or DVP. Client-visible MOM is separately accepted/published with a notification; copy email subject/body only, manual sending."
+        },
+        {
+          "topic": "Client view, verification and feedback",
+          "scope": "Published client project/order/service projection, company/individual isolation, required inputs, immediate eligible milestone feedback and independent support tickets. Scan/manual reference verifies permitted recorded device/document status, not physical authenticity. Keep internal costs/private remarks excluded."
+        }
+      ]
     },
     {
       "id": "D14",
@@ -205,7 +281,8 @@
         "B0496"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D15",
@@ -218,7 +295,8 @@
         "B0482"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D16",
@@ -230,7 +308,8 @@
         "B0465"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D17",
@@ -242,7 +321,8 @@
         "B0491"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D18",
@@ -260,7 +340,8 @@
         "B0508"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D19",
@@ -272,7 +353,8 @@
         "B0510"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D20",
@@ -285,7 +367,8 @@
         "B0525"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D21",
@@ -299,7 +382,13 @@
         "B0530"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Department and project Process Flow",
+          "scope": "Main lifecycle overview and lead Process Flow menu. Diagram configuration editing reuses the same protected settings contract; draft/validate/review/activate, history and gate checks. Production PFD is a distinct technical subtype, not the portal workflow editor."
+        }
+      ]
     },
     {
       "id": "D22",
@@ -312,7 +401,8 @@
         "B0532"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D23",
@@ -324,7 +414,13 @@
         "B0534"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Client view, verification and feedback",
+          "scope": "Published client project/order/service projection, company/individual isolation, required inputs, immediate eligible milestone feedback and independent support tickets. Scan/manual reference verifies permitted recorded device/document status, not physical authenticity. Keep internal costs/private remarks excluded."
+        }
+      ]
     },
     {
       "id": "D24",
@@ -339,7 +435,8 @@
         "B0535"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D25",
@@ -352,7 +449,17 @@
         "B0533"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Research, visit testing and MOM",
+          "scope": "Assigned R&D/Service mobile observations/readings/evidence generate reviewable report drafts. Service/complaint context remains distinct; not every visit is a nonconformance or DVP. Client-visible MOM is separately accepted/published with a notification; copy email subject/body only, manual sending."
+        },
+        {
+          "topic": "Client view, verification and feedback",
+          "scope": "Published client project/order/service projection, company/individual isolation, required inputs, immediate eligible milestone feedback and independent support tickets. Scan/manual reference verifies permitted recorded device/document status, not physical authenticity. Keep internal costs/private remarks excluded."
+        }
+      ]
     },
     {
       "id": "D26",
@@ -367,7 +474,13 @@
         "B0545"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Client view, verification and feedback",
+          "scope": "Published client project/order/service projection, company/individual isolation, required inputs, immediate eligible milestone feedback and independent support tickets. Scan/manual reference verifies permitted recorded device/document status, not physical authenticity. Keep internal costs/private remarks excluded."
+        }
+      ]
     },
     {
       "id": "D27",
@@ -382,7 +495,17 @@
         "B0555"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "People policies, forms and monthly reviews",
+          "scope": "Web policy/template administration; mobile applicable policy reads, assigned forms, training and monthly self-review/feedback; leave/calendar, attendance/travel rules and reviewer scope remain contract-dependent. HR case privacy stays separate."
+        },
+        {
+          "topic": "Timing matrix and reminders",
+          "scope": "Versioned configurable recurrence/event triggers, current assignees/reviewers, quiet hours, dedup and completion cancellation. Suggested defaults are organizational proposals, not IATF-mandated intervals."
+        }
+      ]
     },
     {
       "id": "D28",
@@ -394,7 +517,13 @@
         "B0550"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "People policies, forms and monthly reviews",
+          "scope": "Web policy/template administration; mobile applicable policy reads, assigned forms, training and monthly self-review/feedback; leave/calendar, attendance/travel rules and reviewer scope remain contract-dependent. HR case privacy stays separate."
+        }
+      ]
     },
     {
       "id": "D29",
@@ -406,7 +535,13 @@
         "B0551"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "People policies, forms and monthly reviews",
+          "scope": "Web policy/template administration; mobile applicable policy reads, assigned forms, training and monthly self-review/feedback; leave/calendar, attendance/travel rules and reviewer scope remain contract-dependent. HR case privacy stays separate."
+        }
+      ]
     },
     {
       "id": "D30",
@@ -421,7 +556,8 @@
         "B0577"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D31",
@@ -438,7 +574,8 @@
         "B0565"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D32",
@@ -453,7 +590,17 @@
         "B0574"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Timing matrix and reminders",
+          "scope": "Versioned configurable recurrence/event triggers, current assignees/reviewers, quiet hours, dedup and completion cancellation. Suggested defaults are organizational proposals, not IATF-mandated intervals."
+        },
+        {
+          "topic": "Department and project Process Flow",
+          "scope": "Main lifecycle overview and lead Process Flow menu. Diagram configuration editing reuses the same protected settings contract; draft/validate/review/activate, history and gate checks. Production PFD is a distinct technical subtype, not the portal workflow editor."
+        }
+      ]
     },
     {
       "id": "D33",
@@ -466,7 +613,8 @@
         "B0578"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D34",
@@ -478,7 +626,8 @@
         "B0522"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D35",
@@ -491,7 +640,8 @@
         "B0571"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D36",
@@ -504,7 +654,8 @@
         "B0545"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D37",
@@ -518,7 +669,8 @@
         "B0575"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": []
     },
     {
       "id": "D38",
@@ -530,7 +682,112 @@
         "B0559"
       ],
       "delivery_scope": "As applicable",
-      "status": "Target family; readiness follows actual records/contracts, not this catalogue"
+      "status": "Target family; readiness follows actual records/contracts, not this catalogue",
+      "confirmed_refinements_2026_10_18": [
+        {
+          "topic": "Newsletter draft and common summaries",
+          "scope": "Reviewable period summary rendition from permitted verified milestones, source pins and manual-edit preservation. No automatic external sending or invented achievements; no separate authority or mandatory document per project."
+        },
+        {
+          "topic": "Client view, verification and feedback",
+          "scope": "Published client project/order/service projection, company/individual isolation, required inputs, immediate eligible milestone feedback and independent support tickets. Scan/manual reference verifies permitted recorded device/document status, not physical authenticity. Keep internal costs/private remarks excluded."
+        }
+      ]
     }
-  ]
+  ],
+  "confirmed_master_plan_alignment": {
+    "date": "2026-10-18",
+    "status": "Confirmed requirements/reference mapping only; implementation and contract acceptance remain pending",
+    "master_plan": "SSM_ONE_WEB_PORTAL_MASTER_PLAN.md",
+    "baseline_family_count": 38,
+    "original_coverage_unchanged": true,
+    "workflow_overlays": [
+      {
+        "topic": "Template ownership and approval",
+        "family_ids": [
+          "D01"
+        ],
+        "scope": "Web-only scoped lead template editing; members fill/verify instances; authenticated Prepared by; lead review/return; configured CPO hardware/product, CTO software and CEO business/money routing; exact revision and separate release."
+      },
+      {
+        "topic": "Customer onboarding and requirement intake",
+        "family_ids": [
+          "D02",
+          "D03",
+          "D04",
+          "D05",
+          "D08"
+        ],
+        "scope": "Pending customer registration with Sales/Finance reviews; separate progressive technical intake, assigned feasibility/conflicts and exact baseline acceptance. Customer form submission is not automatic activation or project start."
+      },
+      {
+        "topic": "Research, visit testing and MOM",
+        "family_ids": [
+          "D13",
+          "D25"
+        ],
+        "scope": "Assigned R&D/Service mobile observations/readings/evidence generate reviewable report drafts. Service/complaint context remains distinct; not every visit is a nonconformance or DVP. Client-visible MOM is separately accepted/published with a notification; copy email subject/body only, manual sending."
+      },
+      {
+        "topic": "People policies, forms and monthly reviews",
+        "family_ids": [
+          "D01",
+          "D27",
+          "D28",
+          "D29"
+        ],
+        "scope": "Web policy/template administration; mobile applicable policy reads, assigned forms, training and monthly self-review/feedback; leave/calendar, attendance/travel rules and reviewer scope remain contract-dependent. HR case privacy stays separate."
+      },
+      {
+        "topic": "Timing matrix and reminders",
+        "family_ids": [
+          "D01",
+          "D27",
+          "D32"
+        ],
+        "scope": "Versioned configurable recurrence/event triggers, current assignees/reviewers, quiet hours, dedup and completion cancellation. Suggested defaults are organizational proposals, not IATF-mandated intervals."
+      },
+      {
+        "topic": "Newsletter draft and common summaries",
+        "family_ids": [
+          "D38",
+          "D01"
+        ],
+        "scope": "Reviewable period summary rendition from permitted verified milestones, source pins and manual-edit preservation. No automatic external sending or invented achievements; no separate authority or mandatory document per project."
+      },
+      {
+        "topic": "Client view, verification and feedback",
+        "family_ids": [
+          "D04",
+          "D13",
+          "D23",
+          "D25",
+          "D26",
+          "D38"
+        ],
+        "scope": "Published client project/order/service projection, company/individual isolation, required inputs, immediate eligible milestone feedback and independent support tickets. Scan/manual reference verifies permitted recorded device/document status, not physical authenticity. Keep internal costs/private remarks excluded."
+      },
+      {
+        "topic": "Department and project Process Flow",
+        "family_ids": [
+          "D01",
+          "D21",
+          "D32"
+        ],
+        "scope": "Main lifecycle overview and lead Process Flow menu. Diagram configuration editing reuses the same protected settings contract; draft/validate/review/activate, history and gate checks. Production PFD is a distinct technical subtype, not the portal workflow editor."
+      },
+      {
+        "topic": "Web/Android handoff",
+        "family_ids": [
+          "D01"
+        ],
+        "scope": "Separate web/backend master and Android build plan; explicit planned contract packet with caller scope, payloads, replay/version pins, receipts/readback and device acceptance. No mobile business backend or inferred installation."
+      }
+    ],
+    "excluded_decisions": [
+      "Google Drive/Docs/Sheets API integration was exploratory and is not selected scope",
+      "Automatic email sending and mailbox draft creation are not selected; MOM copy subject/body is manual-send convenience",
+      "UI approval does not install grants, approve business records or deploy features"
+    ]
+  }
 }
