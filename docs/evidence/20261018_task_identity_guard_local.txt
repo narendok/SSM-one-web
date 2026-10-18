@@ -1,0 +1,3 @@
+TASK_IDENTITY_PRIVATE_PROPOSAL_LOCAL_PASS no_backfill=true app_access_denied=true duplicate_current_links_denied=true invalid_fk_denied=true source_delete_restricted=true revoked_history_retained=true managed_execution=false
+{"version":"PostgreSQL 18.6 (PGlite 0.5.10) on wasm32-unknown-emscripten, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.5 (1db513782be24469589d7cb8a1f1834e9a33f271), 32-bit"}
+TASK_IDENTITY_INSTALL_GUARDS_LOCAL_PASS missing_source_denied=true disabled_rls_denied=true late_fk_failure_rolls_back=true no_partial_schema=true managed_execution=false

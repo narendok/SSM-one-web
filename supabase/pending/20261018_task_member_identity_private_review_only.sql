@@ -2,6 +2,24 @@
 -- Original backend yyrvduosyyaluifqvwkr. Separate schema/access review required.
 -- Proposed explicit steward-verified identity history. Names/emails are never matched.
 BEGIN;
+DO $identity_preflight$
+DECLARE target regclass; row_security boolean; table_owner name; id_type oid;
+BEGIN
+  IF to_regnamespace('_ssm_task_identity') IS NOT NULL THEN
+    RAISE EXCEPTION 'Identity schema already exists; inspect rather than overwrite';
+  END IF;
+  FOREACH target IN ARRAY ARRAY[to_regclass('public.rd_members'),to_regclass('public.employees')] LOOP
+    IF target IS NULL THEN RAISE EXCEPTION 'Required identity source table is missing'; END IF;
+    SELECT relrowsecurity,pg_get_userbyid(relowner) INTO row_security,table_owner FROM pg_class WHERE oid=target;
+    IF NOT row_security OR table_owner<>current_user THEN
+      RAISE EXCEPTION 'Identity source ownership/RLS prerequisite mismatch';
+    END IF;
+    SELECT atttypid INTO id_type FROM pg_attribute WHERE attrelid=target AND attname='id' AND NOT attisdropped;
+    IF id_type IS DISTINCT FROM 'uuid'::regtype::oid THEN RAISE EXCEPTION 'Identity source UUID key mismatch'; END IF;
+  END LOOP;
+  IF to_regclass('auth.users') IS NULL THEN RAISE EXCEPTION 'Verifying actor source is missing'; END IF;
+END;
+$identity_preflight$;
 CREATE SCHEMA _ssm_task_identity;
 REVOKE ALL ON SCHEMA _ssm_task_identity FROM PUBLIC, anon, authenticated, service_role;
 CREATE TABLE _ssm_task_identity.member_employee_versions (
@@ -23,4 +41,16 @@ ALTER TABLE _ssm_task_identity.member_employee_versions ENABLE ROW LEVEL SECURIT
 REVOKE ALL ON TABLE _ssm_task_identity.member_employee_versions FROM PUBLIC, anon, authenticated, service_role;
 -- No app roles, policies, RPCs, existing task/member updates, or approved mappings.
 -- Membership, capability/delegation, audit/replay and protected write contracts are separate.
+DO $identity_postflight$
+DECLARE actor name;
+BEGIN
+  FOREACH actor IN ARRAY ARRAY['anon'::name,'authenticated'::name,'service_role'::name] LOOP
+    IF has_schema_privilege(actor,'_ssm_task_identity','USAGE,CREATE') OR
+       has_table_privilege(actor,'_ssm_task_identity.member_employee_versions','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') THEN
+      RAISE EXCEPTION 'Application role unexpectedly retains identity bridge access';
+    END IF;
+  END LOOP;
+  IF EXISTS (SELECT 1 FROM _ssm_task_identity.member_employee_versions) THEN RAISE EXCEPTION 'Unexpected identity backfill'; END IF;
+END;
+$identity_postflight$;
 COMMIT;
