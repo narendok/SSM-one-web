@@ -15,10 +15,11 @@ import {
   DEPARTMENTS, TASK_PRIORITIES, TASK_STATUSES, department as findDepartment,
   fetchTasks, statusLabel, taskAssigneeLabel, updateTask, type ProjectTask, type TaskStatus,
 } from "@/lib/tasks";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { TaskDialog } from "./TaskDialog";
 import { TaskDrawer } from "./TaskDrawer";
 
-export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTaskChange, departmentId, initialView = "table" }: { departmentId?: string; initialView?: "board" | "table"; projectId?: string; compact?: boolean; assigneeId?: string; taskId?: string; onTaskChange?: (taskId: string | undefined) => void }) {
+export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTaskChange, departmentId, readOnly = false, initialView = "table" }: { readOnly?: boolean; departmentId?: string; initialView?: "board" | "table"; projectId?: string; compact?: boolean; assigneeId?: string; taskId?: string; onTaskChange?: (taskId: string | undefined) => void }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const routeSearch = useRouterState({ select: (state) => state.location.search }) as { assignee?: string; task?: string };
@@ -85,7 +86,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
   }
 
   async function move(task: ProjectTask, status: TaskStatus) {
-    if (task.status === status) return;
+    if (readOnly || task.status === status) return;
     if (status === "done" && task.department === "qa") {
       if (!confirm("QA sign-off: confirm this quality task has been verified and can be closed?")) return;
     }
@@ -149,7 +150,8 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
         </div>
         {hasTaskData && <span className="text-xs text-muted-foreground">{filtered.length} task{filtered.length === 1 ? "" : "s"}{activeAssigneeId ? " for selected assignee" : ""}{isError ? " · refresh failed" : ""}</span>}
         {activeAssigneeId && !assigneeId && !projectId && <Button variant="ghost" size="sm" onClick={() => void navigate({ to: "/tasks", search: { assignee: undefined, task: activeTaskId } })}>Clear assignee</Button>}
-        <Button className="ml-auto" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New task</Button>
+        {!readOnly && <Button className="ml-auto" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New task</Button>}
+        {readOnly && <Badge variant="outline">Read-only task view</Badge>}
       </div>
 
       {projectId && (
@@ -176,11 +178,11 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
           {TASK_STATUSES.map((col) => (
             <div
               key={col.value}
-              onDragOver={(e) => e.preventDefault()}
+              onDragOver={(e) => { if (!readOnly) e.preventDefault(); }}
               onDrop={() => {
                 const t = tasks.find((x) => x.id === dragId);
                 setDragId(null);
-                if (t) move(t, col.value);
+                if (!readOnly && t) move(t, col.value);
               }}
               className="rounded-lg border bg-muted/30 p-2 min-h-[140px] space-y-2"
             >
@@ -194,8 +196,8 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
                 return (
                   <Card
                     key={t.id}
-                    draggable
-                    onDragStart={() => setDragId(t.id)}
+                    draggable={!readOnly}
+                    onDragStart={() => { if (!readOnly) setDragId(t.id); }}
                     onClick={() => setSelectedTask(t.id)}
                     className="cursor-pointer p-2.5 space-y-1.5 hover:border-primary/50"
                   >
@@ -262,6 +264,7 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
         </Card>
       )}
 
+      {!readOnly && <>
       <TaskDialog open={creating} onOpenChange={setCreating} projectId={projectId} defaultDepartmentId={departmentId} />
       <TaskDialog
         open={!!editing}
@@ -275,6 +278,12 @@ export function TaskBoard({ projectId, compact = false, assigneeId, taskId, onTa
         onOpenChange={(v) => { if (!v) setSelectedTask(undefined); }}
         onEdit={(t) => { setSelectedTask(undefined); setEditing(t); }}
       />
+      </>}
+      {readOnly && <Dialog open={!!openTask} onOpenChange={(open) => { if (!open) setSelectedTask(undefined); }}>
+        <DialogContent><DialogHeader><DialogTitle>{openTask?.title ?? "Task"}</DialogTitle><DialogDescription>Read-only internal task details</DialogDescription></DialogHeader>
+          {openTask && <div className="space-y-3 text-sm"><p className="whitespace-pre-wrap">{openTask.description || "No description recorded."}</p><p>{statusLabel(openTask.status)} · {openTask.priority}</p><p>{taskAssigneeLabel(openTask)} · {openTask.due_date ?? "No due date"}</p></div>}
+        </DialogContent>
+      </Dialog>}
     </div>
   );
 }

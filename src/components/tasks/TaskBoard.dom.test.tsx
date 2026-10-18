@@ -28,13 +28,13 @@ const tasks = [{
   project: { id: "project-123", name: "Project One", code: "PROJECT-2026-0005", color: "blue" },
 }];
 
-function renderBoard(initialEntry: string, embedded: boolean, setupFetch: () => void = () => fetchTasks.mockResolvedValue(tasks), departmentId?: string) {
+function renderBoard(initialEntry: string, embedded: boolean, setupFetch: () => void = () => fetchTasks.mockResolvedValue(tasks), departmentId?: string, readOnly = false) {
   setupFetch();
   const root = createRootRoute({ component: Outlet });
   const authenticated = createRoute({ getParentRoute: () => root, id: "_authenticated", component: Outlet });
   const tasksLayout = createRoute({ getParentRoute: () => authenticated, path: "tasks", component: Outlet });
   const globalTasks = createRoute({ getParentRoute: () => tasksLayout, path: "/", validateSearch: (search) => search as { assignee?: string; task?: string }, component: () => <TaskBoard /> });
-  const projectTasks = createRoute({ getParentRoute: () => root, path: "projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact departmentId={departmentId} /> : null });
+  const projectTasks = createRoute({ getParentRoute: () => root, path: "projects/$projectId", component: () => embedded ? <TaskBoard projectId="project-123" compact departmentId={departmentId} readOnly={readOnly} /> : null });
   const router = createRouter({ routeTree: root.addChildren([authenticated.addChildren([tasksLayout.addChildren([globalTasks])]), projectTasks]), history: createMemoryHistory({ initialEntries: [initialEntry] }) });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
@@ -145,4 +145,15 @@ describe('TaskBoard canonical department scope', () => {
     expect(screen.queryByText('Unresolved department work')).toBeNull();
     expect(fetchTasks).toHaveBeenCalledWith('project-123', 'department-hardware');
   });
+});
+
+it("keeps basic task details readable without mounting task mutation editors", async () => {
+  const user = userEvent.setup();
+  renderBoard("/projects/project-123", true, () => fetchTasks.mockResolvedValue(tasks), undefined, true);
+  await screen.findByText("Read-only task view");
+  expect(screen.queryByRole("button", { name: "New task" })).toBeNull();
+  await user.click((await screen.findAllByText("Project route task"))[1]);
+  expect(await screen.findByText("Read-only internal task details")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Close task" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Save|Edit|Delete/ })).toBeNull();
 });

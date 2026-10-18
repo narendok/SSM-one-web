@@ -289,7 +289,7 @@ function ProjectDetailPage() {
               The same project tasks shown in Tasks. Completion reflects visible work, not stage approval.
             </p>
             <div className="mt-4">
-              <TaskBoard projectId={projectId} compact initialView="board" />
+              <TaskBoard projectId={projectId} compact initialView="board" readOnly />
             </div>
           </details>
           <div className="grid gap-3 lg:grid-cols-3">
