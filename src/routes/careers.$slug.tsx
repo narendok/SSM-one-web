@@ -11,9 +11,9 @@ export const Route = createFileRoute("/careers/$slug")({
   head: ({ params }) => ({
     meta: [
       { title: `Career opening — ${params.slug}` },
-      { name: "description", content: "View a current Six Sense Mobility opening and learn what the role involves." },
+      { name: "description", content: "View a current XYZ Pvt Ltd opening and learn what the role involves." },
       { property: "og:title", content: `Career opening — ${params.slug}` },
-      { property: "og:description", content: "View a current Six Sense Mobility opening and learn what the role involves." },
+      { property: "og:description", content: "View a current XYZ Pvt Ltd opening and learn what the role involves." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

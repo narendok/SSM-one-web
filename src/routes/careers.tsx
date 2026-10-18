@@ -9,10 +9,10 @@ import { fetchPublishedJobs } from "@/lib/hr";
 export const Route = createFileRoute("/careers")({
   head: () => ({
     meta: [
-      { title: "Careers — Six Sense Mobility" },
-      { name: "description", content: "Explore current openings at Six Sense Mobility and see where your next role could fit." },
-      { property: "og:title", content: "Careers — Six Sense Mobility" },
-      { property: "og:description", content: "Explore current openings at Six Sense Mobility and see where your next role could fit." },
+      { title: "Careers — XYZ Pvt Ltd" },
+      { name: "description", content: "Explore current openings at XYZ Pvt Ltd and see where your next role could fit." },
+      { property: "og:title", content: "Careers — XYZ Pvt Ltd" },
+      { property: "og:description", content: "Explore current openings at XYZ Pvt Ltd and see where your next role could fit." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -29,7 +29,7 @@ function CareersPage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-6 py-16 lg:grid-cols-[1.3fr_0.9fr] lg:items-end">
           <div>
             <p className="text-sm font-medium text-primary">Join the team</p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Careers at Six Sense Mobility</h1>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Careers at XYZ Pvt Ltd</h1>
             <p className="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
               Build reliable mobility hardware, embedded systems, quality workflows, and supply-chain operations with a team shipping real products.
             </p>

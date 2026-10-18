@@ -62,10 +62,10 @@ function AuthPage() {
         <div className="space-y-3">
            <h1 className="text-4xl font-bold leading-tight">One workspace for every operating team.</h1>
           <p className="text-primary-foreground/80 max-w-md">
-             Six Sense Mobility teams coordinate engineering, procurement, quality, HR, and company operations from a unified workspace.
+             XYZ Pvt Ltd teams coordinate engineering, procurement, quality, HR, and company operations from a unified workspace.
           </p>
         </div>
-         <p className="text-xs text-primary-foreground/60">HEXENSE LABS PRIVATE LIMITED · SIX SENSE MOBILITY</p>
+         <p className="text-xs text-primary-foreground/60">XYZ Pvt Ltd</p>
       </div>
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-6">

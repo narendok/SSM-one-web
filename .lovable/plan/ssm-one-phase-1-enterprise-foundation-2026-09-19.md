@@ -1,7 +1,7 @@
 # SSM One Phase 1 — Enterprise Foundation
 
 ## Outcome
-Transform the existing PartsBench application into the first module of **SSM One**, initially branded as **Six Sense Mobility**, while preserving all current inventory, BOM, PCB, Drive, task, project, and procurement capabilities. Branding stays editable through Administration.
+Transform the existing PartsBench application into the first module of **SSM One**, initially branded as **XYZ Pvt Ltd**, while preserving all current inventory, BOM, PCB, Drive, task, project, and procurement capabilities. Branding stays editable through Administration.
 
 ## Existing compatibility baseline
 - Preserve the existing auth-linked `profiles`, legacy `user_roles`, R&D roster (`rd_members`), PartsBench inventory/BOM/procurement/PCB tables, storage buckets, supplier integration, and bookmarked routes.
@@ -12,7 +12,7 @@ Transform the existing PartsBench application into the first module of **SSM One
 ## 1. Safe data and access foundation
 - Inspect current database policies and authentication configuration before applying one additive migration.
 - Add normalized enterprise tables for organization settings, departments, employees, employee-department membership, roles, permissions, role-permissions, employee-role assignments, module settings, notifications, activity/audit records, entity registry, and document-numbering configuration.
-- Seed only the stated official department names/codes and a reusable initial permission/module catalogue. Seed Six Sense Mobility organization defaults in editable settings; do not seed fake people or operational data.
+- Seed only the stated official department names/codes and a reusable initial permission/module catalogue. Seed XYZ Pvt Ltd organization defaults in editable settings; do not seed fake people or operational data.
 - Bridge the new employee record to existing authenticated profiles and optionally link the historical `rd_members` roster without changing legacy identifiers or foreign keys.
 - Add a reusable, server-validated effective-permission function and least-privilege RLS policies. Protect administration records, employee privacy fields, notifications, audit entries, and future-module routes; keep existing PartsBench policies intact.
 - Audit organization, department, employee status, role, and permission changes. Support employee states: invited, active, suspended, exited.
@@ -20,7 +20,7 @@ Transform the existing PartsBench application into the first module of **SSM One
 ## 2. Authentication and identity experience
 - Retain email/password and Google sign-in, add password-reset and invitation activation flows, and enable safe session handling.
 - Route suspended/exited accounts away from the application with a clear access message.
-- Replace the split PartsBench login branding with the editable Six Sense Mobility/SSM One identity while keeping the page hydration-safe.
+- Replace the split PartsBench login branding with the editable XYZ Pvt Ltd/SSM One identity while keeping the page hydration-safe.
 - Consolidate identity loading into one profile/permission source so the existing two-role frontend mismatch cannot weaken navigation or authorization.
 
 ## 3. Unified responsive shell and navigation

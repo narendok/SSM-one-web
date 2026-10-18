@@ -11,7 +11,7 @@ Enterprise Smart Management System & Automated Lifecycle Documentation Framework
 1. Executive Summary & Core Architectural Vision
 
 [B0003] 
-My Company operates in high-precision automotive electronics and mobility solutions, engineering products such as Body Control Units (BCU), Telematics Systems (SLCT), Xlink Controllers, eFan Controllers, and Power Shuttle Transmissions. To ensure compliance with quality management systems (IATF 16949:2016 and ISO 9001:2015) and environmental standards (ISO 14001), Hexense Labs requires a centralized, fully integrated Smart Enterprise Automation Architecture.
+My Company operates in high-precision automotive electronics and mobility solutions, engineering products such as Body Control Units (BCU), Telematics Systems (SLCT), Xlink Controllers, eFan Controllers, and Power Shuttle Transmissions. To ensure compliance with quality management systems (IATF 16949:2016 and ISO 9001:2015) and environmental standards (ISO 14001), XYZ Pvt Ltd requires a centralized, fully integrated Smart Enterprise Automation Architecture.
 
 [B0005] 
 This document specifies the Smart Company Management System (SCMS). The framework unifies all eleven functional departments into a single digital backbone: Project manufacture. 
@@ -219,7 +219,7 @@ Code Specifications
 
 [B0115] tbl
 Code Type | Token | Standard Expansion | Example / Mapping Reference
-Enterprise Prefix | HLPL | Hexense Labs Private Limited | Corporate Master Standard
+Enterprise Prefix | HLPL | XYZ Pvt Ltd | Corporate Master Standard
 Project Identifier | BCU | Body Control Unit | Project ID HLPL-BCU-02 / HLPL-BCU-03
  | SLCT | Telematics / SLCT Module | Commercial Order Tracker Item 6
  | XLINK | Commercial Vehicle Gateway | Commercial Order Tracker Item 3
@@ -1059,7 +1059,7 @@ HR & Operations | Resource Requests, Training Schedules, Audit Requirements | Tr
 7. Comprehensive Maintenance & Tooling Management Framework
 
 [B0408] 
-To ensure operational continuity across SMT lines, automated testing jigs, and mechanical fabrication equipment, Hexense Labs enforces a Total Productive Maintenance (TPM) master plan integrated with strictly monitored mean-time metrics and quality assurance registers.
+To ensure operational continuity across SMT lines, automated testing jigs, and mechanical fabrication equipment, XYZ Pvt Ltd enforces a Total Productive Maintenance (TPM) master plan integrated with strictly monitored mean-time metrics and quality assurance registers.
 
 [B0409] Heading2
 7.1 Total Productive Maintenance (TPM) Master Plan & MTBF/MTTR Tracking

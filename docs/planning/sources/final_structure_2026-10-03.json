@@ -18,7 +18,7 @@
       "id": "B0003",
       "kind": "p",
       "style": "",
-      "text": "My Company operates in high-precision automotive electronics and mobility solutions, engineering products such as Body Control Units (BCU), Telematics Systems (SLCT), Xlink Controllers, eFan Controllers, and Power Shuttle Transmissions. To ensure compliance with quality management systems (IATF 16949:2016 and ISO 9001:2015) and environmental standards (ISO 14001), Hexense Labs requires a centralized, fully integrated Smart Enterprise Automation Architecture."
+      "text": "My Company operates in high-precision automotive electronics and mobility solutions, engineering products such as Body Control Units (BCU), Telematics Systems (SLCT), Xlink Controllers, eFan Controllers, and Power Shuttle Transmissions. To ensure compliance with quality management systems (IATF 16949:2016 and ISO 9001:2015) and environmental standards (ISO 14001), XYZ Pvt Ltd requires a centralized, fully integrated Smart Enterprise Automation Architecture."
     },
     {
       "id": "B0005",
@@ -441,7 +441,7 @@
         [
           "Enterprise Prefix",
           "HLPL",
-          "Hexense Labs Private Limited",
+          "XYZ Pvt Ltd",
           "Corporate Master Standard"
         ],
         [
@@ -2325,7 +2325,7 @@
       "id": "B0408",
       "kind": "p",
       "style": "",
-      "text": "To ensure operational continuity across SMT lines, automated testing jigs, and mechanical fabrication equipment, Hexense Labs enforces a Total Productive Maintenance (TPM) master plan integrated with strictly monitored mean-time metrics and quality assurance registers."
+      "text": "To ensure operational continuity across SMT lines, automated testing jigs, and mechanical fabrication equipment, XYZ Pvt Ltd enforces a Total Productive Maintenance (TPM) master plan integrated with strictly monitored mean-time metrics and quality assurance registers."
     },
     {
       "id": "B0409",

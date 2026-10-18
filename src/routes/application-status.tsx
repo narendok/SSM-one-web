@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export const Route = createFileRoute("/application-status")({
   head: () => ({
     meta: [
-      { title: "Application status — Six Sense Mobility" },
-      { name: "description", content: "Check the progress of your Six Sense Mobility job application." },
-      { property: "og:title", content: "Application status — Six Sense Mobility" },
-      { property: "og:description", content: "Check the progress of your Six Sense Mobility job application." },
+      { title: "Application status — XYZ Pvt Ltd" },
+      { name: "description", content: "Check the progress of your XYZ Pvt Ltd job application." },
+      { property: "og:title", content: "Application status — XYZ Pvt Ltd" },
+      { property: "og:description", content: "Check the progress of your XYZ Pvt Ltd job application." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
