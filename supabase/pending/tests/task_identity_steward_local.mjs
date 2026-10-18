@@ -1,9 +1,11 @@
+import {buildBundle,transactionBody} from './task_identity_bundle_source.mjs';
 import {pathToFileURL} from 'node:url'; import {resolve} from 'node:path'; import fs from 'node:fs/promises';
 if(!process.argv[2])throw Error('Supply local PGlite module path; no managed connection accepted');
 const {PGlite}=await import(pathToFileURL(resolve(process.argv[2])).href); const db=new PGlite();
 const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role; CREATE SCHEMA auth; CREATE TYPE public.app_role AS ENUM('admin','member'); CREATE TABLE auth.users(id uuid PRIMARY KEY); INSERT INTO auth.users VALUES('${id(1)}'),('${id(2)}'); CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; CREATE TABLE public.fixture_admins(user_id uuid PRIMARY KEY); INSERT INTO public.fixture_admins VALUES('${id(1)}'); CREATE FUNCTION public.has_role(u uuid,r public.app_role) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$SELECT r='admin' AND EXISTS(SELECT 1 FROM public.fixture_admins WHERE user_id=u)$$; CREATE TABLE public.activity_log(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),actor_user_id uuid,module_key text,entity_type text,entity_id uuid,action text,summary text,after_data jsonb); ALTER TABLE public.activity_log ENABLE ROW LEVEL SECURITY; CREATE TABLE employees(id uuid PRIMARY KEY,user_id uuid,employment_status text); ALTER TABLE employees ENABLE ROW LEVEL SECURITY; INSERT INTO employees VALUES('${id(10)}','${id(1)}','ACTIVE'),('${id(11)}','${id(2)}','ACTIVE'),('${id(3)}',NULL,'ACTIVE'),('${id(4)}',NULL,'ACTIVE'); CREATE TABLE rd_members(id uuid PRIMARY KEY,active boolean,department_id uuid); ALTER TABLE rd_members ENABLE ROW LEVEL SECURITY; INSERT INTO rd_members VALUES('${id(5)}',true,'${id(7)}'),('${id(6)}',true,'${id(7)}'); CREATE TABLE employee_departments(employee_id uuid,department_id uuid,PRIMARY KEY(employee_id,department_id)); ALTER TABLE employee_departments ENABLE ROW LEVEL SECURITY; INSERT INTO employee_departments VALUES('${id(3)}','${id(7)}'),('${id(4)}','${id(7)}');`);
-await db.exec(await fs.readFile(new URL('../20261018_task_member_identity_private_review_only.sql',import.meta.url),'utf8'));
+await db.exec('BEGIN');
+await db.exec(transactionBody(await fs.readFile(new URL('../20261018_task_member_identity_private_review_only.sql',import.meta.url),'utf8')));
 const stewardSql=await fs.readFile(new URL('../20261018_task_identity_steward_transaction_review_only.sql',import.meta.url),'utf8');
 const preflight=stewardSql.match(/DO \$steward_preflight\$[\s\S]*?\$steward_preflight\$;/)[0];
 for(const [mutation,expected] of [
@@ -12,16 +14,27 @@ for(const [mutation,expected] of [
  ['ALTER TABLE public.employee_departments DROP CONSTRAINT employee_departments_pkey',/primary key prerequisite/],
  ['ALTER FUNCTION public.has_role(uuid,public.app_role) SECURITY INVOKER',/role helper prerequisite/]
 ]){
- await db.exec('BEGIN');
+ await db.exec('SAVEPOINT guard_fixture');
  let failure;
  try{await db.exec(mutation);await db.exec(preflight);}catch(error){failure=error;}
- finally{await db.exec('ROLLBACK');}
+ finally{await db.exec('ROLLBACK TO SAVEPOINT guard_fixture');}
  if(!failure||!expected.test(failure.message))throw Error('Preflight failed to reject altered prerequisite: '+mutation);
  const partial=await db.query("SELECT to_regclass('_ssm_task_identity.mapping_requests') partial");
  if(partial.rows[0].partial)throw Error('Preflight test created partial request table');
 }
-await db.exec(stewardSql);
-await db.exec(await fs.readFile(new URL('../20261018_task_identity_readback_revoke_review_only.sql',import.meta.url),'utf8'));
+await db.exec('ROLLBACK');
+const bundle=await fs.readFile(new URL('../20261018_task_identity_private_bundle_review_only.sql',import.meta.url),'utf8');
+if(bundle.replaceAll('\r\n','\n')!==await buildBundle())throw Error('Tracked atomic bundle drifted from normalized source inputs');
+let lateFailure;
+try{await db.exec(bundle.replace(/COMMIT;\s*$/,()=>"DO $$BEGIN RAISE EXCEPTION 'Injected final installation failure'; END;$$; COMMIT;"));}catch(error){lateFailure=error;}finally{await db.exec('ROLLBACK');}
+if(!lateFailure||!/Injected final installation failure/.test(lateFailure.message))throw Error('Late installation failure fixture did not reach final boundary');
+if((await db.query("SELECT to_regnamespace('_ssm_task_identity') private_schema")).rows[0].private_schema)throw Error('Failed atomic install left private schema');
+if((await db.query('SELECT count(*)::int n FROM public.activity_log')).rows[0].n)throw Error('Failed atomic install left business audit');
+await db.exec(bundle);
+let repeatedInstall;
+try{await db.exec(bundle);}catch(error){repeatedInstall=error;}finally{await db.exec('ROLLBACK');}
+if(!repeatedInstall||!/schema already exists/.test(repeatedInstall.message))throw Error('Repeat install did not fail closed');
+console.log('TASK_IDENTITY_ATOMIC_BUNDLE_PASS generated_source_matches=true one_transaction=true injected_final_failure_no_schema=true no_business_audit=true repeated_install_denied=true managed_execution=false');
 console.log('TASK_IDENTITY_STEWARD_PREFLIGHT_PASS changed_rls_column_membership_key_role_helper_denied=true no_partial_receipt_table=true managed_execution=false');
 const actor=async n=>db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[n?id(n):'']);
 const map=async(member,employee,expected,key,reason='Steward fixture verification')=>(await db.query('SELECT _ssm_task_identity.record_mapping($1,$2,$3,$4,$5) id',[id(member),id(employee),expected,id(key),reason])).rows[0].id;
