@@ -3,7 +3,7 @@ import postgres from '../../../node_modules/postgres/src/index.js';
 const port=Number(process.env.SSM_TASK_FIXTURE_PORT);if(!Number.isInteger(port)||port<1024||!process.env.SSM_TASK_FIXTURE_PASSWORD)throw Error('Disposable loopback fixture required');
 const options={host:'127.0.0.1',port,database:'postgres',username:'ssm_fixture',password:process.env.SSM_TASK_FIXTURE_PASSWORD,max:1,connect_timeout:10};
 const a=postgres(options),b=postgres(options),control=postgres(options);const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
-let revokeRelease;let release;const gate=new Promise(r=>release=r);let ready;const started=new Promise(r=>ready=r);let first,second;
+let membershipRelease;let revokeRelease;let release;const gate=new Promise(r=>release=r);let ready;const started=new Promise(r=>ready=r);let first,second;
 try{
  for(const client of [a,b]){await client`SELECT set_config('request.jwt.claim.sub',${id(1)},false)`;await client`SET statement_timeout='10s'`;}
  const current=(await control`SELECT id FROM _ssm_task_identity.member_employee_versions WHERE rd_member_id=${id(5)} AND revoked_at IS NULL`)[0].id;
@@ -40,7 +40,23 @@ try{
  });
  const chronology=await control`SELECT count(*)::int n FROM _ssm_task_identity.member_employee_versions WHERE revoked_at<verified_at`;
  if(chronology[0].n)throw Error('Mapping history chronology inverted');
+ // Hold serialization independently, remove membership while the mapping request waits.
+ const latest=(await control`SELECT id FROM _ssm_task_identity.member_employee_versions WHERE rd_member_id=${id(5)} AND revoked_at IS NULL`)[0].id;
+ let membershipReady;const membershipStarted=new Promise(r=>membershipReady=r);const membershipGate=new Promise(r=>membershipRelease=r);
+ first=control.begin(async tx=>{await tx`SELECT pg_advisory_xact_lock(839071418)`;membershipReady();await membershipGate;});
+ await membershipStarted;
+ second=b`SELECT _ssm_task_identity.record_mapping(${id(5)},${id(4)},${latest},${id(230)},'Queued membership fixture') id`.execute().then(rows=>({rows}),error=>({error}));
+ let membershipWaited=false;
+ for(let i=0;i<60;i++){const locks=await a`SELECT EXISTS(SELECT 1 FROM pg_locks WHERE pid=${bpid} AND locktype='advisory' AND NOT granted) waiting`;if(locks[0].waiting){membershipWaited=true;break;}await new Promise(r=>setTimeout(r,50));}
+ if(!membershipWaited)throw Error('Membership fixture did not independently observe queued request');
+ await a`DELETE FROM public.employee_departments WHERE employee_id=${id(4)} AND department_id=${id(7)}`;
+ membershipRelease();const [,membershipResult]=await Promise.all([first,second]);
+ if(!membershipResult.error||!/membership required/.test(membershipResult.error.message))throw Error('Queued mapping retained removed department membership');
+ const untouched=await control`SELECT count(*)::int n FROM _ssm_task_identity.mapping_requests WHERE request_key=${id(230)}`;
+ if(untouched[0].n)throw Error('Denied queued mapping left receipt');
+ await control`INSERT INTO public.employee_departments VALUES(${id(4)},${id(7)})`;
+ console.log('TASK_IDENTITY_NATIVE_MEMBERSHIP_REVOCATION_PASS queued_lock_observed=true membership_removed_before_resume=true mapping_denied=true no_receipt=true managed_execution=false general_membership_race_acceptance=false');
  console.log('TASK_IDENTITY_NATIVE_CHRONOLOGY_PASS older_transaction_observed=true later_mapping_rebound=true history_order_preserved=true managed_execution=false');
  console.log('TASK_IDENTITY_NATIVE_ROLE_REVOCATION_PASS queued_lock_observed=true role_removed_while_waiting=true replay_denied_after_lock=true managed_execution=false general_membership_race_acceptance=false');
  console.log('TASK_IDENTITY_NATIVE_OVERLAP_PASS two_connections=true blocked_advisory_lock_observed=true same_request_single_receipt=true same_result=true managed_execution=false membership_revocation_race_acceptance=false');
-}finally{release?.();revokeRelease?.();await Promise.allSettled([first,second].filter(Boolean));await Promise.all([a.end({timeout:5}),b.end({timeout:5}),control.end({timeout:5})]);}
+}finally{release?.();revokeRelease?.();membershipRelease?.();await Promise.allSettled([first,second].filter(Boolean));await Promise.all([a.end({timeout:5}),b.end({timeout:5}),control.end({timeout:5})]);}
