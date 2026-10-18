@@ -8,6 +8,7 @@ CREATE TABLE _ssm_task_identity.mapping_requests (
  employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE RESTRICT,
  expected_version_id uuid,
  verification_reason text NOT NULL,
+ audit_id uuid NOT NULL UNIQUE REFERENCES public.activity_log(id) ON DELETE RESTRICT,
  result_version_id uuid NOT NULL REFERENCES _ssm_task_identity.member_employee_versions(id) ON DELETE RESTRICT,
  recorded_at timestamptz NOT NULL DEFAULT transaction_timestamp(),
  PRIMARY KEY(actor_id,request_key)
@@ -19,7 +20,7 @@ CREATE FUNCTION _ssm_task_identity.record_mapping(
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $mapping$
 DECLARE actor uuid:=auth.uid(); actor_employee uuid; canonical_reason text:=btrim(p_reason);
  member_department uuid; previous _ssm_task_identity.member_employee_versions%ROWTYPE;
- receipt _ssm_task_identity.mapping_requests%ROWTYPE; result_id uuid;
+ receipt _ssm_task_identity.mapping_requests%ROWTYPE; result_id uuid; audit_id uuid; transition_at timestamptz;
 BEGIN
  IF actor IS NULL OR NOT public.has_role(actor,'admin'::public.app_role) THEN RAISE EXCEPTION 'Identity steward authority required'; END IF;
  -- Serialize this proposed low-volume stewardship operation; external membership changes
@@ -41,6 +42,9 @@ BEGIN
   IF receipt.rd_member_id<>p_member OR receipt.employee_id<>p_employee OR receipt.expected_version_id IS DISTINCT FROM p_expected_version OR receipt.verification_reason<>canonical_reason THEN RAISE EXCEPTION 'Identity request payload conflict'; END IF;
   PERFORM 1 FROM _ssm_task_identity.member_employee_versions WHERE id=receipt.result_version_id AND rd_member_id=p_member AND employee_id=p_employee AND revoked_at IS NULL;
   IF NOT FOUND THEN RAISE EXCEPTION 'Identity receipt is no longer current'; END IF;
+  PERFORM 1 FROM public.activity_log a WHERE a.id=receipt.audit_id AND a.actor_user_id=actor AND a.module_key='projects' AND a.entity_type='task_member_identity' AND a.entity_id=receipt.result_version_id AND a.action='mapping_verified'
+   AND a.after_data=jsonb_build_object('request_key',p_request_key,'rd_member_id',p_member,'employee_id',p_employee,'expected_version_id',p_expected_version,'result_version_id',receipt.result_version_id);
+  IF NOT FOUND THEN RAISE EXCEPTION 'Mapping audit receipt mismatch'; END IF;
   RETURN receipt.result_version_id;
  END IF;
  SELECT * INTO previous FROM _ssm_task_identity.member_employee_versions WHERE rd_member_id=p_member AND revoked_at IS NULL FOR UPDATE;
@@ -48,10 +52,14 @@ BEGIN
  IF EXISTS(SELECT 1 FROM _ssm_task_identity.member_employee_versions WHERE employee_id=p_employee AND revoked_at IS NULL AND rd_member_id<>p_member) THEN RAISE EXCEPTION 'Employee already linked to another member'; END IF;
  IF previous.employee_id=p_employee THEN result_id:=previous.id;
  ELSE
-  IF previous.id IS NOT NULL THEN UPDATE _ssm_task_identity.member_employee_versions SET revoked_by=actor,revoked_at=transaction_timestamp() WHERE id=previous.id; END IF;
-  INSERT INTO _ssm_task_identity.member_employee_versions(rd_member_id,employee_id,verified_by,verification_reason) VALUES(p_member,p_employee,actor,canonical_reason) RETURNING id INTO result_id;
+  -- Capture transition time after serialization; transaction start may predate a newer mapping.
+  transition_at:=clock_timestamp();
+  IF previous.id IS NOT NULL THEN UPDATE _ssm_task_identity.member_employee_versions SET revoked_by=actor,revoked_at=transition_at WHERE id=previous.id; END IF;
+  INSERT INTO _ssm_task_identity.member_employee_versions(rd_member_id,employee_id,verified_by,verification_reason,verified_at) VALUES(p_member,p_employee,actor,canonical_reason,transition_at) RETURNING id INTO result_id;
  END IF;
- INSERT INTO _ssm_task_identity.mapping_requests(actor_id,request_key,rd_member_id,employee_id,expected_version_id,verification_reason,result_version_id) VALUES(actor,p_request_key,p_member,p_employee,p_expected_version,canonical_reason,result_id);
+ INSERT INTO public.activity_log(actor_user_id,module_key,entity_type,entity_id,action,summary,after_data)
+ VALUES(actor,'projects','task_member_identity',result_id,'mapping_verified','Task member identity mapping verified.',jsonb_build_object('request_key',p_request_key,'rd_member_id',p_member,'employee_id',p_employee,'expected_version_id',p_expected_version,'result_version_id',result_id)) RETURNING id INTO audit_id;
+ INSERT INTO _ssm_task_identity.mapping_requests(actor_id,request_key,rd_member_id,employee_id,expected_version_id,verification_reason,result_version_id,audit_id) VALUES(actor,p_request_key,p_member,p_employee,p_expected_version,canonical_reason,result_id,audit_id);
  RETURN result_id;
 END;
 $mapping$;

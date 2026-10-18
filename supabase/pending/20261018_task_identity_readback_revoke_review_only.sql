@@ -6,6 +6,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $read$
  SELECT v.id,v.verified_at,r.request_key
  FROM _ssm_task_identity.mapping_requests r
  JOIN _ssm_task_identity.member_employee_versions v ON v.id=r.result_version_id AND v.rd_member_id=r.rd_member_id AND v.employee_id=r.employee_id
+ JOIN public.activity_log a ON a.id=r.audit_id AND a.actor_user_id=r.actor_id AND a.module_key='projects' AND a.entity_type='task_member_identity' AND a.entity_id=v.id AND a.action='mapping_verified' AND a.after_data=jsonb_build_object('request_key',r.request_key,'rd_member_id',r.rd_member_id,'employee_id',r.employee_id,'expected_version_id',r.expected_version_id,'result_version_id',v.id)
  JOIN public.rd_members m ON m.id=v.rd_member_id AND m.active IS TRUE
  JOIN public.employees e ON e.id=v.employee_id AND e.employment_status='ACTIVE'
  JOIN public.employee_departments d ON d.employee_id=e.id AND d.department_id=m.department_id
@@ -20,6 +21,7 @@ CREATE TABLE _ssm_task_identity.revocation_requests(
  version_id uuid NOT NULL REFERENCES _ssm_task_identity.member_employee_versions(id) ON DELETE RESTRICT,
  rd_member_id uuid NOT NULL REFERENCES public.rd_members(id) ON DELETE RESTRICT,
  reason text NOT NULL,
+ audit_id uuid NOT NULL UNIQUE REFERENCES public.activity_log(id) ON DELETE RESTRICT,
  revoked_at timestamptz NOT NULL,
  PRIMARY KEY(actor_id,request_key)
 );
@@ -28,7 +30,7 @@ REVOKE ALL ON TABLE _ssm_task_identity.revocation_requests FROM PUBLIC,anon,auth
 CREATE FUNCTION _ssm_task_identity.revoke_mapping(p_key uuid,p_member uuid,p_version uuid,p_reason text)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $revoke$
 DECLARE actor uuid:=auth.uid(); actor_employee uuid; canonical_reason text:=btrim(p_reason);
- receipt _ssm_task_identity.revocation_requests%ROWTYPE; source _ssm_task_identity.member_employee_versions%ROWTYPE; changed_at timestamptz;
+ receipt _ssm_task_identity.revocation_requests%ROWTYPE; source _ssm_task_identity.member_employee_versions%ROWTYPE; changed_at timestamptz; audit_id uuid;
 BEGIN
  IF actor IS NULL THEN RAISE EXCEPTION 'Identity steward authority required'; END IF;
  PERFORM pg_advisory_xact_lock(839071418);
@@ -40,6 +42,8 @@ BEGIN
   IF receipt.version_id<>p_version OR receipt.rd_member_id<>p_member OR receipt.reason<>canonical_reason THEN RAISE EXCEPTION 'Revocation payload conflict'; END IF;
   PERFORM 1 FROM _ssm_task_identity.member_employee_versions WHERE id=p_version AND rd_member_id=p_member AND revoked_by=actor AND revoked_at=receipt.revoked_at;
   IF NOT FOUND THEN RAISE EXCEPTION 'Revocation receipt mismatch'; END IF;
+  PERFORM 1 FROM public.activity_log a WHERE a.id=receipt.audit_id AND a.actor_user_id=actor AND a.module_key='projects' AND a.entity_type='task_member_identity' AND a.entity_id=p_version AND a.action='mapping_revoked' AND a.after_data=jsonb_build_object('request_key',p_key,'rd_member_id',p_member,'version_id',p_version);
+  IF NOT FOUND THEN RAISE EXCEPTION 'Revocation audit receipt mismatch'; END IF;
   RETURN p_version;
  END IF;
  SELECT * INTO source FROM _ssm_task_identity.member_employee_versions WHERE id=p_version AND rd_member_id=p_member AND revoked_at IS NULL FOR UPDATE;
@@ -47,9 +51,21 @@ BEGIN
  -- Withdrawal remains possible after subject deactivation/removal; actor authority is current.
  changed_at:=clock_timestamp();
  UPDATE _ssm_task_identity.member_employee_versions SET revoked_by=actor,revoked_at=changed_at WHERE id=source.id;
- INSERT INTO _ssm_task_identity.revocation_requests(actor_id,request_key,version_id,rd_member_id,reason,revoked_at) VALUES(actor,p_key,p_version,p_member,canonical_reason,changed_at);
+ INSERT INTO public.activity_log(actor_user_id,module_key,entity_type,entity_id,action,summary,after_data) VALUES(actor,'projects','task_member_identity',p_version,'mapping_revoked','Task member identity mapping withdrawn.',jsonb_build_object('request_key',p_key,'rd_member_id',p_member,'version_id',p_version)) RETURNING id INTO audit_id;
+ INSERT INTO _ssm_task_identity.revocation_requests(actor_id,request_key,version_id,rd_member_id,reason,revoked_at,audit_id) VALUES(actor,p_key,p_version,p_member,canonical_reason,changed_at,audit_id);
  RETURN p_version;
 END;
 $revoke$;
 REVOKE ALL ON FUNCTION _ssm_task_identity.revoke_mapping(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated,service_role;
+CREATE FUNCTION _ssm_task_identity.read_revocation_receipt(p_key uuid,p_member uuid,p_version uuid)
+RETURNS TABLE(version_id uuid,revoked_at timestamptz,audit_id uuid)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $read_revoke$
+ SELECT v.id,v.revoked_at,a.id FROM _ssm_task_identity.revocation_requests r
+ JOIN _ssm_task_identity.member_employee_versions v ON v.id=r.version_id AND v.rd_member_id=r.rd_member_id AND v.revoked_by=r.actor_id AND v.revoked_at=r.revoked_at
+ JOIN public.activity_log a ON a.id=r.audit_id AND a.actor_user_id=r.actor_id AND a.module_key='projects' AND a.entity_type='task_member_identity' AND a.entity_id=v.id AND a.action='mapping_revoked' AND a.after_data=jsonb_build_object('request_key',r.request_key,'rd_member_id',r.rd_member_id,'version_id',v.id)
+ WHERE r.actor_id=auth.uid() AND r.request_key=p_key AND r.rd_member_id=p_member AND v.id=p_version
+ AND public.has_role(auth.uid(),'admin'::public.app_role)
+ AND (SELECT count(*) FROM public.employees actor WHERE actor.user_id=auth.uid() AND actor.employment_status='ACTIVE')=1;
+$read_revoke$;
+REVOKE ALL ON FUNCTION _ssm_task_identity.read_revocation_receipt(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
 COMMIT;

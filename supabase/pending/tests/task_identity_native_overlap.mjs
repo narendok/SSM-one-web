@@ -28,6 +28,19 @@ try{
  await control`DELETE FROM public.fixture_admins WHERE user_id=${id(1)}`;
  revokeRelease();const [,revoked]=await Promise.all([first,second]);
  if(!revoked.error||!/steward authority/.test(revoked.error.message))throw Error('Queued replay retained revoked role authority');
+ // An already-open transaction must use post-lock transition time, not its older start time.
+ await control`INSERT INTO public.fixture_admins VALUES(${id(1)})`;
+ await b.begin(async tx=>{
+  const begun=(await tx`SELECT transaction_timestamp() at`)[0].at;
+  await control`SELECT pg_sleep(0.03)`;
+  const middle=(await a`SELECT _ssm_task_identity.record_mapping(${id(5)},${id(3)},${current},${id(210)},'Chronology middle fixture') id`)[0].id;
+  const middleTime=(await control`SELECT verified_at FROM _ssm_task_identity.member_employee_versions WHERE id=${middle}`)[0].verified_at;
+  if(new Date(middleTime)<=new Date(begun))throw Error('Chronology fixture did not establish older transaction');
+  await tx`SELECT _ssm_task_identity.record_mapping(${id(5)},${id(4)},${middle},${id(211)},'Chronology delayed fixture')`;
+ });
+ const chronology=await control`SELECT count(*)::int n FROM _ssm_task_identity.member_employee_versions WHERE revoked_at<verified_at`;
+ if(chronology[0].n)throw Error('Mapping history chronology inverted');
+ console.log('TASK_IDENTITY_NATIVE_CHRONOLOGY_PASS older_transaction_observed=true later_mapping_rebound=true history_order_preserved=true managed_execution=false');
  console.log('TASK_IDENTITY_NATIVE_ROLE_REVOCATION_PASS queued_lock_observed=true role_removed_while_waiting=true replay_denied_after_lock=true managed_execution=false general_membership_race_acceptance=false');
  console.log('TASK_IDENTITY_NATIVE_OVERLAP_PASS two_connections=true blocked_advisory_lock_observed=true same_request_single_receipt=true same_result=true managed_execution=false membership_revocation_race_acceptance=false');
 }finally{release?.();revokeRelease?.();await Promise.allSettled([first,second].filter(Boolean));await Promise.all([a.end({timeout:5}),b.end({timeout:5}),control.end({timeout:5})]);}
