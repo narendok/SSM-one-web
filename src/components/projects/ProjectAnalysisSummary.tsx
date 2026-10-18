@@ -13,9 +13,18 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
   const blocked = visible.filter(task => task.status === "blocked");
   const next = visible.filter(task => task.status !== "done").sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))[0];
   const unavailable = tasks.isError || tasks.isPending;
+  let designReference: string | null = null;
+  try {
+    const url = new URL(project.design_link ?? "");
+    if (["https:", "http:"].includes(url.protocol) && !url.username && !url.password) designReference = url.href;
+  } catch { /* Missing or unsupported recorded references remain unavailable. */ }
   return <section aria-label="Common project analysis" className="space-y-3">
     <div className="flex flex-wrap items-center gap-2"><h2 className="text-sm font-semibold uppercase tracking-wide">Common project analysis</h2><Badge variant="outline">Internal view</Badge></div>
     <ProjectRequirementContext projectId={project.id} baselineId={project.requirement_baseline_id} />
+    <Card className="flex flex-wrap items-center justify-between gap-2 p-3" aria-label="Recorded project context">
+      <div><h3 className="text-xs font-semibold uppercase">Recorded project context</h3><p className="mt-1 text-sm">{project.project_type?.replaceAll("_", " ") || "Project type not recorded"} · {project.revision?.trim() ? `Revision ${project.revision}` : "Revision not recorded"}</p></div>
+      {designReference ? <a href={designReference} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline underline-offset-4">Open design reference</a> : <p className="text-xs text-muted-foreground">Design reference unavailable</p>}
+    </Card>
     <div className="grid gap-3 md:grid-cols-3">
       <Card className="p-3"><h3 className="text-xs font-semibold uppercase">Current phase</h3><p className="mt-2 text-sm">{project.project_stage.replaceAll("_", " ")}</p><p className="text-xs text-muted-foreground">{project.health_status} · {project.priority} priority</p></Card>
       <Card className="p-3"><h3 className="text-xs font-semibold uppercase">Visible blockers</h3><p className="mt-2 text-sm">{unavailable ? "Task data unavailable" : blocked.length ? blocked.map(task => task.title).join(" · ") : "No blocked tasks visible"}</p><p className="text-xs text-muted-foreground">Task status does not establish lifecycle gate clearance.</p></Card>

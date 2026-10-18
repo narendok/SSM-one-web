@@ -36,3 +36,7 @@ Web product: **SSMone**. Android application/display name: **SSMone-App**. Prefe
 - Android: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-App`
 
 Both entries are directory junctions to the existing physical repositories (`C:/Users/Admin/AndroidStudioProjects/SSMOneWeb` and `C:/Users/Admin/AndroidStudioProjects/SSMApplication3`). Windows blocked moving the active Android checkout; no physical relocation is claimed. Each entry opens the same original files and separate Git history, with no duplicate checkout or parent monorepo. Existing paths remain valid for open tools. Historical backups, archived evidence, backend/project IDs, Android application ID/package and official document names/numbers are unchanged. Use the preferred paths for new Studio/Antigravity sessions and scheduler work. A later physical relocation requires released directory locks and a separate checked move; never delete an original root thinking the junction is a backup.
+
+### Junction-aware web verification
+
+The preferred workspace entry is a directory junction. Vitest file collection has been observed failing through that alias while the identical physical-root run passes. Run Vite/Vitest validation with cwd `C:/Users/Admin/AndroidStudioProjects/SSMOneWeb` until physical relocation is complete; keep the shared workspace entry for navigation. Do not duplicate or move source to work around tool resolution.

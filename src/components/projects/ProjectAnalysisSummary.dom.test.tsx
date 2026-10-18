@@ -8,7 +8,7 @@ const reads = vi.hoisted(() => ({ tasks: vi.fn(), departments: vi.fn() }));
 vi.mock("@/lib/tasks", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/tasks")>(), fetchTasks: reads.tasks, fetchCanonicalDepartments: reads.departments }));
 vi.mock("./ProjectOperationalTabs", () => ({ ProjectRequirementContext: () => <p>Linked baseline context</p> }));
 const project = { id: "project-one", project_stage: "PILOT", health_status: "GREEN", priority: "medium", requirement_baseline_id: null } as Project;
-function mount() { return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ProjectAnalysisSummary project={project} /></QueryClientProvider>); }
+function mount(record = project) { return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ProjectAnalysisSummary project={record} /></QueryClientProvider>); }
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it("groups by canonical department and preserves the same task identity and review status", async () => {
   reads.departments.mockResolvedValue([{ id: "dep-1", name: "Hardware" }, { id: "dep-2", name: "Software" }]);
@@ -33,3 +33,19 @@ it("does not infer department scope for unclassified tasks", async () => {
 });
 
 
+
+it("shows recorded project context and permits only ordinary external design references", async () => {
+  reads.departments.mockResolvedValue([]); reads.tasks.mockResolvedValue([]);
+  mount({ ...project, project_type: "CUSTOM_PROJECT", revision: "TEST-01", design_link: "https://example.com/design/revision-1" });
+  expect(screen.getByText("CUSTOM PROJECT · Revision TEST-01")).toBeTruthy();
+  const reference = screen.getByRole("link", { name: "Open design reference" });
+  expect(reference.getAttribute("href")).toBe("https://example.com/design/revision-1");
+  expect(reference.getAttribute("rel")).toBe("noopener noreferrer");
+});
+it.each(["javascript:alert(1)", "data:text/html,test", "https://user:password@example.com/design", "", "/internal-path"])("does not turn an unsupported recorded design URL into a link: %s", design_link => {
+  reads.departments.mockResolvedValue([]); reads.tasks.mockResolvedValue([]);
+  mount({ ...project, revision: null, design_link });
+  expect(screen.queryByRole("link", { name: "Open design reference" })).toBeNull();
+  expect(screen.getByText("Design reference unavailable")).toBeTruthy();
+  expect(screen.getByText(/Revision not recorded/)).toBeTruthy();
+});

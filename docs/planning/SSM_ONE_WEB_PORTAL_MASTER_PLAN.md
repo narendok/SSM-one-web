@@ -976,3 +976,7 @@ Both entries are directory junctions to the existing physical repositories (`C:/
 ### SSMone authenticated common-view read checkpoint — 18 October 2026
 
 An existing Platform Owner session now renders the renamed app and labelled PROJECT-2026-0005. Common analysis and common read-only TaskBoard show the same three tasks, recorded metadata, priorities/statuses and explicit missing baseline. Read-only navigation only; no mutation or new fixture. Evidence: docs/evidence/20261018_ssmone_common_view_read_checkpoint.md. This resolves the immediate authenticated rendering check, not ordinary department authorization, durable remarks, client link/publication, baseline approval or full final-design integration. No unchanged screenshot/build/test repeated.
+
+### Common recorded project context — 18 October 2026
+
+Added existing project type/revision/design reference to the common analysis without inventing a description, creating data or enabling editing/publication. Nine focused DOM tests, typecheck and production build passed. Design URLs are limited to absolute HTTP(S) without embedded credentials. Evidence: docs/evidence/20261018_common_recorded_project_context.md. Vitest requires physical-root cwd due an observed junction collection mismatch; AGENTS.md records the workaround. Managed rendering/read verification follows sync, and broader department/client workflow gates remain unchanged.
