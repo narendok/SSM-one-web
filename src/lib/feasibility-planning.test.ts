@@ -51,6 +51,18 @@ describe("all-review readiness conflicts", () => {
       expect(readiness(planning)).toMatchObject({ state: "BLOCKED", canApprove: false });
     }
   });
+  it.each([
+    { source_revision_id: "old-revision" },
+    { source_revision_id: null },
+    { applicable_workstreams: ["UNKNOWN"] },
+  ])("does not let a positive review hide an unverified peer: %j", changed => {
+    const positive = snapshot("feasible");
+    const unverified = buildFeasibilityPlanningSnapshot({ review: { ...pinnedReview, ...changed }, requirements: [requirement], revisions: [revision], masterSpecifications: [specification] });
+    for (const planning of [[positive, unverified], [unverified, positive]]) {
+      expect(readiness(planning)).toMatchObject({ state: "BLOCKED", canApprove: false });
+      expect(readiness(planning).blockers).toContain("A feasibility review has unverified workstream applicability.");
+    }
+  });
   it("requires a nonempty verified scope instead of vacuous readiness", () => {
     expect(readiness([], [])).toMatchObject({ state: "BLOCKED", canApprove: false, blockers: ["Required feasibility scope is unavailable."] });
   });

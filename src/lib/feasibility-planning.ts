@@ -172,6 +172,10 @@ export function buildBaselineReadinessSnapshot(input: {
   if (input.requiredDepartments.length === 0) {
     blockers.push("Required feasibility scope is unavailable.");
   }
+  // Unverified peers must not disappear from the scope filter and be masked by a positive review.
+  if (input.planning.some(review => !review.applicableWorkstreams?.length)) {
+    blockers.push("A feasibility review has unverified workstream applicability.");
+  }
   for (const department of new Set(input.requiredDepartments)) {
     const matching = input.planning.filter((item) => item.applicableWorkstreams?.includes(department));
     if (matching.length === 0) blockers.push(`${department} feasibility review is missing.`);
