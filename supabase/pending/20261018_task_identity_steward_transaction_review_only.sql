@@ -1,6 +1,39 @@
 -- REVIEW ONLY, NOT INSTALLED. Requires the separately reviewed private identity schema.
 -- No application-role execution, public wrapper, mapping backfill or task authority.
 BEGIN;
+DO $steward_preflight$
+DECLARE source_name text; source_oid regclass; spec record;
+BEGIN
+ IF to_regclass('_ssm_task_identity.member_employee_versions') IS NULL THEN RAISE EXCEPTION 'Private identity prerequisite missing'; END IF;
+ FOREACH source_name IN ARRAY ARRAY['public.employees','public.rd_members','public.employee_departments','public.activity_log'] LOOP
+  source_oid:=to_regclass(source_name);
+  IF source_oid IS NULL OR NOT EXISTS(SELECT 1 FROM pg_class WHERE oid=source_oid AND relkind='r' AND relrowsecurity AND relowner=(SELECT oid FROM pg_roles WHERE rolname=current_user)) THEN
+   RAISE EXCEPTION 'Steward source ownership/RLS prerequisite mismatch: %',source_name;
+  END IF;
+ END LOOP;
+ FOR spec IN SELECT * FROM (VALUES
+  ('public.employees','id','uuid'),('public.employees','user_id','uuid'),
+  ('public.rd_members','id','uuid'),('public.rd_members','department_id','uuid'),('public.rd_members','active','boolean'),
+  ('public.employee_departments','employee_id','uuid'),('public.employee_departments','department_id','uuid'),
+  ('public.activity_log','id','uuid'),('public.activity_log','actor_user_id','uuid'),
+  ('public.activity_log','entity_id','uuid'),('public.activity_log','module_key','text'),
+  ('public.activity_log','entity_type','text'),('public.activity_log','action','text'),
+  ('public.activity_log','summary','text'),('public.activity_log','after_data','jsonb')
+ ) AS expected(table_name,column_name,type_name) LOOP
+  IF NOT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass(spec.table_name) AND attname=spec.column_name AND NOT attisdropped AND atttypid=to_regtype(spec.type_name)) THEN
+   RAISE EXCEPTION 'Steward source column prerequisite mismatch: %.%',spec.table_name,spec.column_name;
+  END IF;
+ END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='public.employee_departments'::regclass AND contype='p' AND conkey=ARRAY[
+  (SELECT attnum FROM pg_attribute WHERE attrelid='public.employee_departments'::regclass AND attname='employee_id'),
+  (SELECT attnum FROM pg_attribute WHERE attrelid='public.employee_departments'::regclass AND attname='department_id')]) THEN
+  RAISE EXCEPTION 'Steward membership primary key prerequisite mismatch';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid=to_regprocedure('public.has_role(uuid,public.app_role)') AND prorettype='boolean'::regtype AND provolatile='s' AND prosecdef) THEN
+  RAISE EXCEPTION 'Steward role helper prerequisite mismatch';
+ END IF;
+END;
+$steward_preflight$;
 CREATE TABLE _ssm_task_identity.mapping_requests (
  actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
  request_key uuid NOT NULL,
