@@ -25,6 +25,8 @@ BEGIN
  -- Serialize this proposed low-volume stewardship operation; external membership changes
  -- are separately held with row locks. This is not a concurrency acceptance claim.
  PERFORM pg_advisory_xact_lock(839071418);
+ -- A queued request must not retain a role revoked while it waited.
+ IF NOT public.has_role(actor,'admin'::public.app_role) THEN RAISE EXCEPTION 'Identity steward authority required'; END IF;
  SELECT id INTO STRICT actor_employee FROM public.employees WHERE user_id=actor AND employment_status='ACTIVE' FOR SHARE;
  IF p_member IS NULL OR p_employee IS NULL OR p_request_key IS NULL OR canonical_reason IS NULL OR length(canonical_reason) NOT BETWEEN 1 AND 1000 THEN RAISE EXCEPTION 'Explicit identity and verification reason required'; END IF;
  SELECT department_id INTO member_department FROM public.rd_members WHERE id=p_member AND active IS TRUE FOR SHARE;
