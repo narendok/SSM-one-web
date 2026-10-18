@@ -35,7 +35,7 @@ Web product: **SSMone**. Android application/display name: **SSMone-App**. Prefe
 - Web: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-Web`
 - Android: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-App`
 
-The web repository is now physically located at C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-Web; the old SSMOneWeb root no longer exists. Android remains physically at C:/Users/Admin/AndroidStudioProjects/SSMApplication3 because Windows still holds a directory lock; SSMone/SSMone-App remains its junction until a checked physical move succeeds. Each child has a separate Git history; there is no duplicate checkout or parent monorepo. Preserve original Android files, historical backups, application/package identity, backend/project IDs and official document names. Do not delete the Android original or treat the junction as a backup.
+Both SSMone-Web and SSMone-App are actual physical directories under C:/Users/Admin/AndroidStudioProjects/SSMone, with separate Git repositories and histories. Neither entry is a junction or duplicate checkout; this parent is not a monorepo. The former SSMOneWeb and SSMApplication3 roots no longer exist. Preserve historical backups, application/package identity, backend/project IDs and official document names. Use these physical workspace paths for new Studio/Antigravity sessions and schedulers.
 
 ### Physical-root web verification
 
