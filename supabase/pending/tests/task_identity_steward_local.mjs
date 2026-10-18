@@ -1,0 +1,24 @@
+import {pathToFileURL} from 'node:url'; import {resolve} from 'node:path'; import fs from 'node:fs/promises';
+if(!process.argv[2])throw Error('Supply local PGlite module path; no managed connection accepted');
+const {PGlite}=await import(pathToFileURL(resolve(process.argv[2])).href); const db=new PGlite();
+const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role; CREATE SCHEMA auth; CREATE TYPE public.app_role AS ENUM('admin','member'); CREATE TABLE auth.users(id uuid PRIMARY KEY); INSERT INTO auth.users VALUES('${id(1)}'),('${id(2)}'); CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; CREATE FUNCTION public.has_role(u uuid,r public.app_role) RETURNS boolean LANGUAGE sql AS $$SELECT u='${id(1)}'::uuid AND r='admin'$$; CREATE TABLE employees(id uuid PRIMARY KEY,user_id uuid,employment_status text); ALTER TABLE employees ENABLE ROW LEVEL SECURITY; INSERT INTO employees VALUES('${id(10)}','${id(1)}','ACTIVE'),('${id(11)}','${id(2)}','ACTIVE'),('${id(3)}',NULL,'ACTIVE'),('${id(4)}',NULL,'ACTIVE'); CREATE TABLE rd_members(id uuid PRIMARY KEY,active boolean,department_id uuid); ALTER TABLE rd_members ENABLE ROW LEVEL SECURITY; INSERT INTO rd_members VALUES('${id(5)}',true,'${id(7)}'),('${id(6)}',true,'${id(7)}'); CREATE TABLE employee_departments(employee_id uuid,department_id uuid,PRIMARY KEY(employee_id,department_id)); INSERT INTO employee_departments VALUES('${id(3)}','${id(7)}'),('${id(4)}','${id(7)}');`);
+for(const file of ['20261018_task_member_identity_private_review_only.sql','20261018_task_identity_steward_transaction_review_only.sql'])await db.exec(await fs.readFile(new URL('../'+file,import.meta.url),'utf8'));
+const actor=async n=>db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[n?id(n):'']);
+const map=async(member,employee,expected,key,reason='Steward fixture verification')=>(await db.query('SELECT _ssm_task_identity.record_mapping($1,$2,$3,$4,$5) id',[id(member),id(employee),expected,id(key),reason])).rows[0].id;
+async function denied(run,pattern){try{await run()}catch(e){if(pattern.test(e.message))return;throw e}throw Error('Expected denial '+pattern)}
+await actor(null);await denied(()=>map(5,3,null,100),/steward authority/);
+await actor(2);await denied(()=>map(5,3,null,100),/steward authority/);
+await actor(1);const first=await map(5,3,null,100);if(await map(5,3,null,100)!==first)throw Error('Replay changed result');
+await denied(()=>map(5,3,null,100,'Changed reason'),/payload conflict/);
+await db.exec(`DELETE FROM employee_departments WHERE employee_id='${id(3)}'`);await denied(()=>map(5,3,null,100),/membership required/);await db.exec(`INSERT INTO employee_departments VALUES('${id(3)}','${id(7)}')`);
+await db.exec(`UPDATE employees SET employment_status='INACTIVE' WHERE id='${id(10)}'`);await denied(()=>map(5,3,null,100),/returned no rows/);await db.exec(`UPDATE employees SET employment_status='ACTIVE' WHERE id='${id(10)}'`);
+await denied(()=>map(6,3,null,101),/already linked/);
+await db.exec(`CREATE FUNCTION public.fixture_fail_receipt() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.request_key='${id(999)}'::uuid THEN RAISE EXCEPTION 'Injected receipt failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER fixture_fail BEFORE INSERT ON _ssm_task_identity.mapping_requests FOR EACH ROW EXECUTE FUNCTION public.fixture_fail_receipt();`);
+await denied(()=>map(5,4,first,999),/Injected receipt failure/);
+const current=await db.query('SELECT id FROM _ssm_task_identity.member_employee_versions WHERE revoked_at IS NULL');if(current.rows.length!==1||current.rows[0].id!==first)throw Error('Failed receipt left partial rebind');
+const second=await map(5,4,first,102);if(second===first)throw Error('Rebind did not version');await denied(()=>map(5,3,first,103),/version changed/);await denied(()=>map(5,3,null,100),/no longer current/);
+for(const role of ['anon','authenticated','service_role']){const r=await db.query(`SELECT has_function_privilege('${role}','_ssm_task_identity.record_mapping(uuid,uuid,uuid,uuid,text)','EXECUTE') allowed`);if(r.rows[0].allowed)throw Error('Unexpected execution grant');}
+const counts=await db.query('SELECT count(*)::int n,count(*) FILTER(WHERE revoked_at IS NULL)::int active FROM _ssm_task_identity.member_employee_versions');if(counts.rows[0].n!==2||counts.rows[0].active!==1)throw Error('Version history mismatch');
+console.log('TASK_IDENTITY_STEWARD_LOCAL_PASS exact_sql_compiles=true missing_actor_denied=true non_steward_denied=true replay=true payload_conflict=true removed_membership_replay_denied=true inactive_actor_replay_denied=true stale_version_denied=true superseded_receipt_denied=true receipt_failure_atomic=true app_execution_denied=true history_retained=true managed_execution=false concurrency_acceptance=false');
+await db.close();
