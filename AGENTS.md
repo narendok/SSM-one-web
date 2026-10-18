@@ -35,8 +35,8 @@ Web product: **SSMone**. Android application/display name: **SSMone-App**. Prefe
 - Web: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-Web`
 - Android: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-App`
 
-Both entries are directory junctions to the existing physical repositories (`C:/Users/Admin/AndroidStudioProjects/SSMOneWeb` and `C:/Users/Admin/AndroidStudioProjects/SSMApplication3`). Windows blocked moving the active Android checkout; no physical relocation is claimed. Each entry opens the same original files and separate Git history, with no duplicate checkout or parent monorepo. Existing paths remain valid for open tools. Historical backups, archived evidence, backend/project IDs, Android application ID/package and official document names/numbers are unchanged. Use the preferred paths for new Studio/Antigravity sessions and scheduler work. A later physical relocation requires released directory locks and a separate checked move; never delete an original root thinking the junction is a backup.
+The web repository is now physically located at C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-Web; the old SSMOneWeb root no longer exists. Android remains physically at C:/Users/Admin/AndroidStudioProjects/SSMApplication3 because Windows still holds a directory lock; SSMone/SSMone-App remains its junction until a checked physical move succeeds. Each child has a separate Git history; there is no duplicate checkout or parent monorepo. Preserve original Android files, historical backups, application/package identity, backend/project IDs and official document names. Do not delete the Android original or treat the junction as a backup.
 
-### Junction-aware web verification
+### Physical-root web verification
 
-The preferred workspace entry is a directory junction. Vitest file collection has been observed failing through that alias while the identical physical-root run passes. Run Vite/Vitest validation with cwd `C:/Users/Admin/AndroidStudioProjects/SSMOneWeb` until physical relocation is complete; keep the shared workspace entry for navigation. Do not duplicate or move source to work around tool resolution.
+Run web validation from C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-Web, now the physical repository root. The former SSMOneWeb path is no longer valid.
