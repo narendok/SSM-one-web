@@ -20,6 +20,8 @@ export type FeasibilityPlanningRevision = {
   requirement_id: string;
   revision_number: number;
   source_master_specification_version_id?: string | null;
+  /** Derived from requirement_data.source, never a presumed database column. */
+  source_master_specification_version_number?: number | null;
 };
 
 export type FeasibilityPlanningSpecification = {
@@ -56,7 +58,8 @@ function readWorkstreams(value: unknown): string[] | null {
 /**
  * Read-only source composition. A terminal verdict is usable only when the
  * feasibility record pins the same immutable customer-requirement revision.
- * Current deployed reviews do not carry that column, so they fail closed.
+ * Missing verified source projections fail closed; mutable Master header advances
+ * do not invalidate an otherwise exact immutable pin.
  */
 export function buildFeasibilityPlanningSnapshot(input: {
   review: FeasibilityPlanningReview;
@@ -85,13 +88,16 @@ export function buildFeasibilityPlanningSnapshot(input: {
     return planningSnapshot({ state: "UNSUPPORTED_UNVERIFIED", requirementRevision, masterSpecification, isTerminalVerdict, canSatisfyPlanningGate: false, message: "This feasibility record is not bound to immutable requirement and Master Specification revisions. Its verdict is unverified and cannot satisfy planning." });
   }
 
-  if (!requirementRevision.source_master_specification_version_id) {
+  if (!requirementRevision.source_master_specification_version_id
+    || !Number.isSafeInteger(requirementRevision.source_master_specification_version_number)
+    || (requirementRevision.source_master_specification_version_number ?? 0) < 1) {
     return planningSnapshot({ state: "UNSUPPORTED_UNVERIFIED", requirementRevision, masterSpecification, isTerminalVerdict, canSatisfyPlanningGate: false, message: "The current requirement revision does not expose immutable Master Specification provenance. Its feasibility verdict is unverified and cannot satisfy planning." });
   }
 
   if (input.review.source_revision_id !== requirementRevision.id
     || input.review.source_revision_number !== requirementRevision.revision_number
-    || input.review.master_specification_version_id !== requirementRevision.source_master_specification_version_id) {
+    || input.review.master_specification_version_id !== requirementRevision.source_master_specification_version_id
+    || input.review.master_specification_version_number !== requirementRevision.source_master_specification_version_number) {
     return planningSnapshot({ state: "STALE", requirementRevision, masterSpecification, isTerminalVerdict, canSatisfyPlanningGate: false, message: "The immutable requirement source changed after this review was assigned. A stale verdict cannot satisfy planning." });
   }
 

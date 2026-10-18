@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildBaselineReadinessSnapshot, buildFeasibilityPlanningSnapshot, displayPlanningValue } from "./feasibility-planning";
 
 const requirement = { id: "requirement-1", opportunity_id: "opportunity-1", current_revision: 2 };
-const revision = { id: "revision-2", requirement_id: "requirement-1", revision_number: 2, source_master_specification_version_id: "master-version-3" };
+const revision = { id: "revision-2", requirement_id: "requirement-1", revision_number: 2, source_master_specification_version_id: "master-version-3", source_master_specification_version_number: 3 };
 const specification = { id: "master-1", opportunity_id: "opportunity-1", current_version: 3 };
 const pinnedReview = { id: "review-1", requirement_id: requirement.id, status: "feasible", source_revision_id: revision.id, source_revision_number: 2, master_specification_version_id: "master-version-3", master_specification_version_number: 3, applicable_workstreams: ["HARDWARE"] };
 
@@ -10,6 +10,12 @@ describe("buildFeasibilityPlanningSnapshot", () => {
   it("does not treat an unpinned terminal verdict as ready", () => expect(buildFeasibilityPlanningSnapshot({ review: { id: "review-1", requirement_id: requirement.id, status: "feasible" }, requirements: [requirement], revisions: [revision], masterSpecifications: [specification] })).toMatchObject({ state: "UNSUPPORTED_UNVERIFIED", canSatisfyPlanningGate: false }));
   it("does not let a stale terminal verdict satisfy planning", () => expect(buildFeasibilityPlanningSnapshot({ review: { ...pinnedReview, source_revision_id: "revision-1" }, requirements: [requirement], revisions: [revision], masterSpecifications: [specification] })).toMatchObject({ state: "STALE", canSatisfyPlanningGate: false }));
   it("retains a terminal decision when the mutable Master header advances after its immutable revision was pinned", () => expect(buildFeasibilityPlanningSnapshot({ review: pinnedReview, requirements: [requirement], revisions: [revision], masterSpecifications: [{ ...specification, current_version: 4 }] })).toMatchObject({ state: "READY", canSatisfyPlanningGate: true }));
+  it("rejects a mismatched version number even when Master identity matches", () => {
+    expect(buildFeasibilityPlanningSnapshot({ review: { ...pinnedReview, master_specification_version_number: 2 }, requirements: [requirement], revisions: [revision], masterSpecifications: [specification] })).toMatchObject({ state: "STALE", canSatisfyPlanningGate: false });
+  });
+  it.each([undefined, null, 0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])("requires a verified positive safe source version number: %s", version => {
+    expect(buildFeasibilityPlanningSnapshot({ review: pinnedReview, requirements: [requirement], revisions: [{ ...revision, source_master_specification_version_number: version }], masterSpecifications: [specification] })).toMatchObject({ state: "UNSUPPORTED_UNVERIFIED", canSatisfyPlanningGate: false });
+  });
   it("blocks readiness when verified workstream applicability is unknown", () => expect(buildFeasibilityPlanningSnapshot({ review: { ...pinnedReview, applicable_workstreams: ["UNKNOWN"] }, requirements: [requirement], revisions: [revision], masterSpecifications: [specification] })).toMatchObject({ state: "APPLICABILITY_TBC", canSatisfyPlanningGate: false }));
   it("treats only an exact pinned terminal decision as ready", () => expect(buildFeasibilityPlanningSnapshot({ review: pinnedReview, requirements: [requirement], revisions: [revision], masterSpecifications: [specification] })).toMatchObject({ state: "READY", canSatisfyPlanningGate: true, applicableWorkstreams: ["HARDWARE"] }));
   it("does not turn a failed source query into empty success", () => expect(buildFeasibilityPlanningSnapshot({ review: { id: "review-1", requirement_id: requirement.id, status: "feasible", source_revision_id: revision.id }, requirements: [requirement], revisions: [], masterSpecifications: [], sourceError: new Error("RLS read denied") })).toMatchObject({ state: "SOURCE_ERROR", canSatisfyPlanningGate: false }));
