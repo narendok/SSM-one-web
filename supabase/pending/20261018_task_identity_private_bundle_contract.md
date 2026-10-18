@@ -6,7 +6,7 @@ NOT INSTALLED. No application grants, wrappers, task authority, UI activation or
 
 20261018_task_identity_private_bundle_review_only.sql composes the three private identity/steward/readback-withdrawal drafts inside one BEGIN/COMMIT. Original drafts remain review inputs; do not install them separately as a purported atomic bundle. tests/task_identity_bundle_source.mjs deterministically composes LF-normalized source hashes and a whole-bundle postflight. Native acceptance compares the tracked bundle against that composition before executing it.
 
-Postflight requires exactly three private tables and four private functions, expected table ownership/RLS, no effective schema/table/function access for anon/authenticated/service_role and no private-table rows. Existing public source data/grants/policies are not changed. Existing source prerequisite checks still apply. Structural role-helper checks do not prove helper semantics or caller authorization.
+Postflight requires exactly three private tables and four private functions, expected table ownership/RLS, exact function signatures/installer ownership/SECURITY DEFINER/pinned search_path, no effective schema/table/function access for anon/authenticated/service_role and no private-table rows. Existing public source data/grants/policies are not changed. Existing source prerequisite checks still apply. Structural role-helper checks do not prove helper semantics or caller authorization.
 
 ## Local acceptance
 

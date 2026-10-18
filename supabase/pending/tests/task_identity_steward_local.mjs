@@ -31,6 +31,19 @@ if(!lateFailure||!/Injected final installation failure/.test(lateFailure.message
 if((await db.query("SELECT to_regnamespace('_ssm_task_identity') private_schema")).rows[0].private_schema)throw Error('Failed atomic install left private schema');
 if((await db.query('SELECT count(*)::int n FROM public.activity_log')).rows[0].n)throw Error('Failed atomic install left business audit');
 await db.exec(bundle);
+const postflight=await fs.readFile(new URL('./task_identity_bundle_postflight.sql',import.meta.url),'utf8');
+for(const mutation of [
+ 'ALTER FUNCTION _ssm_task_identity.record_mapping(uuid,uuid,uuid,uuid,text) SECURITY INVOKER',
+ 'ALTER FUNCTION _ssm_task_identity.record_mapping(uuid,uuid,uuid,uuid,text) RESET search_path',
+ 'ALTER FUNCTION _ssm_task_identity.record_mapping(uuid,uuid,uuid,uuid,text) OWNER TO authenticated',
+ 'ALTER FUNCTION _ssm_task_identity.record_mapping(uuid,uuid,uuid,uuid,text) RENAME TO unexpected_mapping'
+]){
+ await db.exec('BEGIN');let failure;
+ try{await db.exec(mutation);await db.exec(postflight);}catch(error){failure=error;}
+ finally{await db.exec('ROLLBACK');}
+ if(!failure||!/function authority mismatch/.test(failure.message))throw Error('Postflight accepted changed function authority: '+mutation);
+}
+console.log('TASK_IDENTITY_FUNCTION_AUTHORITY_PASS exact_signatures_owner_definer_search_path=true altered_authority_denied=true managed_execution=false');
 let repeatedInstall;
 try{await db.exec(bundle);}catch(error){repeatedInstall=error;}finally{await db.exec('ROLLBACK');}
 if(!repeatedInstall||!/schema already exists/.test(repeatedInstall.message))throw Error('Repeat install did not fail closed');

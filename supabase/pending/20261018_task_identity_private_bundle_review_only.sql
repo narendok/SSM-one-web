@@ -229,13 +229,18 @@ $read_revoke$;
 REVOKE ALL ON FUNCTION _ssm_task_identity.read_revocation_receipt(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
 
 DO $bundle_postflight$
-DECLARE application_role name; object_oid oid; object_count integer; populated boolean;
+DECLARE application_role name; object_oid oid; object_count integer; populated boolean; signature text;
 BEGIN
  SELECT count(*) INTO object_count FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='_ssm_task_identity' AND c.relkind='r';
  IF object_count<>3 THEN RAISE EXCEPTION 'Private identity bundle table inventory mismatch'; END IF;
  IF EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='_ssm_task_identity' AND c.relkind='r' AND (NOT c.relrowsecurity OR c.relowner<>(SELECT oid FROM pg_roles WHERE rolname=current_user))) THEN RAISE EXCEPTION 'Private identity bundle table ownership/RLS mismatch'; END IF;
  SELECT count(*) INTO object_count FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='_ssm_task_identity';
  IF object_count<>4 THEN RAISE EXCEPTION 'Private identity bundle function inventory mismatch'; END IF;
+ FOREACH signature IN ARRAY ARRAY['record_mapping(uuid,uuid,uuid,uuid,text)','read_mapping_receipt(uuid,uuid,uuid,uuid)','revoke_mapping(uuid,uuid,uuid,text)','read_revocation_receipt(uuid,uuid,uuid)'] LOOP
+  IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid=to_regprocedure('_ssm_task_identity.'||signature) AND proowner=(SELECT oid FROM pg_roles WHERE rolname=current_user) AND prosecdef AND proconfig=ARRAY['search_path=public, pg_temp']) THEN
+   RAISE EXCEPTION 'Private identity bundle function authority mismatch: %',signature;
+  END IF;
+ END LOOP;
  FOREACH application_role IN ARRAY ARRAY['anon'::name,'authenticated'::name,'service_role'::name] LOOP
   IF has_schema_privilege(application_role,'_ssm_task_identity','USAGE,CREATE') THEN RAISE EXCEPTION 'Private identity schema application access remains'; END IF;
   FOR object_oid IN SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='_ssm_task_identity' AND c.relkind='r' LOOP
