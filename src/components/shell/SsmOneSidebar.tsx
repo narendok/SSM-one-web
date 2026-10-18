@@ -121,7 +121,7 @@ export function SsmOneSidebar() {
       <SidebarHeader className="border-b">
         <Link to="/" className="flex items-center gap-2 px-2 py-2.5 font-semibold tracking-tight">
           <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground"><CircuitBoard className="size-4" /></span>
-          {!collapsed && <span>SSM One</span>}
+          {!collapsed && <span>SSMone</span>}
         </Link>
       </SidebarHeader>
       <SidebarContent>

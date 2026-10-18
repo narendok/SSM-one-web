@@ -13,8 +13,8 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({ next: typeof search.next === "string" ? search.next : undefined }),
   head: () => ({ meta: [
-    { title: "Sign in — SSM One" }, { name: "description", content: "Sign in to the SSM One operations workspace." },
-    { property: "og:title", content: "Sign in — SSM One" }, { property: "og:description", content: "Sign in to the SSM One operations workspace." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+    { title: "Sign in — SSMone" }, { name: "description", content: "Sign in to the SSMone operations workspace." },
+    { property: "og:title", content: "Sign in — SSMone" }, { property: "og:description", content: "Sign in to the SSMone operations workspace." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
   component: AuthPage,
 });
@@ -57,7 +57,7 @@ function AuthPage() {
       </div>
        <div className="hidden lg:flex flex-col justify-between p-12 bg-primary text-primary-foreground">
         <div className="flex items-center gap-2 text-xl font-semibold">
-           <CircuitBoard className="h-6 w-6" /> SSM One
+           <CircuitBoard className="h-6 w-6" /> SSMone
         </div>
         <div className="space-y-3">
            <h1 className="text-4xl font-bold leading-tight">One workspace for every operating team.</h1>
@@ -70,7 +70,7 @@ function AuthPage() {
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-6">
           <div className="lg:hidden flex items-center gap-2 text-xl font-semibold">
-             <CircuitBoard className="h-6 w-6 text-primary" /> SSM One
+             <CircuitBoard className="h-6 w-6 text-primary" /> SSMone
           </div>
            <Tabs defaultValue="signin">
              <TabsList className="grid w-full grid-cols-1">

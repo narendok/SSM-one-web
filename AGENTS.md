@@ -28,3 +28,11 @@ Read docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md for the current web/backend
 ## Workspace authority
 
 Use original Lovable project d758dbf2-2f0e-44b3-b149-1ec51def58eb and backend yyrvduosyyaluifqvwkr. Preserve existing auth, departments, RLS, official numbering, manual edits and historical revisions. Do not create a competing backend. No destructive database operations, new production test users, privileged credential/access changes or Publish without required specific authorization. Historical backup captures are immutable; code/Git capture is not a database or private Storage backup.
+
+## Workspace names — 18 October 2026
+
+Web product: **SSMone**. Android application/display name: **SSMone-App**. Preferred workspace entry paths:
+- Web: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-Web`
+- Android: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-App`
+
+Both entries are directory junctions to the existing physical repositories (`C:/Users/Admin/AndroidStudioProjects/SSMOneWeb` and `C:/Users/Admin/AndroidStudioProjects/SSMApplication3`). Windows blocked moving the active Android checkout; no physical relocation is claimed. Each entry opens the same original files and separate Git history, with no duplicate checkout or parent monorepo. Existing paths remain valid for open tools. Historical backups, archived evidence, backend/project IDs, Android application ID/package and official document names/numbers are unchanged. Use the preferred paths for new Studio/Antigravity sessions and scheduler work. A later physical relocation requires released directory locks and a separate checked move; never delete an original root thinking the junction is a backup.

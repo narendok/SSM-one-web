@@ -1,8 +1,8 @@
-# SSM One — web portal master plan
+# SSMone — web portal master plan
 
 Last refined: 14 October 2026. **Single current requirements and delivery roadmap.**
 
-Repository entry point: `docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`. `C:/Users/Admin/AndroidStudioProjects/SSMOneWeb` is the full Git repository root, containing application code and this single tracked docs folder. Normal Git pull/add/commit/push includes the documentation; no separate copy or mirror step is required. Historical backups live outside the active repository in sibling `SSMOneWebBackups`. Pending backend work remains pending.
+Repository entry point: `docs/planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md`. `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-Web` is the full Git repository root, containing application code and this single tracked docs folder. Normal Git pull/add/commit/push includes the documentation; no separate copy or mirror step is required. Historical backups live outside the active repository in sibling `SSMOneWebBackups`. Pending backend work remains pending.
 
 This plan consolidates the company framework, lifecycle, departmental Drive, Sales refinements, editable documents, registers, Legal/directory follow-on and web-to-mobile backend handoff. Android implementation/build planning is explicitly excluded. Update this file in place; do not create a new dated plan for each clarification. Implementation status is evidence-qualified below, not a statement that the whole target is live.
 
@@ -11,7 +11,7 @@ This plan consolidates the company framework, lifecycle, departmental Drive, Sal
 
 This file plans the **Lovable web portal and its authoritative backend only**. It may define and export web-to-mobile integration contracts, but it does not own Android screens, mobile offline implementation, mobile build stages, APKs or emulator/device acceptance.
 
-The separate `SSMApplication3/docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md` lives in the Android repository. Evidence generated or imported for this web source belongs in `docs/evidence/`; Android implementation evidence remains in `SSMApplication3/docs/evidence/`. Source snapshots retain their original layout for recovery and are not reorganized.
+The separate `SSMone-App/docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md` lives in the Android repository. Evidence generated or imported for this web source belongs in `docs/evidence/`; Android implementation evidence remains in `SSMone-App/docs/evidence/`. Source snapshots retain their original layout for recovery and are not reorganized.
 
 ## 1. Authority and how to use this plan
 
@@ -298,7 +298,7 @@ After lifecycle/documents, add Operations **Legal Documents and Letterheads** us
 
 Inspect existing employee/profile manager/contact contracts and search/Help/voice/navigation before implementing the directory. Missing contacts or broken reporting hierarchy remain explicit. Legal ownership can later transfer through an authorized configurable responsibility contract without duplicating files or rewriting historical ownership; do not invent a Legal department or grant every Operations employee agreement access. Protect template/letterhead versioning, private agreement history, assigned reviewers and retention. Letterhead availability does not authorize signing or issuing an agreement. Verify signed-in directory access across departments, confidential-field exclusion, absent hierarchy, allowed/denied Legal callers, search/deep-link isolation, reassignment and web/Android parity. Legal/directory work must not delay the active feasibility and document delivery groups.
 
-Web-to-mobile handoff only: after a backend increment is accepted, export its exact fields/enums, payload/response/errors, scopes/RLS, numbering/retry semantics, private file delivery, offline classification and evidence. Keep pending operations explicitly unavailable. Android screens, scanner, native viewers, Room/WorkManager/SyncCoordinator, mobile stage sequencing and APK/device tests belong exclusively to the separate Android build plan (`SSMApplication3/docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md`).
+Web-to-mobile handoff only: after a backend increment is accepted, export its exact fields/enums, payload/response/errors, scopes/RLS, numbering/retry semantics, private file delivery, offline classification and evidence. Keep pending operations explicitly unavailable. Android screens, scanner, native viewers, Room/WorkManager/SyncCoordinator, mobile stage sequencing and APK/device tests belong exclusively to the separate Android build plan (`SSMone-App/docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md`).
 
 ## 10. One delivery queue and evidence-qualified checkpoint
 
@@ -964,3 +964,11 @@ Read-only planning now compares both the pinned Master UUID and the immutable so
 ### Managed preview diagnosis follow-up — 18 October 2026
 
 Browser control recovered and the original project now selects the latest readiness commit with its sign-in page rendered. This is auth-shell rendering only, not authenticated feature acceptance. Lovable reports managed failure logs unavailable and made no source/backend changes. Independent comparison finds npm/installed Vite 8.3.4 versus Bun-locked 8.0.16; config 2.26.5 remains aligned. Resolution drift is verified, causation is not; no blind dependency change or managed generation was requested. Evidence: docs/evidence/20261018_managed_preview_diagnosis_followup.md. No unchanged build/test rerun, fixture, credentials, SQL, access change or Publish.
+
+## Workspace names — 18 October 2026
+
+Web product: **SSMone**. Android application/display name: **SSMone-App**. Preferred workspace entry paths:
+- Web: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-Web`
+- Android: `C:/Users/Admin/AndroidStudioProjects/SSMone/SSMone-App`
+
+Both entries are directory junctions to the existing physical repositories (`C:/Users/Admin/AndroidStudioProjects/SSMOneWeb` and `C:/Users/Admin/AndroidStudioProjects/SSMApplication3`). Windows blocked moving the active Android checkout; no physical relocation is claimed. Each entry opens the same original files and separate Git history, with no duplicate checkout or parent monorepo. Existing paths remain valid for open tools. Historical backups, archived evidence, backend/project IDs, Android application ID/package and official document names/numbers are unchanged. Use the preferred paths for new Studio/Antigravity sessions and scheduler work. A later physical relocation requires released directory locks and a separate checked move; never delete an original root thinking the junction is a backup.

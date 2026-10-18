@@ -85,3 +85,7 @@ Default pins will depend on the person’s active department and assigned work, 
 ## Boundaries
 - This is a navigation and visibility improvement, not a permissions rewrite. No existing backend authorization, document responsibility, inventory release, quality-hold, or feasibility approval rule is weakened.
 - No new operational links are added for pending feasibility, external-client copy, private document materialization, or other workflows that lack an accepted backend contract.
+
+## Workspace identity
+
+The web product/project display name is SSMone; Android is SSMone-App. They remain separate repositories and share the original managed backend. Naming does not approve or activate this pending sidebar plan. Local preferred entries are documented in AGENTS.md.

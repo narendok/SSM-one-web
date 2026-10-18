@@ -61,10 +61,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-       { title: "SSM One — Operations Workspace" },
+       { title: "SSMone — Operations Workspace" },
        { name: "description", content: "Company-wide operations workspace for Six Sense Mobility." },
-       { property: "og:title", content: "SSM One — Operations Workspace" },
-       { name: "twitter:title", content: "SSM One — Operations Workspace" },
+       { property: "og:title", content: "SSMone — Operations Workspace" },
+       { name: "twitter:title", content: "SSMone — Operations Workspace" },
        { property: "og:description", content: "Company-wide operations workspace for Six Sense Mobility." },
        { name: "twitter:description", content: "Company-wide operations workspace for Six Sense Mobility." },
        { name: "twitter:card", content: "summary" },

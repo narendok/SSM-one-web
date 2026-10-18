@@ -5,7 +5,7 @@ This is the single active documentation folder for the web portal and its backen
 - [Web portal master plan](planning/SSM_ONE_WEB_PORTAL_MASTER_PLAN.md): web/backend delivery and integration handoff only.
 - [Optimized document catalogue](planning/SSM_ONE_DOCUMENT_CATALOGUE.md): reference inventory, not another delivery plan.
 - [Evidence](evidence/README.md): web verification reports and implementation checkpoints; dated claims retain their original scope.
-- Android build plan (`SSMApplication3/docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md`): separate mobile implementation/build queue in the Android project.
+- Android build plan (`SSMone-App/docs/planning/SSM_ONE_ANDROID_BUILD_PLAN.md`): separate mobile implementation/build queue in the Android project.
 
 Technical review packages and preflights are indexed in [contracts/README.md](contracts/README.md); executable pending backend packages remain under supabase/pending. Do not treat proposals as installed operations. Original source/reference data remains under planning/sources. Dated backup snapshots retain their original docs layout and are immutable.
 
