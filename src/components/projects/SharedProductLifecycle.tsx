@@ -14,12 +14,14 @@ import {
   FileText,
   FolderOpen,
   GitPullRequest,
+  Layers,
   Lock,
   MessageSquare,
   PackageSearch,
   Plus,
   RefreshCw,
   Send,
+  Settings2,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
@@ -29,6 +31,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import type { Project } from "@/lib/projects";
@@ -38,6 +47,8 @@ import { LifecycleResponsibilityPlan } from "@/components/projects/LifecycleResp
 import { lifecycleStageReadiness, requirementRevisionRelation, type CompanyStageRead } from "@/lib/connected-lifecycle-responsibility-plan";
 import { SAMPLE_REGULATORY_REPORTS } from "@/lib/sample-data-lifecycle";
 import { DepartmentChroniclesFeed } from "@/components/departments/DepartmentChroniclesFeed";
+import { getDepartmentsForStage } from "@/lib/department-stage-responsibilities";
+import { DepartmentStagesManager } from "@/components/departments/DepartmentStagesManager";
 import { toast } from "sonner";
 
 const sb = supabase as any;
@@ -371,8 +382,7 @@ export function SharedProductLifecycle({
     queryKey: ["shared_product_lifecycle", project.id, project.requirement_baseline_id],
     retry: false,
     queryFn: async () => {
-      try {
-        const [tasks, boms, inputs, research, changes, process] = await Promise.all([
+      const [tasks, boms, inputs, research, changes, process] = await Promise.all([
           sb.from("project_tasks").select("id,status,assignee_id,department_id").eq("project_id", project.id),
           sb.from("project_boms").select("id,revision,source_drive_node_id,source_drive_revision_id").eq("project_id", project.id),
           sb.from("project_design_inputs").select("id,status").eq("project_id", project.id),
@@ -380,6 +390,9 @@ export function SharedProductLifecycle({
           sb.from("project_change_requests").select("id,status").eq("project_id", project.id),
           sb.from("project_process_stage_records").select("id,status").eq("project_id", project.id),
         ]);
+        for (const result of [tasks, boms, inputs, research, changes, process]) {
+          if (result && result.error) throw result.error;
+        }
         return {
           tasks: tasks.data ?? [],
           boms: boms.data ?? [],
@@ -388,23 +401,36 @@ export function SharedProductLifecycle({
           changes: changes.data ?? [],
           process: process.data ?? [],
         };
-      } catch (e) {
-        console.warn("Could not load backend lifecycle records, using memory snapshot:", e);
-        return { tasks: [], boms: [], inputs: [], research: [], changes: [], process: [] };
-      }
-    },
-  });
+      },
+    });
 
-  const { data: gates = [] } = useQuery({
+  const {
+    data: gates = [],
+    isLoading: areGatesLoading,
+    isError: hasGateError,
+    error: gateError,
+    refetch: refetchGates,
+  } = useQuery({
     queryKey: ["shared_product_lifecycle_gates", project.id],
     retry: false,
     queryFn: async () => {
-      try {
-        const { data } = await sb.from("project_stage_gates").select("id,status").eq("project_id", project.id);
-        return data ?? [];
-      } catch {
-        return [];
-      }
+      const { data, error } = await sb.from("project_stage_gates").select("id,status").eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const stages = useQuery({
+    queryKey: ["company_process_stages", "shared_product_lifecycle"],
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("company_process_stages")
+        .select("id,stage_code,title,sort_order,requires_gated_handover")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as CompanyStageRead[];
     },
   });
 
@@ -413,18 +439,30 @@ export function SharedProductLifecycle({
     enabled: Boolean(project.requirement_baseline_id),
     retry: false,
     queryFn: async () => {
-      try {
-        const { data } = await sb
-          .from("requirement_baselines")
-          .select("baseline_number,revision_number,status,requirement:customer_requirements(requirement_number,current_revision)")
-          .eq("id", project.requirement_baseline_id)
-          .maybeSingle();
-        return data;
-      } catch {
-        return null;
-      }
+      const { data, error } = await sb
+        .from("requirement_baselines")
+        .select("baseline_number,revision_number,status,requirement:customer_requirements(requirement_number,current_revision)")
+        .eq("id", project.requirement_baseline_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     },
   });
+
+  const stageReadiness = lifecycleStageReadiness(
+    stages.data ?? [],
+    project.project_stage,
+    project.requirement_baseline_id,
+    snapshot ? { designInputCount: snapshot.inputs.length, linkedBomCount: snapshot.boms.length } : null,
+  );
+  const revisionRelation = baseline.data
+    ? requirementRevisionRelation(
+        baseline.data.revision_number,
+        baseline.data.requirement?.current_revision,
+      )
+    : null;
+  const lifecycleContextLoading = stages.isLoading || baseline.isLoading;
+  const lifecycleContextError = stages.error || baseline.error;
 
   const openTasks = snapshot?.tasks.filter((task: any) => task.status !== "done").length ?? 0;
   const draftPlan = snapshot
@@ -443,6 +481,8 @@ export function SharedProductLifecycle({
 
   // Filter regulatory reports for current project
   const relevantReports = SAMPLE_REGULATORY_REPORTS.filter((r) => r.projectId === project.id);
+  const [isStageRespOpen, setIsStageRespOpen] = useState(false);
+  const [refreshRespKey, setRefreshRespKey] = useState(0);
 
   return (
     <div className="space-y-6">
@@ -593,6 +633,63 @@ export function SharedProductLifecycle({
               </ul>
             </div>
 
+            {/* Department Stage Responsibilities (RACI Mapping) */}
+            {(() => {
+              const stageResponsibilities = getDepartmentsForStage(activeStage.stageNumber);
+              return (
+                <div className="mt-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Layers className="size-3.5 text-primary" />
+                      Department Responsibilities ({stageResponsibilities.length} Teams)
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsStageRespOpen(true)}
+                      className="h-6 px-2 text-[11px] gap-1"
+                    >
+                      <Settings2 className="size-3" /> Adjust
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {stageResponsibilities.map((resp) => {
+                      const roleBadgeClass =
+                        resp.role === "lead"
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                          : resp.role === "coordinating"
+                          ? "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30"
+                          : "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30";
+
+                      return (
+                        <div
+                          key={resp.id}
+                          className="rounded-md border bg-card/60 p-2.5 text-xs space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-semibold text-foreground capitalize">
+                              {resp.departmentId}
+                            </span>
+                            <Badge variant="outline" className={`text-[10px] uppercase font-mono ${roleBadgeClass}`}>
+                              {resp.role}
+                            </Badge>
+                          </div>
+                          <ul className="space-y-0.5 text-[11px] text-muted-foreground">
+                            {resp.deliverables.map((deliv, dIdx) => (
+                              <li key={dIdx} className="line-clamp-1">
+                                • {deliv}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Multi-Department Stakeholder Approvals Checklist */}
             <div className="mt-5 space-y-3">
               <div className="flex items-center justify-between">
@@ -727,11 +824,11 @@ export function SharedProductLifecycle({
             <h3 className="font-semibold text-sm">Cross-Functional Navigation</h3>
             <p className="mt-1 text-xs text-muted-foreground">Access supporting engineering and delivery areas.</p>
             <div className="mt-4 space-y-2">
-              <Button size="sm" variant="outline" onClick={onOpenTasks} className="w-full justify-start text-xs gap-2">
+              <Button size="sm" variant="outline" onClick={onOpenTasks} aria-label="Open project tasks" className="w-full justify-start text-xs gap-2">
                 <ClipboardList className="size-3.5 text-primary" />
                 <span>Open Project Tasks ({openTasks} Open)</span>
               </Button>
-              <Button size="sm" variant="outline" onClick={onOpenFiles} className="w-full justify-start text-xs gap-2">
+              <Button size="sm" variant="outline" onClick={onOpenFiles} aria-label="Open project files" className="w-full justify-start text-xs gap-2">
                 <FolderOpen className="size-3.5 text-primary" />
                 <span>Open Project CAD & Drive Vault</span>
               </Button>
@@ -745,6 +842,141 @@ export function SharedProductLifecycle({
           </Card>
         </div>
       </div>
+
+      {/* Governed Stage Context & Requirements Revision Relationship */}
+      <Card className="p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Stage planning context</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Prerequisites and workstreams are planning references only. They do not confirm completion, approval, handover, or release.
+            </p>
+          </div>
+          <Badge variant="outline">READ ONLY</Badge>
+        </div>
+        {hasGateError && (
+          <div role="alert" className="mt-4 flex flex-wrap items-center gap-2 text-sm text-destructive">
+            <span>Gate records could not be loaded{readErrorMessage(gateError) ? `: ${readErrorMessage(gateError)}` : "."}</span>
+            <Button size="sm" variant="outline" onClick={() => void refetchGates()}>
+              <RefreshCw className="size-3.5" /> Retry
+            </Button>
+          </div>
+        )}
+        {lifecycleContextLoading ? (
+          <p className="mt-4 text-sm text-muted-foreground">Loading accessible stage and requirement context…</p>
+        ) : lifecycleContextError ? (
+          <div role="alert" className="mt-4 flex flex-wrap items-center gap-2 text-sm text-destructive">
+            <span>Stage planning context could not be loaded{lifecycleContextError instanceof Error ? `: ${lifecycleContextError.message}` : "."}</span>
+            <Button size="sm" variant="outline" onClick={() => { void baseline.refetch(); void stages.refetch(); }}>
+              <RefreshCw className="size-3.5" /> Retry
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <div className="border-l-2 border-primary/30 pl-3">
+              <p className="text-xs text-muted-foreground">Recorded stage & workstream</p>
+              <p className="mt-1 text-sm font-medium">{stageReadiness.stage?.stage_code ?? project.project_stage.replaceAll("_", " ")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {stageReadiness.responsibility ? `Planning owner: ${stageReadiness.responsibility.leadDepartment} · participants: ${stageReadiness.responsibility.participatingDepartments.join(" · ") || "None"}` : "No lifecycle workstream is inferred for this recorded project stage."}
+              </p>
+            </div>
+            <div className="border-l-2 border-muted pl-3">
+              <p className="text-xs text-muted-foreground">Pinned requirement revision</p>
+              {baseline.data ? (
+                <>
+                  <p className="mt-1 text-sm font-medium">{baseline.data.baseline_number} · revision {baseline.data.revision_number}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {baseline.data.requirement ? `${baseline.data.requirement.requirement_number} · current requirement revision ${baseline.data.requirement.current_revision}` : "Requirement record is not accessible."} · recorded status: {baseline.data.status}
+                  </p>
+                  {revisionRelation && (
+                    <p className={revisionRelation.state === "NEWER_REQUIREMENT_REVISION" ? "mt-3 text-xs text-destructive" : "mt-3 text-xs text-muted-foreground"}>
+                      {revisionRelation.message}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">No accessible pinned requirement baseline.</p>
+              )}
+            </div>
+            <div className="border-l-2 border-muted pl-3">
+              <p className="text-xs text-muted-foreground">Planning prerequisites</p>
+              <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                {stageReadiness.prerequisites.map((prerequisite) => <li key={prerequisite}>{prerequisite}</li>)}
+              </ul>
+              {stageReadiness.blockers.length ? (
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-destructive">Blockers to resolve</p>
+                  <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                    {stageReadiness.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
+                  </ul>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-muted-foreground">No source-link or stage-mapping blocker is visible. Review governed records separately.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Governed Lifecycle Automation Plan */}
+      <Card className="p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Draft lifecycle automation plan</p>
+            <p className="mt-1 text-sm text-muted-foreground">Prepared from visible governed records only. Nothing is created, assigned, notified, approved, or shared from this panel.</p>
+          </div>
+          <Badge variant="secondary">DRAFT ONLY</Badge>
+        </div>
+        {isLoading ? (
+          <p className="mt-4 text-sm text-muted-foreground">Loading available governed records…</p>
+        ) : isError ? (
+          <div role="alert" className="mt-4 flex flex-wrap items-center gap-2 text-sm text-destructive">
+            <span>Governed lifecycle records could not be loaded{readErrorMessage(error) ? `: ${readErrorMessage(error)}` : "."}</span>
+            <Button size="sm" variant="outline" onClick={() => void refetch()}><RefreshCw className="size-3.5" /> Retry</Button>
+          </div>
+        ) : draftPlan ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Required source inputs</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {draftPlan.requiredInputs.map((input) => (
+                  <Badge key={input.name} variant={input.status === "MISSING" ? "secondary" : "outline"} title={input.provenance}>
+                    {input.name}{input.status === "MISSING" ? " · missing" : " · linked"}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              {draftPlan.proposedActions.map((action) => (
+                <div key={action.key} className="border-l-2 border-muted pl-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium">{action.title}</p>
+                    <Badge variant="outline">{action.state}</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{action.reason}</p>
+                </div>
+              ))}
+              <div className="mt-4 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="size-3.5 text-muted-foreground" />
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Governance status</p>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Template autofill</p>
+                    <p className="text-xs font-medium">{draftPlan.autofillState}</p>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] text-muted-foreground">Not created</p>
+                    <p className="text-xs text-muted-foreground">{draftPlan.unavailableGovernedOutputs.join(" · ")}</p>
+                    <p className="mt-1 text-xs text-muted-foreground italic">{draftPlan.governanceNotice}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </Card>
 
       {/* 3. Existing Lower Governed Planning & Responsibility Panels */}
       <LifecycleResponsibilityPlan compact />
@@ -764,6 +996,31 @@ export function SharedProductLifecycle({
           <ArrowRight className="ml-auto mt-1 size-4 text-muted-foreground shrink-0" />
         </div>
       </Card>
+
+      {/* Adjust Stage Responsibilities Modal */}
+      <Dialog open={isStageRespOpen} onOpenChange={setIsStageRespOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="size-5 text-primary" />
+              Stage {activeStage.stageNumber}: {activeStage.name} — Department Responsibilities
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Assign or adjust department roles (Lead / Coordinating / Participating) and deliverables for this lifecycle stage.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DepartmentStagesManager
+            departmentId="rnd"
+            departmentName="Engineering & Operations"
+            isAdmin={true}
+            className="border-0 shadow-none p-0"
+            onChanged={() => {
+              setRefreshRespKey((k) => k + 1);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

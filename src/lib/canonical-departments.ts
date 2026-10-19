@@ -228,13 +228,12 @@ export async function reorderCanonicalDepartments(orderedIds: string[]): Promise
 
   setLocalDepartmentsOverride(reordered);
 
-  // Attempt remote update
+  // Attempt remote update in parallel
   try {
-    for (const d of reordered) {
-      if (!d.id.startsWith("dept-custom-")) {
-        await sb.from("departments").update({ sort_order: d.sort_order }).eq("id", d.id);
-      }
-    }
+    const remoteUpdates = reordered
+      .filter((d) => !d.id.startsWith("dept-custom-"))
+      .map((d) => sb.from("departments").update({ sort_order: d.sort_order }).eq("id", d.id));
+    await Promise.allSettled(remoteUpdates);
   } catch (err) {
     console.warn("Remote sort_order sync failed, updated locally:", err);
   }

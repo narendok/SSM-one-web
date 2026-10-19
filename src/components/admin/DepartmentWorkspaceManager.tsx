@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  ArrowDown, ArrowUp, Building2, Calendar, Check, Edit2, Info, Plus,
+  ArrowDown, ArrowUp, Building2, Calendar, Check, Edit2, Info, Layers, Plus,
   RefreshCw, Search, ShieldAlert, ShieldCheck, Tag, Trash2, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   type CanonicalDepartment,
 } from "@/lib/canonical-departments";
 import { DepartmentChroniclesFeed } from "@/components/departments/DepartmentChroniclesFeed";
+import { DepartmentStagesManager } from "@/components/departments/DepartmentStagesManager";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -33,6 +34,7 @@ export function DepartmentWorkspaceManager() {
   const [editingDept, setEditingDept] = useState<CanonicalDepartment | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [chroniclesDept, setChroniclesDept] = useState<CanonicalDepartment | null>(null);
+  const [stagesDept, setStagesDept] = useState<CanonicalDepartment | null>(null);
 
   // Form states
   const [name, setName] = useState("");
@@ -409,6 +411,17 @@ export function DepartmentWorkspaceManager() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setStagesDept(dept)}
+                          className="h-7 px-2 text-xs gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
+                          title="Manage Stages & Responsibilities for this department"
+                        >
+                          <Layers className="size-3.5" />
+                          <span className="hidden md:inline">Stages</span>
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setChroniclesDept(dept)}
                           className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary"
                           title="Open Chronicles Feed for this department"
@@ -582,6 +595,38 @@ export function DepartmentWorkspaceManager() {
             <DepartmentChroniclesFeed
               departmentId={chroniclesDept.id}
               departmentName={chroniclesDept.name}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Stages & Responsibilities Modal for specific department */}
+      <Dialog
+        open={Boolean(stagesDept)}
+        onOpenChange={(open) => {
+          if (!open) setStagesDept(null);
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="size-5 text-primary" />
+              {stagesDept?.name} — Stages & Responsibilities Management
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Allocate lifecycle stages, assign Lead or Participating roles, and customize engineering deliverables for {stagesDept?.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          {stagesDept && (
+            <DepartmentStagesManager
+              departmentId={stagesDept.id}
+              departmentName={stagesDept.name}
+              isAdmin={true}
+              className="border-0 shadow-none p-0"
+              onChanged={() => {
+                void loadDepartments();
+              }}
             />
           )}
         </DialogContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   AlertCircle,
@@ -49,6 +49,7 @@ import {
   type ChronicleCategory,
   type StageStatus,
 } from "@/lib/department-chronicles";
+import { getAssignedStagesForDepartment } from "@/lib/department-stage-responsibilities";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -153,6 +154,11 @@ export function DepartmentChroniclesFeed({
   );
 
   // Filters
+  const assignedStages = useMemo(
+    () => (departmentId && departmentId !== "all" ? getAssignedStagesForDepartment(departmentId) : []),
+    [departmentId]
+  );
+  const [onlyAssignedStages, setOnlyAssignedStages] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStage, setSelectedStage] = useState<string>(
     defaultStageNumber ? String(defaultStageNumber) : "all"
@@ -295,6 +301,9 @@ export function DepartmentChroniclesFeed({
   };
 
   const filtered = chronicles.filter((c) => {
+    if (onlyAssignedStages && assignedStages.length > 0) {
+      if (!c.stageNumber || !assignedStages.some((a) => a.stageNumber === c.stageNumber)) return false;
+    }
     if (selectedCategory !== "all" && c.category !== selectedCategory) return false;
     if (selectedStage !== "all" && c.stageNumber !== Number(selectedStage)) return false;
     if (selectedStatus !== "all" && c.stageStatus !== selectedStatus) return false;
@@ -323,6 +332,24 @@ export function DepartmentChroniclesFeed({
             <CardDescription className="text-xs">
               Chronological log of all 9 lifecycle stage milestones, gate reviews, and technical decisions. Click any status or stage to change here and there.
             </CardDescription>
+            {assignedStages.length > 0 && (
+              <div className="flex items-center gap-2 pt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setOnlyAssignedStages(!onlyAssignedStages)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium border transition-colors ${
+                    onlyAssignedStages
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/60 text-muted-foreground border-border hover:bg-muted"
+                  }`}
+                >
+                  <Tag className="size-3" />
+                  {onlyAssignedStages
+                    ? `Showing ${assignedStages.length} Assigned Stages Only`
+                    : `Show Only Assigned Stages (${assignedStages.length})`}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -371,11 +398,15 @@ export function DepartmentChroniclesFeed({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All 9 Stages ({chronicles.length})</SelectItem>
-              {LIFECYCLE_STAGES.map((s) => (
-                <SelectItem key={s.stageNumber} value={String(s.stageNumber)}>
-                  {s.name} ({chronicles.filter((c) => c.stageNumber === s.stageNumber).length})
-                </SelectItem>
-              ))}
+              {LIFECYCLE_STAGES.map((s) => {
+                const assigned = assignedStages.find((a) => a.stageNumber === s.stageNumber);
+                const roleBadge = assigned ? (assigned.role === "lead" ? "★ Lead" : assigned.role === "coordinating" ? "★ Coord" : "★ Part") : "";
+                return (
+                  <SelectItem key={s.stageNumber} value={String(s.stageNumber)}>
+                    {s.name} {roleBadge ? `(${roleBadge})` : ""} ({chronicles.filter((c) => c.stageNumber === s.stageNumber).length})
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
 
