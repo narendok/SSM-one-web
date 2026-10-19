@@ -111,10 +111,16 @@ export function SsmOneSidebar() {
   }, []);
   const selectedDepartment = (departments.data ?? []).find((department: CanonicalDepartment) => department.id === workspaceDepartmentId) ?? null;
   const selectedWorkspace = workspaceForDepartment(selectedDepartment);
+  const workGroup = groups.find((group) => group.label === "Work");
+  const salesGroup = groups.find((group) => group.label === "Sales");
+  const systemGroup = groups.find((group) => group.label === "System");
+
   const visibleGroups = selectedWorkspace ? [
     { label: "Daily work", items: [{ label: "My day", to: "/command-center", icon: LayoutGrid }, { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing }] },
     { label: `${selectedWorkspace.label} work`, collapsible: false, items: selectedWorkspace.items },
-    { label: "System", collapsible: true, items: groups.find((group) => group.label === "System")!.items },
+    ...(workGroup ? [workGroup] : []),
+    ...(salesGroup ? [salesGroup] : []),
+    ...(systemGroup ? [systemGroup] : []),
   ] : groups;
 
   return (

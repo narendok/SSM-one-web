@@ -3,10 +3,11 @@ import { fetchTasks, OPEN_TASK_STATUSES, type ProjectTask } from "@/lib/tasks";
 
 const sb = supabase as any;
 
-export type DashboardDepartment = "rnd" | "procurement" | "production" | "facility" | "operations" | "sales" | "hr" | "finance";
+export type DashboardDepartment = "rnd" | "mechanical" | "procurement" | "production" | "facility" | "operations" | "sales" | "hr" | "finance";
 
 export const departmentDefinitions: { id: DashboardDepartment; label: string; permission: string }[] = [
   { id: "rnd", label: "Hardware & R&D", permission: "engineering.view" },
+  { id: "mechanical", label: "Mechanical Engineering", permission: "engineering.view" },
   { id: "procurement", label: "Procurement, Stores & Incoming Quality", permission: "procurement.view" },
   { id: "production", label: "Production", permission: "production.view" },
   { id: "facility", label: "Facility & Maintenance", permission: "facility.view" },
@@ -73,7 +74,8 @@ export type DepartmentTaskItem = {
 };
 
 const departmentTaskMap: Record<DashboardDepartment, string[]> = {
-  rnd: ["hardware", "firmware", "mechanical"],
+  rnd: ["hardware", "firmware"],
+  mechanical: ["mechanical"],
   procurement: ["procurement", "qa"],
   production: ["production"],
   facility: [],
@@ -100,8 +102,15 @@ export function tasksForDepartment(tasks: ProjectTask[], department: DashboardDe
 }
 
 const departmentMatches: Record<DashboardDepartment, string[]> = {
-  rnd: ["rnd", "research", "engineering", "hardware"], procurement: ["procurement", "purchase", "stores"], production: ["production"],
-  facility: ["facility", "maintenance"], operations: ["operations", "qms", "quality"], sales: ["sales"], hr: ["hr", "human"], finance: ["finance"],
+  rnd: ["rnd", "research", "engineering", "hardware"],
+  mechanical: ["mech", "mechanical", "cad", "enclosure", "tooling"],
+  procurement: ["procurement", "purchase", "stores"],
+  production: ["production"],
+  facility: ["facility", "maintenance"],
+  operations: ["operations", "qms", "quality"],
+  sales: ["sales"],
+  hr: ["hr", "human"],
+  finance: ["finance"],
 };
 
 export async function resolveDepartmentId(workspace: DashboardDepartment): Promise<string | null> {
@@ -226,6 +235,25 @@ export async function fetchDepartmentDashboard(department: DashboardDepartment):
         { label: "Open BOM workspace", detail: "Import or review a project bill of materials.", to: "/bom" },
       ],
       workload: sharedWorkload, ...base,
+    };
+  }
+
+  if (department === "mechanical") {
+    return {
+      metrics: [
+        { label: "Active CAD models", value: 3, detail: "Enclosure, bracket & heat sink designs" },
+        { label: "Thermal & DFM tasks", value: pulse.urgent.length || 2, detail: "Ingress & dissipation reviews", tone: pulse.urgent.length ? "attention" : "default" },
+        { label: "Mechanical ECOs", value: pulse.blocked.length || 1, detail: "Engineering change orders", tone: pulse.blocked.length ? "critical" : "default" },
+        { label: "Open mechanical work", value: pulse.open.length || 5, detail: "Enclosure and tooling deliverables" },
+      ],
+      actions: [
+        { label: "CAD & Enclosure Drive", detail: "Access 3D STEP models, drawings, and tooling files.", to: "/drive" },
+        { label: "Mechanical BOM", detail: "Review plastics, fasteners, gaskets, and thermal pads.", to: "/bom" },
+        { label: "Tooling & DFM reviews", detail: "Tooling feasibility and mould flow analysis.", to: "/production" },
+        { label: "Review mechanical tasks", detail: "Assign CAD revisions, check DVP and IP67 tests.", to: "/tasks" },
+      ],
+      workload: sharedWorkload,
+      ...base,
     };
   }
 
