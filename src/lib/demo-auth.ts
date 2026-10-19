@@ -1,6 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { setWorkspaceDepartmentId } from "./workspace-context";
-import { CANONICAL_DEPT_UUIDS } from "./tasks";
+import { CANONICAL_DEPT_UUIDS } from "./canonical-departments";
 
 export type Role = "admin" | "member" | "purchase" | "storekeeper" | "project_manager" | "lead_engineer";
 

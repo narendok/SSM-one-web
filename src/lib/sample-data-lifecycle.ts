@@ -15,7 +15,7 @@ import type {
 import type { Project } from "./projects";
 import type { RDMember } from "./inventory";
 import type { ProjectTask } from "./tasks";
-import { CANONICAL_DEPT_UUIDS } from "./tasks";
+import { CANONICAL_DEPT_UUIDS } from "./canonical-departments";
 
 // ============================================================================
 // 1. SAMPLE CUSTOMERS (8–10 realistic customers: 3–4 OEMs, varying contacts)
