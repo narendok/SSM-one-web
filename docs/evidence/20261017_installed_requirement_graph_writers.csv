@@ -1,4 +1,0 @@
-anon_execute;authenticated_execute;definer;observed_graph_writes;routine;service_execute
-false;true;true;"[""UPDATE public.requirement_feasibility_reviews"",""INSERT INTO public.requirement_feasibility_reviews""]";assign_requirement_feasibility_review(uuid,uuid,uuid);true
-false;true;true;"[""UPDATE public.requirement_feasibility_reviews""]";record_requirement_feasibility_response(uuid,text,text,text,text,uuid);true
-false;true;true;"[""INSERT INTO public.customer_requirements"",""INSERT INTO public.customer_requirement_revisions"",""INSERT INTO public.requirement_feasibility_reviews""]";submit_sales_feasibility_handover(uuid,uuid,uuid,uuid,text,text,text,uuid[],uuid[],timestamp with time zone,uuid);true

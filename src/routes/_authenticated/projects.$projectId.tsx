@@ -9,6 +9,7 @@ import {
   FileSpreadsheet,
   FolderOpen,
   GitPullRequest,
+  Layers,
   Pencil,
   Settings2,
 } from "lucide-react";
@@ -154,6 +155,10 @@ function ProjectDetailPage() {
       <Tabs value={activeTab} onValueChange={openProjectTab}>
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analysis" className="gap-1.5 font-semibold text-primary">
+            <Layers className="size-3.5" />
+            <span>Project Analysis (Page 1)</span>
+          </TabsTrigger>
           <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="inputs">Inputs</TabsTrigger>
@@ -332,6 +337,10 @@ function ProjectDetailPage() {
               </div>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="analysis" className="pt-4 space-y-4">
+          <ProjectAnalysisSummary project={project} />
         </TabsContent>
 
         <TabsContent value="lifecycle" className="pt-4">

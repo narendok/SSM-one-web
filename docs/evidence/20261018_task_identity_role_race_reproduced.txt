@@ -1,9 +1,0 @@
-file:///C:/Users/Admin/AndroidStudioProjects/SSMOneWeb/supabase/pending/tests/task_identity_native_overlap.mjs:30
- if(!revoked.error||!/steward authority/.test(revoked.error.message))throw Error('Queued replay retained revoked role authority');
-                                                                           ^
-
-Error: Queued replay retained revoked role authority
-    at file:///C:/Users/Admin/AndroidStudioProjects/SSMOneWeb/supabase/pending/tests/task_identity_native_overlap.mjs:30:76
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-
-Node.js v24.19.0

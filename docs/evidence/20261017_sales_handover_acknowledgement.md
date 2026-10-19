@@ -1,9 +1,0 @@
-# Sales handover acknowledgement safeguards — 17 October 2026
-
-The gated Sales server action now delegates its existing caller-authenticated RPC to sales-handover-save.ts. It requires exactly one valid acknowledgement, distinct review identities matching the submitted team count, and no requirement identity reused as a review. It preserves the same request key and never retries. Lost responses, connection errors, unknown errors and malformed/incomplete acknowledgements report an uncertain outcome rather than a confirmed save. Explicit transaction-aborting server errors preserve their rejection message.
-
-This validates mutation output only. It is not an independent persisted graph/readback contract, department membership proof or operational acceptance. The existing availability gate remains false. No backend SQL, new access, business fixture, UI activation or Publish occurred in this increment.
-
-Verification: 15 focused tests passed across sales-handover-save.test.ts and sales-handover-contract.test.ts; TypeScript noEmit passed; production Vite build passed. Typecheck initially caught parameterized test arrays being spread into callback arguments; the rows were corrected to named objects and all checks rerun. Build log: C:/Users/Admin/AppData/Local/Temp/ssm-handover-ack-build.log. Only prechecked-clean generated route/MCP files were restored after the build. No browser screenshot was taken because this is a gated server transport change with no newly operational UI.
-
-Remaining: independent caller-scoped handover graph/notification readback, ordinary real-JWT reviewer acceptance, separately approved direct-write transition and UI activation; then the agreed conflict/pass/client-baseline/explicit phase-decision flow. Installed own-note/highlight storage remains private and separate from publication.

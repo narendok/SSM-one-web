@@ -1,7 +1,0 @@
-- [ ] Review corrected feasibility activation package and local PostgreSQL 17 evidence before managed installation (source-only; no installation).
-- [x] Complete the read-only managed feasibility catalog preflight using public.requirement_feasibility_reviews and the specified helper signatures; no installation.
-- [ ] Provide a suggestions-only UX review of SharedFeasibilityAnalysis.
-- [ ] Await explicit approval before handover installation, grants/policies, UI enablement, or baseline-to-project deployment.
-- [x] Diagnose the original project Git sync state read-only and prepare a complete current-source recovery archive.
-- [ ] Keep the Lovable Git connection available after one GitHub authorization; waiting for the user to complete the Git settings connection flow, subject to GitHub authorization expiry or revocation.
-- [ ] Review and implement the inventory register parity and controlled GRN flow from the updated plan; backend contracts and access scope require separate accepted increments.

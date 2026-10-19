@@ -3,7 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   BriefcaseBusiness, Building2, CircuitBoard, ClipboardList, FileSpreadsheet, FolderKanban, FolderOpen,
   GraduationCap, History, LayoutGrid, ListChecks, MapPin, PackageCheck, PlaneTakeoff, Settings2, ShoppingCart,
-   Truck, Users, Wrench, WalletCards, ShieldCheck, Boxes, FileText, Factory, ClipboardCheck, Send, Gauge, Armchair, ChartNoAxesCombined, Headset, Handshake, ChartColumnIncreasing, ChevronDown, Search, type LucideIcon,
+   Truck, Users, Wrench, WalletCards, ShieldCheck, Boxes, FileText, Factory, ClipboardCheck, Send, Gauge, Armchair, ChartNoAxesCombined, Headset, Handshake, ChartColumnIncreasing, ChevronDown, Search, Layers, type LucideIcon,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -22,6 +22,7 @@ const groups: NavGroup[] = [
    { label: "Daily work", items: [{ label: "My day", to: "/command-center", icon: LayoutGrid }, { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing }] },
   { label: "Work", items: [
     { label: "Projects", to: "/projects", icon: FolderKanban, permission: "projects.view" },
+    { label: "Project Analysis (Page 1)", to: "/projects?tab=analysis", icon: Layers, permission: "projects.view" },
     { label: "Task board", to: "/tasks", icon: ListChecks, permission: "my_work.view" },
     { label: "Unified records", to: "/records", icon: Search, permission: "documents.view" },
   ] },
