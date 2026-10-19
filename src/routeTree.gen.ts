@@ -14,6 +14,7 @@ import { Route as ApplicationStatusRouteImport } from './routes/application-stat
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CareersRouteImport } from './routes/careers'
 import { Route as ExternalPortalRouteImport } from './routes/external-portal'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
@@ -138,6 +139,11 @@ const CareersRoute = CareersRouteImport.update({
 const ExternalPortalRoute = ExternalPortalRouteImport.update({
   id: '/external-portal',
   path: '/external-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -719,6 +725,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/careers': typeof CareersRouteWithChildren
   '/external-portal': typeof ExternalPortalRouteWithChildren
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -825,6 +832,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/careers': typeof CareersRouteWithChildren
   '/external-portal': typeof ExternalPortalRouteWithChildren
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/assignments': typeof AuthenticatedAssignmentsRoute
@@ -931,6 +939,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/careers': typeof CareersRouteWithChildren
   '/external-portal': typeof ExternalPortalRouteWithChildren
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -1041,6 +1050,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/careers'
     | '/external-portal'
+    | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/admin'
@@ -1147,6 +1157,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/careers'
     | '/external-portal'
+    | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/assignments'
@@ -1252,6 +1263,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/careers'
     | '/external-portal'
+    | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
@@ -1361,6 +1373,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CareersRoute: typeof CareersRouteWithChildren
   ExternalPortalRoute: typeof ExternalPortalRouteWithChildren
+  LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   FileTokenRoute: typeof FileTokenRoute
@@ -1407,6 +1420,13 @@ declare module '@tanstack/react-router' {
       path: '/external-portal'
       fullPath: '/external-portal'
       preLoaderRoute: typeof ExternalPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -2398,6 +2418,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CareersRoute: CareersRouteWithChildren,
   ExternalPortalRoute: ExternalPortalRouteWithChildren,
+  LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,

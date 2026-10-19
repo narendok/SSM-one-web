@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { DepartmentTestAccounts } from "@/components/auth/DepartmentTestAccounts";
+import { loginAsTestAccount, type DepartmentTestAccount } from "@/lib/demo-auth";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({ next: typeof search.next === "string" ? search.next : undefined }),
@@ -24,13 +26,18 @@ function AuthPage() {
   const { next } = Route.useSearch();
   const destination = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
+    const formEmail = String(fd.get("email") || email);
+    const formPassword = String(fd.get("password") || password);
     const { error } = await supabase.auth.signInWithPassword({
-      email: String(fd.get("email")),
-      password: String(fd.get("password")),
+      email: formEmail,
+      password: formPassword,
     });
     setLoading(false);
     if (error) return toast.error(error.message);
@@ -40,6 +47,22 @@ function AuthPage() {
 
   async function handleGoogle() {
     setLoading(true);
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}${destination}` },
+      });
+      if (error) {
+        setLoading(false);
+        toast.error(error.message);
+        return;
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+    }
+
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}${destination}` });
     if (result.error) {
       setLoading(false);
@@ -50,36 +73,67 @@ function AuthPage() {
     navigate({ to: destination });
   }
 
+  function handleFillCredentials(account: DepartmentTestAccount) {
+    setEmail(account.email);
+    setPassword(account.password);
+    toast.info(`Filled credentials for ${account.name}`);
+  }
+
+  function handleInstantLogin(account: DepartmentTestAccount) {
+    loginAsTestAccount(account);
+    toast.success(`Welcome back, ${account.name}!`);
+    const targetPath = destination !== "/" ? destination : account.defaultPath;
+    navigate({ to: targetPath });
+  }
+
   return (
     <div className="relative min-h-screen grid lg:grid-cols-2 bg-background">
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
-       <div className="hidden lg:flex flex-col justify-between p-12 bg-primary text-primary-foreground">
+      <div className="hidden lg:flex flex-col justify-between p-12 bg-primary text-primary-foreground">
         <div className="flex items-center gap-2 text-xl font-semibold">
-           <CircuitBoard className="h-6 w-6" /> SSMone
+          <CircuitBoard className="h-6 w-6" /> SSMone
         </div>
         <div className="space-y-3">
-           <h1 className="text-4xl font-bold leading-tight">One workspace for every operating team.</h1>
+          <h1 className="text-4xl font-bold leading-tight">One workspace for every operating team.</h1>
           <p className="text-primary-foreground/80 max-w-md">
-             XYZ Pvt Ltd teams coordinate engineering, procurement, quality, HR, and company operations from a unified workspace.
+            XYZ Pvt Ltd teams coordinate engineering, procurement, quality, HR, and company operations from a unified workspace.
           </p>
         </div>
-         <p className="text-xs text-primary-foreground/60">XYZ Pvt Ltd</p>
+        <p className="text-xs text-primary-foreground/60">XYZ Pvt Ltd</p>
       </div>
       <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm space-y-6">
+        <div className="w-full max-w-xl space-y-6">
           <div className="lg:hidden flex items-center gap-2 text-xl font-semibold">
-             <CircuitBoard className="h-6 w-6 text-primary" /> SSMone
+            <CircuitBoard className="h-6 w-6 text-primary" /> SSMone
           </div>
-           <Tabs defaultValue="signin">
-             <TabsList className="grid w-full grid-cols-1">
-               <TabsTrigger value="signin">Sign in</TabsTrigger>
-              </TabsList>
+          <Tabs defaultValue="signin">
+            <TabsList className="grid w-full grid-cols-1">
+              <TabsTrigger value="signin">Sign in</TabsTrigger>
+            </TabsList>
             <TabsContent value="signin" className="space-y-4 pt-4">
               <form onSubmit={handleSignIn} className="space-y-3">
-                <div className="space-y-1.5"><Label>Email</Label><Input name="email" type="email" required /></div>
-                <div className="space-y-1.5"><Label>Password</Label><Input name="password" type="password" required /></div>
+                <div className="space-y-1.5">
+                  <Label>Email</Label>
+                  <Input
+                    name="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Password</Label>
+                  <Input
+                    name="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
                 <Button className="w-full" disabled={loading}>
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />} Sign in
                 </Button>
@@ -93,13 +147,19 @@ function AuthPage() {
           <Button variant="outline" className="w-full" onClick={handleGoogle} disabled={loading}>
             Continue with Google
           </Button>
+
+          {/* Department Test Accounts Launcher */}
+          <DepartmentTestAccounts
+            onFillCredentials={handleFillCredentials}
+            onInstantLogin={handleInstantLogin}
+          />
+
           <div className="rounded-lg border p-4 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">Exploring openings?</p>
             <p className="mt-1">Public job pages are now live.</p>
             <Button asChild variant="link" className="mt-2 h-auto p-0"><Link to="/careers">Open Careers</Link></Button>
           </div>
-           <p className="text-center text-xs text-muted-foreground">Access is provided by invitation. Contact your system administrator for help.</p>
-
+          <p className="text-center text-xs text-muted-foreground">Access is provided by invitation. Contact your system administrator for help.</p>
         </div>
       </div>
     </div>

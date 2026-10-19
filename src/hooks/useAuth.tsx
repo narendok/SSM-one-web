@@ -1,6 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getStoredTestSession,
+  clearStoredTestSession,
+  DEMO_AUTH_CHANGE_EVENT,
+  type StoredDemoSession,
+} from "@/lib/demo-auth";
 
 type Role = "admin" | "member" | "purchase" | "storekeeper" | "project_manager" | "lead_engineer";
 
@@ -61,8 +67,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissions([...new Set(keys)]);
   }, []);
 
+  const applyDemoSession = useCallback((demo: StoredDemoSession | null) => {
+    if (demo) {
+      setSession(demo.session);
+      setRole(demo.role);
+      setDisplayName(demo.displayName);
+      setEmployeeStatus("active");
+      setPermissions(demo.permissions);
+      setLoading(false);
+      return true;
+    }
+    return false;
+  }, []);
+
   useEffect(() => {
+    const initialDemo = getStoredTestSession();
+    if (initialDemo) {
+      applyDemoSession(initialDemo);
+    }
+
+    const handleDemoChange = (e: Event) => {
+      const customEvent = e as CustomEvent<StoredDemoSession | null>;
+      if (customEvent.detail) {
+        applyDemoSession(customEvent.detail);
+      } else {
+        supabase.auth.getSession().then(async ({ data }) => {
+          setSession(data.session);
+          if (data.session) {
+            await loadIdentity(data.session.user);
+          } else {
+            setRole(null);
+            setDisplayName(null);
+            setEmployeeStatus(null);
+            setPermissions([]);
+          }
+        });
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener(DEMO_AUTH_CHANGE_EVENT, handleDemoChange);
+    }
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      const currentDemo = getStoredTestSession();
+      if (currentDemo) {
+        applyDemoSession(currentDemo);
+        return;
+      }
       setSession(s);
       if (s) {
         void loadIdentity(s.user).finally(() => setLoading(false));
@@ -76,19 +128,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     supabase.auth.getSession().then(async ({ data }) => {
+      const currentDemo = getStoredTestSession();
+      if (currentDemo) {
+        applyDemoSession(currentDemo);
+        return;
+      }
       setSession(data.session);
       if (data.session) await loadIdentity(data.session.user);
     }).catch(() => {
+      const currentDemo = getStoredTestSession();
+      if (currentDemo) {
+        applyDemoSession(currentDemo);
+        return;
+      }
       setRole(null);
       setDisplayName(null);
       setEmployeeStatus(null);
       setPermissions([]);
-    }).finally(() => setLoading(false));
+    }).finally(() => {
+      if (!getStoredTestSession()) setLoading(false);
+    });
 
-    return () => sub.subscription.unsubscribe();
-  }, [loadIdentity]);
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener(DEMO_AUTH_CHANGE_EVENT, handleDemoChange);
+      }
+      sub.subscription.unsubscribe();
+    };
+  }, [loadIdentity, applyDemoSession]);
 
   const signOut = async () => {
+    clearStoredTestSession();
     await supabase.auth.signOut();
   };
 

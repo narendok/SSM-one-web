@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { getStoredTestSession } from "@/lib/demo-auth";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -20,8 +21,10 @@ export const Route = createFileRoute("/_authenticated")({
   pendingComponent: WorkspaceLoading,
   beforeLoad: async ({ location }) => {
     const { data } = await supabase.auth.getSession();
-    if (!data.session?.user) throw redirect({ to: "/auth", search: { next: `${location.pathname}${location.searchStr}` } });
-    return { user: data.session.user };
+    const demoSession = getStoredTestSession();
+    const currentUser = data.session?.user ?? demoSession?.user ?? null;
+    if (!currentUser) throw redirect({ to: "/auth", search: { next: `${location.pathname}${location.searchStr}` } });
+    return { user: currentUser };
   },
   component: AppLayout,
 });
