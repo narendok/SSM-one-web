@@ -103,12 +103,203 @@ const defaultDepartmentProfiles = [
   },
 ];
 
+function getDepartmentProfiles(project: Project) {
+  const isBle = project.code?.includes("BLE") || project.name?.toLowerCase().includes("ble");
+  const isReuse = project.code?.includes("TLM-STD") || project.name?.toLowerCase().includes("reuse") || project.name?.toLowerCase().includes("apex");
+
+  if (isBle) {
+    return [
+      {
+        code: "EHW",
+        name: "Embedded Electronics Engineering",
+        title: "BLE 5.2 Nordic nRF52833 & 3.7V Battery Charger",
+        status: "Approved",
+        lead: "Dr. Avery Vale",
+        internalRemark: "Spatial addition of Nordic nRF52833 BLE 5.2 and TI BQ24075 3.7V Li-ion charging IC onto ready PCB-TLM-V2.0 layout. Layout released as PCB-TLM-V2.1-BLE with 22mm ground isolation passed.",
+        clientHighlight: "EV telematics hardware revision PCB-TLM-V2.1-BLE completed with integrated BLE 5.2 and 3.7V Lithium-ion charging circuit.",
+        nextAction: "Pilot fabrication release for SMT Line 2.",
+      },
+      {
+        code: "ESW",
+        name: "Embedded Firmware Engineering",
+        title: "RTOS Kernel, Quectel 4G LTE & BLE 5.2 Stack",
+        status: "Approved",
+        lead: "Devon Lane",
+        internalRemark: "FreeRTOS kernel with Quectel 4G AT command engine and BLE 5.2 GATT peripheral stack. Low-power sleep measured at 2.1mA on 3.7V backup battery.",
+        clientHighlight: "Firmware release v2.1 with BLE proximity vehicle immobilizer and dual-bank secure FOTA validated.",
+        nextAction: "Sign off FOTA bootloader hash signature.",
+      },
+      {
+        code: "MECH",
+        name: "Mechanical Engineering",
+        title: "IP67 Enclosure with 3.7V Battery Compartment",
+        status: "Approved",
+        lead: "Samira Holt",
+        internalRemark: "Molded poly-carbonate/ABS enclosure CAD updated with custom internal rib for 3.7V Li-ion 800mAh cell. Silicone gasket durometer 40 Shore A passed IP67 immersion.",
+        clientHighlight: "Enclosure 3D tooling drawings frozen with IP67 submersible gasket and Gore hydrophobic breather vent.",
+        nextAction: "Release injection mold tooling T1 sample.",
+      },
+      {
+        code: "PUR",
+        name: "Purchasing & SCM",
+        title: "Quectel Module, BLE SoC & Certified 3.7V Cells",
+        status: "Approved",
+        lead: "Morgan Reed",
+        internalRemark: "Quectel EG915 cellular SIM module and Nordic nRF52833 BLE SoC sourced via direct franchised distributors. BIS registered, UN 38.3 & NABL certified 3.7V battery cells contracted.",
+        clientHighlight: "All active components, Quectel cellular modules, and NABL-certified Lithium-ion cells secured on Approved Vendor List (AVL).",
+        nextAction: "PO issued for 5,000 pilot assembly kits.",
+      },
+      {
+        code: "QA",
+        name: "Quality Assurance & APQP",
+        title: "DVP&R, iCAT Homologation & NABL Battery Test",
+        status: "Approved",
+        lead: "Jordan Blake",
+        internalRemark: "TBR electrical acceptance and EBT thermal/vibration test reports approved. Homologation certificate granted by iCAT (AIS-140/AIS-004) and NABL lab certified testing for 3.7V Lithium-ion battery safety (AIS-156 & UN 38.3).",
+        clientHighlight: "DVP&R testing passed. Official iCAT homologation certificate and NABL-accredited laboratory Lithium-ion battery safety compliance reports certified.",
+        nextAction: "Prepare final PPAP Level 3 documentation dossier.",
+      },
+      {
+        code: "EMF",
+        name: "Electronics Manufacturing",
+        title: "SMT Line 2 Setup & Reflow Profiling",
+        status: "In progress",
+        lead: "Casey Rowan",
+        internalRemark: "SMT Line 2 10-zone reflow thermal profile validated for double-sided PCB assembly. JST battery connector insertion Poka-Yoke fixture verified.",
+        clientHighlight: "Manufacturing process flow plan and automated optical inspection (AOI) criteria configured for pilot build.",
+        nextAction: "Commence pilot assembly run of 100 units.",
+      },
+      {
+        code: "TST",
+        name: "Production & EOL Testing",
+        title: "Automated FCT Rig & BLE / Cellular RF Fixture",
+        status: "Approved",
+        lead: "Mina Cross",
+        internalRemark: "End-of-line RF test fixture tuned for simultaneous 4G LTE-Cat1 Quectel throughput and BLE 5.2 RSSI signal strength validation.",
+        clientHighlight: "100% automated testing protocol and PDI inspection flashing rig ready for pilot run.",
+        nextAction: "Conduct dry run test on 10 dummy boards.",
+      },
+      {
+        code: "FIN",
+        name: "Accounts & Finance",
+        title: "Project Budget, NRE & Unit Commercials",
+        status: "Approved",
+        lead: "Priya Voss",
+        internalRemark: "Unit target BOM cost ₹1,420 fits OEM contract price ₹2,150 at 34.8% gross margin. Pilot NRE ₹4,50,000 approved by client.",
+        clientHighlight: "Commercial milestone billing and pilot purchase order commitments verified with NexGen EV.",
+        nextAction: "Issue pilot batch delivery advance invoice.",
+      },
+      {
+        code: "SAL",
+        name: "Commercial Sales & OEM Accounts",
+        title: "OEM Contract & Baseline Sign-Off",
+        status: "Approved",
+        lead: "Vikram Malhotra",
+        internalRemark: "NexGen EV VP Rohan Deshmukh authorized requirement baseline BASE-EV-0205-R2 and PO-NEXGEN-2026-8871 for 5,000 pilot units.",
+        clientHighlight: "Commercial agreement signed. Joint engineering steering committee aligned on SOP Q4 2026.",
+        nextAction: "Host bi-weekly pilot delivery milestone review.",
+      },
+    ];
+  }
+
+  if (isReuse) {
+    return [
+      {
+        code: "EHW",
+        name: "Embedded Electronics Engineering",
+        title: "Approved Reuse As-Is (Ready PCB-TLM-V2.0)",
+        status: "Approved",
+        lead: "Dr. Avery Vale",
+        internalRemark: "100% hardware compatibility confirmed with proven ready PCB-TLM-V2.0. Standard 12V tracker circuit board with Quectel 4G SIM module requires zero new schematic or layout.",
+        clientHighlight: "Approved direct reuse of proven PCB-TLM-V2.0 telematics platform. Zero new hardware development NRE required.",
+        nextAction: "Release standard manufacturing pack.",
+      },
+      {
+        code: "ESW",
+        name: "Embedded Firmware Engineering",
+        title: "Standard Telemetry Stack with Quectel Cellular Pipeline",
+        status: "Approved",
+        lead: "Devon Lane",
+        internalRemark: "Standard commercial firmware build verified for Apex Fleet MQTT endpoint with Assisted-GPS ephemeris injection.",
+        clientHighlight: "Firmware v2.0 proven across 18,000+ field-operating trackers in heavy commercial freight.",
+        nextAction: "Flash golden image on pilot run.",
+      },
+      {
+        code: "MECH",
+        name: "Mechanical Engineering",
+        title: "Standard IP65 Polycarbonate Enclosure & 12-Pin Harness",
+        status: "Approved",
+        lead: "Samira Holt",
+        internalRemark: "Existing tooling molds and automotive 12-pin harness drawings reused as-is.",
+        clientHighlight: "Proven IP65 enclosure and vibration-tested bracket reused directly.",
+        nextAction: "Confirm harness inventory for assembly.",
+      },
+      {
+        code: "PUR",
+        name: "Purchasing & SCM",
+        title: "Volume Component Sourcing for Quectel EG915",
+        status: "Approved",
+        lead: "Morgan Reed",
+        internalRemark: "Quectel cellular modules and passives secured on existing volume master contract with franchised distributor.",
+        clientHighlight: "All BOM materials verified on existing Approved Vendor List (AVL).",
+        nextAction: "Trigger scheduled delivery lot 1.",
+      },
+      {
+        code: "QA",
+        name: "Quality Assurance & APQP",
+        title: "Automotive Fleet Reliability Baseline",
+        status: "Approved",
+        lead: "Jordan Blake",
+        internalRemark: "Quality track record established with <0.08% field failure rate across fleet installations.",
+        clientHighlight: "Standard automotive APQP package and certificate of conformity prepared.",
+        nextAction: "Conduct incoming inspection on pilot lot.",
+      },
+      {
+        code: "EMF",
+        name: "Electronics Manufacturing",
+        title: "SMT Line 1 Production Scheduling",
+        status: "Approved",
+        lead: "Casey Rowan",
+        internalRemark: "Standard pick-and-place programs and reflow profile ready for immediate launch on SMT Line 1.",
+        clientHighlight: "Production line allocation scheduled for 5,000-unit pilot batch.",
+        nextAction: "Load reel feeders on Line 1.",
+      },
+      {
+        code: "FIN",
+        name: "Accounts & Finance",
+        title: "Commercial Contract & Margin Reconciliation",
+        status: "Approved",
+        lead: "Priya Voss",
+        internalRemark: "Quoted ₹1,425/unit at 38% gross margin for 25,000 units/year.",
+        clientHighlight: "Contract terms aligned with Apex Fleet PO PO-APEX-2026-1102.",
+        nextAction: "Process commercial sign-off.",
+      },
+      {
+        code: "SAL",
+        name: "Commercial Sales & OEM Accounts",
+        title: "Client Authorization & Delivery Scheduling",
+        status: "Approved",
+        lead: "Vikram Malhotra",
+        internalRemark: "Director Arvind Swaminathan signed off requirement baseline BASE-TLM-0101-R1.",
+        clientHighlight: "Account agreement finalized for multi-year fleet telematics rollout.",
+        nextAction: "Coordinate initial dispatch schedule.",
+      },
+    ];
+  }
+
+  return defaultDepartmentProfiles;
+}
+
 export function ProjectAnalysisSummary({ project }: { project: Project }) {
   const [viewMode, setViewMode] = useState<"internal" | "client">("internal");
   const [diagramMode, setDiagramMode] = useState<"concept" | "diagram">("concept");
   const [taskDeptFilter, setTaskDeptFilter] = useState("all");
   const [taskStatusFilter, setTaskStatusFilter] = useState("all");
   const [taskSearch, setTaskSearch] = useState("");
+
+  const isBleProject = project.code?.includes("BLE") || project.name?.toLowerCase().includes("ble");
+  const isReuseProject = project.code?.includes("TLM-STD") || project.name?.toLowerCase().includes("reuse") || project.name?.toLowerCase().includes("apex");
+  const activeProfiles = useMemo(() => getDepartmentProfiles(project), [project]);
 
   const departments = useQuery({
     queryKey: ["canonical_departments"],
@@ -299,7 +490,11 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm">Approved Requirements</span>
               <Badge variant="outline" className="border-emerald-500/40 text-emerald-600">
-                Locked · R1 Baseline
+                {isBleProject
+                  ? "Locked · R2 Baseline (NexGen EV Authorized)"
+                  : isReuseProject
+                  ? "Locked · R1 Baseline (Apex Fleet Reused)"
+                  : "Locked · R1 Baseline"}
               </Badge>
             </div>
             {designReference && (
@@ -317,35 +512,61 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-lg border bg-muted/30 p-2.5">
               <p className="text-[11px] text-muted-foreground">Operating Supply</p>
-              <p className="text-sm font-bold">24 V DC (12–36V)</p>
+              <p className="text-sm font-bold">
+                {isBleProject ? "12V / 24V (9–36V)" : isReuseProject ? "12V DC Automotive" : "24 V DC (12–36V)"}
+              </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-2.5">
-              <p className="text-[11px] text-muted-foreground">Ingress Protection</p>
-              <p className="text-sm font-bold">IP65 (Gasket sealed)</p>
+              <p className="text-[11px] text-muted-foreground">{isBleProject ? "Radio & Cellular" : "Ingress Protection"}</p>
+              <p className="text-sm font-bold">
+                {isBleProject ? "Quectel 4G + BLE 5.2" : isReuseProject ? "IP65 Gasket Enclosure" : "IP65 (Gasket sealed)"}
+              </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-2.5">
-              <p className="text-[11px] text-muted-foreground">Communication</p>
-              <p className="text-sm font-bold">RS485 + Dual CAN</p>
+              <p className="text-[11px] text-muted-foreground">{isBleProject ? "Backup Battery" : "Communication"}</p>
+              <p className="text-sm font-bold">
+                {isBleProject ? "3.7V Li-ion (AIS-156)" : isReuseProject ? "Quectel 4G SIM + GNSS" : "RS485 + Dual CAN"}
+              </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-2.5">
-              <p className="text-[11px] text-muted-foreground">Pilot Batch Quantity</p>
-              <p className="text-sm font-bold">100 units</p>
+              <p className="text-[11px] text-muted-foreground">{isBleProject ? "Homologation" : "Pilot Batch Quantity"}</p>
+              <p className="text-sm font-bold">
+                {isBleProject ? "iCAT AIS-140 · IP67" : isReuseProject ? "2,000 units" : "100 units"}
+              </p>
             </div>
           </div>
         </Card>
 
-        <Card className="border-amber-500/30 bg-amber-500/5 p-4">
+        <Card className={isBleProject || isReuseProject ? "border-emerald-500/30 bg-emerald-500/5 p-4" : "border-amber-500/30 bg-amber-500/5 p-4"}>
           <div className="flex items-center gap-2">
-            <AlertTriangle className="size-4 text-amber-600" />
-            <span className="text-sm font-bold text-amber-700 dark:text-amber-400">
-              Latest Client Proposal
+            {isBleProject || isReuseProject ? (
+              <CheckCircle2 className="size-4 text-emerald-600" />
+            ) : (
+              <AlertTriangle className="size-4 text-amber-600" />
+            )}
+            <span className="text-sm font-bold text-foreground">
+              {isBleProject
+                ? "Spatial Hardware Modification Approved"
+                : isReuseProject
+                ? "Approved Direct Hardware Reuse"
+                : "Latest Client Proposal"}
             </span>
           </div>
           <p className="mt-2 text-xs font-semibold">
-            Proposed Spec Upgrade: <span className="underline">IP65 → IP67 Submersion</span>
+            {isBleProject ? (
+              <>Ready PCB-TLM-V2.0 → <span className="underline">PCB-TLM-V2.1-BLE</span></>
+            ) : isReuseProject ? (
+              <>100% Match with Ready <span className="underline">PCB-TLM-V2.0</span></>
+            ) : (
+              <>Proposed Spec Upgrade: <span className="underline">IP65 → IP67 Submersion</span></>
+            )}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Client submitted revision proposal. R1 baseline remains strictly locked until feasibility, tooling costing, and DVP&R acceptance pass.
+            {isBleProject
+              ? "All 10 departments approved spatial addition of Nordic nRF52833 BLE 5.2 SoC & TI BQ24075 3.7V Li-ion battery charging circuit. DVP&R completed with iCAT and NABL battery certifications."
+              : isReuseProject
+              ? "All departments confirmed 100% hardware compatibility with proven ready PCB-TLM-V2.0. Zero new hardware engineering required; fast-tracked to pilot assembly."
+              : "Client submitted revision proposal. R1 baseline remains strictly locked until feasibility, tooling costing, and DVP&R acceptance pass."}
           </p>
         </Card>
       </div>
@@ -391,8 +612,16 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
               <rect x="240" y="130" width="55" height="22" rx="3" fill="#1e293b" />
               <circle cx="330" cy="130" r="6" fill="#10b981" />
               <circle cx="355" cy="127" r="6" fill="#38bdf8" />
-              <text x="210" y="70" fill="currentColor" className="text-xs font-bold" fontSize="12">SENSOR GATEWAY IP67</text>
-              <text x="30" y="205" fill="currentColor" className="text-muted-foreground" fontSize="11">Concept Enclosure · 24V / RS485 Dual CAN</text>
+              <text x="210" y="70" fill="currentColor" className="text-xs font-bold" fontSize="12">
+                {isBleProject ? "NEXGEN EV TELEMATICS IP67" : isReuseProject ? "APEX FLEET 12V TRACKER" : "SENSOR GATEWAY IP67"}
+              </text>
+              <text x="30" y="205" fill="currentColor" className="text-muted-foreground" fontSize="11">
+                {isBleProject
+                  ? "Concept Enclosure · 3.7V Li-ion Backup Cell · BLE 5.2 Keyless & Quectel 4G LTE"
+                  : isReuseProject
+                  ? "Reused Platform · Ready PCB-TLM-V2.0 · 12V Quectel 4G SIM"
+                  : "Concept Enclosure · 24V / RS485 Dual CAN"}
+              </text>
             </svg>
           ) : (
             <svg viewBox="0 0 520 200" className="max-h-[170px] w-full max-w-[500px]" role="img" aria-label="System block diagram">
@@ -404,12 +633,14 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
                 <path d="M120 98H195M325 98H390M260 50V70" />
               </g>
               <g fontSize="12" textAnchor="middle" fill="currentColor">
-                <text x="67" y="102" className="font-semibold">Sensors (IO)</text>
+                <text x="67" y="93" className="font-semibold">{isBleProject ? "3.7V Li-ion" : "Sensors"}</text>
+                <text x="67" y="112" className="text-[10px] text-muted-foreground">{isBleProject ? "Backup Cell" : "(IO)"}</text>
                 <text x="260" y="93" className="font-bold text-primary">STM32 MCU</text>
-                <text x="260" y="112" className="text-[10px] text-muted-foreground">Main Controller</text>
-                <text x="447" y="93" className="font-semibold">RS485 / CAN</text>
-                <text x="447" y="112" className="text-[10px] text-muted-foreground">Telemetry Stack</text>
-                <text x="260" y="34" className="font-semibold">24V Power Supply</text>
+                <text x="260" y="112" className="text-[10px] text-muted-foreground">{isBleProject ? "PCB-TLM-V2.1-BLE" : "Main Controller"}</text>
+                <text x="447" y="93" className="font-semibold">{isBleProject ? "Quectel + BLE" : "RS485 / CAN"}</text>
+                <text x="447" y="112" className="text-[10px] text-muted-foreground">{isBleProject ? "4G LTE & BLE 5.2" : "Telemetry Stack"}</text>
+                <text x="260" y="27" className="font-semibold">{isBleProject ? "12V/24V Power" : "24V Power Supply"}</text>
+                <text x="260" y="42" className="text-[9px] text-muted-foreground">{isBleProject ? "& BQ24075 Charger" : ""}</text>
               </g>
             </svg>
           )}
@@ -421,9 +652,15 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-bold text-sm">Progress & Lifecycle Gate Dependencies</span>
-            <Badge variant="outline">Step 2 of 4</Badge>
+            <Badge variant="outline">{isBleProject ? "Step 3 of 4" : isReuseProject ? "Step 4 of 4" : "Step 2 of 4"}</Badge>
           </div>
-          <span className="text-xs text-muted-foreground">Next Gate: Ingress Chamber Test</span>
+          <span className="text-xs text-muted-foreground">
+            {isBleProject
+              ? "Next Gate: SMT Line 2 Pilot Build"
+              : isReuseProject
+              ? "Next Gate: Pilot Dispatch Clearance"
+              : "Next Gate: Ingress Chamber Test"}
+          </span>
         </div>
 
         <div className="mt-4 grid grid-cols-1 items-center gap-2 sm:grid-cols-4">
@@ -433,37 +670,37 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
             </div>
             <div>
               <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">1. Requirements</p>
-              <p className="text-[11px] text-muted-foreground">Locked · R1 baseline</p>
+              <p className="text-[11px] text-muted-foreground">{isBleProject ? "Locked · R2 Baseline" : isReuseProject ? "Locked · R1 Reused" : "Locked · R1 baseline"}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3">
-            <div className="flex size-7 items-center justify-center rounded-full bg-rose-600 text-white">
-              <AlertTriangle className="size-4" />
+          <div className="flex items-center gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3">
+            <div className="flex size-7 items-center justify-center rounded-full bg-emerald-600 text-white">
+              <Check className="size-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-rose-800 dark:text-rose-300">2. Seal Sample</p>
-              <p className="text-[11px] text-muted-foreground">Blocked · Mechanical</p>
+              <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">2. Feasibility</p>
+              <p className="text-[11px] text-muted-foreground">{isBleProject ? "Approved · 10/10 Depts" : isReuseProject ? "Approved As-Is" : "Blocked · Mechanical"}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3 opacity-75">
-            <div className="flex size-7 items-center justify-center rounded-full bg-muted text-muted-foreground font-bold text-xs">
-              3
+          <div className={isBleProject || isReuseProject ? "flex items-center gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3" : "flex items-center gap-3 rounded-lg border bg-muted/40 p-3 opacity-75"}>
+            <div className={isBleProject || isReuseProject ? "flex size-7 items-center justify-center rounded-full bg-emerald-600 text-white" : "flex size-7 items-center justify-center rounded-full bg-muted text-muted-foreground font-bold text-xs"}>
+              {isBleProject || isReuseProject ? <Check className="size-4" /> : "3"}
             </div>
             <div>
-              <p className="text-xs font-bold">3. Ingress Test</p>
-              <p className="text-[11px] text-muted-foreground">Waiting · Quality APQP</p>
+              <p className="text-xs font-bold">{isBleProject ? "3. DVP&R / iCAT / NABL" : "3. Ingress & Testing"}</p>
+              <p className="text-[11px] text-muted-foreground">{isBleProject ? "Passed · Certified" : isReuseProject ? "Passed · Baseline" : "Waiting · Quality APQP"}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3 opacity-75">
-            <div className="flex size-7 items-center justify-center rounded-full bg-muted text-muted-foreground font-bold text-xs">
-              4
+          <div className={isReuseProject ? "flex items-center gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3" : isBleProject ? "flex items-center gap-3 rounded-lg border border-primary/40 bg-primary/10 p-3" : "flex items-center gap-3 rounded-lg border bg-muted/40 p-3 opacity-75"}>
+            <div className={isReuseProject ? "flex size-7 items-center justify-center rounded-full bg-emerald-600 text-white" : "flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-xs"}>
+              {isReuseProject ? <Check className="size-4" /> : "4"}
             </div>
             <div>
               <p className="text-xs font-bold">4. Pilot Release</p>
-              <p className="text-[11px] text-muted-foreground">Waiting · Sign-off</p>
+              <p className="text-[11px] text-muted-foreground">{isBleProject ? "Active · SMT Line 2" : isReuseProject ? "Scheduled · Line 1" : "Waiting · Sign-off"}</p>
             </div>
           </div>
         </div>
@@ -474,63 +711,85 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
         <div className="flex items-center justify-between border-b pb-2">
           <div className="flex items-center gap-2">
             <CircuitBoard className="size-4 text-primary" />
-            <h3 className="text-sm font-bold">Modular Platform Electronics Reuse</h3>
+            <h3 className="text-sm font-bold">
+              {isBleProject
+                ? "Modular Platform Electronics Reuse & BLE Modification"
+                : isReuseProject
+                ? "Modular Platform Electronics Reuse (100% As-Is Hardware Match)"
+                : "Modular Platform Electronics Reuse"}
+            </h3>
           </div>
           <Badge variant="outline" className="text-xs">
-            Decoupled Architecture (Master Plan §6)
+            Decoupled Architecture (Master Plan §5 & §6)
           </Badge>
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg border p-3">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-xs">PCB-CTRL R3</span>
+              <span className="font-bold text-xs">
+                {isBleProject ? "PCB-TLM-V2.0 Base" : isReuseProject ? "PCB-TLM-V2.0 Platform" : "PCB-CTRL R3"}
+              </span>
               <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 text-[10px]">
-                Reuse Proposed
+                {isBleProject ? "Base Reused" : "100% Direct Reuse"}
               </Badge>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Main Controller (STM32)</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isBleProject ? "Base Telematics Circuitry" : "Standard Telematics Board"}
+            </p>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              FW-GATEWAY 2.4 compatibility verified.
+              {isBleProject ? "4-layer FR4 layout, STM32 MCU & buck power reused." : "Proven across 18,000+ commercial fleet installations."}
             </p>
           </div>
 
           <div className="rounded-lg border p-3">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-xs">PCB-IO R2</span>
+              <span className="font-bold text-xs">
+                {isBleProject ? "Quectel 4G LTE Subsystem" : isReuseProject ? "Quectel Cellular SIM Module" : "PCB-IO R2"}
+              </span>
               <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 text-[10px]">
-                Reuse Proposed
+                Approved Reuse
               </Badge>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Sensor Expansion Board</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isBleProject || isReuseProject ? "Cellular & GNSS Receiver" : "Sensor Expansion Board"}
+            </p>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              RS485 transceiver interface verified.
+              {isBleProject || isReuseProject ? "EG915 LTE Cat-1 with Assisted-GPS ephemeris." : "RS485 transceiver interface verified."}
             </p>
           </div>
 
           <div className="rounded-lg border p-3">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-xs">HARNESS-PWR R2</span>
-              <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 text-[10px]">
-                Reuse Proposed
+              <span className="font-bold text-xs">
+                {isBleProject ? "Nordic nRF52833 BLE 5.2" : isReuseProject ? "12V Automotive Power Stage" : "HARNESS-PWR R2"}
+              </span>
+              <Badge variant="secondary" className={isBleProject ? "bg-sky-500/10 text-sky-600 text-[10px]" : "bg-emerald-500/10 text-emerald-600 text-[10px]"}>
+                {isBleProject ? "Spatial Addition · NEW" : "Direct Reuse"}
               </Badge>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">24V Input Harness</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isBleProject ? "Short-Range BLE Radio" : "9–36V Automotive Buck"}
+            </p>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Automotive grade cross-section wired.
+              {isBleProject ? "Spatial addition on top layer with 2.45 GHz chip antenna." : "ISO 7637-2 transient & load dump protection."}
             </p>
           </div>
 
           <div className="rounded-lg border p-3">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-xs">Telemetry Gateway 1.8</span>
-              <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 text-[10px]">
-                Adapt Config
+              <span className="font-bold text-xs">
+                {isBleProject ? "3.7V Li-ion Battery Charger" : isReuseProject ? "IP65 Housing & Harness" : "Telemetry Gateway 1.8"}
+              </span>
+              <Badge variant="secondary" className={isBleProject ? "bg-amber-500/10 text-amber-600 text-[10px]" : "bg-emerald-500/10 text-emerald-600 text-[10px]"}>
+                {isBleProject ? "Power Modification · NEW" : "Direct Reuse"}
               </Badge>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Telemetry & Register Map</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isBleProject ? "TI BQ24075 + MAX17048" : "IP65 Polycarbonate Enclosure"}
+            </p>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Custom register map configured.
+              {isBleProject ? "800mAh backup cell, AIS-156 & UN 38.3 certified." : "Standard enclosure tooling and 12-pin harness reused."}
             </p>
           </div>
         </div>
@@ -605,12 +864,12 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
             </p>
           </div>
           <Badge variant="outline">
-            {defaultDepartmentProfiles.length} Functional Disciplines
+            {activeProfiles.length} Functional Disciplines
           </Badge>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-          {defaultDepartmentProfiles.map((dept) => (
+          {activeProfiles.map((dept) => (
             <Card key={dept.code} className="p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">
                 <div>

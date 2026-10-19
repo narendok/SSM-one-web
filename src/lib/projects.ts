@@ -30,95 +30,24 @@ export interface Project {
   updated_at: string;
 }
 
+import { SAMPLE_PROJECTS, PROJECT_ID_BLE_MODIFIED, PROJECT_ID_AS_IS_REUSE, PROJECT_ID_BMS_48V, PROJECT_ID_MCU_72V } from "./sample-data-lifecycle";
+
 const sb = supabase as any;
 
 export const DEFAULT_PROJECTS: Project[] = [
+  ...SAMPLE_PROJECTS,
+  // Backward compatibility alias for any legacy links
   {
-    id: "proj-bms-001",
-    name: "Smart Battery Management System (BMS-48V)",
-    code: "PRJ-BMS-48V",
-    color: "#0284c7",
-    status: "active",
-    revision: "2.1",
-    design_link: null,
-    project_type: "Hardware & Firmware",
-    department_id: "00000000-0000-4000-a000-000000000001",
-    drive_project_class: "CLIENT",
-    customer_id: null,
-    opportunity_id: null,
-    requirement_baseline_id: null,
-    project_manager_employee_id: null,
-    engineering_lead_employee_id: null,
-    project_stage: "PROTOTYPE",
-    health_status: "GREEN",
-    priority: "high",
-    planned_start_date: "2026-01-10",
-    target_sop_date: "2026-12-15",
-    prototype_quantity: 50,
-    annual_volume: 10000,
-    project_drive_node_id: null,
-    completion_notes: null,
-    archived_at: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
+    ...SAMPLE_PROJECTS[1],
     id: "proj-telematics-002",
-    name: "IoT Telematics Gateway Unit (TGU-v3)",
-    code: "PRJ-TGU-003",
-    color: "#7c3aed",
-    status: "active",
-    revision: "1.4",
-    design_link: null,
-    project_type: "Embedded System",
-    department_id: "00000000-0000-4000-a000-000000000001",
-    drive_project_class: "INTERNAL",
-    customer_id: null,
-    opportunity_id: null,
-    requirement_baseline_id: null,
-    project_manager_employee_id: null,
-    engineering_lead_employee_id: null,
-    project_stage: "PILOT",
-    health_status: "GREEN",
-    priority: "medium",
-    planned_start_date: "2026-02-01",
-    target_sop_date: "2026-10-30",
-    prototype_quantity: 25,
-    annual_volume: 5000,
-    project_drive_node_id: null,
-    completion_notes: null,
-    archived_at: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   },
   {
+    ...SAMPLE_PROJECTS[2],
+    id: "proj-bms-001",
+  },
+  {
+    ...SAMPLE_PROJECTS[3],
     id: "proj-mcu-drive-003",
-    name: "BLDC Motor Controller (MC-72V)",
-    code: "PRJ-MCU-72V",
-    color: "#059669",
-    status: "active",
-    revision: "3.0",
-    design_link: null,
-    project_type: "Power Electronics",
-    department_id: "00000000-0000-4000-a000-000000000001",
-    drive_project_class: "CLIENT",
-    customer_id: null,
-    opportunity_id: null,
-    requirement_baseline_id: null,
-    project_manager_employee_id: null,
-    engineering_lead_employee_id: null,
-    project_stage: "VALIDATION",
-    health_status: "AMBER",
-    priority: "high",
-    planned_start_date: "2025-11-15",
-    target_sop_date: "2026-09-01",
-    prototype_quantity: 100,
-    annual_volume: 25000,
-    project_drive_node_id: null,
-    completion_notes: null,
-    archived_at: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   },
 ];
 
@@ -126,11 +55,15 @@ export async function fetchProjects(): Promise<Project[]> {
   try {
     let query = sb.from("projects").select("*").order("status").order("name");
     const { data, error } = await query;
-    if (!error && Array.isArray(data) && data.length > 0) return data as Project[];
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const existingIds = new Set(data.map((p: any) => p.id));
+      const unrepresented = SAMPLE_PROJECTS.filter((p) => !existingIds.has(p.id));
+      return [...data, ...unrepresented] as Project[];
+    }
   } catch (err) {
     console.warn("fetchProjects error:", err);
   }
-  return DEFAULT_PROJECTS;
+  return SAMPLE_PROJECTS;
 }
 
 export async function fetchDepartmentProjects(departmentId: string): Promise<Project[]> {
@@ -138,13 +71,17 @@ export async function fetchDepartmentProjects(departmentId: string): Promise<Pro
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(departmentId);
     if (isUuid) {
       const { data, error } = await sb.from("projects").select("*").eq("department_id", departmentId).order("status").order("name");
-      if (!error && Array.isArray(data) && data.length > 0) return data as Project[];
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const existingIds = new Set(data.map((p: any) => p.id));
+        const unrepresented = SAMPLE_PROJECTS.filter((p) => p.department_id === departmentId && !existingIds.has(p.id));
+        return [...data, ...unrepresented] as Project[];
+      }
     }
   } catch (err) {
     console.warn("fetchDepartmentProjects error:", err);
   }
-  const filtered = DEFAULT_PROJECTS.filter((p) => !departmentId || p.department_id === departmentId);
-  return filtered.length > 0 ? filtered : DEFAULT_PROJECTS;
+  const filtered = SAMPLE_PROJECTS.filter((p) => !departmentId || p.department_id === departmentId);
+  return filtered.length > 0 ? filtered : SAMPLE_PROJECTS;
 }
 
 export async function fetchComponentProjectIds(componentId: string): Promise<string[]> {

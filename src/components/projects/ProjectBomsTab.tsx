@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { FileSpreadsheet, FolderInput, ChevronRight, ArrowLeft, Upload, FolderOpen } from "lucide-react";
 import { fetchProjectBoms, fetchProjectBomItems, type ProjectBomSummary, type ProjectBomItemRow } from "@/lib/project-bom.functions";
+import { getSampleBoms, getSampleBomDetail } from "@/lib/sample-data-lifecycle";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,12 +30,29 @@ export function ProjectBomsTab({ projectId }: { projectId: string }) {
 
   const { data: boms = [], isLoading } = useQuery({
     queryKey: ["project_boms", projectId],
-    queryFn: () => listFn({ data: { projectId } }),
+    queryFn: async () => {
+      try {
+        const res = await listFn({ data: { projectId } });
+        if (res && res.length > 0) return res;
+      } catch (err) {
+        console.warn("Project BOMs fetch fallback to sample:", err);
+      }
+      return getSampleBoms(projectId) as unknown as ProjectBomSummary[];
+    },
   });
 
   const { data: detail } = useQuery({
     queryKey: ["project_bom_detail", openBomId],
-    queryFn: () => itemsFn({ data: { bomId: openBomId! } }),
+    queryFn: async () => {
+      if (!openBomId) return null;
+      try {
+        const res = await itemsFn({ data: { bomId: openBomId } });
+        if (res) return res;
+      } catch (err) {
+        console.warn("Project BOM detail fetch fallback to sample:", err);
+      }
+      return getSampleBomDetail(openBomId) as any;
+    },
     enabled: !!openBomId,
   });
 
