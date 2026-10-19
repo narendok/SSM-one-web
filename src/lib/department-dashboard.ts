@@ -16,6 +16,33 @@ export const departmentDefinitions: { id: DashboardDepartment; label: string; pe
   { id: "finance", label: "Finance", permission: "finance.view" },
 ];
 
+export function canonicalToDashboardDepartment(canonicalId: string | null): DashboardDepartment | null {
+  if (!canonicalId) return null;
+  const lower = canonicalId.toLowerCase();
+  if (lower.includes("rnd") || lower.includes("hardware") || lower.includes("firmware") || lower.includes("mechanical") || lower.includes("eng")) return "rnd";
+  if (lower.includes("proc") || lower.includes("purchase") || lower.includes("store")) return "procurement";
+  if (lower.includes("prod")) return "production";
+  if (lower.includes("fac") || lower.includes("maint") || lower.includes("security")) return "facility";
+  if (lower.includes("ops") || lower.includes("qms") || lower.includes("qa")) return "operations";
+  if (lower.includes("sal")) return "sales";
+  if (lower.includes("hr") || lower.includes("people")) return "hr";
+  if (lower.includes("fin")) return "finance";
+  return null;
+}
+
+export function dashboardToCanonicalDepartment(dashboardDept: DashboardDepartment): string {
+  switch (dashboardDept) {
+    case "rnd": return "dept-rnd";
+    case "procurement": return "dept-procurement";
+    case "production": return "dept-production";
+    case "facility": return "dept-facility";
+    case "operations": return "dept-operations";
+    case "sales": return "dept-sales";
+    case "hr": return "dept-hr";
+    case "finance": return "dept-finance";
+  }
+}
+
 export function getPermittedDepartments(role: string | null, permissions: string[]) {
   return departmentDefinitions.filter((department) => role === "admin" || permissions.includes(department.permission));
 }

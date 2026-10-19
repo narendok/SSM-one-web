@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export function WorkspaceSwitcher() {
   const { role, permissions, employeeStatus } = useAuth();
+  const isAdmin = role === "admin";
   const departments = useQuery({ queryKey: ["active-departments"], queryFn: fetchCanonicalDepartments });
   const [departmentId, setDepartmentId] = useState<string | null>(() => readWorkspaceDepartmentId());
 
@@ -32,8 +33,24 @@ export function WorkspaceSwitcher() {
 
   const selectedDepartment = (departments.data ?? []).find((department) => department.id === departmentId) ?? null;
   const workspace = workspaceForDepartment(selectedDepartment);
-  const hasWorkspaceAccess = (department: CanonicalDepartment) => role === "admin" || Boolean(workspaceForDepartment(department)?.items.some((item) => !item.permission || permissions.includes(item.permission)));
-  const availableDepartments = (departments.data ?? []).filter(hasWorkspaceAccess);
+
+  // If user is NOT admin, they are locked to their assigned department!
+  // No switcher dropdown is shown for regular department accounts.
+  if (!isAdmin) {
+    const label = workspace?.label ?? selectedDepartment?.name ?? "Assigned Workspace";
+    return (
+      <div
+        className="flex h-8 max-w-48 items-center gap-1.5 rounded-md border bg-muted/40 px-2.5 text-xs font-medium text-foreground/90 select-none"
+        title={`${label} (Assigned Workspace)`}
+      >
+        <Building2 className="size-3.5 shrink-0 text-primary" />
+        <span className="truncate hidden sm:inline">{label}</span>
+      </div>
+    );
+  }
+
+  // Admin users can explore and switch between any department workspace or view all workspaces
+  const availableDepartments = departments.data ?? [];
   const triggerLabel = workspace?.label ?? "All workspaces";
   const chooseWorkspace = (nextDepartmentId: string | null) => {
     setWorkspaceDepartmentId(nextDepartmentId);
@@ -43,15 +60,26 @@ export function WorkspaceSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 max-w-44 gap-1.5 px-2" title="Change department workspace" aria-label={`Department workspace: ${triggerLabel}`}>
-          <Building2 className="size-4 shrink-0" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 max-w-44 gap-1.5 px-2"
+          title="Change department workspace"
+          aria-label={`Department workspace: ${triggerLabel}`}
+        >
+          <Building2 className="size-4 shrink-0 text-primary" />
           <span className="hidden truncate text-xs font-medium lg:inline">{triggerLabel}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Department workspace</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {role === "admin" && <WorkspaceItem label="All workspaces" active={!departmentId} onSelect={() => chooseWorkspace(null)} icon={<Layers3 className="size-4" />} />}
+        <WorkspaceItem
+          label="All workspaces"
+          active={!departmentId}
+          onSelect={() => chooseWorkspace(null)}
+          icon={<Layers3 className="size-4" />}
+        />
         {availableDepartments.map((department) => (
           <WorkspaceItem
             key={department.id}
@@ -66,5 +94,11 @@ export function WorkspaceSwitcher() {
 }
 
 function WorkspaceItem({ label, active, onSelect, icon }: { label: string; active: boolean; onSelect: () => void; icon?: React.ReactNode }) {
-  return <DropdownMenuItem onSelect={onSelect} className="flex items-center gap-2">{icon ?? <Building2 className="size-4" />}<span className="flex-1">{label}</span>{active && <Check className="size-4 text-primary" />}</DropdownMenuItem>;
+  return (
+    <DropdownMenuItem onSelect={onSelect} className="flex items-center gap-2">
+      {icon ?? <Building2 className="size-4" />}
+      <span className="flex-1">{label}</span>
+      {active && <Check className="size-4 text-primary" />}
+    </DropdownMenuItem>
+  );
 }

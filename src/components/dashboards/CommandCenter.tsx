@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CalendarDays, ChevronDown, FileText, Layers3, Loader2, UserRound, UsersRound, Wrench } from "lucide-react";
+import { AlertTriangle, Building2, CalendarDays, ChevronDown, FileText, Layers3, Loader2, UserRound, UsersRound, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,7 +73,71 @@ function DepartmentSelector({ departments, isAdmin, value, onChange }: { departm
   const selectedDepartment = departments.find((department) => department.id === value) ?? null;
   const workTarget = selectedDepartment ? departmentWorkTarget(selectedDepartment) : "/tasks";
   const label = isAdmin ? "Workspace view" : "Department";
-  return <div className="w-full sm:w-72"><p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p><div className="flex gap-2"><Select value={value ?? "all"} onValueChange={(nextValue) => onChange(nextValue === "all" ? null : nextValue)}><SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger><SelectContent>{isAdmin && <SelectItem value="all"><span className="flex items-center gap-2"><Layers3 className="size-3.5" />All departments</span></SelectItem>}{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name}{department.aliases.length ? ` · ${department.aliases.join(", ")}` : ""}</SelectItem>)}</SelectContent></Select>{selectedDepartment && <Button asChild size="icon" variant="outline" title={`Open ${selectedDepartment.name} lead workspace`} aria-label={`Open ${selectedDepartment.name} lead workspace`}><Link to={workTarget}><Wrench className="size-4" /></Link></Button>}</div>{isAdmin && <p className="mt-1.5 text-xs text-muted-foreground">Changes your oversight view only; permissions remain administrator-controlled.</p>}</div>;
+
+  if (!isAdmin) {
+    return (
+      <div className="w-full sm:w-64">
+        <p className="mb-1.5 text-xs font-medium text-muted-foreground">Department Workspace</p>
+        <div className="flex h-9 items-center justify-between rounded-md border bg-muted/30 px-3 text-xs font-medium text-foreground">
+          <span className="flex items-center gap-2 truncate">
+            <Building2 className="size-3.5 text-primary shrink-0" />
+            <span className="truncate">{selectedDepartment?.name ?? "Assigned Department"}</span>
+          </span>
+          {selectedDepartment && (
+            <Button
+              asChild
+              size="icon"
+              variant="ghost"
+              className="size-7"
+              title={`Open ${selectedDepartment.name} lead workspace`}
+              aria-label={`Open ${selectedDepartment.name} lead workspace`}
+            >
+              <Link to={workTarget}>
+                <Wrench className="size-3.5" />
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full sm:w-72">
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="flex gap-2">
+        <Select value={value ?? "all"} onValueChange={(nextValue) => onChange(nextValue === "all" ? null : nextValue)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select department" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              <span className="flex items-center gap-2">
+                <Layers3 className="size-3.5" />
+                All departments
+              </span>
+            </SelectItem>
+            {departments.map((department) => (
+              <SelectItem key={department.id} value={department.id}>
+                {department.name}
+                {department.aliases.length ? ` · ${department.aliases.join(", ")}` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {selectedDepartment && (
+          <Button asChild size="icon" variant="outline" title={`Open ${selectedDepartment.name} lead workspace`} aria-label={`Open ${selectedDepartment.name} lead workspace`}>
+            <Link to={workTarget}>
+              <Wrench className="size-4" />
+            </Link>
+          </Button>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs text-muted-foreground">
+        Changes your oversight view only; permissions remain administrator-controlled.
+      </p>
+    </div>
+  );
 }
 
 function QuickViewCard({ label, value, detail, to }: { label: string; value: number; detail: string; to: "/tasks" }) {
