@@ -37,6 +37,7 @@ import { LifecycleDocumentDraftPanel } from "@/components/projects/LifecycleDocu
 import { LifecycleResponsibilityPlan } from "@/components/projects/LifecycleResponsibilityPlan";
 import { lifecycleStageReadiness, requirementRevisionRelation, type CompanyStageRead } from "@/lib/connected-lifecycle-responsibility-plan";
 import { SAMPLE_REGULATORY_REPORTS } from "@/lib/sample-data-lifecycle";
+import { DepartmentChroniclesFeed } from "@/components/departments/DepartmentChroniclesFeed";
 import { toast } from "sonner";
 
 const sb = supabase as any;
@@ -673,6 +674,14 @@ export function SharedProductLifecycle({
               </Button>
             </div>
           </Card>
+
+          <DepartmentChroniclesFeed
+            key={activeStage.stageNumber}
+            defaultStageNumber={activeStage.stageNumber}
+            departmentId="all"
+            departmentName={`Stage ${activeStage.stageNumber} (${activeStage.shortLabel})`}
+            className="border-primary/20"
+          />
         </div>
 
         {/* Sidebar: Regulatory Register & Quick Actions */}

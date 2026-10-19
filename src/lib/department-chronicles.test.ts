@@ -3,72 +3,84 @@ import {
   fetchDepartmentChronicles,
   createDepartmentChronicle,
   updateDepartmentChronicle,
+  quickUpdateChronicleStatus,
+  quickUpdateChronicleStage,
   deleteDepartmentChronicle,
   resetDepartmentChronicles,
+  LIFECYCLE_STAGES,
 } from "./department-chronicles";
 
-describe("Department Chronicles feed management", () => {
+describe("Department Chronicles feed & 9-stage milestones management", () => {
   beforeEach(() => {
     resetDepartmentChronicles();
   });
 
-  it("fetches seeded initial chronicles across departments", () => {
+  it("fetches seeded initial chronicles across all 9 lifecycle stages", () => {
     const all = fetchDepartmentChronicles();
-    expect(all.length).toBeGreaterThanOrEqual(5);
+    expect(all.length).toBeGreaterThanOrEqual(9);
 
-    const mechChronicles = fetchDepartmentChronicles("mechanical");
-    expect(mechChronicles.length).toBeGreaterThanOrEqual(1);
-    expect(mechChronicles.some((c) => c.title.includes("CAD"))).toBe(true);
+    // Verify milestones exist across stages
+    const stage1 = fetchDepartmentChronicles(undefined, 1);
+    expect(stage1.length).toBeGreaterThanOrEqual(1);
+    expect(stage1.some((c) => c.title.includes("PRD"))).toBe(true);
 
-    const rndChronicles = fetchDepartmentChronicles("rnd");
-    expect(rndChronicles.length).toBeGreaterThanOrEqual(1);
-    expect(rndChronicles.some((c) => c.title.includes("BLE"))).toBe(true);
+    const stage2 = fetchDepartmentChronicles(undefined, 2);
+    expect(stage2.length).toBeGreaterThanOrEqual(1);
+
+    const stage6 = fetchDepartmentChronicles(undefined, 6);
+    expect(stage6.length).toBeGreaterThanOrEqual(1);
+    expect(stage6.some((c) => c.title.includes("iCAT"))).toBe(true);
+    expect(stage6.some((c) => c.title.includes("NABL"))).toBe(true);
   });
 
-  it("creates a new chronicle entry successfully", () => {
+  it("creates a new stage milestone with deliverables", () => {
     const created = createDepartmentChronicle({
       departmentId: "mechanical",
-      title: "Vibration Test Fixture Fabricated",
-      content: "Custom aluminum mounting fixture completed for MIL-STD vibration testing profile.",
+      projectCode: "PRJ-TLM-002",
+      stageNumber: 6,
+      stageStatus: "completed",
+      title: "Drop Test & Submersion Seal Integrity Pass",
+      content: "IP67 housing survived 1.5m drop and 1-meter water immersion testing for 30 minutes with zero moisture ingress.",
       category: "milestone",
-      authorName: "Karthik R",
+      deliverables: ["1.5m drop test report", "IP67 immersion test video log"],
+      authorName: "Arun Kulkarni",
       authorRole: "Lead Mechanical Engineer",
       pinned: true,
     });
 
     expect(created.id).toBeDefined();
-    expect(created.createdAt).toBeDefined();
+    expect(created.stageNumber).toBe(6);
+    expect(created.stageName).toContain("Stage 6");
+    expect(created.deliverables?.length).toBe(2);
 
-    const mechChronicles = fetchDepartmentChronicles("mechanical");
-    expect(mechChronicles[0].title).toBe("Vibration Test Fixture Fabricated");
-    expect(mechChronicles[0].pinned).toBe(true);
+    const stage6Chronicles = fetchDepartmentChronicles("mechanical", 6);
+    expect(stage6Chronicles[0].title).toBe("Drop Test & Submersion Seal Integrity Pass");
   });
 
-  it("updates an existing chronicle entry", () => {
-    const created = createDepartmentChronicle({
-      departmentId: "rnd",
-      title: "Initial Draft Note",
-      content: "Drafting schematic review notes.",
-      category: "update",
-      authorName: "Arun Kumar",
-      authorRole: "Hardware Engineer",
-    });
+  it("allows changing status here and there via quickUpdateChronicleStatus", () => {
+    const all = fetchDepartmentChronicles();
+    const target = all[0];
 
-    const updated = updateDepartmentChronicle(created.id, {
-      title: "Finalized Schematic Sign-off",
-      category: "decision",
-      content: "Schematic signed off after peer review.",
-    });
+    const updated = quickUpdateChronicleStatus(target.id, "blocked");
+    expect(updated.stageStatus).toBe("blocked");
 
-    expect(updated.title).toBe("Finalized Schematic Sign-off");
-    expect(updated.category).toBe("decision");
-
-    const rndList = fetchDepartmentChronicles("rnd");
-    const found = rndList.find((c) => c.id === created.id);
-    expect(found?.title).toBe("Finalized Schematic Sign-off");
+    const refreshed = fetchDepartmentChronicles().find((c) => c.id === target.id);
+    expect(refreshed?.stageStatus).toBe("blocked");
   });
 
-  it("deletes a chronicle entry", () => {
+  it("allows changing stage here and there via quickUpdateChronicleStage", () => {
+    const all = fetchDepartmentChronicles();
+    const target = all[0];
+
+    const updated = quickUpdateChronicleStage(target.id, 7);
+    expect(updated.stageNumber).toBe(7);
+    expect(updated.stageName).toContain("Stage 7");
+
+    const refreshed = fetchDepartmentChronicles(undefined, 7).find((c) => c.id === target.id);
+    expect(refreshed).toBeDefined();
+  });
+
+  it("updates and deletes a chronicle milestone", () => {
     const created = createDepartmentChronicle({
       departmentId: "procurement",
       title: "Temporary Quotation Inquiry",
@@ -78,10 +90,16 @@ describe("Department Chronicles feed management", () => {
       authorRole: "Procurement Specialist",
     });
 
+    const updated = updateDepartmentChronicle(created.id, {
+      title: "Approved PO Issued",
+      category: "decision",
+    });
+    expect(updated.title).toBe("Approved PO Issued");
+
     const deleted = deleteDepartmentChronicle(created.id);
     expect(deleted).toBe(true);
 
-    const procList = fetchDepartmentChronicles("procurement");
-    expect(procList.some((c) => c.id === created.id)).toBe(false);
+    const check = fetchDepartmentChronicles().find((c) => c.id === created.id);
+    expect(check).toBeUndefined();
   });
 });
