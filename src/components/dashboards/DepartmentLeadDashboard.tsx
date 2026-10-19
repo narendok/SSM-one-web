@@ -67,13 +67,15 @@ export function DepartmentLeadDashboard() {
     ? (search.department as DashboardDepartment)
     : undefined;
 
-  // Active selection: URL search param if present, otherwise top workspace context, otherwise first available
-  const activeSelection: DashboardDepartment =
-    requestedDepartment && availableDepartments.some((d) => d.id === requestedDepartment)
-      ? requestedDepartment
-      : mappedFromContext && availableDepartments.some((d) => d.id === mappedFromContext)
-      ? mappedFromContext
-      : availableDepartments[0]?.id ?? "rnd";
+  // Active selection: For non-admins, strictly lock to their mapped assigned workspace.
+  // For admins, honor URL search param if present, then top workspace context, then first available.
+  const activeSelection: DashboardDepartment = !isAdmin && mappedFromContext
+    ? mappedFromContext
+    : requestedDepartment && availableDepartments.some((d) => d.id === requestedDepartment)
+    ? requestedDepartment
+    : mappedFromContext && availableDepartments.some((d) => d.id === mappedFromContext)
+    ? mappedFromContext
+    : availableDepartments[0]?.id ?? "rnd";
 
   const activeDepartment =
     availableDepartments.find((department) => department.id === activeSelection) ??

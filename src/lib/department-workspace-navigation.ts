@@ -6,7 +6,7 @@ import {
   Truck, Users, WalletCards, Wrench,
 } from "lucide-react";
 
-export type WorkspaceKind = "rnd" | "procurement" | "production" | "facility" | "operations" | "hr" | "sales" | "finance";
+export type WorkspaceKind = "rnd" | "mechanical" | "procurement" | "production" | "facility" | "operations" | "hr" | "sales" | "finance";
 export type WorkspaceNavItem = { label: string; to: string; icon: LucideIcon; permission?: string };
 
 export type WorkspaceDefinition = {
@@ -18,8 +18,11 @@ export type WorkspaceDefinition = {
 };
 
 export const workspaceDefinitions: WorkspaceDefinition[] = [
-  { id: "rnd", terms: ["rnd", "hardware & r&d"], label: "Hardware & R&D", summary: "Requirements, engineering disciplines, validation, and release evidence.", items: [
+  { id: "rnd", terms: ["rnd", "hardware & r&d", "hardware", "firmware"], label: "Hardware & R&D", summary: "Requirements, engineering disciplines, validation, and release evidence.", items: [
     { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" }, { label: "Engineering workspace", to: "/", icon: HardHat, permission: "engineering.view" }, { label: "BOM sourcing", to: "/bom", icon: FileSpreadsheet, permission: "engineering.edit" }, { label: "Validation & repair", to: "/pcb", icon: Wrench, permission: "engineering.edit" }, { label: "Engineering assignments", to: "/assignments", icon: ClipboardList, permission: "engineering.view" }, { label: "Release documents", to: "/drive", icon: FileText, permission: "documents.view" },
+  ] },
+  { id: "mechanical", terms: ["mech", "mechanical", "cad", "enclosure"], label: "Mechanical Engineering", summary: "CAD models, thermal dissipation, structural analysis, mechanical drawings, and enclosure BOM components.", items: [
+    { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" }, { label: "Mechanical workspace", to: "/", icon: HardHat, permission: "engineering.view" }, { label: "BOM sourcing", to: "/bom", icon: FileSpreadsheet, permission: "engineering.edit" }, { label: "Design drawings", to: "/drive", icon: FileText, permission: "documents.view" }, { label: "Engineering assignments", to: "/assignments", icon: ClipboardList, permission: "engineering.view" }, { label: "Production dispatch", to: "/production/dispatch", icon: Send, permission: "production.view" },
   ] },
   { id: "procurement", terms: ["proc", "procurement", "purchase", "stores", "incoming quality", "qa"], label: "Procurement", summary: "Supplier data, sourcing, orders, incoming quality, Stores records, and controlled BOM sourcing.", items: [
     { label: "Purchase requests", to: "/procurement/requests", icon: ClipboardList, permission: "procurement.view" }, { label: "RFQs & quotations", to: "/procurement/rfqs", icon: FileSearch, permission: "procurement.view" }, { label: "Purchase orders", to: "/procurement/orders", icon: ShoppingCart, permission: "procurement.view" }, { label: "Supplier shipments", to: "/procurement/shipments", icon: Truck, permission: "procurement.view" }, { label: "Incoming quality", to: "/quality/incoming", icon: ShieldCheck, permission: "quality.view" }, { label: "Stores records", to: "/stores/inventory", icon: Boxes, permission: "stores.view" }, { label: "BOM sourcing", to: "/bom", icon: FileSpreadsheet, permission: "engineering.edit" }, { label: "Procurement documents", to: "/drive", icon: FileText, permission: "documents.view" },

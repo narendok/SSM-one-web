@@ -129,7 +129,7 @@ export const DEPARTMENT_TEST_ACCOUNTS: DepartmentTestAccount[] = [
     roleLabel: "Mechanical Lead Engineer",
     email: "mech.lead@ssmone.internal",
     password: "Mechanical@SSMone2026",
-    defaultPath: "/",
+    defaultPath: "/dashboards?department=mechanical",
     badgeColor: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
     permissions: [
       "projects.view",
