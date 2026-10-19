@@ -106,10 +106,29 @@ const SELECT =
 
 export type CanonicalDepartment = { id: string; name: string; code: string | null; aliases: string[] };
 
+export const DEFAULT_CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
+  { id: "dept-rnd", name: "Hardware & R&D", code: "RND", aliases: ["rnd", "hardware", "engineering"] },
+  { id: "dept-firmware", name: "Firmware", code: "FW", aliases: ["firmware", "software", "embedded"] },
+  { id: "dept-mechanical", name: "Mechanical", code: "MECH", aliases: ["mechanical", "cad", "enclosure"] },
+  { id: "dept-procurement", name: "Procurement", code: "PROC", aliases: ["proc", "procurement", "purchase", "stores"] },
+  { id: "dept-production", name: "Production", code: "PROD", aliases: ["prod", "production", "manufacturing"] },
+  { id: "dept-facility", name: "Facility / Maintenance", code: "FAC", aliases: ["fac", "facility", "maintenance", "security"] },
+  { id: "dept-operations", name: "Operations / QMS", code: "OPS", aliases: ["ops", "operations", "qms", "qa", "quality"] },
+  { id: "dept-hr", name: "HR", code: "HR", aliases: ["hr", "human resources", "people"] },
+  { id: "dept-sales", name: "Sales", code: "SAL", aliases: ["sal", "sales", "commercial"] },
+  { id: "dept-finance", name: "Finance", code: "FIN", aliases: ["fin", "finance", "accounts"] },
+];
+
 export async function fetchCanonicalDepartments(): Promise<CanonicalDepartment[]> {
-  const { data, error } = await sb.from("departments").select("id,name,code,aliases").eq("is_active", true).order("sort_order").order("name");
-  if (error) throw error;
-  return (data ?? []) as CanonicalDepartment[];
+  try {
+    const { data, error } = await sb.from("departments").select("id,name,code,aliases").eq("is_active", true).order("sort_order").order("name");
+    if (!error && Array.isArray(data) && data.length > 0) {
+      return data as CanonicalDepartment[];
+    }
+  } catch (err) {
+    console.warn("Using default canonical departments fallback:", err);
+  }
+  return DEFAULT_CANONICAL_DEPARTMENTS;
 }
 
 export async function fetchTasks(projectId?: string, departmentId?: string): Promise<ProjectTask[]> {
