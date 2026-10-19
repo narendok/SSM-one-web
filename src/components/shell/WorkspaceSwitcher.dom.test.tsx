@@ -19,6 +19,16 @@ vi.mock("@/hooks/useAuth", () => ({
   }),
 }));
 
+const mockDepartments = [
+  { id: "dept-sales", name: "Sales", code: "SAL", aliases: ["sales"] },
+  { id: "dept-rnd", name: "Hardware & R&D", code: "RND", aliases: ["rnd", "hardware"] },
+];
+
+vi.mock("@/lib/tasks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/tasks")>()),
+  fetchCanonicalDepartments: vi.fn().mockImplementation(async () => mockDepartments),
+}));
+
 function renderWithClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);

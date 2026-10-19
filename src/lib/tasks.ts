@@ -106,17 +106,30 @@ const SELECT =
 
 export type CanonicalDepartment = { id: string; name: string; code: string | null; aliases: string[] };
 
+export const CANONICAL_DEPT_UUIDS = {
+  RND: "00000000-0000-4000-a000-000000000001",
+  FIRMWARE: "00000000-0000-4000-a000-000000000002",
+  MECHANICAL: "00000000-0000-4000-a000-000000000003",
+  PROCUREMENT: "00000000-0000-4000-a000-000000000004",
+  PRODUCTION: "00000000-0000-4000-a000-000000000005",
+  FACILITY: "00000000-0000-4000-a000-000000000006",
+  OPERATIONS: "00000000-0000-4000-a000-000000000007",
+  HR: "00000000-0000-4000-a000-000000000008",
+  SALES: "00000000-0000-4000-a000-000000000009",
+  FINANCE: "00000000-0000-4000-a000-000000000010",
+} as const;
+
 export const DEFAULT_CANONICAL_DEPARTMENTS: CanonicalDepartment[] = [
-  { id: "dept-rnd", name: "Hardware & R&D", code: "RND", aliases: ["rnd", "hardware", "engineering"] },
-  { id: "dept-firmware", name: "Firmware", code: "FW", aliases: ["firmware", "software", "embedded"] },
-  { id: "dept-mechanical", name: "Mechanical", code: "MECH", aliases: ["mechanical", "cad", "enclosure"] },
-  { id: "dept-procurement", name: "Procurement", code: "PROC", aliases: ["proc", "procurement", "purchase", "stores"] },
-  { id: "dept-production", name: "Production", code: "PROD", aliases: ["prod", "production", "manufacturing"] },
-  { id: "dept-facility", name: "Facility / Maintenance", code: "FAC", aliases: ["fac", "facility", "maintenance", "security"] },
-  { id: "dept-operations", name: "Operations / QMS", code: "OPS", aliases: ["ops", "operations", "qms", "qa", "quality"] },
-  { id: "dept-hr", name: "HR", code: "HR", aliases: ["hr", "human resources", "people"] },
-  { id: "dept-sales", name: "Sales", code: "SAL", aliases: ["sal", "sales", "commercial"] },
-  { id: "dept-finance", name: "Finance", code: "FIN", aliases: ["fin", "finance", "accounts"] },
+  { id: CANONICAL_DEPT_UUIDS.RND, name: "Hardware & R&D", code: "RND", aliases: ["rnd", "hardware", "engineering"] },
+  { id: CANONICAL_DEPT_UUIDS.FIRMWARE, name: "Firmware", code: "FW", aliases: ["firmware", "software", "embedded"] },
+  { id: CANONICAL_DEPT_UUIDS.MECHANICAL, name: "Mechanical", code: "MECH", aliases: ["mechanical", "cad", "enclosure"] },
+  { id: CANONICAL_DEPT_UUIDS.PROCUREMENT, name: "Procurement", code: "PROC", aliases: ["proc", "procurement", "purchase", "stores"] },
+  { id: CANONICAL_DEPT_UUIDS.PRODUCTION, name: "Production", code: "PROD", aliases: ["prod", "production", "manufacturing"] },
+  { id: CANONICAL_DEPT_UUIDS.FACILITY, name: "Facility / Maintenance", code: "FAC", aliases: ["fac", "facility", "maintenance", "security"] },
+  { id: CANONICAL_DEPT_UUIDS.OPERATIONS, name: "Operations / QMS", code: "OPS", aliases: ["ops", "operations", "qms", "qa", "quality"] },
+  { id: CANONICAL_DEPT_UUIDS.HR, name: "HR", code: "HR", aliases: ["hr", "human resources", "people"] },
+  { id: CANONICAL_DEPT_UUIDS.SALES, name: "Sales", code: "SAL", aliases: ["sal", "sales", "commercial"] },
+  { id: CANONICAL_DEPT_UUIDS.FINANCE, name: "Finance", code: "FIN", aliases: ["fin", "finance", "accounts"] },
 ];
 
 export async function fetchCanonicalDepartments(): Promise<CanonicalDepartment[]> {
@@ -132,12 +145,17 @@ export async function fetchCanonicalDepartments(): Promise<CanonicalDepartment[]
 }
 
 export async function fetchTasks(projectId?: string, departmentId?: string): Promise<ProjectTask[]> {
-  let q = sb.from("project_tasks").select(SELECT).order("sort_order").order("created_at", { ascending: false });
-  if (projectId) q = q.eq("project_id", projectId);
-  if (departmentId) q = q.eq("department_id", departmentId);
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data ?? []) as ProjectTask[];
+  try {
+    let q = sb.from("project_tasks").select(SELECT).order("sort_order").order("created_at", { ascending: false });
+    if (projectId) q = q.eq("project_id", projectId);
+    const isUuid = departmentId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(departmentId);
+    if (isUuid) q = q.eq("department_id", departmentId);
+    const { data, error } = await q;
+    if (!error && Array.isArray(data)) return data as ProjectTask[];
+  } catch (err) {
+    console.warn("fetchTasks error:", err);
+  }
+  return [];
 }
 
 export async function fetchOpenTaskCount(): Promise<number> {

@@ -31,7 +31,14 @@ export function WorkspaceSwitcher() {
     };
   }, []);
 
-  const selectedDepartment = (departments.data ?? []).find((department) => department.id === departmentId) ?? null;
+  const selectedDepartment =
+    (departments.data ?? []).find(
+      (department) =>
+        department.id === departmentId ||
+        department.code?.toLowerCase() === departmentId?.toLowerCase() ||
+        department.aliases?.some((a) => a.toLowerCase() === departmentId?.toLowerCase()) ||
+        `dept-${department.code?.toLowerCase()}` === departmentId?.toLowerCase()
+    ) ?? null;
   const workspace = workspaceForDepartment(selectedDepartment);
 
   // If user is NOT admin, they are locked to their assigned department!
