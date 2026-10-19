@@ -30,58 +30,19 @@ export interface Project {
   updated_at: string;
 }
 
-import { SAMPLE_PROJECTS, PROJECT_ID_BLE_MODIFIED, PROJECT_ID_AS_IS_REUSE, PROJECT_ID_BMS_48V, PROJECT_ID_MCU_72V } from "./sample-data-lifecycle";
-
 const sb = supabase as any;
 
-export const DEFAULT_PROJECTS: Project[] = [
-  ...SAMPLE_PROJECTS,
-  // Backward compatibility alias for any legacy links
-  {
-    ...SAMPLE_PROJECTS[1],
-    id: "proj-telematics-002",
-  },
-  {
-    ...SAMPLE_PROJECTS[2],
-    id: "proj-bms-001",
-  },
-  {
-    ...SAMPLE_PROJECTS[3],
-    id: "proj-mcu-drive-003",
-  },
-];
-
 export async function fetchProjects(): Promise<Project[]> {
-  try {
-    let query = sb.from("projects").select("*").order("status").order("name");
-    const { data, error } = await query;
-    if (!error && Array.isArray(data) && data.length > 0) {
-      const existingIds = new Set(data.map((p: any) => p.id));
-      const unrepresented = SAMPLE_PROJECTS.filter((p) => !existingIds.has(p.id));
-      return [...data, ...unrepresented] as Project[];
-    }
-  } catch (err) {
-    console.warn("fetchProjects error:", err);
-  }
-  return SAMPLE_PROJECTS;
+  let query = sb.from("projects").select("*").order("status").order("name");
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as Project[];
 }
 
 export async function fetchDepartmentProjects(departmentId: string): Promise<Project[]> {
-  try {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(departmentId);
-    if (isUuid) {
-      const { data, error } = await sb.from("projects").select("*").eq("department_id", departmentId).order("status").order("name");
-      if (!error && Array.isArray(data) && data.length > 0) {
-        const existingIds = new Set(data.map((p: any) => p.id));
-        const unrepresented = SAMPLE_PROJECTS.filter((p) => p.department_id === departmentId && !existingIds.has(p.id));
-        return [...data, ...unrepresented] as Project[];
-      }
-    }
-  } catch (err) {
-    console.warn("fetchDepartmentProjects error:", err);
-  }
-  const filtered = SAMPLE_PROJECTS.filter((p) => !departmentId || p.department_id === departmentId);
-  return filtered.length > 0 ? filtered : SAMPLE_PROJECTS;
+  const { data, error } = await sb.from("projects").select("*").eq("department_id", departmentId).order("status").order("name");
+  if (error) throw error;
+  return (data ?? []) as Project[];
 }
 
 export async function fetchComponentProjectIds(componentId: string): Promise<string[]> {

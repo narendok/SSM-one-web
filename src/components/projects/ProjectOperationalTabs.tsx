@@ -45,42 +45,6 @@ const configs: Record<"design" | "research" | "registers" | "gates" | "issues" |
   changes: { table: "project_change_requests", queryKey: "project_change_requests", heading: "Engineering changes", empty: "No engineering change requests or notices.", addLabel: "Add change", codeLabel: "Change code", codeKey: "change_code", typeLabel: "Change type", typeKey: "change_type", descriptionLabel: "Title", descriptionKey: "title", statusKey: "status", options: ["ECR", "ECN", "DEVIATION", "WAIVER"] },
 };
 
-import {
-  SAMPLE_DESIGN_INPUTS,
-  SAMPLE_RESEARCH_RECORDS,
-  SAMPLE_ENGINEERING_REGISTERS,
-  SAMPLE_STAGE_GATES,
-  SAMPLE_PROJECT_ISSUES,
-  SAMPLE_CHANGE_REQUESTS,
-  SAMPLE_BASELINES,
-  SAMPLE_HANDOVERS,
-  PROJECT_ID_BLE_MODIFIED,
-  PROJECT_ID_AS_IS_REUSE,
-} from "@/lib/sample-data-lifecycle";
-
-function getSampleOperationalRecords(table: string, projectId: string) {
-  const isBle = projectId === PROJECT_ID_BLE_MODIFIED || projectId === "proj-telematics-ble-002";
-  const isReuse = projectId === PROJECT_ID_AS_IS_REUSE || projectId === "proj-telematics-002";
-  if (!isBle && !isReuse) return [];
-
-  switch (table) {
-    case "project_design_inputs":
-      return SAMPLE_DESIGN_INPUTS;
-    case "project_research_records":
-      return SAMPLE_RESEARCH_RECORDS;
-    case "project_engineering_registers":
-      return SAMPLE_ENGINEERING_REGISTERS;
-    case "project_stage_gates":
-      return SAMPLE_STAGE_GATES;
-    case "project_issues":
-      return SAMPLE_PROJECT_ISSUES;
-    case "project_change_requests":
-      return SAMPLE_CHANGE_REQUESTS;
-    default:
-      return [];
-  }
-}
-
 export function ProjectOperationalTab({ projectId, kind, onOpenFiles }: { projectId: string; kind: keyof typeof configs; onOpenFiles?: () => void }) {
   const config = configs[kind];
   const qc = useQueryClient();
@@ -89,13 +53,9 @@ export function ProjectOperationalTab({ projectId, kind, onOpenFiles }: { projec
     queryKey: [config.queryKey, projectId],
     retry: false,
     queryFn: async () => {
-      try {
-        const { data, error } = await sb.from(config.table).select("*").eq("project_id", projectId).order("created_at", { ascending: false });
-        if (!error && Array.isArray(data) && data.length > 0) return data;
-      } catch (err) {
-        console.warn(`Query ${config.table} fallback:`, err);
-      }
-      return getSampleOperationalRecords(config.table, projectId);
+      const { data, error } = await sb.from(config.table).select("*").eq("project_id", projectId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
     },
   });
   const records = data ?? [];
@@ -149,66 +109,27 @@ export function ProjectRequirementContext({ projectId, baselineId }: { projectId
     queryKey: ["project_requirement_baseline", projectId, baselineId],
     enabled: Boolean(baselineId),
     queryFn: async () => {
-      try {
-        const { data, error } = await sb
-          .from("requirement_baselines")
-          .select("id,baseline_number,revision_number,status,approved_at,requirement:customer_requirements(id,requirement_number,title,current_revision)")
-          .eq("id", baselineId)
-          .maybeSingle();
-        if (!error && data) return data as LinkedBaseline;
-      } catch (err) {
-        console.warn("Baseline query fallback:", err);
-      }
-      const match = SAMPLE_BASELINES.find((b) => b.id === baselineId);
-      if (match) {
-        return {
-          id: match.id,
-          baseline_number: match.baseline_number,
-          revision_number: match.revision_number,
-          status: match.status,
-          approved_at: match.approved_at,
-          requirement: match.id === "base-ev-001" ? {
-            id: "req-ev-001",
-            requirement_number: "REQ-EV-0205",
-            title: "EV Telematics with Integrated BLE 5.2 Keyless Receiver & 3.7V Lithium-ion Tamper Backup",
-            current_revision: 2,
-          } : {
-            id: "req-fl-002",
-            requirement_number: "REQ-TLM-0101",
-            title: "Apex Fleet Standard 12V GPS Telematics Tracker (Approved Direct Reuse)",
-            current_revision: 1,
-          },
-        } as LinkedBaseline;
-      }
-      return null;
+      const { data, error } = await sb
+        .from("requirement_baselines")
+        .select("id,baseline_number,revision_number,status,approved_at,requirement:customer_requirements(id,requirement_number,title,current_revision)")
+        .eq("id", baselineId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as LinkedBaseline | null;
     },
   });
   const handoverQuery = useQuery({
     queryKey: ["project_sales_handover", projectId, baselineId],
     enabled: Boolean(baselineId),
     queryFn: async () => {
-      try {
-        const { data, error } = await sb
-          .from("sales_project_handovers")
-          .select("id,status,handover_notes,initiated_at,baseline_id")
-          .eq("project_id", projectId)
-          .eq("baseline_id", baselineId)
-          .maybeSingle();
-        if (!error && data) return data as ProjectHandover;
-      } catch (err) {
-        console.warn("Handover query fallback:", err);
-      }
-      const match = SAMPLE_HANDOVERS.find((h) => h.baseline_id === baselineId);
-      if (match) {
-        return {
-          id: match.id,
-          status: match.status,
-          handover_notes: match.handover_notes,
-          initiated_at: match.initiated_at,
-          baseline_id: match.baseline_id,
-        } as ProjectHandover;
-      }
-      return null;
+      const { data, error } = await sb
+        .from("sales_project_handovers")
+        .select("id,status,handover_notes,initiated_at,baseline_id")
+        .eq("project_id", projectId)
+        .eq("baseline_id", baselineId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as ProjectHandover | null;
     },
   });
 

@@ -1,6 +1,5 @@
 import type { RDMember } from "@/lib/inventory";
 import { supabase } from "@/integrations/supabase/client";
-import { SAMPLE_TASKS, SAMPLE_RD_MEMBERS } from "./sample-data-lifecycle";
 
 const sb = supabase as any;
 
@@ -105,57 +104,30 @@ export interface TaskActivity {
 const SELECT =
   "*, assignee:rd_members(id,name,email,department,department_id), department_record:departments(id,name,code), project:projects(id,name,code,color), purchase_request:purchase_requests(id,request_number,status), qms_capa:qms_capas(id,capa_code,title,status), customer_complaint:customer_complaints(id,complaint_code,title,status)";
 
-export {
-  CANONICAL_DEPT_UUIDS,
-  DEFAULT_CANONICAL_DEPARTMENTS,
-  type CanonicalDepartment,
-  fetchCanonicalDepartments,
-  resolveCanonicalDepartment,
-} from "./canonical-departments";
+export type CanonicalDepartment = { id: string; name: string; code: string | null; aliases: string[] };
 
+export async function fetchCanonicalDepartments(): Promise<CanonicalDepartment[]> {
+  const { data, error } = await sb.from("departments").select("id,name,code,aliases").eq("is_active", true).order("sort_order").order("name");
+  if (error) throw error;
+  return (data ?? []) as CanonicalDepartment[];
+}
 
 export async function fetchTasks(projectId?: string, departmentId?: string): Promise<ProjectTask[]> {
-  try {
-    let q = sb.from("project_tasks").select(SELECT).order("sort_order").order("created_at", { ascending: false });
-    if (projectId) q = q.eq("project_id", projectId);
-    if (departmentId) {
-      const resolved = resolveCanonicalDepartment(departmentId);
-      const finalDeptId = resolved?.id ?? departmentId;
-      q = q.eq("department_id", finalDeptId);
-    }
-    const { data, error } = await q;
-    if (!error && Array.isArray(data) && data.length > 0) return data as ProjectTask[];
-  } catch (err) {
-    console.warn("fetchTasks error:", err);
-  }
-  return SAMPLE_TASKS.filter((task) => {
-    if (projectId && task.project_id !== projectId) {
-      const isBleMatch = (projectId === "00000000-0000-4000-b000-000000000002" || projectId === "proj-telematics-ble-002") &&
-        task.project_id === "00000000-0000-4000-b000-000000000002";
-      const isReuseMatch = (projectId === "00000000-0000-4000-b000-000000000001" || projectId === "proj-telematics-002") &&
-        task.project_id === "00000000-0000-4000-b000-000000000001";
-      if (!isBleMatch && !isReuseMatch) return false;
-    }
-    if (departmentId) {
-      const resolved = resolveCanonicalDepartment(departmentId);
-      const targetId = resolved?.id ?? departmentId;
-      if (task.department_id !== targetId) return false;
-    }
-    return true;
-  });
+  let q = sb.from("project_tasks").select(SELECT).order("sort_order").order("created_at", { ascending: false });
+  if (projectId) q = q.eq("project_id", projectId);
+  if (departmentId) q = q.eq("department_id", departmentId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as ProjectTask[];
 }
 
 export async function fetchOpenTaskCount(): Promise<number> {
-  try {
-    const { count, error } = await sb
-      .from("project_tasks")
-      .select("id", { count: "exact", head: true })
-      .in("status", OPEN_TASK_STATUSES);
-    if (!error && count && count > 0) return count;
-  } catch (err) {
-    console.warn("fetchOpenTaskCount fallback:", err);
-  }
-  return SAMPLE_TASKS.filter((t) => OPEN_TASK_STATUSES.includes(t.status)).length;
+  const { count, error } = await sb
+    .from("project_tasks")
+    .select("id", { count: "exact", head: true })
+    .in("status", OPEN_TASK_STATUSES);
+  if (error) return 0;
+  return count ?? 0;
 }
 
 export type TaskInput = Partial<Omit<ProjectTask, "assignee" | "project">> & { title: string };
@@ -256,11 +228,7 @@ export async function addComment(taskId: string, body: string) {
 
 /** Caller-visible active identities only. A denied read must not look like an empty team. */
 export async function fetchTaskMembers(): Promise<RDMember[]> {
-  try {
-    const { data, error } = await sb.from('rd_members').select('*').eq('active', true).order('name');
-    if (!error && Array.isArray(data) && data.length > 0) return data as RDMember[];
-  } catch (err) {
-    console.warn("fetchTaskMembers fallback:", err);
-  }
-  return SAMPLE_RD_MEMBERS;
+  const { data, error } = await sb.from('rd_members').select('*').eq('active', true).order('name');
+  if (error) throw error;
+  return (data ?? []) as RDMember[];
 }

@@ -1,15 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  clearStoredTestSession,
-  DEMO_AUTH_CHANGE_EVENT,
-  getStoredTestSession,
-  type Role,
-  type StoredDemoSession,
-} from "@/lib/demo-auth";
 
-export type { Role };
+type Role = "admin" | "member" | "purchase" | "storekeeper" | "project_manager" | "lead_engineer";
 
 interface AuthCtx {
   user: User | null;
@@ -41,19 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const applyDemoSession = useCallback((demo: StoredDemoSession | null) => {
-    if (demo) {
-      setSession(demo.session);
-      setRole(demo.role);
-      setDisplayName(demo.displayName);
-      setEmployeeStatus("ACTIVE");
-      setPermissions(demo.permissions);
-      setLoading(false);
-      return true;
-    }
-    return false;
-  }, []);
-
   const loadIdentity = useCallback(async (user: User) => {
     const [roleResult, profileResult, employeeResult] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
@@ -82,41 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // 1. Check if demo test session is currently active
-    const activeDemo = getStoredTestSession();
-    if (activeDemo) {
-      applyDemoSession(activeDemo);
-    }
-
-    // 2. Listen for demo session events
-    const handleDemoChange = (e: Event) => {
-      const custom = e as CustomEvent<StoredDemoSession | null>;
-      if (custom.detail) {
-        applyDemoSession(custom.detail);
-      } else {
-        // demo cleared, check if there's an actual Supabase session
-        supabase.auth.getSession().then(({ data }) => {
-          setSession(data.session);
-          if (data.session) {
-            void loadIdentity(data.session.user).finally(() => setLoading(false));
-          } else {
-            setRole(null);
-            setDisplayName(null);
-            setEmployeeStatus(null);
-            setPermissions([]);
-            setLoading(false);
-          }
-        });
-      }
-    };
-
-    window.addEventListener(DEMO_AUTH_CHANGE_EVENT, handleDemoChange);
-
-    // 3. Listen to Supabase auth state change
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      const currentDemo = getStoredTestSession();
-      if (currentDemo) return; // demo session takes precedence for testing
-
       setSession(s);
       if (s) {
         void loadIdentity(s.user).finally(() => setLoading(false));
@@ -129,38 +75,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    if (!activeDemo) {
-      supabase.auth.getSession().then(async ({ data }) => {
-        const demo = getStoredTestSession();
-        if (demo) return;
-        setSession(data.session);
-        if (data.session) await loadIdentity(data.session.user);
-      }).catch(() => {
-        setRole(null);
-        setDisplayName(null);
-        setEmployeeStatus(null);
-        setPermissions([]);
-      }).finally(() => setLoading(false));
-    }
+    supabase.auth.getSession().then(async ({ data }) => {
+      setSession(data.session);
+      if (data.session) await loadIdentity(data.session.user);
+    }).catch(() => {
+      setRole(null);
+      setDisplayName(null);
+      setEmployeeStatus(null);
+      setPermissions([]);
+    }).finally(() => setLoading(false));
 
-    return () => {
-      window.removeEventListener(DEMO_AUTH_CHANGE_EVENT, handleDemoChange);
-      sub.subscription.unsubscribe();
-    };
-  }, [applyDemoSession, loadIdentity]);
+    return () => sub.subscription.unsubscribe();
+  }, [loadIdentity]);
 
   const signOut = async () => {
-    clearStoredTestSession();
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      // ignore network errors when signing out locally
-    }
-    setSession(null);
-    setRole(null);
-    setDisplayName(null);
-    setEmployeeStatus(null);
-    setPermissions([]);
+    await supabase.auth.signOut();
   };
 
   return (

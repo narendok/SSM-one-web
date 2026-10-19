@@ -1,14 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { CANONICAL_DEPT_UUIDS } from "@/lib/canonical-departments";
 import { fetchTasks, OPEN_TASK_STATUSES, type ProjectTask } from "@/lib/tasks";
 
 const sb = supabase as any;
 
-export type DashboardDepartment = "rnd" | "mechanical" | "procurement" | "production" | "facility" | "operations" | "sales" | "hr" | "finance";
+export type DashboardDepartment = "rnd" | "procurement" | "production" | "facility" | "operations" | "sales" | "hr" | "finance";
 
 export const departmentDefinitions: { id: DashboardDepartment; label: string; permission: string }[] = [
   { id: "rnd", label: "Hardware & R&D", permission: "engineering.view" },
-  { id: "mechanical", label: "Mechanical Engineering", permission: "engineering.view" },
   { id: "procurement", label: "Procurement, Stores & Incoming Quality", permission: "procurement.view" },
   { id: "production", label: "Production", permission: "production.view" },
   { id: "facility", label: "Facility & Maintenance", permission: "facility.view" },
@@ -17,48 +15,6 @@ export const departmentDefinitions: { id: DashboardDepartment; label: string; pe
   { id: "hr", label: "Human Resources", permission: "hr.view" },
   { id: "finance", label: "Finance", permission: "finance.view" },
 ];
-
-export function canonicalToDashboardDepartment(canonicalId: string | null): DashboardDepartment | null {
-  if (!canonicalId) return null;
-  const lower = canonicalId.toLowerCase();
-
-  // Match canonical UUIDs
-  if (canonicalId === CANONICAL_DEPT_UUIDS.MECHANICAL || canonicalId === "00000000-0000-4000-a000-000000000003") return "mechanical";
-  if (canonicalId === CANONICAL_DEPT_UUIDS.RND || canonicalId === CANONICAL_DEPT_UUIDS.FIRMWARE || canonicalId === "00000000-0000-4000-a000-000000000001" || canonicalId === "00000000-0000-4000-a000-000000000002") return "rnd";
-  if (canonicalId === CANONICAL_DEPT_UUIDS.PROCUREMENT || canonicalId === "00000000-0000-4000-a000-000000000004") return "procurement";
-  if (canonicalId === CANONICAL_DEPT_UUIDS.PRODUCTION || canonicalId === "00000000-0000-4000-a000-000000000005") return "production";
-  if (canonicalId === CANONICAL_DEPT_UUIDS.FACILITY || canonicalId === "00000000-0000-4000-a000-000000000006") return "facility";
-  if (canonicalId === CANONICAL_DEPT_UUIDS.OPERATIONS || canonicalId === "00000000-0000-4000-a000-000000000007") return "operations";
-  if (canonicalId === CANONICAL_DEPT_UUIDS.HR || canonicalId === "00000000-0000-4000-a000-000000000008") return "hr";
-  if (canonicalId === CANONICAL_DEPT_UUIDS.SALES || canonicalId === "00000000-0000-4000-a000-000000000009") return "sales";
-  if (canonicalId === CANONICAL_DEPT_UUIDS.FINANCE || canonicalId === "00000000-0000-4000-a000-000000000010") return "finance";
-
-  // Match keyword terms and prefixed slugs
-  if (lower.includes("mech") || lower.includes("cad") || lower.includes("enclosure")) return "mechanical";
-  if (lower.includes("rnd") || lower.includes("hardware") || lower.includes("firmware") || lower.includes("eng")) return "rnd";
-  if (lower.includes("proc") || lower.includes("purchase") || lower.includes("store")) return "procurement";
-  if (lower.includes("prod")) return "production";
-  if (lower.includes("fac") || lower.includes("maint") || lower.includes("security")) return "facility";
-  if (lower.includes("ops") || lower.includes("qms") || lower.includes("qa")) return "operations";
-  if (lower.includes("sal")) return "sales";
-  if (lower.includes("hr") || lower.includes("people")) return "hr";
-  if (lower.includes("fin")) return "finance";
-  return null;
-}
-
-export function dashboardToCanonicalDepartment(dashboardDept: DashboardDepartment): string {
-  switch (dashboardDept) {
-    case "rnd": return CANONICAL_DEPT_UUIDS.RND;
-    case "mechanical": return CANONICAL_DEPT_UUIDS.MECHANICAL;
-    case "procurement": return CANONICAL_DEPT_UUIDS.PROCUREMENT;
-    case "production": return CANONICAL_DEPT_UUIDS.PRODUCTION;
-    case "facility": return CANONICAL_DEPT_UUIDS.FACILITY;
-    case "operations": return CANONICAL_DEPT_UUIDS.OPERATIONS;
-    case "sales": return CANONICAL_DEPT_UUIDS.SALES;
-    case "hr": return CANONICAL_DEPT_UUIDS.HR;
-    case "finance": return CANONICAL_DEPT_UUIDS.FINANCE;
-  }
-}
 
 export function getPermittedDepartments(role: string | null, permissions: string[]) {
   return departmentDefinitions.filter((department) => role === "admin" || permissions.includes(department.permission));
@@ -117,8 +73,7 @@ export type DepartmentTaskItem = {
 };
 
 const departmentTaskMap: Record<DashboardDepartment, string[]> = {
-  rnd: ["hardware", "firmware"],
-  mechanical: ["mechanical"],
+  rnd: ["hardware", "firmware", "mechanical"],
   procurement: ["procurement", "qa"],
   production: ["production"],
   facility: [],
@@ -140,44 +95,21 @@ function taskPulse(tasks: ProjectTask[]) {
 }
 
 export function tasksForDepartment(tasks: ProjectTask[], department: DashboardDepartment) {
-  const canonicalId = dashboardToCanonicalDepartment(department);
   const taskDepartments = departmentTaskMap[department];
-  return tasks.filter((task) => {
-    if (task.department_id && task.department_id.toLowerCase() === canonicalId.toLowerCase()) return true;
-    if (taskDepartments && taskDepartments.includes(task.department)) return true;
-    return false;
-  });
+  return taskDepartments.length ? tasks.filter((task) => taskDepartments.includes(task.department)) : [];
 }
 
 const departmentMatches: Record<DashboardDepartment, string[]> = {
-  rnd: ["rnd", "research", "hardware", "firmware"],
-  mechanical: ["mech", "cad", "enclosure", "structural"],
-  procurement: ["procurement", "purchase", "stores"],
-  production: ["production"],
-  facility: ["facility", "maintenance"],
-  operations: ["operations", "qms", "quality"],
-  sales: ["sales"],
-  hr: ["hr", "human"],
-  finance: ["finance"],
+  rnd: ["rnd", "research", "engineering", "hardware"], procurement: ["procurement", "purchase", "stores"], production: ["production"],
+  facility: ["facility", "maintenance"], operations: ["operations", "qms", "quality"], sales: ["sales"], hr: ["hr", "human"], finance: ["finance"],
 };
 
 export async function resolveDepartmentId(workspace: DashboardDepartment): Promise<string | null> {
-  const fallbackId = dashboardToCanonicalDepartment(workspace);
-  try {
-    const { data, error } = await sb.from("departments").select("id,name,code,aliases").eq("is_active", true);
-    if (!error && Array.isArray(data) && data.length > 0) {
-      const terms = departmentMatches[workspace];
-      const match = data.find((row: any) =>
-        [row.name, row.code, ...(row.aliases ?? [])]
-          .filter(Boolean)
-          .some((value: string) => terms.some((term) => value.toLowerCase().includes(term)))
-      );
-      if (match?.id) return match.id;
-    }
-  } catch (err) {
-    console.warn("resolveDepartmentId error:", err);
-  }
-  return fallbackId;
+  const { data, error } = await sb.from("departments").select("id,name,code,aliases").eq("is_active", true);
+  if (error) return null;
+  const terms = departmentMatches[workspace];
+  const match = (data ?? []).find((row: any) => [row.name, row.code, ...(row.aliases ?? [])].filter(Boolean).some((value: string) => terms.some((term) => value.toLowerCase().includes(term))));
+  return match?.id ?? null;
 }
 
 async function documentSummary(departmentId: string | null) {
@@ -282,7 +214,7 @@ export async function fetchDepartmentDashboard(department: DashboardDepartment):
     const lowStock = await count("components", (query) => query.eq("needs_review", true));
     return {
       metrics: [
-        { label: "Open engineering work", value: pulse.open.length, detail: "Hardware & embedded tasks" },
+        { label: "Open engineering work", value: pulse.open.length, detail: "Hardware, firmware and mechanical tasks" },
         { label: "Blocked work", value: pulse.blocked.length, detail: "Needs a lead decision", tone: pulse.blocked.length ? "critical" : "default" },
         { label: "Priority tasks", value: pulse.urgent.length, detail: "High and urgent work", tone: pulse.urgent.length ? "attention" : "default" },
         { label: "Parts to review", value: lowStock, detail: "Inventory items awaiting review", tone: lowStock ? "attention" : "default" },
@@ -292,24 +224,6 @@ export async function fetchDepartmentDashboard(department: DashboardDepartment):
         { label: "Manage projects", detail: "Review project delivery work and team responsibility.", to: "/projects" },
         { label: "Review inventory", detail: "Check parts, bins and engineering stock.", to: "/locations" },
         { label: "Open BOM workspace", detail: "Import or review a project bill of materials.", to: "/bom" },
-      ],
-      workload: sharedWorkload, ...base,
-    };
-  }
-
-  if (department === "mechanical") {
-    return {
-      metrics: [
-        { label: "Open mechanical work", value: pulse.open.length, detail: "Enclosure CAD, thermal & structural tasks" },
-        { label: "Blocked work", value: pulse.blocked.length, detail: "Needs design sign-off", tone: pulse.blocked.length ? "critical" : "default" },
-        { label: "Priority design tasks", value: pulse.urgent.length, detail: "High and urgent CAD work", tone: pulse.urgent.length ? "attention" : "default" },
-        { label: "Active revisions", value: pulse.open.filter((t) => t.status === "in_progress").length, detail: "Currently under development" },
-      ],
-      actions: [
-        { label: "Review mechanical tasks", detail: "Track CAD modeling, thermal tests and drawings.", to: "/tasks" },
-        { label: "Manage projects", detail: "Review project milestones and deliverables.", to: "/projects" },
-        { label: "BOM sourcing", detail: "Verify mechanical components and structural fasteners.", to: "/bom" },
-        { label: "Design drawings", detail: "Access release drawings, CAD packages and 3D files.", to: "/drive" },
       ],
       workload: sharedWorkload, ...base,
     };

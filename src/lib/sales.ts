@@ -17,162 +17,33 @@ export interface SalesHandover { id: string; baseline_id: string; project_id: st
 export interface CustomerSupportTicket { id: string; complaint_code: string; title: string; severity: string; status: string; owner_user_id: string | null; customer_visible_update: string | null; updated_at: string; }
 
 export type FeasibilityProvenanceState = { available: boolean; error: string | null };
-import {
-  SAMPLE_CUSTOMERS,
-  SAMPLE_CONTACTS,
-  SAMPLE_ENQUIRIES,
-  SAMPLE_OPPORTUNITIES,
-  SAMPLE_MASTER_SPECS,
-  SAMPLE_REQUIREMENTS,
-  SAMPLE_FEASIBILITY_REVIEWS,
-  SAMPLE_COMMERCIAL_RECORDS,
-  SAMPLE_BASELINES,
-  SAMPLE_PORTAL_ACCESS,
-  SAMPLE_HANDOVERS,
-  SAMPLE_EMPLOYEES,
-  SAMPLE_SUPPORT_TICKETS,
-  SAMPLE_PROJECTS,
-} from "./sample-data-lifecycle";
-
 type DeployedFeasibilityReview = Omit<FeasibilityReview, "source_revision_id" | "source_revision_number" | "master_specification_version_id" | "master_specification_version_number" | "applicable_workstreams">;
 const CUSTOMER_SELECT = "id,customer_code,legal_name,display_name,customer_type,industry,primary_email,primary_phone,status,account_owner_user_id,is_sample,created_at";
 const deployedProvenanceError = "Immutable feasibility provenance is unavailable in the deployed read model; readiness is blocked until the protected provenance contract is accepted.";
-
-function mergeWithSample<T>(live: T[], sample: T[], key: keyof T): T[] {
-  const existingKeys = new Set(live.map((item) => String(item[key])));
-  const unrepresented = sample.filter((item) => !existingKeys.has(String(item[key])));
-  return [...live, ...unrepresented];
-}
 
 export function withUnavailableFeasibilityProvenance(reviews: DeployedFeasibilityReview[], error = deployedProvenanceError): { reviews: FeasibilityReview[]; provenance: FeasibilityProvenanceState } {
   return { reviews: reviews.map((review) => ({ ...review, source_revision_id: null, source_revision_number: null, master_specification_version_id: null, master_specification_version_number: null, applicable_workstreams: null })), provenance: { available: false, error } };
 }
 
 export async function fetchSalesOverview(): Promise<{ customers: SalesCustomer[]; contacts: SalesContact[]; enquiries: SalesEnquiry[]; opportunities: SalesOpportunity[]; clientProjects: Project[] | null; masterSpecifications: MasterSpecificationSummary[]; requirements: CustomerRequirement[]; feasibilityReviews: FeasibilityReview[]; feasibilityProvenance: FeasibilityProvenanceState; commercialRecords: CommercialRecord[]; baselines: RequirementBaseline[]; portalAccess: PortalAccess[]; handovers: SalesHandover[]; departments: Array<{ id: string; name: string; code: string | null }>; employees: Array<{ user_id: string; display_name: string | null; official_email: string | null }>; supportTickets: CustomerSupportTicket[] | null }> {
-  try {
-    const [customers, contacts, enquiries, opportunities, clientProjects, masterSpecifications, requirements, feasibilityReviews, commercialRecords, baselines, portalAccess, handovers, departments, employees, supportTickets] = await Promise.all([
-      sb.from("customers").select(CUSTOMER_SELECT).neq("status", "archived").order("created_at", { ascending: false }),
-      sb.from("customer_contacts").select("id,customer_id,full_name,job_title,email,phone,mobile,is_primary,is_active,customer:customers(id,legal_name,customer_code)").eq("is_active", true).order("full_name"),
-      sb.from("sales_enquiries").select("id,enquiry_number,requirement_summary,source,enquiry_date,priority,status,application,product_type,estimated_volume,expected_timeline,next_action,next_action_date,notes,created_at,updated_at,customer:customers(id,legal_name,customer_code,is_sample)").neq("status", "archived").order("created_at", { ascending: false }),
-      sb.from("sales_opportunities").select("id,opportunity_number,enquiry_id,name,stage,status,priority,application,product_type,nda_required,estimated_volume,target_timeline,next_action,next_action_date,customer:customers(id,legal_name,customer_code,is_sample),primary_contact:customer_contacts(id,full_name,email)").neq("status", "archived").order("updated_at", { ascending: false }),
-      sb.from("projects").select("*").eq("status", "active").eq("drive_project_class", "CLIENT").is("archived_at", null).order("name"),
-      sb.from("master_specifications").select("id,opportunity_id,customer_id,specification_number,title,status,current_version").order("updated_at", { ascending: false }),
-      sb.from("customer_requirements").select("id,requirement_number,opportunity_id,customer_id,title,status,current_revision,customer_reference,updated_at,opportunity:sales_opportunities(id,name,opportunity_number),customer:customers(id,legal_name,customer_code)").neq("status", "archived").order("updated_at", { ascending: false }),
-      sb.from("requirement_feasibility_reviews").select("id,requirement_id,department_id,reviewer_user_id,status,findings,assumptions,risks,reviewed_at,created_at,requirement:customer_requirements(id,requirement_number,title,current_revision),department:departments(id,name,code)").order("created_at", { ascending: false }),
-      sb.from("sales_commercial_records").select("id,requirement_id,quotation_reference,currency,quoted_amount,status,customer_authorized_at,authorization_reference").order("updated_at", { ascending: false }),
-      sb.from("requirement_baselines").select("id,requirement_id,baseline_number,revision_number,status,approved_at").order("approved_at", { ascending: false }),
-      sb.from("customer_portal_access").select("id,customer_id,contact_id,access_token,label,expires_at,is_active,customer:customers(id,legal_name),contact:customer_contacts(id,full_name,email)").order("created_at", { ascending: false }),
-      sb.from("sales_project_handovers").select("id,baseline_id,project_id,status,handover_notes,initiated_at,baseline:requirement_baselines(id,baseline_number,requirement_id)").order("created_at", { ascending: false }),
-      sb.from("departments").select("id,name,code").eq("is_active", true).order("sort_order").order("name"),
-      sb.from("employees").select("user_id,display_name,official_email").not("user_id", "is", null).eq("employment_status", "ACTIVE").order("display_name"),
-      sb.from("customer_complaints").select("id,complaint_code,title,severity,status,owner_user_id,customer_visible_update,updated_at").order("updated_at", { ascending: false }).limit(12),
-    ]);
-
-    const resolvedCustomers: SalesCustomer[] = Array.isArray(customers.data) && customers.data.length > 0
-      ? mergeWithSample(customers.data as SalesCustomer[], SAMPLE_CUSTOMERS, "id")
-      : SAMPLE_CUSTOMERS;
-
-    const resolvedContacts: SalesContact[] = Array.isArray(contacts.data) && contacts.data.length > 0
-      ? mergeWithSample(contacts.data as SalesContact[], SAMPLE_CONTACTS, "id")
-      : SAMPLE_CONTACTS;
-
-    const resolvedEnquiries: SalesEnquiry[] = Array.isArray(enquiries.data) && enquiries.data.length > 0
-      ? mergeWithSample(enquiries.data as SalesEnquiry[], SAMPLE_ENQUIRIES, "id")
-      : SAMPLE_ENQUIRIES;
-
-    const resolvedOpportunities: SalesOpportunity[] = Array.isArray(opportunities.data) && opportunities.data.length > 0
-      ? mergeWithSample(opportunities.data as SalesOpportunity[], SAMPLE_OPPORTUNITIES, "id")
-      : SAMPLE_OPPORTUNITIES;
-
-    const resolvedProjects: Project[] = Array.isArray(clientProjects.data) && clientProjects.data.length > 0
-      ? mergeWithSample(clientProjects.data as Project[], SAMPLE_PROJECTS, "id")
-      : SAMPLE_PROJECTS;
-
-    const resolvedSpecs: MasterSpecificationSummary[] = Array.isArray(masterSpecifications.data) && masterSpecifications.data.length > 0
-      ? mergeWithSample(masterSpecifications.data as MasterSpecificationSummary[], SAMPLE_MASTER_SPECS, "id")
-      : SAMPLE_MASTER_SPECS;
-
-    const resolvedRequirements: CustomerRequirement[] = Array.isArray(requirements.data) && requirements.data.length > 0
-      ? mergeWithSample(requirements.data as CustomerRequirement[], SAMPLE_REQUIREMENTS, "id")
-      : SAMPLE_REQUIREMENTS;
-
-    const rawFeasibility = Array.isArray(feasibilityReviews.data) && feasibilityReviews.data.length > 0
-      ? mergeWithSample(feasibilityReviews.data as FeasibilityReview[], SAMPLE_FEASIBILITY_REVIEWS, "id")
-      : SAMPLE_FEASIBILITY_REVIEWS;
-
-    const resolvedCommercial: CommercialRecord[] = Array.isArray(commercialRecords.data) && commercialRecords.data.length > 0
-      ? mergeWithSample(commercialRecords.data as CommercialRecord[], SAMPLE_COMMERCIAL_RECORDS, "id")
-      : SAMPLE_COMMERCIAL_RECORDS;
-
-    const resolvedBaselines: RequirementBaseline[] = Array.isArray(baselines.data) && baselines.data.length > 0
-      ? mergeWithSample(baselines.data as RequirementBaseline[], SAMPLE_BASELINES, "id")
-      : SAMPLE_BASELINES;
-
-    const resolvedPortals: PortalAccess[] = Array.isArray(portalAccess.data) && portalAccess.data.length > 0
-      ? mergeWithSample(portalAccess.data as PortalAccess[], SAMPLE_PORTAL_ACCESS, "id")
-      : SAMPLE_PORTAL_ACCESS;
-
-    const resolvedHandovers: SalesHandover[] = Array.isArray(handovers.data) && handovers.data.length > 0
-      ? mergeWithSample(handovers.data as SalesHandover[], SAMPLE_HANDOVERS, "id")
-      : SAMPLE_HANDOVERS;
-
-    const resolvedEmployees = Array.isArray(employees.data) && employees.data.length > 0
-      ? mergeWithSample(employees.data as Array<{ user_id: string; display_name: string | null; official_email: string | null }>, SAMPLE_EMPLOYEES, "user_id")
-      : SAMPLE_EMPLOYEES;
-
-    const feasibility = withUnavailableFeasibilityProvenance(rawFeasibility as DeployedFeasibilityReview[]);
-
-    return {
-      customers: resolvedCustomers,
-      contacts: resolvedContacts,
-      enquiries: resolvedEnquiries,
-      opportunities: resolvedOpportunities,
-      clientProjects: resolvedProjects,
-      masterSpecifications: resolvedSpecs,
-      requirements: resolvedRequirements,
-      feasibilityReviews: feasibility.reviews,
-      feasibilityProvenance: feasibility.provenance,
-      commercialRecords: resolvedCommercial,
-      baselines: resolvedBaselines,
-      portalAccess: resolvedPortals,
-      handovers: resolvedHandovers,
-      departments: (departments.data ?? []) as Array<{ id: string; name: string; code: string | null }>,
-      employees: resolvedEmployees,
-      supportTickets: Array.isArray(supportTickets.data) && supportTickets.data.length > 0
-        ? supportTickets.data
-        : SAMPLE_SUPPORT_TICKETS,
-    };
-  } catch (err) {
-    console.warn("fetchSalesOverview fallback to sample dataset:", err);
-    const feasibility = withUnavailableFeasibilityProvenance(SAMPLE_FEASIBILITY_REVIEWS as DeployedFeasibilityReview[]);
-    return {
-      customers: SAMPLE_CUSTOMERS,
-      contacts: SAMPLE_CONTACTS,
-      enquiries: SAMPLE_ENQUIRIES,
-      opportunities: SAMPLE_OPPORTUNITIES,
-      clientProjects: SAMPLE_PROJECTS,
-      masterSpecifications: SAMPLE_MASTER_SPECS,
-      requirements: SAMPLE_REQUIREMENTS,
-      feasibilityReviews: feasibility.reviews,
-      feasibilityProvenance: feasibility.provenance,
-      commercialRecords: SAMPLE_COMMERCIAL_RECORDS,
-      baselines: SAMPLE_BASELINES,
-      portalAccess: SAMPLE_PORTAL_ACCESS,
-      handovers: SAMPLE_HANDOVERS,
-      departments: [
-        { id: CANONICAL_DEPT_UUIDS.RND, name: "Hardware & R&D", code: "RND" },
-        { id: CANONICAL_DEPT_UUIDS.FIRMWARE, name: "Firmware", code: "FW" },
-        { id: CANONICAL_DEPT_UUIDS.MECHANICAL, name: "Mechanical", code: "MECH" },
-        { id: CANONICAL_DEPT_UUIDS.PROCUREMENT, name: "Procurement", code: "PROC" },
-        { id: CANONICAL_DEPT_UUIDS.PRODUCTION, name: "Production", code: "PROD" },
-        { id: CANONICAL_DEPT_UUIDS.FACILITY, name: "Facility / Maintenance", code: "FAC" },
-        { id: CANONICAL_DEPT_UUIDS.OPERATIONS, name: "Operations / QMS", code: "OPS" },
-        { id: CANONICAL_DEPT_UUIDS.HR, name: "HR", code: "HR" },
-        { id: CANONICAL_DEPT_UUIDS.SALES, name: "Sales", code: "SAL" },
-        { id: CANONICAL_DEPT_UUIDS.FINANCE, name: "Finance", code: "FIN" },
-      ],
-      employees: SAMPLE_EMPLOYEES,
-      supportTickets: SAMPLE_SUPPORT_TICKETS,
-    };
-  }
+  const [customers, contacts, enquiries, opportunities, clientProjects, masterSpecifications, requirements, feasibilityReviews, commercialRecords, baselines, portalAccess, handovers, departments, employees, supportTickets] = await Promise.all([
+    sb.from("customers").select(CUSTOMER_SELECT).neq("status", "archived").order("created_at", { ascending: false }),
+    sb.from("customer_contacts").select("id,customer_id,full_name,job_title,email,phone,mobile,is_primary,is_active,customer:customers(id,legal_name,customer_code)").eq("is_active", true).order("full_name"),
+    sb.from("sales_enquiries").select("id,enquiry_number,requirement_summary,source,enquiry_date,priority,status,application,product_type,estimated_volume,expected_timeline,next_action,next_action_date,notes,created_at,updated_at,customer:customers(id,legal_name,customer_code,is_sample)").neq("status", "archived").order("created_at", { ascending: false }),
+    sb.from("sales_opportunities").select("id,opportunity_number,enquiry_id,name,stage,status,priority,application,product_type,nda_required,estimated_volume,target_timeline,next_action,next_action_date,customer:customers(id,legal_name,customer_code,is_sample),primary_contact:customer_contacts(id,full_name,email)").neq("status", "archived").order("updated_at", { ascending: false }),
+    sb.from("projects").select("*").eq("status", "active").eq("drive_project_class", "CLIENT").is("archived_at", null).order("name"),
+    sb.from("master_specifications").select("id,opportunity_id,customer_id,specification_number,title,status,current_version").order("updated_at", { ascending: false }),
+    sb.from("customer_requirements").select("id,requirement_number,opportunity_id,customer_id,title,status,current_revision,customer_reference,updated_at,opportunity:sales_opportunities(id,name,opportunity_number),customer:customers(id,legal_name,customer_code)").neq("status", "archived").order("updated_at", { ascending: false }),
+    sb.from("requirement_feasibility_reviews").select("id,requirement_id,department_id,reviewer_user_id,status,findings,assumptions,risks,reviewed_at,created_at,requirement:customer_requirements(id,requirement_number,title,current_revision),department:departments(id,name,code)").order("created_at", { ascending: false }),
+    sb.from("sales_commercial_records").select("id,requirement_id,quotation_reference,currency,quoted_amount,status,customer_authorized_at,authorization_reference").order("updated_at", { ascending: false }),
+    sb.from("requirement_baselines").select("id,requirement_id,baseline_number,revision_number,status,approved_at").order("approved_at", { ascending: false }),
+    sb.from("customer_portal_access").select("id,customer_id,contact_id,access_token,label,expires_at,is_active,customer:customers(id,legal_name),contact:customer_contacts(id,full_name,email)").order("created_at", { ascending: false }),
+    sb.from("sales_project_handovers").select("id,baseline_id,project_id,status,handover_notes,initiated_at,baseline:requirement_baselines(id,baseline_number,requirement_id)").order("created_at", { ascending: false }),
+    sb.from("departments").select("id,name,code").eq("is_active", true).order("sort_order").order("name"),
+    sb.from("employees").select("user_id,display_name,official_email").not("user_id", "is", null).eq("employment_status", "ACTIVE").order("display_name"),
+    sb.from("customer_complaints").select("id,complaint_code,title,severity,status,owner_user_id,customer_visible_update,updated_at").order("updated_at", { ascending: false }).limit(12),
+  ]);
+  for (const result of [customers, contacts, enquiries, opportunities, masterSpecifications, requirements, feasibilityReviews, commercialRecords, baselines, portalAccess, handovers, departments, employees]) if (result.error) throw result.error;
+  const feasibility = withUnavailableFeasibilityProvenance((feasibilityReviews.data ?? []) as DeployedFeasibilityReview[]);
+  return { customers: (customers.data ?? []) as SalesCustomer[], contacts: (contacts.data ?? []) as SalesContact[], enquiries: (enquiries.data ?? []) as SalesEnquiry[], opportunities: (opportunities.data ?? []) as SalesOpportunity[], clientProjects: clientProjects.error ? null : (clientProjects.data ?? []) as Project[], masterSpecifications: (masterSpecifications.data ?? []) as MasterSpecificationSummary[], requirements: (requirements.data ?? []) as CustomerRequirement[], feasibilityReviews: feasibility.reviews, feasibilityProvenance: feasibility.provenance, commercialRecords: (commercialRecords.data ?? []) as CommercialRecord[], baselines: (baselines.data ?? []) as RequirementBaseline[], portalAccess: (portalAccess.data ?? []) as PortalAccess[], handovers: (handovers.data ?? []) as SalesHandover[], departments: (departments.data ?? []) as Array<{ id: string; name: string; code: string | null }>, employees: (employees.data ?? []) as Array<{ user_id: string; display_name: string | null; official_email: string | null }>, supportTickets: supportTickets.error ? null : (supportTickets.data ?? []) as CustomerSupportTicket[] };
 }

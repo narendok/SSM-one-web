@@ -34,17 +34,6 @@ type LinkedBaseline = {
   requirement: { requirement_number: string; current_revision: number } | null;
 };
 
-import {
-  SAMPLE_TASKS,
-  SAMPLE_DESIGN_INPUTS,
-  SAMPLE_RESEARCH_RECORDS,
-  SAMPLE_CHANGE_REQUESTS,
-  SAMPLE_STAGE_GATES,
-  SAMPLE_BASELINES,
-  PROJECT_ID_BLE_MODIFIED,
-  PROJECT_ID_AS_IS_REUSE,
-} from "@/lib/sample-data-lifecycle";
-
 export function SharedProductLifecycle({
   project,
   onOpenDelivery,
@@ -56,41 +45,20 @@ export function SharedProductLifecycle({
   onOpenFiles: () => void;
   onOpenTasks: () => void;
 }) {
-  const isBle = project.id === PROJECT_ID_BLE_MODIFIED || project.id === "proj-telematics-ble-002";
-  const isReuse = project.id === PROJECT_ID_AS_IS_REUSE || project.id === "proj-telematics-002";
-
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["shared_product_lifecycle", project.id, project.requirement_baseline_id],
     retry: false,
     queryFn: async () => {
-      try {
-        const [tasks, boms, inputs, research, changes, process] = await Promise.all([
-          sb.from("project_tasks").select("id,status,assignee_id,department_id").eq("project_id", project.id),
-          sb.from("project_boms").select("id,revision,source_drive_node_id,source_drive_revision_id").eq("project_id", project.id),
-          sb.from("project_design_inputs").select("id,status").eq("project_id", project.id),
-          sb.from("project_research_records").select("id,decision_status").eq("project_id", project.id),
-          sb.from("project_change_requests").select("id,status").eq("project_id", project.id),
-          sb.from("project_process_stage_records").select("id,status").eq("project_id", project.id),
-        ]);
-        if (!tasks.error && !boms.error && !inputs.error && (tasks.data?.length || boms.data?.length || inputs.data?.length)) {
-          return { tasks: tasks.data ?? [], boms: boms.data ?? [], inputs: inputs.data ?? [], research: research.data ?? [], changes: changes.data ?? [], process: process.data ?? [] };
-        }
-      } catch (err) {
-        console.warn("SharedProductLifecycle query fallback:", err);
-      }
-      if (isBle || isReuse) {
-        return {
-          tasks: SAMPLE_TASKS.filter((t) => t.project_id === (isBle ? PROJECT_ID_BLE_MODIFIED : PROJECT_ID_AS_IS_REUSE)),
-          boms: [
-            { id: "bom-ev-01", revision: isBle ? "2.1" : "2.0", source_drive_node_id: "00000000-0000-4000-c000-000000000001", source_drive_revision_id: "00000000-0000-4000-c000-000000000002" },
-          ],
-          inputs: isBle ? SAMPLE_DESIGN_INPUTS : [{ id: "inp-fl-01", status: "APPROVED" }],
-          research: isBle ? SAMPLE_RESEARCH_RECORDS : [{ id: "poc-fl-01", decision_status: "PASSED" }],
-          changes: isBle ? SAMPLE_CHANGE_REQUESTS : [],
-          process: [{ id: "proc-01", status: "COMPLETED" }],
-        };
-      }
-      return { tasks: [], boms: [], inputs: [], research: [], changes: [], process: [] };
+      const [tasks, boms, inputs, research, changes, process] = await Promise.all([
+        sb.from("project_tasks").select("id,status,assignee_id,department_id").eq("project_id", project.id),
+        sb.from("project_boms").select("id,revision,source_drive_node_id,source_drive_revision_id").eq("project_id", project.id),
+        sb.from("project_design_inputs").select("id,status").eq("project_id", project.id),
+        sb.from("project_research_records").select("id,decision_status").eq("project_id", project.id),
+        sb.from("project_change_requests").select("id,status").eq("project_id", project.id),
+        sb.from("project_process_stage_records").select("id,status").eq("project_id", project.id),
+      ]);
+      for (const result of [tasks, boms, inputs, research, changes, process]) if (result.error) throw result.error;
+      return { tasks: tasks.data ?? [], boms: boms.data ?? [], inputs: inputs.data ?? [], research: research.data ?? [], changes: changes.data ?? [], process: process.data ?? [] };
     },
   });
   const {
@@ -103,19 +71,12 @@ export function SharedProductLifecycle({
     queryKey: ["shared_product_lifecycle_gates", project.id],
     retry: false,
     queryFn: async () => {
-      try {
-        const { data, error } = await sb
-          .from("project_stage_gates")
-          .select("id,status")
-          .eq("project_id", project.id);
-        if (!error && Array.isArray(data) && data.length > 0) return data;
-      } catch (err) {
-        console.warn("Gates query fallback:", err);
-      }
-      if (isBle || isReuse) {
-        return SAMPLE_STAGE_GATES.map((g) => ({ id: g.id, status: g.status }));
-      }
-      return [];
+      const { data, error } = await sb
+        .from("project_stage_gates")
+        .select("id,status")
+        .eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
     },
   });
   const baseline = useQuery({
@@ -123,26 +84,13 @@ export function SharedProductLifecycle({
     enabled: Boolean(project.requirement_baseline_id),
     retry: false,
     queryFn: async () => {
-      try {
-        const { data, error } = await sb
-          .from("requirement_baselines")
-          .select("baseline_number,revision_number,status,requirement:customer_requirements(requirement_number,current_revision)")
-          .eq("id", project.requirement_baseline_id)
-          .maybeSingle();
-        if (!error && data) return data as LinkedBaseline;
-      } catch (err) {
-        console.warn("Lifecycle baseline query fallback:", err);
-      }
-      const match = SAMPLE_BASELINES.find((b) => b.id === project.requirement_baseline_id);
-      if (match) {
-        return {
-          baseline_number: match.baseline_number,
-          revision_number: match.revision_number,
-          status: match.status,
-          requirement: match.id === "base-ev-001" ? { requirement_number: "REQ-EV-0205", current_revision: 2 } : { requirement_number: "REQ-TLM-0101", current_revision: 1 },
-        } as LinkedBaseline;
-      }
-      return null;
+      const { data, error } = await sb
+        .from("requirement_baselines")
+        .select("baseline_number,revision_number,status,requirement:customer_requirements(requirement_number,current_revision)")
+        .eq("id", project.requirement_baseline_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as LinkedBaseline | null;
     },
   });
   const stages = useQuery({
