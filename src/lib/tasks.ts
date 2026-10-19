@@ -144,12 +144,57 @@ export async function fetchCanonicalDepartments(): Promise<CanonicalDepartment[]
   return DEFAULT_CANONICAL_DEPARTMENTS;
 }
 
+export function resolveCanonicalDepartment(
+  idOrSlug: string | null | undefined,
+  departments: CanonicalDepartment[] = DEFAULT_CANONICAL_DEPARTMENTS
+): CanonicalDepartment | null {
+  if (!idOrSlug) return null;
+  const list = departments && departments.length > 0 ? departments : DEFAULT_CANONICAL_DEPARTMENTS;
+  const clean = idOrSlug.trim().toLowerCase();
+
+  // 1. Direct ID match (e.g. UUID)
+  const byId = list.find((d) => d.id.toLowerCase() === clean);
+  if (byId) return byId;
+
+  // 2. Direct code match (e.g. "MECH", "PROC", "RND")
+  const byCode = list.find((d) => d.code?.toLowerCase() === clean);
+  if (byCode) return byCode;
+
+  // 3. Match prefixed "dept-<code|name>" (e.g. "dept-mechanical", "dept-procurement")
+  const strippedDept = clean.replace(/^dept-/, "");
+  const byStripped = list.find(
+    (d) =>
+      d.code?.toLowerCase() === strippedDept ||
+      d.name.toLowerCase() === strippedDept ||
+      d.aliases.some((a) => a.toLowerCase() === strippedDept)
+  );
+  if (byStripped) return byStripped;
+
+  // 4. Match aliases
+  const byAlias = list.find((d) => d.aliases.some((a) => a.toLowerCase() === clean));
+  if (byAlias) return byAlias;
+
+  // 5. Partial name / alias match
+  const byName = list.find(
+    (d) =>
+      d.name.toLowerCase().includes(clean) ||
+      clean.includes(d.name.toLowerCase()) ||
+      d.aliases.some((a) => clean.includes(a.toLowerCase()))
+  );
+  if (byName) return byName;
+
+  return null;
+}
+
 export async function fetchTasks(projectId?: string, departmentId?: string): Promise<ProjectTask[]> {
   try {
     let q = sb.from("project_tasks").select(SELECT).order("sort_order").order("created_at", { ascending: false });
     if (projectId) q = q.eq("project_id", projectId);
-    const isUuid = departmentId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(departmentId);
-    if (isUuid) q = q.eq("department_id", departmentId);
+    if (departmentId) {
+      const resolved = resolveCanonicalDepartment(departmentId);
+      const finalDeptId = resolved?.id ?? departmentId;
+      q = q.eq("department_id", finalDeptId);
+    }
     const { data, error } = await q;
     if (!error && Array.isArray(data)) return data as ProjectTask[];
   } catch (err) {

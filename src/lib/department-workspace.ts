@@ -5,8 +5,9 @@ import { workspaceForDepartment } from "@/lib/department-workspace-navigation";
 const sb = supabase as any;
 export type WorkspacePreference = Database["public"]["Tables"]["department_workspace_preferences"]["Row"];
 
-export function departmentWorkTarget(department: { name: string; code: string | null; aliases: string[] }) {
-  return workspaceForDepartment(department) ? "/workspace/projects" : "/command-center";
+export function departmentWorkTarget(department: { name: string; code: string | null; aliases: string[] } | null) {
+  const ws = workspaceForDepartment(department);
+  return ws ? `/dashboards?department=${ws.id}` : "/dashboards";
 }
 
 export async function fetchWorkspacePreference(departmentId: string): Promise<WorkspacePreference | null> {

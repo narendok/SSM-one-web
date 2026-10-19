@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Building2, Check, Layers3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { fetchCanonicalDepartments, type CanonicalDepartment } from "@/lib/tasks";
+import { fetchCanonicalDepartments, resolveCanonicalDepartment, type CanonicalDepartment } from "@/lib/tasks";
 import { readWorkspaceDepartmentId, setWorkspaceDepartmentId, WORKSPACE_CONTEXT_EVENT } from "@/lib/workspace-context";
 import { workspaceForDepartment } from "@/lib/department-workspace-navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 export function WorkspaceSwitcher() {
   const { role, permissions, employeeStatus } = useAuth();
   const isAdmin = role === "admin";
+  const navigate = useNavigate();
   const departments = useQuery({ queryKey: ["active-departments"], queryFn: fetchCanonicalDepartments });
   const [departmentId, setDepartmentId] = useState<string | null>(() => readWorkspaceDepartmentId());
 
@@ -31,14 +33,7 @@ export function WorkspaceSwitcher() {
     };
   }, []);
 
-  const selectedDepartment =
-    (departments.data ?? []).find(
-      (department) =>
-        department.id === departmentId ||
-        department.code?.toLowerCase() === departmentId?.toLowerCase() ||
-        department.aliases?.some((a) => a.toLowerCase() === departmentId?.toLowerCase()) ||
-        `dept-${department.code?.toLowerCase()}` === departmentId?.toLowerCase()
-    ) ?? null;
+  const selectedDepartment = resolveCanonicalDepartment(departmentId, departments.data ?? []);
   const workspace = workspaceForDepartment(selectedDepartment);
 
   // If user is NOT admin, they are locked to their assigned department!
@@ -62,6 +57,17 @@ export function WorkspaceSwitcher() {
   const chooseWorkspace = (nextDepartmentId: string | null) => {
     setWorkspaceDepartmentId(nextDepartmentId);
     setDepartmentId(nextDepartmentId);
+    if (nextDepartmentId) {
+      const canonical = resolveCanonicalDepartment(nextDepartmentId, availableDepartments);
+      const ws = workspaceForDepartment(canonical);
+      if (ws) {
+        void navigate({ to: "/dashboards", search: { department: ws.id } });
+      } else {
+        void navigate({ to: "/dashboards" });
+      }
+    } else {
+      void navigate({ to: "/command-center" });
+    }
   };
 
   return (

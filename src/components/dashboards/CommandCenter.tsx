@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { fetchCanonicalDepartments, fetchTasks, OPEN_TASK_STATUSES, updateTask, type CanonicalDepartment, type ProjectTask } from "@/lib/tasks";
+import { fetchCanonicalDepartments, fetchTasks, OPEN_TASK_STATUSES, resolveCanonicalDepartment, updateTask, type CanonicalDepartment, type ProjectTask } from "@/lib/tasks";
 import { departmentWorkTarget } from "@/lib/department-workspace";
 import { groupWorkspaceTasks, taskDueLabel } from "@/lib/task-workspace";
 import { workspaceForDepartment } from "@/lib/department-workspace-navigation";
@@ -37,7 +37,7 @@ export function CommandCenter() {
   const filteredTasks = selectedDepartmentId ? liveTasks.filter((task) => task.department_id === selectedDepartmentId) : liveTasks;
   const groupedTasks = groupWorkspaceTasks(filteredTasks, []);
 
-  const selectedDepartment = availableDepartments.find((department) => department.id === selectedDepartmentId) ?? null;
+  const selectedDepartment = resolveCanonicalDepartment(selectedDepartmentId, availableDepartments);
   const workspaceLabel = selectedDepartment?.name ?? "All departments";
   const workspace = workspaceForDepartment(selectedDepartment);
   const workspaceKind = workspace?.id as DashboardDepartment | undefined;
@@ -70,7 +70,7 @@ export function CommandCenter() {
 }
 
 function DepartmentSelector({ departments, isAdmin, value, onChange }: { departments: CanonicalDepartment[]; isAdmin: boolean; value: string | null; onChange: (departmentId: string | null) => void }) {
-  const selectedDepartment = departments.find((department) => department.id === value) ?? null;
+  const selectedDepartment = resolveCanonicalDepartment(value, departments);
   const workTarget = selectedDepartment ? departmentWorkTarget(selectedDepartment) : "/tasks";
   const label = isAdmin ? "Workspace view" : "Department";
 

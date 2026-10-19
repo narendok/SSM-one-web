@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { fetchTasks, OPEN_TASK_STATUSES, type ProjectTask } from "@/lib/tasks";
+import { CANONICAL_DEPT_UUIDS, fetchTasks, OPEN_TASK_STATUSES, type ProjectTask } from "@/lib/tasks";
 
 const sb = supabase as any;
 
@@ -22,17 +22,17 @@ export function canonicalToDashboardDepartment(canonicalId: string | null): Dash
   const lower = canonicalId.toLowerCase();
 
   // Match canonical UUIDs
-  if (canonicalId === "00000000-0000-4000-a000-000000000003") return "mechanical";
-  if (canonicalId === "00000000-0000-4000-a000-000000000001" || canonicalId === "00000000-0000-4000-a000-000000000002") return "rnd";
-  if (canonicalId === "00000000-0000-4000-a000-000000000004") return "procurement";
-  if (canonicalId === "00000000-0000-4000-a000-000000000005") return "production";
-  if (canonicalId === "00000000-0000-4000-a000-000000000006") return "facility";
-  if (canonicalId === "00000000-0000-4000-a000-000000000007") return "operations";
-  if (canonicalId === "00000000-0000-4000-a000-000000000008") return "hr";
-  if (canonicalId === "00000000-0000-4000-a000-000000000009") return "sales";
-  if (canonicalId === "00000000-0000-4000-a000-000000000010") return "finance";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.MECHANICAL || canonicalId === "00000000-0000-4000-a000-000000000003") return "mechanical";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.RND || canonicalId === CANONICAL_DEPT_UUIDS.FIRMWARE || canonicalId === "00000000-0000-4000-a000-000000000001" || canonicalId === "00000000-0000-4000-a000-000000000002") return "rnd";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.PROCUREMENT || canonicalId === "00000000-0000-4000-a000-000000000004") return "procurement";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.PRODUCTION || canonicalId === "00000000-0000-4000-a000-000000000005") return "production";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.FACILITY || canonicalId === "00000000-0000-4000-a000-000000000006") return "facility";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.OPERATIONS || canonicalId === "00000000-0000-4000-a000-000000000007") return "operations";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.HR || canonicalId === "00000000-0000-4000-a000-000000000008") return "hr";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.SALES || canonicalId === "00000000-0000-4000-a000-000000000009") return "sales";
+  if (canonicalId === CANONICAL_DEPT_UUIDS.FINANCE || canonicalId === "00000000-0000-4000-a000-000000000010") return "finance";
 
-  // Match keyword terms
+  // Match keyword terms and prefixed slugs
   if (lower.includes("mech") || lower.includes("cad") || lower.includes("enclosure")) return "mechanical";
   if (lower.includes("rnd") || lower.includes("hardware") || lower.includes("firmware") || lower.includes("eng")) return "rnd";
   if (lower.includes("proc") || lower.includes("purchase") || lower.includes("store")) return "procurement";
@@ -47,15 +47,15 @@ export function canonicalToDashboardDepartment(canonicalId: string | null): Dash
 
 export function dashboardToCanonicalDepartment(dashboardDept: DashboardDepartment): string {
   switch (dashboardDept) {
-    case "rnd": return "dept-rnd";
-    case "mechanical": return "dept-mechanical";
-    case "procurement": return "dept-procurement";
-    case "production": return "dept-production";
-    case "facility": return "dept-facility";
-    case "operations": return "dept-operations";
-    case "sales": return "dept-sales";
-    case "hr": return "dept-hr";
-    case "finance": return "dept-finance";
+    case "rnd": return CANONICAL_DEPT_UUIDS.RND;
+    case "mechanical": return CANONICAL_DEPT_UUIDS.MECHANICAL;
+    case "procurement": return CANONICAL_DEPT_UUIDS.PROCUREMENT;
+    case "production": return CANONICAL_DEPT_UUIDS.PRODUCTION;
+    case "facility": return CANONICAL_DEPT_UUIDS.FACILITY;
+    case "operations": return CANONICAL_DEPT_UUIDS.OPERATIONS;
+    case "sales": return CANONICAL_DEPT_UUIDS.SALES;
+    case "hr": return CANONICAL_DEPT_UUIDS.HR;
+    case "finance": return CANONICAL_DEPT_UUIDS.FINANCE;
   }
 }
 

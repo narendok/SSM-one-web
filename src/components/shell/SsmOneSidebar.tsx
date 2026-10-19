@@ -10,7 +10,7 @@ import {
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchCanonicalDepartments, type CanonicalDepartment } from "@/lib/tasks";
+import { fetchCanonicalDepartments, resolveCanonicalDepartment, type CanonicalDepartment } from "@/lib/tasks";
 import { useQuery } from "@tanstack/react-query";
 import { readWorkspaceDepartmentId, WORKSPACE_CONTEXT_EVENT } from "@/lib/workspace-context";
 import { workspaceForDepartment } from "@/lib/department-workspace-navigation";
@@ -19,7 +19,7 @@ type NavItem = { label: string; to: string; icon: LucideIcon; permission?: strin
 type NavGroup = { label: string; items: NavItem[]; collapsible?: boolean; department?: string };
 
 const groups: NavGroup[] = [
-   { label: "Daily work", items: [{ label: "My day", to: "/command-center", icon: LayoutGrid }, { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing }] },
+   { label: "Daily work", items: [{ label: "My day", to: "/command-center", icon: LayoutGrid }, { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing }, { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" }] },
   { label: "Work", items: [
     { label: "Projects", to: "/projects", icon: FolderKanban, permission: "projects.view" },
     { label: "Project Analysis (Page 1)", to: "/projects?tab=analysis", icon: Layers, permission: "projects.view" },
@@ -109,10 +109,14 @@ export function SsmOneSidebar() {
     window.addEventListener("storage", syncWorkspace);
     return () => { window.removeEventListener(WORKSPACE_CONTEXT_EVENT, syncWorkspace); window.removeEventListener("storage", syncWorkspace); };
   }, []);
-  const selectedDepartment = (departments.data ?? []).find((department: CanonicalDepartment) => department.id === workspaceDepartmentId) ?? null;
+  const selectedDepartment = resolveCanonicalDepartment(workspaceDepartmentId, departments.data ?? []);
   const selectedWorkspace = workspaceForDepartment(selectedDepartment);
   const visibleGroups = selectedWorkspace ? [
-    { label: "Daily work", items: [{ label: "My day", to: "/command-center", icon: LayoutGrid }, { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing }] },
+    { label: "Daily work", items: [
+      { label: "My day", to: "/command-center", icon: LayoutGrid },
+      { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing },
+      { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" },
+    ] },
     { label: `${selectedWorkspace.label} work`, collapsible: false, items: selectedWorkspace.items },
     { label: "System", collapsible: true, items: groups.find((group) => group.label === "System")!.items },
   ] : groups;
