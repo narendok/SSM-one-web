@@ -50,7 +50,7 @@ function useDepartmentQueues(department: DashboardDepartment) {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: department === "rnd" || department === "production" || department === "operations",
+    enabled: department === "rnd" || department === "mechanical" || department === "production" || department === "operations",
   });
 
   const departmentTasks = useMemo(() => {

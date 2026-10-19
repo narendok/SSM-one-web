@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import { CANONICAL_DEPT_UUIDS, fetchTasks, OPEN_TASK_STATUSES, type ProjectTask } from "@/lib/tasks";
+import { CANONICAL_DEPT_UUIDS } from "@/lib/canonical-departments";
+import { fetchTasks, OPEN_TASK_STATUSES, type ProjectTask } from "@/lib/tasks";
 
 const sb = supabase as any;
 
@@ -139,8 +140,13 @@ function taskPulse(tasks: ProjectTask[]) {
 }
 
 export function tasksForDepartment(tasks: ProjectTask[], department: DashboardDepartment) {
+  const canonicalId = dashboardToCanonicalDepartment(department);
   const taskDepartments = departmentTaskMap[department];
-  return taskDepartments?.length ? tasks.filter((task) => taskDepartments.includes(task.department)) : [];
+  return tasks.filter((task) => {
+    if (task.department_id && task.department_id.toLowerCase() === canonicalId.toLowerCase()) return true;
+    if (taskDepartments && taskDepartments.includes(task.department)) return true;
+    return false;
+  });
 }
 
 const departmentMatches: Record<DashboardDepartment, string[]> = {
@@ -156,11 +162,22 @@ const departmentMatches: Record<DashboardDepartment, string[]> = {
 };
 
 export async function resolveDepartmentId(workspace: DashboardDepartment): Promise<string | null> {
-  const { data, error } = await sb.from("departments").select("id,name,code,aliases").eq("is_active", true);
-  if (error) return null;
-  const terms = departmentMatches[workspace];
-  const match = (data ?? []).find((row: any) => [row.name, row.code, ...(row.aliases ?? [])].filter(Boolean).some((value: string) => terms.some((term) => value.toLowerCase().includes(term))));
-  return match?.id ?? null;
+  const fallbackId = dashboardToCanonicalDepartment(workspace);
+  try {
+    const { data, error } = await sb.from("departments").select("id,name,code,aliases").eq("is_active", true);
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const terms = departmentMatches[workspace];
+      const match = data.find((row: any) =>
+        [row.name, row.code, ...(row.aliases ?? [])]
+          .filter(Boolean)
+          .some((value: string) => terms.some((term) => value.toLowerCase().includes(term)))
+      );
+      if (match?.id) return match.id;
+    }
+  } catch (err) {
+    console.warn("resolveDepartmentId error:", err);
+  }
+  return fallbackId;
 }
 
 async function documentSummary(departmentId: string | null) {

@@ -52,6 +52,16 @@ function AuthPage() {
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
+  const navigateToTarget = (target: string) => {
+    const [pathname, searchStr] = target.split("?");
+    const search = searchStr ? Object.fromEntries(new URLSearchParams(searchStr)) : undefined;
+    if (search) {
+      void navigate({ to: pathname as any, search: search as any });
+    } else {
+      void navigate({ to: pathname as any });
+    }
+  };
+
   const handleInstantLogin = (account: DepartmentTestAccount) => {
     setLoading(true);
     try {
@@ -60,7 +70,7 @@ function AuthPage() {
         description: `Logged in as ${account.roleLabel} (${account.department})`,
       });
       const target = destination !== "/" ? destination : account.defaultPath;
-      navigate({ to: target });
+      navigateToTarget(target);
     } catch (e: any) {
       toast.error("Failed to start session: " + (e?.message ?? "Unknown error"));
     } finally {
@@ -81,7 +91,7 @@ function AuthPage() {
         description: `Signed in to ${testMatch.department}`,
       });
       const target = destination !== "/" ? destination : testMatch.defaultPath;
-      return navigate({ to: target });
+      return navigateToTarget(target);
     }
 
     // 2. Otherwise fall back to remote Supabase auth
@@ -92,7 +102,7 @@ function AuthPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Welcome back");
-    navigate({ to: destination });
+    navigateToTarget(destination);
   }
 
   async function handleGoogle() {

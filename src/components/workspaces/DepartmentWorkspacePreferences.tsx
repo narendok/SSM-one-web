@@ -118,6 +118,7 @@ const DEPARTMENT_ROLES_CATALOGUE: Record<string, DepartmentResponsibilityCatalog
       },
     ],
     standardOptions: [
+      { label: "Procurement workspace", to: "/dashboards?department=procurement", description: "Procurement, SCM, and supplier lead overview" },
       { label: "Purchase requests", to: "/procurement/requests", description: "Review and approve internal PRs" },
       { label: "RFQs & quotations", to: "/procurement/rfqs", description: "Request for quotes from suppliers" },
       { label: "Purchase orders", to: "/procurement/orders", description: "Generate and dispatch official POs" },
@@ -148,7 +149,7 @@ const DEPARTMENT_ROLES_CATALOGUE: Record<string, DepartmentResponsibilityCatalog
           "Mechanical drawing release and revision control",
         ],
         options: [
-          { label: "Mechanical workspace", to: "/" },
+          { label: "Mechanical workspace", to: "/dashboards?department=mechanical" },
           { label: "Design drawings", to: "/drive" },
           { label: "Project tracker", to: "/workspace/projects" },
         ],
@@ -184,9 +185,10 @@ const DEPARTMENT_ROLES_CATALOGUE: Record<string, DepartmentResponsibilityCatalog
       },
     ],
     standardOptions: [
-      { label: "Mechanical workspace", to: "/", description: "Primary mechanical engineering overview" },
+      { label: "Mechanical workspace", to: "/dashboards?department=mechanical", description: "Primary mechanical engineering overview" },
       { label: "Mechanical BOM sourcing", to: "/bom", description: "Enclosure, hardware, and fastener BOM items" },
       { label: "Design drawings", to: "/drive", description: "Controlled CAD drawings and 3D models in Drive" },
+      { label: "PPAP packages", to: "/production/ppap", description: "Production Part Approval Process documentation" },
       { label: "Engineering assignments", to: "/assignments", description: "Mechanical tasks, review requests, and milestones" },
       { label: "Production dispatch", to: "/production/dispatch", description: "Finished enclosure & packaging dispatch coordination" },
       { label: "Project tracker", to: "/workspace/projects", description: "Department project progress and milestone tracking" },
@@ -209,7 +211,7 @@ const DEPARTMENT_ROLES_CATALOGUE: Record<string, DepartmentResponsibilityCatalog
           "Product Requirement Specification (PRS) sign-off",
         ],
         options: [
-          { label: "Engineering workspace", to: "/" },
+          { label: "Hardware workspace", to: "/dashboards?department=rnd" },
           { label: "BOM sourcing & qualification", to: "/bom" },
           { label: "Project tracker", to: "/workspace/projects" },
         ],
@@ -246,7 +248,8 @@ const DEPARTMENT_ROLES_CATALOGUE: Record<string, DepartmentResponsibilityCatalog
       },
     ],
     standardOptions: [
-      { label: "Engineering workspace", to: "/", description: "Hardware & R&D central dashboard" },
+      { label: "Hardware workspace", to: "/dashboards?department=rnd", description: "Hardware & R&D central dashboard" },
+      { label: "Electronic inventory", to: "/", description: "Electronic components & lab stock" },
       { label: "BOM sourcing", to: "/bom", description: "Electronic component sourcing & qualification" },
       { label: "Validation & repair", to: "/pcb", description: "PCB diagnostics, rework logs, and repair tickets" },
       { label: "Engineering assignments", to: "/assignments", description: "Engineering tasks and milestone tracking" },
@@ -295,6 +298,7 @@ const DEPARTMENT_ROLES_CATALOGUE: Record<string, DepartmentResponsibilityCatalog
       },
     ],
     standardOptions: [
+      { label: "Production workspace", to: "/dashboards?department=production", description: "Production management and KPI summary" },
       { label: "Production control", to: "/production", description: "Overview of ongoing production runs" },
       { label: "Shop floor", to: "/production/shopfloor", description: "Active batch status, routing, and kitting" },
       { label: "Tool calibration", to: "/calibration", description: "Tool calibration certificates and due dates" },
@@ -305,6 +309,173 @@ const DEPARTMENT_ROLES_CATALOGUE: Record<string, DepartmentResponsibilityCatalog
     reassignableOptions: [
       { id: "calibration", label: "Tool & instrument calibration", description: "Manage calibration logs and certificates", defaultDepartments: ["PROD", "FAC"] },
       { id: "dispatch_release", label: "Dispatch & packaging evidence", description: "Record outbound lot genealogy and shipping manifests", defaultDepartments: ["PROD", "MECH"] },
+    ],
+  },
+  [CANONICAL_DEPT_UUIDS.SALES]: {
+    summary: "Customer relationship management, enquiries, feasibility coordination, quotations, and commercial project handovers (Master Plan §2).",
+    standardRoles: [
+      {
+        title: "Sales & Commercial Lead",
+        code: "SALES-LEAD",
+        responsibilities: [
+          "OEM customer relationship management & NDA execution",
+          "Enquiry review, technical feasibility alignment with engineering",
+          "Commercial proposals, quotations, and customer authorization",
+          "Project commercial handover to engineering & production",
+        ],
+        options: [
+          { label: "Sales overview", to: "/sales" },
+          { label: "Enquiries & Opportunities", to: "/sales/enquiries" },
+          { label: "Customers", to: "/customers" },
+          { label: "Project tracker", to: "/workspace/projects" },
+        ],
+        isDefault: true,
+      },
+    ],
+    standardOptions: [
+      { label: "Sales workspace", to: "/dashboards?department=sales", description: "Commercial CRM and customer pipeline" },
+      { label: "Sales overview", to: "/sales", description: "Enquiry pipeline, active opportunities, and quotes" },
+      { label: "Enquiries & Opportunities", to: "/sales/enquiries", description: "Lead tracking, technical feasibility, and baselines" },
+      { label: "Customers directory", to: "/customers", description: "OEM accounts and named contacts" },
+      { label: "Customer service", to: "/customer-service", description: "Field failures, complaints, and satisfaction" },
+      { label: "Commercial documents", to: "/drive", description: "Contracts, NDAs, and proposals in Drive" },
+    ],
+    reassignableOptions: [
+      { id: "client_nda", label: "NDA & legal agreements", description: "Maintain NDA records and non-disclosure validity", defaultDepartments: ["SALES", "HR"] },
+    ],
+  },
+  [CANONICAL_DEPT_UUIDS.OPERATIONS]: {
+    summary: "Quality management systems (QMS), incoming QA, CAPA, APQP/PPAP validation, and operational governance (Master Plan §2).",
+    standardRoles: [
+      {
+        title: "Quality & QMS Manager",
+        code: "OPS-QMS",
+        responsibilities: [
+          "Quality manual, ISO 9001 / IATF 16949 audit schedules",
+          "CAPA root cause investigations and 8D reports",
+          "Incoming component inspection & vendor quality tracking",
+          "Customer field failure triage and warranty tracking",
+        ],
+        options: [
+          { label: "Operations workspace", to: "/dashboards?department=operations" },
+          { label: "QMS overview", to: "/qms" },
+          { label: "Incoming quality", to: "/quality/incoming" },
+          { label: "Customer quality", to: "/customer-service" },
+        ],
+        isDefault: true,
+      },
+    ],
+    standardOptions: [
+      { label: "Operations workspace", to: "/dashboards?department=operations", description: "Central operations and QMS health" },
+      { label: "QMS", to: "/qms", description: "Internal audits, CAPA, and management reviews" },
+      { label: "Incoming quality (IQC)", to: "/quality/incoming", description: "Material inwarding inspection reports" },
+      { label: "Customer service & warranty", to: "/customer-service", description: "Field failure triage, complaints, and returns" },
+      { label: "Supplier quality", to: "/procurement/supplier-quality", description: "Vendor scorecards and SCAR notices" },
+      { label: "Quality documents", to: "/drive", description: "SOPs, control plans, and certificates in Drive" },
+    ],
+    reassignableOptions: [
+      { id: "customer_quality", label: "Customer service & warranty", description: "Customer RMA and field issue investigations", defaultDepartments: ["OPS", "SALES"] },
+    ],
+  },
+  [CANONICAL_DEPT_UUIDS.FACILITY]: {
+    summary: "Building infrastructure, plant electricals, asset maintenance, physical security, and workplace safety (Master Plan §2).",
+    standardRoles: [
+      {
+        title: "Facility & Maintenance Manager",
+        code: "FAC-LEAD",
+        responsibilities: [
+          "Preventive & breakdown maintenance schedules",
+          "Machine uptime, compressor, UPS & HVAC controls",
+          "Fixed asset tracking, tagging, and location updates",
+          "Physical security, visitor badges, and surveillance",
+        ],
+        options: [
+          { label: "Facility workspace", to: "/dashboards?department=facility" },
+          { label: "Facilities", to: "/facility" },
+          { label: "Assets register", to: "/assets" },
+          { label: "Maintenance", to: "/maintenance" },
+          { label: "Security desk", to: "/security" },
+        ],
+        isDefault: true,
+      },
+    ],
+    standardOptions: [
+      { label: "Facility workspace", to: "/dashboards?department=facility", description: "Plant maintenance, assets, and security" },
+      { label: "Facilities", to: "/facility", description: "Rooms, labs, and utility services" },
+      { label: "Assets register", to: "/assets", description: "Lab equipment, machines, and tools inventory" },
+      { label: "Maintenance desk", to: "/maintenance", description: "Service logs and PM work orders" },
+      { label: "Security desk", to: "/security", description: "Gate passes, visitor logs, and cameras" },
+      { label: "Workplace", to: "/workplace", description: "Workstations, safety equipment, and ergonomics" },
+    ],
+    reassignableOptions: [
+      { id: "asset_calibration", label: "Asset tracking & calibration", description: "Asset custodianship and calibration scheduling", defaultDepartments: ["FAC", "PROD"] },
+    ],
+  },
+  [CANONICAL_DEPT_UUIDS.HR]: {
+    summary: "Talent acquisition, onboarding, attendance, leave management, corporate policies, and training (Master Plan §2).",
+    standardRoles: [
+      {
+        title: "HR & Talent Manager",
+        code: "HR-LEAD",
+        responsibilities: [
+          "Recruitment pipelines, technical interview coordination",
+          "Employee onboarding, document verification & access setup",
+          "Leave desk, attendance records, and leave approvals",
+          "Corporate policies, safety training, and skill matrices",
+        ],
+        options: [
+          { label: "HR workspace", to: "/dashboards?department=hr" },
+          { label: "HR overview", to: "/hr" },
+          { label: "Employees & access", to: "/hr/access" },
+          { label: "Recruitment", to: "/hr/recruitment" },
+          { label: "Leave desk", to: "/hr/leave" },
+        ],
+        isDefault: true,
+      },
+    ],
+    standardOptions: [
+      { label: "HR workspace", to: "/dashboards?department=hr", description: "Human resources and people management" },
+      { label: "HR overview", to: "/hr", description: "Department headcounts and status summary" },
+      { label: "Employees & access", to: "/hr/access", description: "Staff directory, system roles, and status" },
+      { label: "Recruitment", to: "/hr/recruitment", description: "Job postings and candidate stages" },
+      { label: "Leave desk", to: "/hr/leave", description: "Leave applications and team availability" },
+      { label: "Training & learning", to: "/hr/training", description: "Course modules and skill development" },
+      { label: "Policies", to: "/hr/policies", description: "Company handbook and safety policies" },
+    ],
+    reassignableOptions: [
+      { id: "onboarding_training", label: "Employee training & skill tracking", description: "Coordinate corporate training programs", defaultDepartments: ["HR"] },
+    ],
+  },
+  [CANONICAL_DEPT_UUIDS.FINANCE]: {
+    summary: "Accounting, expense claims, purchase order billing approvals, payment milestones, and financial reporting (Master Plan §2).",
+    standardRoles: [
+      {
+        title: "Finance Controller",
+        code: "FIN-LEAD",
+        responsibilities: [
+          "Departmental operating expenses & OPEX budget tracking",
+          "Purchase Order payment milestone release & vendor invoices",
+          "Client project milestones billing and payment receipts",
+          "Financial audit compliance and commercial documentation",
+        ],
+        options: [
+          { label: "Finance workspace", to: "/dashboards?department=finance" },
+          { label: "Expenses", to: "/finance/expenses" },
+          { label: "Payment milestones", to: "/finance/payment-plans" },
+          { label: "Financial records", to: "/records" },
+        ],
+        isDefault: true,
+      },
+    ],
+    standardOptions: [
+      { label: "Finance workspace", to: "/dashboards?department=finance", description: "Financial health, payment plans, and OPEX" },
+      { label: "Expenses", to: "/finance/expenses", description: "Track expense claims and department vouchers" },
+      { label: "Payment milestones", to: "/finance/payment-plans", description: "Project milestone payments and supplier disbursements" },
+      { label: "Financial records", to: "/records", description: "Audit trails, invoices, and accounting docs" },
+      { label: "Finance documents", to: "/drive", description: "Financial reports and agreements in Drive" },
+    ],
+    reassignableOptions: [
+      { id: "po_milestones", label: "PO milestone payments", description: "Approve milestone payments to critical vendors", defaultDepartments: ["FIN", "PROC"] },
     ],
   },
 };

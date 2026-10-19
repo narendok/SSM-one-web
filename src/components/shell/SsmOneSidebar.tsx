@@ -10,7 +10,7 @@ import {
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchCanonicalDepartments, resolveCanonicalDepartment, type CanonicalDepartment } from "@/lib/tasks";
+import { DEFAULT_CANONICAL_DEPARTMENTS, fetchCanonicalDepartments, resolveCanonicalDepartment, type CanonicalDepartment } from "@/lib/canonical-departments";
 import { useQuery } from "@tanstack/react-query";
 import { readWorkspaceDepartmentId, WORKSPACE_CONTEXT_EVENT } from "@/lib/workspace-context";
 import { workspaceForDepartment } from "@/lib/department-workspace-navigation";
@@ -19,7 +19,11 @@ type NavItem = { label: string; to: string; icon: LucideIcon; permission?: strin
 type NavGroup = { label: string; items: NavItem[]; collapsible?: boolean; department?: string };
 
 const groups: NavGroup[] = [
-   { label: "Daily work", items: [{ label: "My day", to: "/command-center", icon: LayoutGrid }, { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing }, { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" }] },
+  { label: "Daily work", items: [
+    { label: "My day", to: "/command-center", icon: LayoutGrid },
+    { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing },
+    { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" },
+  ] },
   { label: "Work", items: [
     { label: "Projects", to: "/projects", icon: FolderKanban, permission: "projects.view" },
     { label: "Project Analysis (Page 1)", to: "/projects?tab=analysis", icon: Layers, permission: "projects.view" },
@@ -31,58 +35,61 @@ const groups: NavGroup[] = [
     { label: "Enquiries & Opportunities", to: "/sales/enquiries", icon: ClipboardList, permission: "sales.view" },
     { label: "Customers", to: "/customers", icon: Building2, permission: "sales.view" },
   ] },
-  { label: "Engineering", collapsible: true, department: "engineering", items: [
-    { label: "Engineering", to: "/", icon: CircuitBoard, permission: "engineering.view" },
-    { label: "Inventory", to: "/locations", icon: MapPin, permission: "engineering.view" },
-    { label: "BOM import", to: "/bom", icon: FileSpreadsheet, permission: "engineering.edit" },
-    { label: "Drive", to: "/drive", icon: FolderOpen, permission: "documents.view" },
+  { label: "Engineering", collapsible: true, department: "rnd", items: [
+    { label: "Hardware & R&D", to: "/dashboards?department=rnd", icon: CircuitBoard, permission: "engineering.view" },
+    { label: "Mechanical Engineering", to: "/dashboards?department=mechanical", icon: HardHat, permission: "engineering.view" },
+    { label: "Electronic inventory", to: "/", icon: Boxes, permission: "inventory.view" },
+    { label: "Inventory locations", to: "/locations", icon: MapPin, permission: "engineering.view" },
+    { label: "BOM sourcing", to: "/bom", icon: FileSpreadsheet, permission: "engineering.edit" },
+    { label: "Drive files", to: "/drive", icon: FolderOpen, permission: "documents.view" },
     { label: "PCB repair", to: "/pcb", icon: Wrench, permission: "engineering.edit" },
     { label: "Assignments", to: "/assignments", icon: ClipboardList, permission: "engineering.view" },
     { label: "Engineering team", to: "/rd-team", icon: Users, permission: "engineering.view" },
   ] },
   { label: "Operations", collapsible: true, department: "operations", items: [
+    { label: "Procurement workspace", to: "/dashboards?department=procurement", icon: ShoppingCart, permission: "procurement.view" },
     { label: "Purchase requests", to: "/procurement/requests", icon: ClipboardList, permission: "procurement.view" },
     { label: "RFQs & quotations", to: "/procurement/rfqs", icon: FileText, permission: "procurement.view" },
     { label: "Purchase orders", to: "/procurement/orders", icon: ShoppingCart, permission: "procurement.view" },
-     { label: "Delivery revisions", to: "/procurement/delivery-revisions", icon: History, permission: "procurement.view" },
+    { label: "Delivery revisions", to: "/procurement/delivery-revisions", icon: History, permission: "procurement.view" },
     { label: "Pending deliveries", to: "/procurement/pending", icon: Truck, permission: "procurement.view" },
     { label: "Supplier shipments", to: "/procurement/shipments", icon: Truck, permission: "procurement.view" },
     { label: "Inwarding (GRN)", to: "/procurement/inward", icon: PackageCheck, permission: "procurement.view" },
     { label: "Vendors", to: "/procurement/vendors", icon: Building2, permission: "procurement.view" },
     { label: "Supplier quality", to: "/procurement/supplier-quality", icon: ShieldCheck, permission: "quality.view" },
-     { label: "Supplier returns", to: "/procurement/returns", icon: Truck, permission: "quality.view" },
+    { label: "Supplier returns", to: "/procurement/returns", icon: Truck, permission: "quality.view" },
     { label: "Stores inventory", to: "/stores/inventory", icon: Boxes, permission: "stores.view" },
-     { label: "Production control", to: "/production", icon: Factory, permission: "production.view" },
-     { label: "Shop floor", to: "/production/shopfloor", icon: Factory, permission: "production.view" },
-     { label: "Finished goods", to: "/production/release", icon: ClipboardCheck, permission: "production.view" },
-     { label: "PPAP packages", to: "/production/ppap", icon: FileText, permission: "production.view" },
-     { label: "Production dispatch", to: "/production/dispatch", icon: Send, permission: "production.view" },
+    { label: "Production control", to: "/production", icon: Factory, permission: "production.view" },
+    { label: "Shop floor", to: "/production/shopfloor", icon: Factory, permission: "production.view" },
+    { label: "Finished goods", to: "/production/release", icon: ClipboardCheck, permission: "production.view" },
+    { label: "PPAP packages", to: "/production/ppap", icon: FileText, permission: "production.view" },
+    { label: "Production dispatch", to: "/production/dispatch", icon: Send, permission: "production.view" },
     { label: "Incoming quality", to: "/quality/incoming", icon: ShieldCheck, permission: "quality.view" },
     { label: "Finance", to: "/finance/expenses", icon: WalletCards, permission: "finance.view" },
     { label: "Payment milestones", to: "/finance/payment-plans", icon: WalletCards, permission: "finance.view" },
-      { label: "Facility", to: "/facility", icon: Building2, permission: "facility.view" },
-      { label: "Assets", to: "/assets", icon: Boxes, permission: "assets.view" },
-      { label: "Maintenance", to: "/maintenance", icon: Wrench, permission: "maintenance.view" },
-      { label: "Calibration", to: "/calibration", icon: Gauge, permission: "calibration.view" },
-      { label: "Security desk", to: "/security", icon: ShieldCheck, permission: "security.view" },
-      { label: "Workplace", to: "/workplace", icon: Armchair, permission: "workplace.view" },
-       { label: "QMS", to: "/qms", icon: ChartNoAxesCombined, permission: "qms.view" },
-       { label: "Customer service", to: "/customer-service", icon: Headset, permission: "customer_service.view" },
-        { label: "External collaboration", to: "/external-collaboration", icon: Handshake, permission: "external_collaboration.view" },
-        { label: "Transmittals", to: "/external-collaboration/transmittals", icon: Send, permission: "external_collaboration.view" },
-        { label: "External actions", to: "/external-collaboration/actions", icon: ClipboardList, permission: "external_collaboration.view" },
-        { label: "Upload requests", to: "/external-collaboration/uploads", icon: FileText, permission: "external_collaboration.view" },
+    { label: "Facility", to: "/facility", icon: Building2, permission: "facility.view" },
+    { label: "Assets", to: "/assets", icon: Boxes, permission: "assets.view" },
+    { label: "Maintenance", to: "/maintenance", icon: Wrench, permission: "maintenance.view" },
+    { label: "Calibration", to: "/calibration", icon: Gauge, permission: "calibration.view" },
+    { label: "Security desk", to: "/security", icon: ShieldCheck, permission: "security.view" },
+    { label: "Workplace", to: "/workplace", icon: Armchair, permission: "workplace.view" },
+    { label: "QMS", to: "/qms", icon: ChartNoAxesCombined, permission: "qms.view" },
+    { label: "Customer service", to: "/customer-service", icon: Headset, permission: "customer_service.view" },
+    { label: "External collaboration", to: "/external-collaboration", icon: Handshake, permission: "external_collaboration.view" },
+    { label: "Transmittals", to: "/external-collaboration/transmittals", icon: Send, permission: "external_collaboration.view" },
+    { label: "External actions", to: "/external-collaboration/actions", icon: ClipboardList, permission: "external_collaboration.view" },
+    { label: "Upload requests", to: "/external-collaboration/uploads", icon: FileText, permission: "external_collaboration.view" },
   ] },
-   { label: "People & HR", collapsible: true, department: "hr", items: [
+  { label: "People & HR", collapsible: true, department: "hr", items: [
     { label: "HR overview", to: "/hr", icon: Users, permission: "hr.view" },
-      { label: "Employees & Access", to: "/hr/access", icon: ShieldCheck, permission: "admin.view" },
+    { label: "Employees & Access", to: "/hr/access", icon: ShieldCheck, permission: "admin.view" },
     { label: "Recruitment", to: "/hr/recruitment", icon: ClipboardList, permission: "recruitment.manage" },
     { label: "Leave desk", to: "/hr/leave", icon: PlaneTakeoff, permission: "hr.view" },
     { label: "Learning", to: "/hr/training", icon: GraduationCap, permission: "training.manage" },
     { label: "Onboarding", to: "/hr/onboarding", icon: ClipboardList, permission: "training.manage" },
     { label: "Policies", to: "/hr/policies", icon: FileSpreadsheet, permission: "hr.view" },
   ] },
-   { label: "System", collapsible: true, items: [
+  { label: "System", collapsible: true, items: [
     { label: "PartsBench history", to: "/history", icon: History, permission: "engineering.view" },
     { label: "System controls", to: "/admin", icon: Settings2, permission: "admin.view" },
   ] },
@@ -103,29 +110,93 @@ export function SsmOneSidebar() {
     else next.add(label);
     return next;
   });
+
   useEffect(() => {
     const syncWorkspace = () => setWorkspaceDepartmentId(readWorkspaceDepartmentId());
     window.addEventListener(WORKSPACE_CONTEXT_EVENT, syncWorkspace);
     window.addEventListener("storage", syncWorkspace);
-    return () => { window.removeEventListener(WORKSPACE_CONTEXT_EVENT, syncWorkspace); window.removeEventListener("storage", syncWorkspace); };
+    return () => {
+      window.removeEventListener(WORKSPACE_CONTEXT_EVENT, syncWorkspace);
+      window.removeEventListener("storage", syncWorkspace);
+    };
   }, []);
-  const selectedDepartment = resolveCanonicalDepartment(workspaceDepartmentId, departments.data ?? []);
+
+  const activeDepartmentList = departments.data && departments.data.length > 0 ? departments.data : DEFAULT_CANONICAL_DEPARTMENTS;
+  const selectedDepartment = resolveCanonicalDepartment(workspaceDepartmentId, activeDepartmentList);
   const selectedWorkspace = workspaceForDepartment(selectedDepartment);
-  const visibleGroups = selectedWorkspace ? [
-    { label: "Daily work", items: [
-      { label: "My day", to: "/command-center", icon: LayoutGrid },
-      { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing },
-      { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" },
-    ] },
-    { label: `${selectedWorkspace.label} work`, collapsible: false, items: selectedWorkspace.items },
-    { label: "System", collapsible: true, items: groups.find((group) => group.label === "System")!.items },
-  ] : groups;
+
+  // When a workspace is selected, surface its dedicated workspace group at the top,
+  // but NEVER hide the core Work groups, Sales, Operations, HR or System!
+  const visibleGroups: NavGroup[] = selectedWorkspace
+    ? [
+        {
+          label: "Daily work",
+          items: [
+            { label: "My day", to: "/command-center", icon: LayoutGrid },
+            { label: `${selectedWorkspace.label} workspace`, to: `/dashboards?department=${selectedWorkspace.id}`, icon: ChartColumnIncreasing },
+            { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" },
+          ],
+        },
+        {
+          label: `${selectedWorkspace.label} focus`,
+          collapsible: false,
+          items: selectedWorkspace.items,
+        },
+        ...groups.filter((g) => g.label !== "Daily work"),
+      ]
+    : groups;
+
+  const renderItemLink = (item: NavItem, isSub = false) => {
+    const [pathnamePart, searchPart] = item.to.split("?");
+    const searchObj = searchPart ? Object.fromEntries(new URLSearchParams(searchPart)) : undefined;
+
+    let toProp: any = pathnamePart;
+    let searchProp: any = searchObj;
+
+    if (item.to === "/drive" && selectedDepartment) {
+      toProp = "/drive";
+      searchProp = { department: selectedDepartment.id };
+    } else if (item.to === "/dashboards" && selectedWorkspace) {
+      toProp = "/dashboards";
+      searchProp = { department: selectedWorkspace.id };
+    }
+
+    const active = item.to === "/"
+      ? pathname === "/"
+      : pathname === pathnamePart || pathname.startsWith(`${pathnamePart}/`);
+
+    if (isSub) {
+      return (
+        <SidebarMenuSubItem key={`${item.label}-${item.to}`}>
+          <SidebarMenuSubButton asChild isActive={active}>
+            <Link to={toProp} search={searchProp}>
+              <item.icon className="size-4" />
+              <span>{item.label}</span>
+            </Link>
+          </SidebarMenuSubButton>
+        </SidebarMenuSubItem>
+      );
+    }
+
+    return (
+      <SidebarMenuItem key={`${item.label}-${item.to}`}>
+        <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+          <Link to={toProp} search={searchProp}>
+            <item.icon className="size-4" />
+            <span>{item.label}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
         <Link to="/" className="flex items-center gap-2 px-2 py-2.5 font-semibold tracking-tight">
-          <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground"><CircuitBoard className="size-4" /></span>
+          <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <CircuitBoard className="size-4" />
+          </span>
           {!collapsed && <span>SSMone</span>}
         </Link>
       </SidebarHeader>
@@ -134,39 +205,52 @@ export function SsmOneSidebar() {
           const visibleItems = group.items.filter((item) => can(item.permission));
           if (!visibleItems.length) return null;
           const groupCollapsed = group.collapsible && collapsedGroups.has(group.label);
-          const isGroupActive = visibleItems.some((item) => item.to === "/" ? pathname === "/" : pathname === item.to || pathname.startsWith(`${item.to}/`));
+          const isGroupActive = visibleItems.some((item) => {
+            const [p] = item.to.split("?");
+            return item.to === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`);
+          });
+
           return (
             <SidebarGroup key={group.label}>
-              {group.collapsible ? <SidebarMenu><SidebarMenuItem><div className="flex items-center"><SidebarMenuButton asChild isActive={isGroupActive} tooltip={group.label} className="flex-1">
-                <Link to="/dashboards" search={{ department: group.department }}><ChartColumnIncreasing /><span>{group.label}</span></Link>
-              </SidebarMenuButton><button type="button" aria-label={`Toggle ${group.label} menu`} aria-expanded={!groupCollapsed} onClick={() => toggleGroup(group.label)} className="mr-1 flex size-7 shrink-0 items-center justify-center rounded-sm text-sidebar-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"><ChevronDown className={`size-4 transition-transform ${groupCollapsed ? "-rotate-90" : ""}`} /></button></div></SidebarMenuItem></SidebarMenu> : <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
-              {!groupCollapsed && <SidebarGroupContent><SidebarMenu>
-                {group.collapsible ? <SidebarMenuSub>{visibleItems.map((item) => {
-                  const active = item.to === "/" ? pathname === "/" : pathname === item.to || pathname.startsWith(`${item.to}/`);
-                  return <SidebarMenuSubItem key={`${group.label}-${item.label}`}><SidebarMenuSubButton asChild isActive={active}>
-                    {item.to === "/drive" && selectedDepartment ? (
-                      <Link to="/drive" search={{ department: selectedDepartment.id }}><item.icon /><span>{item.label}</span></Link>
-                    ) : item.to === "/dashboards" && selectedWorkspace ? (
-                      <Link to="/dashboards" search={{ department: selectedWorkspace.id }}><item.icon /><span>{item.label}</span></Link>
+              {group.collapsible ? (
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <div className="flex items-center">
+                      <SidebarMenuButton asChild isActive={isGroupActive} tooltip={group.label} className="flex-1">
+                        <Link to="/dashboards" search={{ department: group.department }}>
+                          <ChartColumnIncreasing className="size-4" />
+                          <span>{group.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                      <button
+                        type="button"
+                        aria-label={`Toggle ${group.label} menu`}
+                        aria-expanded={!groupCollapsed}
+                        onClick={() => toggleGroup(group.label)}
+                        className="mr-1 flex size-7 shrink-0 items-center justify-center rounded-sm text-sidebar-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                      >
+                        <ChevronDown className={`size-4 transition-transform ${groupCollapsed ? "-rotate-90" : ""}`} />
+                      </button>
+                    </div>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              ) : (
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              )}
+
+              {!groupCollapsed && (
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.collapsible ? (
+                      <SidebarMenuSub>
+                        {visibleItems.map((item) => renderItemLink(item, true))}
+                      </SidebarMenuSub>
                     ) : (
-                      <Link to={item.to}><item.icon /><span>{item.label}</span></Link>
+                      visibleItems.map((item) => renderItemLink(item, false))
                     )}
-                  </SidebarMenuSubButton></SidebarMenuSubItem>;
-                })}</SidebarMenuSub> : visibleItems.map((item) => {
-                  const active = item.to === "/" ? pathname === "/" : pathname === item.to || pathname.startsWith(`${item.to}/`);
-                  return <SidebarMenuItem key={`${group.label}-${item.label}`}>
-                    <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-                      {item.to === "/drive" && selectedDepartment ? (
-                        <Link to="/drive" search={{ department: selectedDepartment.id }}><item.icon /><span>{item.label}</span></Link>
-                      ) : item.to === "/dashboards" && selectedWorkspace ? (
-                        <Link to="/dashboards" search={{ department: selectedWorkspace.id }}><item.icon /><span>{item.label}</span></Link>
-                      ) : (
-                        <Link to={item.to}><item.icon /><span>{item.label}</span></Link>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>;
-                })}
-              </SidebarMenu></SidebarGroupContent>}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              )}
             </SidebarGroup>
           );
         })}

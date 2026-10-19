@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { fetchCanonicalDepartments, resolveCanonicalDepartment, type CanonicalDepartment } from "@/lib/tasks";
+import { DEFAULT_CANONICAL_DEPARTMENTS, fetchCanonicalDepartments, resolveCanonicalDepartment, type CanonicalDepartment } from "@/lib/canonical-departments";
 import { readWorkspaceDepartmentId, setWorkspaceDepartmentId, WORKSPACE_CONTEXT_EVENT } from "@/lib/workspace-context";
 import { workspaceForDepartment } from "@/lib/department-workspace-navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,7 +33,8 @@ export function WorkspaceSwitcher() {
     };
   }, []);
 
-  const selectedDepartment = resolveCanonicalDepartment(departmentId, departments.data ?? []);
+  const availableDepartments = departments.data && departments.data.length > 0 ? departments.data : DEFAULT_CANONICAL_DEPARTMENTS;
+  const selectedDepartment = resolveCanonicalDepartment(departmentId, availableDepartments);
   const workspace = workspaceForDepartment(selectedDepartment);
 
   // If user is NOT admin, they are locked to their assigned department!
@@ -52,7 +53,6 @@ export function WorkspaceSwitcher() {
   }
 
   // Admin users can explore and switch between any department workspace or view all workspaces
-  const availableDepartments = departments.data ?? [];
   const triggerLabel = workspace?.label ?? "All workspaces";
   const chooseWorkspace = (nextDepartmentId: string | null) => {
     setWorkspaceDepartmentId(nextDepartmentId);
@@ -66,7 +66,7 @@ export function WorkspaceSwitcher() {
         void navigate({ to: "/dashboards" });
       }
     } else {
-      void navigate({ to: "/command-center" });
+      void navigate({ to: "/projects", search: { tab: "analysis" } });
     }
   };
 
