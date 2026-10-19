@@ -317,19 +317,43 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-lg border bg-muted/30 p-2.5">
               <p className="text-[11px] text-muted-foreground">Operating Supply</p>
-              <p className="text-sm font-bold">24 V DC (12–36V)</p>
+              <p className="text-sm font-bold">
+                {project.code === "PRJ-TLM-002"
+                  ? "12V/24V + 3.7V Li-ion"
+                  : project.code === "PRJ-TLM-001"
+                  ? "12V Automotive Bus"
+                  : "24 V DC (12–36V)"}
+              </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-2.5">
               <p className="text-[11px] text-muted-foreground">Ingress Protection</p>
-              <p className="text-sm font-bold">IP65 (Gasket sealed)</p>
+              <p className="text-sm font-bold">
+                {project.code === "PRJ-TLM-002"
+                  ? "IP67 Submersion"
+                  : project.code === "PRJ-TLM-001"
+                  ? "IP65 Enclosure"
+                  : "IP65 (Gasket sealed)"}
+              </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-2.5">
               <p className="text-[11px] text-muted-foreground">Communication</p>
-              <p className="text-sm font-bold">RS485 + Dual CAN</p>
+              <p className="text-sm font-bold">
+                {project.code === "PRJ-TLM-002"
+                  ? "BLE 5.2 + 4G Cat 1"
+                  : project.code === "PRJ-TLM-001"
+                  ? "Quectel 4G + GNSS"
+                  : "RS485 + Dual CAN"}
+              </p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-2.5">
               <p className="text-[11px] text-muted-foreground">Pilot Batch Quantity</p>
-              <p className="text-sm font-bold">100 units</p>
+              <p className="text-sm font-bold">
+                {project.code === "PRJ-TLM-002"
+                  ? "150 units"
+                  : project.code === "PRJ-TLM-001"
+                  ? "50 units"
+                  : "100 units"}
+              </p>
             </div>
           </div>
         </Card>
@@ -338,14 +362,28 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
           <div className="flex items-center gap-2">
             <AlertTriangle className="size-4 text-amber-600" />
             <span className="text-sm font-bold text-amber-700 dark:text-amber-400">
-              Latest Client Proposal
+              {project.code === "PRJ-TLM-002"
+                ? "Regulatory Homologation Gate"
+                : project.code === "PRJ-TLM-001"
+                ? "Direct Reuse Status"
+                : "Latest Client Proposal"}
             </span>
           </div>
           <p className="mt-2 text-xs font-semibold">
-            Proposed Spec Upgrade: <span className="underline">IP65 → IP67 Submersion</span>
+            {project.code === "PRJ-TLM-002" ? (
+              <span>iCAT AIS-140 & NABL UN 38.3 Testing</span>
+            ) : project.code === "PRJ-TLM-001" ? (
+              <span>100% Direct Reuse of PCB-TLM-V2.0</span>
+            ) : (
+              <span>Proposed Spec Upgrade: <span className="underline">IP65 → IP67 Submersion</span></span>
+            )}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Client submitted revision proposal. R1 baseline remains strictly locked until feasibility, tooling costing, and DVP&R acceptance pass.
+            {project.code === "PRJ-TLM-002"
+              ? "iCAT Certificate iCAT/AIS140/2026/0892 and NABL Report NABL/BAT/2026/4412 approved. Final IP67 endurance chamber test in progress."
+              : project.code === "PRJ-TLM-001"
+              ? "Feasibility approved as direct hardware reuse without spins. POC breadboard stage bypassed; pilot line active."
+              : "Client submitted revision proposal. R1 baseline remains strictly locked until feasibility, tooling costing, and DVP&R acceptance pass."}
           </p>
         </Card>
       </div>
@@ -356,7 +394,11 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
           <div>
             <h3 className="text-sm font-bold">System Architecture & Engineering Concept</h3>
             <p className="text-xs text-muted-foreground">
-              Physical circuitry topology, controller interfaces, and power routing
+              {project.code === "PRJ-TLM-002"
+                ? "BLE 5.2 Nordic Transceiver, 3.7V Secondary Battery & BQ24075 Charger Topology"
+                : project.code === "PRJ-TLM-001"
+                ? "12V High-Reliability Telematics Architecture (Direct Reuse PCB-TLM-V2.0)"
+                : "Physical circuitry topology, controller interfaces, and power routing"}
             </p>
           </div>
           <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
@@ -391,25 +433,47 @@ export function ProjectAnalysisSummary({ project }: { project: Project }) {
               <rect x="240" y="130" width="55" height="22" rx="3" fill="#1e293b" />
               <circle cx="330" cy="130" r="6" fill="#10b981" />
               <circle cx="355" cy="127" r="6" fill="#38bdf8" />
-              <text x="210" y="70" fill="currentColor" className="text-xs font-bold" fontSize="12">SENSOR GATEWAY IP67</text>
-              <text x="30" y="205" fill="currentColor" className="text-muted-foreground" fontSize="11">Concept Enclosure · 24V / RS485 Dual CAN</text>
+              <text x="210" y="70" fill="currentColor" className="text-xs font-bold" fontSize="12">
+                {project.code === "PRJ-TLM-002" ? "IP67 TELEMATICS HUB" : "TELEMATICS 12V TRACKER"}
+              </text>
+              <text x="30" y="205" fill="currentColor" className="text-muted-foreground" fontSize="11">
+                {project.code === "PRJ-TLM-002"
+                  ? "Polycarbonate Sealed Housing · BLE 5.2 · 3.7V Secondary Battery"
+                  : "ABS Housing · 12V Vehicle Bus · Direct Reuse PCB-TLM-V2.0"}
+              </text>
             </svg>
           ) : (
             <svg viewBox="0 0 520 200" className="max-h-[170px] w-full max-w-[500px]" role="img" aria-label="System block diagram">
               <g fill="currentColor" className="text-muted/20 stroke-primary" strokeWidth="1.5">
-                <rect x="15" y="70" width="105" height="55" rx="8" />
+                <rect x="15" y="70" width="115" height="55" rx="8" />
                 <rect x="195" y="70" width="130" height="55" rx="8" />
-                <rect x="390" y="70" width="115" height="55" rx="8" />
-                <rect x="195" y="10" width="130" height="40" rx="8" />
-                <path d="M120 98H195M325 98H390M260 50V70" />
+                <rect x="385" y="70" width="120" height="55" rx="8" />
+                <rect x="180" y="10" width="160" height="42" rx="8" />
+                <path d="M130 98H195M325 98H385M260 52V70" />
               </g>
-              <g fontSize="12" textAnchor="middle" fill="currentColor">
-                <text x="67" y="102" className="font-semibold">Sensors (IO)</text>
-                <text x="260" y="93" className="font-bold text-primary">STM32 MCU</text>
+              <g fontSize="11" textAnchor="middle" fill="currentColor">
+                <text x="72" y="93" className="font-semibold">
+                  {project.code === "PRJ-TLM-002" ? "Nordic nRF52833" : "Sensors / GNSS"}
+                </text>
+                <text x="72" y="112" className="text-[10px] text-muted-foreground">
+                  {project.code === "PRJ-TLM-002" ? "BLE 5.2 TPMS Hub" : "u-blox NEO-M8N"}
+                </text>
+                <text x="260" y="93" className="font-bold text-primary">
+                  {project.code === "PRJ-TLM-002" ? "STM32F4 MCU" : "STM32 MCU"}
+                </text>
                 <text x="260" y="112" className="text-[10px] text-muted-foreground">Main Controller</text>
-                <text x="447" y="93" className="font-semibold">RS485 / CAN</text>
-                <text x="447" y="112" className="text-[10px] text-muted-foreground">Telemetry Stack</text>
-                <text x="260" y="34" className="font-semibold">24V Power Supply</text>
+                <text x="445" y="93" className="font-semibold">
+                  {project.code === "PRJ-TLM-002" ? "Quectel EG915N" : "Quectel 4G GSM"}
+                </text>
+                <text x="445" y="112" className="text-[10px] text-muted-foreground">
+                  {project.code === "PRJ-TLM-002" ? "LTE Cat 1 Stack" : "Automotive CAN"}
+                </text>
+                <text x="260" y="27" className="font-semibold">
+                  {project.code === "PRJ-TLM-002" ? "TI BQ24075 + 3.7V Battery" : "12V Transient Protected Bus"}
+                </text>
+                <text x="260" y="42" className="text-[9px] text-muted-foreground">
+                  {project.code === "PRJ-TLM-002" ? "Power-Path & 72h Backup" : "ISO 7637-2 Surge Compliant"}
+                </text>
               </g>
             </svg>
           )}

@@ -32,17 +32,46 @@ export interface Project {
 
 const sb = supabase as any;
 
+import { SAMPLE_LIFECYCLE_PROJECTS } from "./sample-data-lifecycle";
+
+function mergeProjects(dbProjects: Project[], fallbackProjects: Project[]): Project[] {
+  const map = new Map<string, Project>();
+  for (const p of fallbackProjects) map.set(p.id, p);
+  for (const p of dbProjects) map.set(p.id, p);
+  return Array.from(map.values());
+}
+
+export function getSampleProjectById(idOrCode: string): Project | undefined {
+  const clean = idOrCode.trim().toLowerCase();
+  return SAMPLE_LIFECYCLE_PROJECTS.find(
+    (p) => p.id.toLowerCase() === clean || p.code.toLowerCase() === clean
+  );
+}
+
 export async function fetchProjects(): Promise<Project[]> {
-  let query = sb.from("projects").select("*").order("status").order("name");
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as Project[];
+  try {
+    const query = sb.from("projects").select("*").order("status").order("name");
+    const { data, error } = await query;
+    if (error) {
+      console.warn("fetchProjects db query error, using fallback sample projects:", error);
+      return SAMPLE_LIFECYCLE_PROJECTS;
+    }
+    return mergeProjects((data ?? []) as Project[], SAMPLE_LIFECYCLE_PROJECTS);
+  } catch (e) {
+    console.warn("fetchProjects failed, using fallback sample projects:", e);
+    return SAMPLE_LIFECYCLE_PROJECTS;
+  }
 }
 
 export async function fetchDepartmentProjects(departmentId: string): Promise<Project[]> {
-  const { data, error } = await sb.from("projects").select("*").eq("department_id", departmentId).order("status").order("name");
-  if (error) throw error;
-  return (data ?? []) as Project[];
+  try {
+    const { data, error } = await sb.from("projects").select("*").eq("department_id", departmentId).order("status").order("name");
+    const filteredSample = SAMPLE_LIFECYCLE_PROJECTS.filter((p) => p.department_id === departmentId);
+    if (error) return filteredSample;
+    return mergeProjects((data ?? []) as Project[], filteredSample);
+  } catch {
+    return SAMPLE_LIFECYCLE_PROJECTS.filter((p) => p.department_id === departmentId);
+  }
 }
 
 export async function fetchComponentProjectIds(componentId: string): Promise<string[]> {

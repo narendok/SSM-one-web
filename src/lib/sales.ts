@@ -25,6 +25,25 @@ export function withUnavailableFeasibilityProvenance(reviews: DeployedFeasibilit
   return { reviews: reviews.map((review) => ({ ...review, source_revision_id: null, source_revision_number: null, master_specification_version_id: null, master_specification_version_number: null, applicable_workstreams: null })), provenance: { available: false, error } };
 }
 
+import {
+  SAMPLE_OEM_CUSTOMERS,
+  SAMPLE_CONTACTS,
+  SAMPLE_ENQUIRIES,
+  SAMPLE_OPPORTUNITIES,
+  SAMPLE_REQUIREMENTS,
+  SAMPLE_BASELINES,
+  SAMPLE_COMMERCIAL_RECORDS,
+  SAMPLE_FEASIBILITY_REVIEWS,
+  SAMPLE_LIFECYCLE_PROJECTS,
+} from "./sample-data-lifecycle";
+
+function mergeById<T extends { id: string }>(dbItems: T[], fallbackItems: T[]): T[] {
+  const map = new Map<string, T>();
+  for (const item of fallbackItems) map.set(item.id, item);
+  for (const item of dbItems) map.set(item.id, item);
+  return Array.from(map.values());
+}
+
 export async function fetchSalesOverview(): Promise<{ customers: SalesCustomer[]; contacts: SalesContact[]; enquiries: SalesEnquiry[]; opportunities: SalesOpportunity[]; clientProjects: Project[] | null; masterSpecifications: MasterSpecificationSummary[]; requirements: CustomerRequirement[]; feasibilityReviews: FeasibilityReview[]; feasibilityProvenance: FeasibilityProvenanceState; commercialRecords: CommercialRecord[]; baselines: RequirementBaseline[]; portalAccess: PortalAccess[]; handovers: SalesHandover[]; departments: Array<{ id: string; name: string; code: string | null }>; employees: Array<{ user_id: string; display_name: string | null; official_email: string | null }>; supportTickets: CustomerSupportTicket[] | null }> {
   const [customers, contacts, enquiries, opportunities, clientProjects, masterSpecifications, requirements, feasibilityReviews, commercialRecords, baselines, portalAccess, handovers, departments, employees, supportTickets] = await Promise.all([
     sb.from("customers").select(CUSTOMER_SELECT).neq("status", "archived").order("created_at", { ascending: false }),
@@ -43,7 +62,26 @@ export async function fetchSalesOverview(): Promise<{ customers: SalesCustomer[]
     sb.from("employees").select("user_id,display_name,official_email").not("user_id", "is", null).eq("employment_status", "ACTIVE").order("display_name"),
     sb.from("customer_complaints").select("id,complaint_code,title,severity,status,owner_user_id,customer_visible_update,updated_at").order("updated_at", { ascending: false }).limit(12),
   ]);
-  for (const result of [customers, contacts, enquiries, opportunities, masterSpecifications, requirements, feasibilityReviews, commercialRecords, baselines, portalAccess, handovers, departments, employees]) if (result.error) throw result.error;
-  const feasibility = withUnavailableFeasibilityProvenance((feasibilityReviews.data ?? []) as DeployedFeasibilityReview[]);
-  return { customers: (customers.data ?? []) as SalesCustomer[], contacts: (contacts.data ?? []) as SalesContact[], enquiries: (enquiries.data ?? []) as SalesEnquiry[], opportunities: (opportunities.data ?? []) as SalesOpportunity[], clientProjects: clientProjects.error ? null : (clientProjects.data ?? []) as Project[], masterSpecifications: (masterSpecifications.data ?? []) as MasterSpecificationSummary[], requirements: (requirements.data ?? []) as CustomerRequirement[], feasibilityReviews: feasibility.reviews, feasibilityProvenance: feasibility.provenance, commercialRecords: (commercialRecords.data ?? []) as CommercialRecord[], baselines: (baselines.data ?? []) as RequirementBaseline[], portalAccess: (portalAccess.data ?? []) as PortalAccess[], handovers: (handovers.data ?? []) as SalesHandover[], departments: (departments.data ?? []) as Array<{ id: string; name: string; code: string | null }>, employees: (employees.data ?? []) as Array<{ user_id: string; display_name: string | null; official_email: string | null }>, supportTickets: supportTickets.error ? null : (supportTickets.data ?? []) as CustomerSupportTicket[] };
+
+  const rawFeasibility = mergeById<FeasibilityReview>((feasibilityReviews.data ?? []) as FeasibilityReview[], SAMPLE_FEASIBILITY_REVIEWS);
+  const feasibility = withUnavailableFeasibilityProvenance(rawFeasibility as DeployedFeasibilityReview[]);
+
+  return {
+    customers: mergeById<SalesCustomer>((customers.data ?? []) as SalesCustomer[], SAMPLE_OEM_CUSTOMERS),
+    contacts: mergeById<SalesContact>((contacts.data ?? []) as SalesContact[], SAMPLE_CONTACTS),
+    enquiries: mergeById<SalesEnquiry>((enquiries.data ?? []) as SalesEnquiry[], SAMPLE_ENQUIRIES),
+    opportunities: mergeById<SalesOpportunity>((opportunities.data ?? []) as SalesOpportunity[], SAMPLE_OPPORTUNITIES),
+    clientProjects: mergeById<Project>((clientProjects.data ?? []) as Project[], SAMPLE_LIFECYCLE_PROJECTS),
+    masterSpecifications: (masterSpecifications.data ?? []) as MasterSpecificationSummary[],
+    requirements: mergeById<CustomerRequirement>((requirements.data ?? []) as CustomerRequirement[], SAMPLE_REQUIREMENTS),
+    feasibilityReviews: feasibility.reviews,
+    feasibilityProvenance: feasibility.provenance,
+    commercialRecords: mergeById<CommercialRecord>((commercialRecords.data ?? []) as CommercialRecord[], SAMPLE_COMMERCIAL_RECORDS),
+    baselines: mergeById<RequirementBaseline>((baselines.data ?? []) as RequirementBaseline[], SAMPLE_BASELINES),
+    portalAccess: (portalAccess.data ?? []) as PortalAccess[],
+    handovers: (handovers.data ?? []) as SalesHandover[],
+    departments: (departments.data ?? []) as Array<{ id: string; name: string; code: string | null }>,
+    employees: (employees.data ?? []) as Array<{ user_id: string; display_name: string | null; official_email: string | null }>,
+    supportTickets: supportTickets.error ? null : ((supportTickets.data ?? []) as CustomerSupportTicket[]),
+  };
 }

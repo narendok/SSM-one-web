@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FolderKanban, Plus, Settings } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,9 @@ import { ProjectDialog } from "@/components/projects/ProjectDialog";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/projects/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Projects — PartsBench" },
@@ -27,10 +30,25 @@ export const Route = createFileRoute("/_authenticated/projects/")({
 });
 
 function ProjectsPage() {
+  const { tab } = Route.useSearch();
+  const navigate = useNavigate();
   const { role } = useAuth();
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
   const { data: projects = [], isLoading } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
+
+  useEffect(() => {
+    if (tab === "analysis" && projects.length > 0) {
+      const target = projects.find((p) => p.code === "PRJ-TLM-002") ?? projects[0];
+      if (target) {
+        void navigate({
+          to: "/projects/$projectId",
+          params: { projectId: target.id },
+          search: { tab: "analysis" },
+        });
+      }
+    }
+  }, [tab, projects, navigate]);
 
   return (
     <div className="space-y-4">

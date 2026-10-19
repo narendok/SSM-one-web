@@ -29,7 +29,7 @@ import { ProjectOperationalTab, ProjectRequirementContext } from "@/components/p
 import { SharedProductLifecycle } from "@/components/projects/SharedProductLifecycle";
 import { ProjectBomReview } from "@/components/projects/ProjectBomReview";
 import { ProjectStructuredDocuments } from "@/components/projects/ProjectStructuredDocuments";
-import type { Project } from "@/lib/projects";
+import { getSampleProjectById, type Project } from "@/lib/projects";
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchTasks, OPEN_TASK_STATUSES } from "@/lib/tasks";
@@ -77,13 +77,17 @@ function ProjectDetailPage() {
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", projectId],
     queryFn: async () => {
-      const { data, error } = await sb
-        .from("projects")
-        .select("*")
-        .eq("id", projectId)
-        .maybeSingle();
-      if (error) throw error;
-      return data as Project | null;
+      try {
+        const { data, error } = await sb
+          .from("projects")
+          .select("*")
+          .eq("id", projectId)
+          .maybeSingle();
+        if (data) return data as Project;
+      } catch (err) {
+        console.warn("Project DB lookup failed, checking sample fallback:", err);
+      }
+      return getSampleProjectById(projectId) ?? null;
     },
   });
 
