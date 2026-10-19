@@ -94,8 +94,30 @@ export const workspaceDefinitions: WorkspaceDefinition[] = [
   ] },
 ];
 
-export function workspaceForDepartment(department: { name: string; code: string | null; aliases: string[] } | null) {
+export function workspaceForDepartment(
+  department: { name: string; code: string | null; aliases: string[]; id?: string } | null,
+  allowFallback = false
+) {
   if (!department) return null;
   const terms = [department.name, department.code ?? "", ...department.aliases].map((value) => value.trim().toLowerCase());
-  return workspaceDefinitions.find((workspace) => workspace.terms.some((term) => terms.includes(term))) ?? null;
+  const matched = workspaceDefinitions.find((workspace) => workspace.terms.some((term) => terms.includes(term)));
+  if (matched) return matched;
+
+  if (!allowFallback) return null;
+
+  // Dynamic workspace fallback for custom/newly created departments when requested
+  const slug = (department.code || department.name).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return {
+    id: (slug as WorkspaceKind) || "operations",
+    terms: [slug, department.name.toLowerCase()],
+    label: department.name,
+    summary: `${department.name} operational queue, tasks, and controlled records.`,
+    items: [
+      { label: `${department.name} workspace`, to: `/dashboards?department=${slug}`, icon: Building2 },
+      { label: "Project tracker", to: "/workspace/projects", icon: FolderKanban, permission: "projects.view" },
+      { label: "Team tasks", to: "/tasks", icon: ClipboardList },
+      { label: "Department Drive", to: "/drive", icon: FileText, permission: "documents.view" },
+      { label: "Controlled records", to: "/records", icon: FileSearch, permission: "documents.view" },
+    ],
+  };
 }

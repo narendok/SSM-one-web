@@ -104,13 +104,8 @@ export interface TaskActivity {
 const SELECT =
   "*, assignee:rd_members(id,name,email,department,department_id), department_record:departments(id,name,code), project:projects(id,name,code,color), purchase_request:purchase_requests(id,request_number,status), qms_capa:qms_capas(id,capa_code,title,status), customer_complaint:customer_complaints(id,complaint_code,title,status)";
 
-export type CanonicalDepartment = { id: string; name: string; code: string | null; aliases: string[] };
-
-export async function fetchCanonicalDepartments(): Promise<CanonicalDepartment[]> {
-  const { data, error } = await sb.from("departments").select("id,name,code,aliases").eq("is_active", true).order("sort_order").order("name");
-  if (error) throw error;
-  return (data ?? []) as CanonicalDepartment[];
-}
+export type { CanonicalDepartment } from "@/lib/canonical-departments";
+export { fetchCanonicalDepartments } from "@/lib/canonical-departments";
 
 export async function fetchTasks(projectId?: string, departmentId?: string): Promise<ProjectTask[]> {
   let q = sb.from("project_tasks").select(SELECT).order("sort_order").order("created_at", { ascending: false });
