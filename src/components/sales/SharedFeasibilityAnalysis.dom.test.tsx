@@ -61,6 +61,7 @@ function setup(reviews: FeasibilityReview[] = [review], sourceError = false) {
       departments={[]}
       employees={[]}
       onOpenSource={onOpenSource}
+      allowExample={true}
     />,
   );
   return { user: userEvent.setup(), onOpenSource };

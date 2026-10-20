@@ -20,6 +20,9 @@ function TestConsumer() {
       <button data-testid="set-system" onClick={() => setTheme("system")}>
         Set System
       </button>
+      <button data-testid="set-slate" onClick={() => setTheme("slate")}>
+        Set Slate
+      </button>
       <button data-testid="toggle" onClick={toggleTheme}>
         Toggle
       </button>
@@ -114,5 +117,23 @@ describe("ThemeProvider & ThemeToggle", () => {
     expect(screen.getByTestId("theme").textContent).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.style.colorScheme).toBe("dark");
+  });
+
+  it("applies dark and slate classes when switched to modern slate", async () => {
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider defaultTheme="light">
+        <TestConsumer />
+      </ThemeProvider>
+    );
+
+    await user.click(screen.getByTestId("set-slate"));
+
+    expect(screen.getByTestId("theme").textContent).toBe("slate");
+    expect(screen.getByTestId("resolvedTheme").textContent).toBe("slate");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("slate")).toBe(true);
+    expect(document.documentElement.style.colorScheme).toBe("dark");
+    expect(localStorage.getItem("ssm-theme")).toBe("slate");
   });
 });

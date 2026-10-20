@@ -452,8 +452,7 @@ export function SharedProductLifecycle({
   const stageReadiness = lifecycleStageReadiness(
     stages.data ?? [],
     project.project_stage,
-    project.requirement_baseline_id,
-    snapshot ? { designInputCount: snapshot.inputs.length, linkedBomCount: snapshot.boms.length } : null,
+    Boolean(project.requirement_baseline_id),
   );
   const revisionRelation = baseline.data
     ? requirementRevisionRelation(

@@ -35,6 +35,7 @@ type Props = {
   employees: Employee[];
   onOpenSource: () => void;
   internalDetails?: ReactNode;
+  allowExample?: boolean;
 };
 type Column = {
   id: string;
@@ -130,6 +131,7 @@ export function SharedFeasibilityAnalysis({
   employees,
   onOpenSource,
   internalDetails,
+  allowExample = false,
 }: Props) {
   const [example, setExample] = useState(false);
   const [audience, setAudience] = useState<"internal" | "client">("internal");
@@ -229,22 +231,24 @@ export function SharedFeasibilityAnalysis({
             connected.
           </p>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant={example ? "secondary" : "outline"}
-          onClick={toggleExample}
-        >
-          {example ? (
-            <RotateCcw className="mr-2 size-3.5" />
-          ) : (
-            <FlaskConical className="mr-2 size-3.5" />
-          )}
-          {example ? "Exit example" : "Try example layout"}
-        </Button>
+        {allowExample && (
+          <Button
+            type="button"
+            size="sm"
+            variant={example ? "secondary" : "outline"}
+            onClick={toggleExample}
+          >
+            {example ? (
+              <RotateCcw className="mr-2 size-3.5" />
+            ) : (
+              <FlaskConical className="mr-2 size-3.5" />
+            )}
+            {example ? "Exit example" : "Try example layout"}
+          </Button>
+        )}
       </header>
 
-      {example && (
+      {allowExample && example && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
           <strong className="font-semibold">UI example · not saved to the portal.</strong>
           <span className="ml-1 text-muted-foreground">

@@ -67,7 +67,7 @@ function ProjectDetailPage() {
   const { role } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState(tab ?? "overview");
+  const [activeTab, setActiveTab] = useState(tab === "analysis" ? "overview" : (tab ?? "overview"));
 
   const openProjectTab = (value: string) => {
     setActiveTab(value);
@@ -128,7 +128,7 @@ function ProjectDetailPage() {
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="icon">
-          <Link to="/projects">
+          <Link to="/projects" search={{ tab: undefined }}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -158,10 +158,9 @@ function ProjectDetailPage() {
 
       <Tabs value={activeTab} onValueChange={openProjectTab}>
         <TabsList className="h-auto flex-wrap justify-start">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analysis" className="gap-1.5 font-semibold text-primary">
+          <TabsTrigger value="overview" className="gap-1.5 font-semibold text-primary">
             <Layers className="size-3.5" />
-            <span>Project Analysis (Page 1)</span>
+            <span>Overview & Analysis</span>
           </TabsTrigger>
           <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
@@ -341,10 +340,6 @@ function ProjectDetailPage() {
               </div>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="analysis" className="pt-4 space-y-4">
-          <ProjectAnalysisSummary project={project} />
         </TabsContent>
 
         <TabsContent value="lifecycle" className="pt-4">

@@ -1,4 +1,4 @@
-import { Sun, Moon, Monitor, Check } from "lucide-react";
+import { Sun, Moon, Monitor, Sparkles, Check } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,23 +31,25 @@ export function ThemeToggle({
           variant={variant}
           size={size}
           className={cn("relative transition-colors", className)}
-          title={`Theme: ${theme === "system" ? `System (${resolvedTheme})` : theme}`}
+          title={`Theme: ${theme === "system" ? `System (${resolvedTheme})` : theme === "slate" ? "Modern Slate" : theme}`}
           aria-label="Toggle display theme"
         >
-          {resolvedTheme === "dark" ? (
+          {resolvedTheme === "slate" ? (
+            <Sparkles className="h-4 w-4 transition-transform duration-200 rotate-0 scale-100 text-cyan-400" />
+          ) : resolvedTheme === "dark" ? (
             <Moon className="h-4 w-4 transition-transform duration-200 rotate-0 scale-100 text-foreground" />
           ) : (
             <Sun className="h-4 w-4 transition-transform duration-200 rotate-0 scale-100 text-foreground" />
           )}
           {showLabel && (
             <span className="ml-2 text-xs font-medium capitalize">
-              {theme}
+              {theme === "slate" ? "Modern Slate" : theme}
             </span>
           )}
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-36">
+      <DropdownMenuContent align="end" className="w-40">
         <DropdownMenuItem
           onClick={() => setTheme("light")}
           className="flex items-center justify-between cursor-pointer"
@@ -68,6 +70,17 @@ export function ThemeToggle({
             <span>Dark</span>
           </span>
           {theme === "dark" && <Check className="h-4 w-4 text-primary" />}
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => setTheme("slate")}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-cyan-400" />
+            <span>Modern Slate</span>
+          </span>
+          {theme === "slate" && <Check className="h-4 w-4 text-primary" />}
         </DropdownMenuItem>
 
         <DropdownMenuItem

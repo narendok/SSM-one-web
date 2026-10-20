@@ -45,6 +45,7 @@ type Props = {
   feasibilityProvenance: FeasibilityProvenanceState;
   onViewSpecification: () => void;
   onOpenChange: (open: boolean) => void;
+  allowExample?: boolean;
 };
 
 type Version = {
@@ -398,6 +399,7 @@ export function OpportunityDetail({
   feasibilityProvenance,
   onViewSpecification,
   onOpenChange,
+  allowExample = false,
 }: Props) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
@@ -529,6 +531,7 @@ export function OpportunityDetail({
                   departments={departments}
                   employees={employees}
                   onOpenSource={() => setActiveTab("customer-inputs")}
+                  allowExample={allowExample}
                   internalDetails={
                     <>
                       <section className="mt-5 rounded-lg border p-3">

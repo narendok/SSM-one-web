@@ -5,8 +5,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { CANONICAL_DEPT_UUIDS } from "@/lib/canonical-departments";
 
-let mockAuth = {
-  role: "member" as const,
+let mockAuth: {
+  role: string;
+  permissions: string[];
+  employeeStatus: string;
+} = {
+  role: "member",
   permissions: ["engineering.view"],
   employeeStatus: "active",
 };

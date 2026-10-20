@@ -19,70 +19,82 @@ type NavItem = { label: string; to: string; icon: LucideIcon; permission?: strin
 type NavGroup = { label: string; items: NavItem[]; collapsible?: boolean; department?: string };
 
 const groups: NavGroup[] = [
-   { label: "Daily work", items: [{ label: "My day", to: "/command-center", icon: LayoutGrid }, { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing }] },
+  { label: "Daily work", items: [
+    { label: "My day", to: "/command-center", icon: LayoutGrid },
+    { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing },
+  ] },
   { label: "Work", items: [
     { label: "Projects", to: "/projects", icon: FolderKanban, permission: "projects.view" },
-    { label: "Project Analysis (Page 1)", to: "/projects?tab=analysis", icon: Layers, permission: "projects.view" },
     { label: "Task board", to: "/tasks", icon: ListChecks, permission: "my_work.view" },
     { label: "Unified records", to: "/records", icon: Search, permission: "documents.view" },
   ] },
-  { label: "Sales", collapsible: true, department: "sales", items: [
+  { label: "Sales & Commercial", collapsible: true, department: "sales", items: [
     { label: "Sales overview", to: "/sales", icon: BriefcaseBusiness, permission: "sales.view" },
     { label: "Enquiries & Opportunities", to: "/sales/enquiries", icon: ClipboardList, permission: "sales.view" },
     { label: "Customers", to: "/customers", icon: Building2, permission: "sales.view" },
+    { label: "Customer service", to: "/customer-service", icon: Headset, permission: "customer_service.view" },
   ] },
-  { label: "Engineering", collapsible: true, department: "engineering", items: [
-    { label: "Engineering", to: "/", icon: CircuitBoard, permission: "engineering.view" },
-    { label: "Inventory", to: "/locations", icon: MapPin, permission: "engineering.view" },
+  { label: "Engineering & R&D", collapsible: true, department: "engineering", items: [
+    { label: "Engineering workspace", to: "/", icon: CircuitBoard, permission: "engineering.view" },
+    { label: "Inventory & locations", to: "/locations", icon: MapPin, permission: "engineering.view" },
     { label: "BOM import", to: "/bom", icon: FileSpreadsheet, permission: "engineering.edit" },
-    { label: "Drive", to: "/drive", icon: FolderOpen, permission: "documents.view" },
-    { label: "PCB repair", to: "/pcb", icon: Wrench, permission: "engineering.edit" },
+    { label: "Technical Drive", to: "/drive", icon: FolderOpen, permission: "documents.view" },
+    { label: "PCB validation & repair", to: "/pcb", icon: Wrench, permission: "engineering.edit" },
     { label: "Assignments", to: "/assignments", icon: ClipboardList, permission: "engineering.view" },
     { label: "Engineering team", to: "/rd-team", icon: Users, permission: "engineering.view" },
   ] },
-  { label: "Operations", collapsible: true, department: "operations", items: [
+  { label: "Procurement & SCM", collapsible: true, department: "procurement", items: [
     { label: "Purchase requests", to: "/procurement/requests", icon: ClipboardList, permission: "procurement.view" },
     { label: "RFQs & quotations", to: "/procurement/rfqs", icon: FileText, permission: "procurement.view" },
     { label: "Purchase orders", to: "/procurement/orders", icon: ShoppingCart, permission: "procurement.view" },
-     { label: "Delivery revisions", to: "/procurement/delivery-revisions", icon: History, permission: "procurement.view" },
+    { label: "Delivery revisions", to: "/procurement/delivery-revisions", icon: History, permission: "procurement.view" },
     { label: "Pending deliveries", to: "/procurement/pending", icon: Truck, permission: "procurement.view" },
     { label: "Supplier shipments", to: "/procurement/shipments", icon: Truck, permission: "procurement.view" },
     { label: "Inwarding (GRN)", to: "/procurement/inward", icon: PackageCheck, permission: "procurement.view" },
     { label: "Vendors", to: "/procurement/vendors", icon: Building2, permission: "procurement.view" },
-    { label: "Supplier quality", to: "/procurement/supplier-quality", icon: ShieldCheck, permission: "quality.view" },
-     { label: "Supplier returns", to: "/procurement/returns", icon: Truck, permission: "quality.view" },
     { label: "Stores inventory", to: "/stores/inventory", icon: Boxes, permission: "stores.view" },
-     { label: "Production control", to: "/production", icon: Factory, permission: "production.view" },
-     { label: "Shop floor", to: "/production/shopfloor", icon: Factory, permission: "production.view" },
-     { label: "Finished goods", to: "/production/release", icon: ClipboardCheck, permission: "production.view" },
-     { label: "PPAP packages", to: "/production/ppap", icon: FileText, permission: "production.view" },
-     { label: "Production dispatch", to: "/production/dispatch", icon: Send, permission: "production.view" },
-    { label: "Incoming quality", to: "/quality/incoming", icon: ShieldCheck, permission: "quality.view" },
-    { label: "Finance", to: "/finance/expenses", icon: WalletCards, permission: "finance.view" },
-    { label: "Payment milestones", to: "/finance/payment-plans", icon: WalletCards, permission: "finance.view" },
-      { label: "Facility", to: "/facility", icon: Building2, permission: "facility.view" },
-      { label: "Assets", to: "/assets", icon: Boxes, permission: "assets.view" },
-      { label: "Maintenance", to: "/maintenance", icon: Wrench, permission: "maintenance.view" },
-      { label: "Calibration", to: "/calibration", icon: Gauge, permission: "calibration.view" },
-      { label: "Security desk", to: "/security", icon: ShieldCheck, permission: "security.view" },
-      { label: "Workplace", to: "/workplace", icon: Armchair, permission: "workplace.view" },
-       { label: "QMS", to: "/qms", icon: ChartNoAxesCombined, permission: "qms.view" },
-       { label: "Customer service", to: "/customer-service", icon: Headset, permission: "customer_service.view" },
-        { label: "External collaboration", to: "/external-collaboration", icon: Handshake, permission: "external_collaboration.view" },
-        { label: "Transmittals", to: "/external-collaboration/transmittals", icon: Send, permission: "external_collaboration.view" },
-        { label: "External actions", to: "/external-collaboration/actions", icon: ClipboardList, permission: "external_collaboration.view" },
-        { label: "Upload requests", to: "/external-collaboration/uploads", icon: FileText, permission: "external_collaboration.view" },
   ] },
-   { label: "People & HR", collapsible: true, department: "hr", items: [
+  { label: "Production & Assembly", collapsible: true, department: "production", items: [
+    { label: "Production control", to: "/production", icon: Factory, permission: "production.view" },
+    { label: "Shop floor", to: "/production/shopfloor", icon: Factory, permission: "production.view" },
+    { label: "Finished goods (PDI)", to: "/production/release", icon: ClipboardCheck, permission: "production.view" },
+    { label: "PPAP packages", to: "/production/ppap", icon: FileText, permission: "production.view" },
+    { label: "Production dispatch", to: "/production/dispatch", icon: Send, permission: "production.view" },
+  ] },
+  { label: "Quality & QMS", collapsible: true, department: "operations", items: [
+    { label: "QMS & Audits", to: "/qms", icon: ChartNoAxesCombined, permission: "qms.view" },
+    { label: "Incoming quality", to: "/quality/incoming", icon: ShieldCheck, permission: "quality.view" },
+    { label: "Supplier quality", to: "/procurement/supplier-quality", icon: ShieldCheck, permission: "quality.view" },
+    { label: "Supplier returns", to: "/procurement/returns", icon: Truck, permission: "quality.view" },
+  ] },
+  { label: "Facility & Assets", collapsible: true, department: "facility", items: [
+    { label: "Facilities", to: "/facility", icon: Building2, permission: "facility.view" },
+    { label: "Assets", to: "/assets", icon: Boxes, permission: "assets.view" },
+    { label: "Maintenance", to: "/maintenance", icon: Wrench, permission: "maintenance.view" },
+    { label: "Calibration", to: "/calibration", icon: Gauge, permission: "calibration.view" },
+    { label: "Security desk", to: "/security", icon: ShieldCheck, permission: "security.view" },
+    { label: "Workplace", to: "/workplace", icon: Armchair, permission: "workplace.view" },
+  ] },
+  { label: "Finance & Accounts", collapsible: true, department: "finance", items: [
+    { label: "Operational expenses", to: "/finance/expenses", icon: WalletCards, permission: "finance.view" },
+    { label: "Payment milestones", to: "/finance/payment-plans", icon: WalletCards, permission: "finance.view" },
+  ] },
+  { label: "People & HR", collapsible: true, department: "hr", items: [
     { label: "HR overview", to: "/hr", icon: Users, permission: "hr.view" },
-      { label: "Employees & Access", to: "/hr/access", icon: ShieldCheck, permission: "admin.view" },
+    { label: "Employees & Access", to: "/hr/access", icon: ShieldCheck, permission: "admin.view" },
     { label: "Recruitment", to: "/hr/recruitment", icon: ClipboardList, permission: "recruitment.manage" },
     { label: "Leave desk", to: "/hr/leave", icon: PlaneTakeoff, permission: "hr.view" },
-    { label: "Learning", to: "/hr/training", icon: GraduationCap, permission: "training.manage" },
+    { label: "Learning & Training", to: "/hr/training", icon: GraduationCap, permission: "training.manage" },
     { label: "Onboarding", to: "/hr/onboarding", icon: ClipboardList, permission: "training.manage" },
     { label: "Policies", to: "/hr/policies", icon: FileSpreadsheet, permission: "hr.view" },
   ] },
-   { label: "System", collapsible: true, items: [
+  { label: "Collaboration", collapsible: true, items: [
+    { label: "External collaboration", to: "/external-collaboration", icon: Handshake, permission: "external_collaboration.view" },
+    { label: "Transmittals", to: "/external-collaboration/transmittals", icon: Send, permission: "external_collaboration.view" },
+    { label: "External actions", to: "/external-collaboration/actions", icon: ClipboardList, permission: "external_collaboration.view" },
+    { label: "Upload requests", to: "/external-collaboration/uploads", icon: FileText, permission: "external_collaboration.view" },
+  ] },
+  { label: "System", collapsible: true, items: [
     { label: "PartsBench history", to: "/history", icon: History, permission: "engineering.view" },
     { label: "System controls", to: "/admin", icon: Settings2, permission: "admin.view" },
   ] },
@@ -111,16 +123,11 @@ export function SsmOneSidebar() {
   }, []);
   const selectedDepartment = (departments.data ?? []).find((department: CanonicalDepartment) => department.id === workspaceDepartmentId) ?? null;
   const selectedWorkspace = workspaceForDepartment(selectedDepartment);
-  const workGroup = groups.find((group) => group.label === "Work");
-  const salesGroup = groups.find((group) => group.label === "Sales");
-  const systemGroup = groups.find((group) => group.label === "System");
 
   const visibleGroups = selectedWorkspace ? [
     { label: "Daily work", items: [{ label: "My day", to: "/command-center", icon: LayoutGrid }, { label: "Department workspace", to: "/dashboards", icon: ChartColumnIncreasing }] },
     { label: `${selectedWorkspace.label} work`, collapsible: false, items: selectedWorkspace.items },
-    ...(workGroup ? [workGroup] : []),
-    ...(salesGroup ? [salesGroup] : []),
-    ...(systemGroup ? [systemGroup] : []),
+    ...groups.filter((group) => group.label !== "Daily work"),
   ] : groups;
 
   return (

@@ -83,6 +83,7 @@ it("opens the integrated shared analysis and its explicit UI example from the op
         feasibilityProvenance={{ available: false, error: "Source not installed" }}
         onViewSpecification={() => undefined}
         onOpenChange={() => undefined}
+        allowExample={true}
       />
     </QueryClientProvider>,
   );

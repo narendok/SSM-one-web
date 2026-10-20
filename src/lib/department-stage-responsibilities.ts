@@ -1,12 +1,67 @@
 import { LIFECYCLE_STAGES, type StageStatus } from "./department-chronicles";
 
 export type StageResponsibilityRole = "lead" | "coordinating" | "participating";
+export type RraciRole = "responsible" | "reviewer" | "accountable" | "consulted" | "informed";
+
+export const RRACI_CONFIG: Record<
+  RraciRole,
+  { code: string; label: string; badge: string; text: string; border: string; desc: string }
+> = {
+  accountable: {
+    code: "A",
+    label: "Accountable (A)",
+    badge: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    text: "text-amber-700 dark:text-amber-400",
+    border: "border-amber-500/30",
+    desc: "Single decision authority approving stage gate release",
+  },
+  responsible: {
+    code: "R",
+    label: "Responsible (R)",
+    badge: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    text: "text-blue-700 dark:text-blue-400",
+    border: "border-blue-500/30",
+    desc: "Primary operational or engineering owner executing deliverables",
+  },
+  reviewer: {
+    code: "Rev",
+    label: "Reviewer (Rev)",
+    badge: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
+    text: "text-purple-700 dark:text-purple-400",
+    border: "border-purple-500/30",
+    desc: "Technical authority reviewing quality, compliance, and design validity",
+  },
+  consulted: {
+    code: "C",
+    label: "Consulted (C)",
+    badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+    text: "text-emerald-700 dark:text-emerald-400",
+    border: "border-emerald-500/30",
+    desc: "Subject-matter experts providing two-way technical input",
+  },
+  informed: {
+    code: "I",
+    label: "Informed (I)",
+    badge: "bg-slate-500/15 text-slate-700 dark:text-slate-400 border-slate-500/30",
+    text: "text-slate-700 dark:text-slate-400",
+    border: "border-slate-500/30",
+    desc: "Stakeholders kept notified of progress, handoffs, and milestones",
+  },
+};
+
+export function effectiveRraciRole(assignment: DepartmentStageAssignment): RraciRole {
+  if (assignment.rraciRole) return assignment.rraciRole;
+  if (assignment.role === "lead") return "responsible";
+  if (assignment.role === "coordinating") return "reviewer";
+  return "consulted";
+}
 
 export interface DepartmentStageAssignment {
   id: string; // unique assignment id e.g. "stg-assign-mech-2"
   departmentId: string; // e.g. "mechanical", "rnd", "procurement", "production", "operations", "sales", "firmware", "finance", "hr", "facility"
   stageNumber: number; // 1 to 9
   role: StageResponsibilityRole;
+  rraciRole?: RraciRole;
   status: StageStatus;
   deliverables: string[];
   notes?: string;
@@ -666,6 +721,33 @@ export function updateDepartmentStageRole(
   const updated: DepartmentStageAssignment = {
     ...all[idx],
     role,
+    updatedAt: new Date().toISOString(),
+  };
+  const list = [...all];
+  list[idx] = updated;
+  persistResponsibilities(list);
+  return updated;
+}
+
+/**
+ * Updates the RRACI role (Responsible, Reviewer, Accountable, Consulted, Informed)
+ */
+export function updateDepartmentStageRraciRole(
+  departmentId: string,
+  stageNumber: number,
+  rraciRole: RraciRole
+): DepartmentStageAssignment | null {
+  const normDept = normalizeDepartmentId(departmentId);
+  const all = loadStoredResponsibilities();
+  const idx = all.findIndex(
+    (a) => normalizeDepartmentId(a.departmentId) === normDept && a.stageNumber === stageNumber
+  );
+
+  if (idx < 0) return null;
+
+  const updated: DepartmentStageAssignment = {
+    ...all[idx],
+    rraciRole,
     updatedAt: new Date().toISOString(),
   };
   const list = [...all];

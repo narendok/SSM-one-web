@@ -48,9 +48,13 @@ import {
   updateDepartmentStageRole,
   updateDepartmentStageStatus,
   updateDepartmentStageDeliverables,
+  updateDepartmentStageRraciRole,
+  effectiveRraciRole,
   resetDepartmentStageResponsibilities,
+  RRACI_CONFIG,
   type DepartmentStageAssignment,
   type StageResponsibilityRole,
+  type RraciRole,
 } from "@/lib/department-stage-responsibilities";
 import { LIFECYCLE_STAGES, type StageStatus } from "@/lib/department-chronicles";
 import { toast } from "sonner";

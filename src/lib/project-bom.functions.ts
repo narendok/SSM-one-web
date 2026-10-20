@@ -3,32 +3,36 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export interface SavedBomItem {
-  line_index: number;
+  line_index?: number;
+  line_number?: number;
   mpn: string | null;
-  manufacturer: string | null;
+  manufacturer?: string | null;
   value: string | null;
   description: string | null;
   refs: string | null;
   footprint: string | null;
   quantity: number;
-  remark: string | null;
+  remark?: string | null;
   unit_cost: number | null;
   total_cost: number | null;
-  matched_component_id: string | null;
+  matched_component_id?: string | null;
   match_status: string | null;
   shortage: number;
 }
 
 export interface ProjectBomSummary {
   id: string;
+  project_id?: string;
   bom_number: string;
   name: string;
   source_filename: string | null;
   revision: string | null;
-  notes: string | null;
+  status?: string;
+  notes?: string | null;
   line_count: number;
   total_cost: number | null;
   created_at: string;
+  updated_at?: string;
   source_drive_node_id?: string | null;
   source_drive_revision_id?: string | null;
 }

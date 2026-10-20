@@ -111,7 +111,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function ThemedToaster() {
   const { resolvedTheme } = useTheme();
-  return <Toaster richColors position="top-right" theme={resolvedTheme} />;
+  return <Toaster richColors position="top-right" theme={resolvedTheme === "slate" ? "dark" : resolvedTheme} />;
 }
 
 function RootComponent() {

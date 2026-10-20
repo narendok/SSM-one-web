@@ -199,7 +199,7 @@ export function AppSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/projects")}>
-                  <Link to="/projects"><FolderKanban className="h-4 w-4" /><span>Projects</span></Link>
+                  <Link to="/projects" search={{ tab: undefined }}><FolderKanban className="h-4 w-4" /><span>Projects</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

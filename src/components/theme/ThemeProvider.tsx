@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 
-export type Theme = "light" | "dark" | "system";
-export type ResolvedTheme = "light" | "dark";
+export type Theme = "light" | "dark" | "slate" | "system";
+export type ResolvedTheme = "light" | "dark" | "slate";
 
 export interface ThemeContextType {
   theme: Theme;
@@ -14,7 +14,7 @@ const STORAGE_KEY = "ssm-theme";
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-function getSystemTheme(): ResolvedTheme {
+function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") return "light";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
@@ -32,7 +32,7 @@ export function ThemeProvider({
     if (typeof window === "undefined") return defaultTheme;
     try {
       const stored = localStorage.getItem(storageKey) || localStorage.getItem("theme");
-      if (stored === "light" || stored === "dark" || stored === "system") {
+      if (stored === "light" || stored === "dark" || stored === "slate" || stored === "system") {
         return stored;
       }
     } catch {
@@ -41,7 +41,7 @@ export function ThemeProvider({
     return defaultTheme;
   });
 
-  const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(getSystemTheme);
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(getSystemTheme);
 
   // Sync with system changes when theme === "system"
   useEffect(() => {
@@ -60,7 +60,7 @@ export function ThemeProvider({
     if (typeof window === "undefined") return;
     const onStorage = (e: StorageEvent) => {
       if ((e.key === storageKey || e.key === "theme") && e.newValue) {
-        if (e.newValue === "light" || e.newValue === "dark" || e.newValue === "system") {
+        if (e.newValue === "light" || e.newValue === "dark" || e.newValue === "slate" || e.newValue === "system") {
           setThemeState(e.newValue);
         }
       }
@@ -75,11 +75,14 @@ export function ThemeProvider({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const root = document.documentElement;
-    if (resolvedTheme === "dark") {
+    root.classList.remove("dark", "slate");
+    if (resolvedTheme === "slate") {
+      root.classList.add("dark", "slate");
+      root.style.colorScheme = "dark";
+    } else if (resolvedTheme === "dark") {
       root.classList.add("dark");
       root.style.colorScheme = "dark";
     } else {
-      root.classList.remove("dark");
       root.style.colorScheme = "light";
     }
   }, [resolvedTheme]);
@@ -96,7 +99,7 @@ export function ThemeProvider({
   };
 
   const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    setTheme(resolvedTheme === "dark" || resolvedTheme === "slate" ? "light" : "dark");
   };
 
   const value = useMemo(

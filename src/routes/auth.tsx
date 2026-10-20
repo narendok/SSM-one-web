@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { DepartmentTestAccounts } from "@/components/auth/DepartmentTestAccounts";
-import { loginAsTestAccount, type DepartmentTestAccount } from "@/lib/demo-auth";
+import { loginAsTestAccount, verifyTestCredentials, type DepartmentTestAccount } from "@/lib/demo-auth";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({ next: typeof search.next === "string" ? search.next : undefined }),
@@ -33,8 +33,19 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const formEmail = String(fd.get("email") || email);
+    const formEmail = String(fd.get("email") || email).trim();
     const formPassword = String(fd.get("password") || password);
+
+    const testAccount = verifyTestCredentials(formEmail, formPassword);
+    if (testAccount) {
+      setLoading(false);
+      loginAsTestAccount(testAccount);
+      toast.success(`Welcome back, ${testAccount.name}!`);
+      const targetPath = destination !== "/" ? destination : testAccount.defaultPath;
+      navigate({ to: targetPath });
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email: formEmail,
       password: formPassword,

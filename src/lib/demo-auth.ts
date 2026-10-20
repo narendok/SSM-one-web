@@ -176,7 +176,7 @@ export const DEPARTMENT_TEST_ACCOUNTS: DepartmentTestAccount[] = [
     roleLabel: "Quality & QMS Manager",
     email: "quality@ssmone.internal",
     password: "Quality@SSMone2026",
-    defaultPath: "/quality/incoming",
+    defaultPath: "/qms",
     badgeColor: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30",
     permissions: [
       "quality.view",
